@@ -3064,8 +3064,12 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 ### R582（2026-09-11，H5 实修 + 生产复验 + 1440 R580 C/D 补测；我的页 `loadRemote` 三端点并发；0 后端）：分支 `devin/1789048590-r582-profile-parallel-load`（从 #760 分支开，链含 #742–#760）→ PR #761；取证 `docs/iter/round-3/r582-profile-parallel-load.md`
+=======
+### R582（2026-09-11，H5 实修 + 生产复验 + 1440 R580 C/D 补测；我的页 `loadRemote` 三端点并发；0 后端）：分支 `devin/1789048590-r582-profile-parallel-load`（从 #760 分支开，链含 #742–#760）；取证 `docs/iter/round-3/r582-profile-parallel-load.md`
+>>>>>>> 7ae34902 (docs(R582): 取证 + handoff + 状态.md + SKILL（我的页并发 / 1440 C/D 17/17 / 自然样本 / 清理 75 行）)
 - 研究（一手）：375 生产冷加载 `~/r582/timing.py`（修前 `eO1hqVT6`）——`/api/growth` 等 `/api/profile` 5.32s 回包后 5.4s 才发、8.29s 才回，`/api/announcement` 8.29s 才发；`profile.vue` `loadRemote()` 三个 `try { await request(…) }` 串行是唯一原因（三端点互不依赖；`stats.vue` 早已 `Promise.all`）。「错题本」格子 `mistakeN == null → '—'` 期间一直是 `—`。375 每日一练完成页 / 我的页截图走查（`~/r582/shots.py`，91 API 全 2xx、console 0）无其他 P0/P1。
 - 实修：`loadRemote()` 快照即显不变，三请求改 `await Promise.all([...])` 三个各自 `try/catch` 的 async 分支，分支体（`adoptServerDailyGoal` / `applyGrowth` / `announce`）逐字不变。测试 `tests/r582-profile-parallel-load.test.js`（源锁 + `new Function` 装载方法体的运行时同 tick / 慢 profile 不拖 growth / profile 失败不影响其余）。本地门：H5 eslint 0 / vitest 200 文件 1561 / `build:h5` `index-B90Wn8n0` / diff --check 空。
 - 发版：`~/r580/pages_deploy.sh` 复用，Pages `eO1hqVT6 → B90Wn8n0`，health 全程 `ec8206e5`。生产复验：修后 375 五请求同 tick 1.94s 发出（宿主快窗 2.3s）；1440 同 tick 0.0s 发出、慢窗 profile 4.55s / growth 5.68s（不再叠加）；`STATS_TEXT 10 累计做题 | 8 错题本 | 1 天` 修前后一致。

@@ -5,6 +5,32 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+## R582 经验：页面「慢」先分「发出时刻」与「往返时长」+ 复验要覆盖宿主快窗与慢窗
+
+- 宿主慢不是全部原因：用 CDP `page.on('request'/'response')` 打相对时刻表（`~/r582/timing.py <route> <base> <width>`，`about:blank` 冷加载 + `X-Kg-Probe`），把每条 `/api/*` 的**发出时刻**和**回包时刻**并排列出——「发出被前一条回包卡住」（串行 `await`）是本产品代码可控的部分，「单次往返 5s」才是宿主。我的页 `loadRemote` 三个 `try { await request() }` 串行让 growth 白等 5.4s，同页 `favs`/`badges` 早就同 tick 发出可对照。
+- 改编排类修复的生产复验口径：断言「五请求同 tick 发出」（结构事实），不要拿「总耗时变短」当证据——修后那次宿主恰好快（2.3s）不能归功于改动；必须再取一次慢窗（1440 窗 profile 4.55s）看串行叠加是否消失。
+- 单测装载 Vue 方法体做运行时断言：`methodBody(src, 'async loadRemote\\(\\)')` 切出方法体 → `new Function('request', …, 'return async function(){' + body + '}')` 注入 fake `request`（返回手控 Promise）→ 断言发出顺序数组 + 先 resolve 慢请求以外的那条看字段先落地；比只做正则源锁更能锁「不再串行」。
+- `walk580b.py` 场景参数化（`abc` / `cd` / `e`）后补测 1440 C/D 只需 `walk580b.py <prefix> 1440 cd`，清理前缀跟着轮次改（`clean582.py` 由 `clean580.py` 只改 `PREFIX` + `digest` 的 `startswith`）。
+
+## R581 经验：「同秒双行」类结论先并排打印时间戳 + Caddy 客户端归属 + 小程序离页路径只能源锁
+
+- 只读 DB 邻近对（`~/r581/q581a.sh`）必须把两行 `created_at` 并排打印再下判：R580 记的「09-07 同秒 NULL/有 uid 双行」实为 `19:57:57` vs `20:00:28`（151s），是读串。窄窗 Caddy（`q581b.sh`，`ts` ±600s 过滤 `practice_result`）用 UA + Referer 归属客户端：`Referer https://servicewechat.com/…` + UA 含 `wv` = **微信小程序**请求，不是 H5；`Referer https://kaogong.zalize.com/` = H5。Caddy access log 无 body，payload 只能靠 DB 行的 `n/correct/secs` 侧证。
+- 小程序上送字段的「有/无」要对源码时间线（`git log -S"uid: anonUid()" -- miniapp-native/...`）：设备上跑的是旧开发包时 NULL uid 是版本差，不是缺陷。
+- 30 天写路径分账（`q581c.sh`）按 `X-Kg-Probe` / UA(`X11; Linux x86_64` harness) / Referer 三分 natural / wx-mp / harness；非 2xx 归 harness 的不能拿来证明「自然会丢」。
+- 小程序 `pages/practice/practice.ts` 全答完离页：`onPick` 末题只 `saveSession()`、`finish()` 只挂 `onNext`/`autoNext(仅答对 1.2s)`，直接返回走 `onUnload → flushProgress` 把 N/N 写快照；R581 加 `finalizeIfAnswered()`（`_resultSent` 先置位 → 清 `_progressTimer` → 删快照 + `clearServerProgress` → `logAttempts` → `postPracticeResult`）+ `flushProgress` `_resultSent` 闸。无运行时通道（R536-1）→ 只有 `frontend-uni/tests/r581-miniapp-finalize-on-leave.test.js` 源锁 + `tsc`；`scripts/reason-toggle.test.ts` 的 `onUnload` 正则要随结构改。
+
+## R580 经验：离页类断言的入口/出口分账 + 「请求已发 ≠ 服务端已落 ≠ 客户端拿到回包」+ 清理脚本必须在宿主上跑
+
+- 练习页三条离页入口不是同一路径：runtime 顶栏返回 `onPageHeadBackButton → navigateBack/reLaunch → removePage → onUnload`；浏览器 Back `history.listen(direction==='back') → removeCurrentPages → onUnload`；页内退出图标 `quit() → quitSummary → (全答完 null 不弹层) → leave()`。**只有页内出口经过 `quit()`**，断言「离页副作用」时三条都要跑，且顶栏/Back 只能靠 `onUnload` 兜住。
+- 全答完停末题反馈态离页要求 `POST /api/practice_result` 恰 1、当前日每日一练 `POST /api/daily_set/submit` 恰 1、`answer_log` 恰 N 条无重复（`resultSent` 与 `_logged` 在**首个 `await` 前**置位，`leave → onUnload` 二次触发不重复）；往期补练 `daily_set/submit` 必须 0 次。断言按 `(uid, 表) 计数` 取服务端一手，不看 toast。
+- 生产请求结果分五档分别记录：sent / response HTTP 状态 / `requestfailed`（含 harness 硬 reload 造成的 `net::ERR_ABORTED`）/ console·pageerror / harness 断言。fin11 一手：宿主 ≈60s 不回 + 4×503，客户端 abort 但服务端 `answer_log 10 / daily_set_entries 1 / practice_results 1` 已落——**客户端 abort 不等于服务端未处理**，判 FAIL 前先 SSH 只读对账；`wait_posts` 慢宿主用 ≥75s。
+- 同一 Document 只改 hash 不触发 uni 路由 Back（`history.state` null/unknown 方向识别失败）——离页类复验必须 `about:blank` 冷加载 → 首页 CTA 真 `navigateTo` 进练习页；探针 `trace` 里见 `hook:onUnload` 才算真卸载。UID 必须在 `add_init_script` 里 app bootstrap 前写入。
+- 清理脚本 `~/r5xx/clean5xx.py` 的库路径是宿主 Docker volume，**必须经 SSH stdin 在宿主上跑**：`ssh … 'sudo -n timeout 170 python3 -u - ro|clean' < clean5xx.py`；本机直跑 `sqlite3.OperationalError: unable to open database file` 不是「已清理」。ro → clean → ro 三次独立 SSH，回执逐表相等 + 保护表 digest 前后一致才算完。
+- `practice_results.uid` 历史 287/288 空（列后加），自然对账不能按 uid；`practice_result` 接口无幂等键，任何「客户端重投」设计前要先加服务端幂等键（R580-1）。
+
+>>>>>>> 7ae34902 (docs(R582): 取证 + handoff + 状态.md + SKILL（我的页并发 / 1440 C/D 17/17 / 自然样本 / 清理 75 行）)
 ## R579 经验：续练「四个数」分账 + `merge_anon` 一手取证 + 退出层不是必经路径
 
 - 续练类断言必须分四个数：`done`（已答数）、`idx`（快照保存的下标，可能指向**已答**题——答完第 3 题停在反馈态即 `idx=2`）、落地下标（`resumeIndex`：当前题已答则其后第一道未答）、首页题号文案 `next`（= 落地下标 + 1）。R579 前 hero 用 `done+1`、落点用 `idx` → 「第 4/10」却落 3/10；修后 hero/落点同源。复验固定「答 k 题停在第 k 题反馈态 → 退出 → 首页 hero 第 k+1 / 续练卡已做 k → 落点 k+1 且无反馈、选项可点」，本机与远端（删 `pendingSession`+`practiceLaunch` 后 F5，远端用服务端 `picks` 判已答）各跑一遍。小程序首页只显「已做 n/N」，不要拿题号断言它。
