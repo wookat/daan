@@ -2162,7 +2162,8 @@ export default {
       const payload = collectPracticeProgress(
         this.items, this.idx, this.right, this.streak, this.bestStreak,
         this.lastModule || '', this.lastSubmodule || '',
-        this._source || '', this._ptitle || ''
+        this._source || '', this._ptitle || '',
+        this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null
       );
       if (!payload) return;
       request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
@@ -2234,11 +2235,18 @@ export default {
       this._source = snap.source || null;
       this._ptitle = snap.ptitle || null;
       this._reinforce = null;
+      this._redoItems = snap.redoItems;
+      this._reviewed = [];
+      this._daily = !!snap.daily;
+      this._dailyDate = snap.daily ? snap.daily.date : '';
+      this._dailyPast = snap.daily ? snap.daily.past : false;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
       this.session = true;
       this.startQTimer();
+      if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
+      else if (snap.daily) uni.showToast({ title: '继续' + (snap.daily.past ? '往期每日一练' : '今日一练') + ' · 第 ' + (this.idx + 1) + '/' + this.items.length + ' 题', icon: 'none' });
       this.saveSession();
       this.relinkWrongMids();
     },

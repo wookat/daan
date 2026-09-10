@@ -4312,25 +4312,30 @@ def _ensure_practice_progress(conn):
         conn.execute("ALTER TABLE practice_progress ADD COLUMN psource TEXT")
     if "ptitle" not in pcols:
         conn.execute("ALTER TABLE practice_progress ADD COLUMN ptitle TEXT")
+    if "daily" not in pcols:
+        conn.execute("ALTER TABLE practice_progress ADD COLUMN daily TEXT")
 
 
 def save_practice_progress(uid: str, qids: list[int], picks: dict, excl: dict, idx: int,
                            right: int, streak: int, best_streak: int,
                            module: str | None, submodule: str | None,
-                           psource: str | None = None, ptitle: str | None = None) -> None:
+                           psource: str | None = None, ptitle: str | None = None,
+                           daily: dict | None = None) -> None:
     conn = get_conn()
     _ensure_practice_progress(conn)
     conn.execute(
         """INSERT INTO practice_progress (uid, qids, picks, excl, idx, right_n, streak, best_streak,
-                                          module, submodule, psource, ptitle, updated_at)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                          module, submodule, psource, ptitle, daily, updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
            ON CONFLICT(uid) DO UPDATE SET
              qids=excluded.qids, picks=excluded.picks, excl=excluded.excl, idx=excluded.idx,
              right_n=excluded.right_n, streak=excluded.streak, best_streak=excluded.best_streak,
              module=excluded.module, submodule=excluded.submodule,
-             psource=excluded.psource, ptitle=excluded.ptitle, updated_at=excluded.updated_at""",
+             psource=excluded.psource, ptitle=excluded.ptitle, daily=excluded.daily,
+             updated_at=excluded.updated_at""",
         (uid, json.dumps(qids), json.dumps(picks), json.dumps(excl) if excl else None,
-         idx, right, streak, best_streak, module, submodule, psource, ptitle, time.time()),
+         idx, right, streak, best_streak, module, submodule, psource, ptitle,
+         json.dumps(daily) if daily else None, time.time()),
     )
     conn.commit()
     conn.close()
@@ -4355,6 +4360,7 @@ def get_practice_progress(uid: str) -> dict | None:
     d["qids"] = json.loads(d["qids"] or "[]")
     d["picks"] = json.loads(d["picks"] or "{}")
     d["excl"] = json.loads(d.get("excl") or "{}")
+    d["daily"] = json.loads(d["daily"]) if d.get("daily") else None
     return d
 
 

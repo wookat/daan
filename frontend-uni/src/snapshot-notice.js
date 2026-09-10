@@ -23,3 +23,15 @@ export function snapshotNotice(snapAt, online, now = Date.now(), noun = '错题'
   const tail = online === false ? '联网后自动更新' : '可稍后重试';
   return head + ' · 展示' + what + '，' + tail;
 }
+
+/** 续练卡等「进度」类旧快照的一行短注（无重试动作，进度以进入练习页时的最新回包为准） */
+export function snapshotProgressNote(snapAt, online, now = Date.now()) {
+  const head = online === false ? '当前离线' : '网络不稳定';
+  const what = snapAt ? snapshotAgeText(snapAt, now) + '缓存的进度' : '缓存的进度';
+  return head + ' · 以上为' + what;
+}
+
+/** navigator.onLine 快照；端不支持时 null（不断言离线） */
+export function netOnlineNow() {
+  return typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
+}

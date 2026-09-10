@@ -63,6 +63,7 @@
               <view class="rs-main">
                 <text class="rs-t">有一组未做完的练习</text>
                 <text class="rs-s">{{ prLabel(practiceResume) }} · 已做 {{ practiceResume.done }}/{{ practiceResume.total }} 题</text>
+                <text v-if="practiceResume.snapAt" class="rs-s rs-stale">{{ snapshotProgressNote(practiceResume.snapAt, practiceResume.netOnline) }}</text>
               </view>
               <kg-button variant="text" size="sm" aria-label="继续未做完的练习" @click="prContinue">去继续 ›</kg-button>
               <view class="rs-x" role="button" aria-label="放弃未完成练习" @click="prDrop"><l-icon name="x" :size="16" tone="muted" /></view>
@@ -371,12 +372,13 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr } from '../../api.js';
+import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr, staleAt } from '../../api.js';
+import { snapshotProgressNote, netOnlineNow } from '../../snapshot-notice.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { adoptServerExamProgress } from '../../exam-progress-sync.js';
-import { parsePendingPractice, parseRemotePractice, dailyPendingTitle, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';
+import { parsePendingPractice, parseRemotePractice, markRemoteResume, dailyPendingTitle, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
@@ -766,9 +768,12 @@ export default {
       if (clearedAt && Date.now() - clearedAt < 30 * 1000) return;
       request('/api/practice/resume?uid=' + encodeURIComponent(anonUid()))
         .then((d) => {
-          this.practiceResume = parseRemotePractice(d);
+          this.practiceResume = markRemoteResume(parseRemotePractice(d), staleAt(d), netOnlineNow());
         })
         .catch(() => {});
+    },
+    snapshotProgressNote(snapAt, online) {
+      return snapshotProgressNote(snapAt, online);
     },
     prModName(m) {
       return modLabel(m) || '上次练习';
@@ -1252,6 +1257,7 @@ export default {
 .rs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
 .rs-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .rs-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
+.rs-stale { color: var(--warn); }
 .rs-x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; margin-right: calc(var(--sp-12) * -1); flex-shrink: 0; }
 
 /* 横幅 */

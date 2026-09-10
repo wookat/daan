@@ -350,8 +350,19 @@ def api_practice_progress(body: dict, request: Request):
                               _bounded("right", len(qids)), _bounded("streak", len(qids)),
                               _bounded("best_streak", 10000),
                               module, submodule,
-                              psource=_opt_str("source", 64), ptitle=_opt_str("ptitle", 80))
+                              psource=_opt_str("source", 64), ptitle=_opt_str("ptitle", 80),
+                              daily=_daily_meta(body.get("daily")))
     return {"ok": True}
+
+
+def _daily_meta(raw) -> dict | None:
+    """每日一练场次标记 {date, past}；形状不对则按普通练习存（不 400，老客户端不带此键）。"""
+    if not isinstance(raw, dict):
+        return None
+    date = raw.get("date")
+    if not isinstance(date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        return None
+    return {"date": date, "past": bool(raw.get("past"))}
 
 
 @router.get("/api/practice/resume")
@@ -379,6 +390,7 @@ def api_practice_resume(uid: str):
         "submodule": prog["submodule"],
         "source": prog.get("psource"),
         "ptitle": prog.get("ptitle"),
+        "daily": prog.get("daily"),
         "t": prog["updated_at"],
     }
 

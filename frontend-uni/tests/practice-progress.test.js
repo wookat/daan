@@ -98,7 +98,7 @@ describe('parsePendingPractice（R323 首页续练卡·本机快照）', () => {
 describe('parseRemotePractice（R323 首页续练卡·服务端应答）', () => {
   it('有效应答返回 done/total/module（picks 字符串键兼容）', () => {
     const d = { items: [{ id: 1 }, { id: 2 }, { id: 3 }], picks: { 1: 'A', '3': 'B' }, module: 'ziliao' };
-    expect(parseRemotePractice(d)).toEqual({ done: 2, total: 3, module: 'ziliao', ptitle: '' });
+    expect(parseRemotePractice(d)).toEqual({ done: 2, total: 3, module: 'ziliao', ptitle: '', redo: false, daily: null });
   });
 
   it('fail-closed：空/无 items/全部已答返回 null', () => {
@@ -110,7 +110,7 @@ describe('parseRemotePractice（R323 首页续练卡·服务端应答）', () =>
 
   it('picks 非对象按无作答处理、module 非字符串回落空串', () => {
     const d = { items: [{ id: 1 }], picks: 'x', module: null };
-    expect(parseRemotePractice(d)).toEqual({ done: 0, total: 1, module: '', ptitle: '' });
+    expect(parseRemotePractice(d)).toEqual({ done: 0, total: 1, module: '', ptitle: '', redo: false, daily: null });
   });
 });
 
