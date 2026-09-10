@@ -308,6 +308,18 @@ function snapLoad(path) {
   }
 }
 
+// request() 以旧快照兜底时给返回值打标（按对象身份，不改数据本身），页面据此区分「真实回包」与「旧快照」：
+// 到期数等时效字段不能把旧快照当已同步，且应向用户明示网络异常与快照时刻
+const staleMarks = new WeakMap();
+function markStale(data, t) {
+  if (data && typeof data === 'object') staleMarks.set(data, t || Date.now());
+  return data;
+}
+/** 该数据若来自旧快照兜底返回快照时刻（ms），真实回包返回 0 */
+export function staleAt(data) {
+  return (data && typeof data === 'object' && staleMarks.get(data)) || 0;
+}
+
 // 快照即显（客户端 stale-while-revalidate）：同步读取最近成功快照供页面先行渲染，
 // 调用方随后照常 request()，真实响应到达后覆盖；无快照/超白名单返回 null
 export function snapPeek(path) {
@@ -363,7 +375,7 @@ export function request(path, opts = {}) {
         const snap = snapLoad(path);
         if (!snap) throw e;
         trackEvent('stale_fallback', 'h5', path.slice(0, 120));
-        return snap.d;
+        return markStale(snap.d, snap.t);
       })
   );
 }

@@ -107,11 +107,12 @@ describe('R569 load()：快照铺屏后即 provisional 落地；离线兜底也�
     expect(load.indexOf('this.applyPendingKp();', real)).toBeGreaterThan(real);
   });
   it('离线兜底分支（缓存有错题）应用深链筛选', () => {
-    const off = load.slice(load.indexOf('const c = getCachedMistakes'), load.indexOf("uni.showToast({ title: '当前无网络"));
+    const off = load.slice(load.indexOf('const c = getCachedMistakes'), load.indexOf('uni.showToast({ title: this.offlineText'));
     expect(off).toContain('this.offlineView = true;\n          this.applyPendingKp();');
   });
   it('dueSynced 只在真实 /api/review 回包后置真，换账号重置', () => {
-    expect(load).toContain('this.dueTotal = r.total || r.items.length;\n        this.dueSynced = true;');
+    // R571 起再加一层：/api/review 若是 request() 旧快照兜底（staleAt>0）同样不置真
+    expect(load).toContain('if (!staleR) {\n          this.due = r.items;\n          this.dueTotal = r.total || r.items.length;\n          this.dueSynced = true;');
     expect(method('resetAccountState')).toContain('this.dueSynced = false;');
     expect(script).toContain('dueSynced: false,');
   });
@@ -140,7 +141,7 @@ describe('R569 头卡：到期数未同步显「—」而非 0，不再假陈述
     expect(wait).toBeGreaterThan(-1);
     expect(wait).toBeLessThan(none);
     expect(tpl).toContain('正在同步今日待复习…');
-    expect(tpl).toContain('离线中 · 今日待复习需联网后同步');
+    expect(tpl).toContain("offlineView ? '今日待复习需网络恢复后同步'");
     // 「开始复习」CTA 仍以真实 due 为条件
     expect(tpl).toContain('<kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta"');
   });

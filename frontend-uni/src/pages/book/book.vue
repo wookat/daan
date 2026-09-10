@@ -1,6 +1,6 @@
 <template>
   <view class="wrap book" :class="{ 'is-review': reviewing }">
-    <kg-banner v-if="offlineView" tone="warn" icon="plane" text="当前离线 · 展示已缓存错题，联网后自动更新" :closable="false" class="offbar" />
+    <kg-banner v-if="offlineView" tone="warn" icon="plane" :text="offlineText" action-text="重试" :closable="false" class="offbar" @action="load" />
 
     <!-- 复习模式 -->
     <kg-card v-if="reviewing" class="review">
@@ -99,7 +99,7 @@
           <kg-card v-if="!loading || items.length || due.length" class="head">
             <kg-stat-row :items="headStats" />
             <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
-            <text v-else-if="items.length && !dueSynced" class="head-tip">{{ offlineView ? '离线中 · 今日待复习需联网后同步' : '正在同步今日待复习…' }}</text>
+            <text v-else-if="items.length && !dueSynced" class="head-tip">{{ offlineView ? '今日待复习需网络恢复后同步' : '正在同步今日待复习…' }}</text>
             <text v-else-if="items.length" class="head-tip">今天没有到期错题，待掌握 {{ todoItems.length }}，已掌握 {{ doneItems.length }}</text>
           </kg-card>
           <kg-card v-if="resumeInfo" variant="soft" class="resumecard" role="button" aria-label="继续刚才的复习">
@@ -592,6 +592,8 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
 <script>
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api.js';
+import { staleAt } from '../../api.js';
+import { snapshotNotice } from '../../snapshot-notice.js';
 import { cloudFavId } from '../../exam-fav.js';
 import { syncCloudFavs } from '../../fav-sync.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
@@ -633,6 +635,7 @@ export default {
       loading: true,
       loadErr: '',
       offlineView: false,
+      snapAt: 0,
       due: [],
       dueTotal: 0,
       dueSynced: false,
@@ -724,6 +727,10 @@ export default {
   },
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    offlineText() {
+      const online = typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
+      return snapshotNotice(this.snapAt, online);
+    },
     hasFilter() {
       return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
     },
@@ -1068,6 +1075,10 @@ export default {
     if (this._offLanded) {
       this._offLanded();
       this._offLanded = null;
+    }
+    if (this._onOnline && typeof window !== 'undefined') {
+      window.removeEventListener('online', this._onOnline);
+      this._onOnline = null;
     }
     if (this._kbHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._kbHandler);
@@ -1534,21 +1545,27 @@ export default {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
         if (seq !== this._loadSeq) return;
+        // request() 网络失败时会以旧快照兜底（resolve 而非 reject）：列表照常铺屏，但到期数不能拿旧值当已同步，
+        // 且页面顶部明示网络异常与快照时刻；旧快照不回写 mistakesCache（避免旧数据刷新时间戳）
+        const staleD = staleAt(d);
+        const staleR = staleAt(r);
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
-        this.due = r.items;
-        this.dueTotal = r.total || r.items.length;
-        this.dueSynced = true;
-        if (this.celebrate) this.dueLeft = this.dueTotal;
-        if (this.autoReview) {
-          this.autoReview = false;
-          if (this.due.length && !this.reviewing) this.startReview();
+        if (!staleR) {
+          this.due = r.items;
+          this.dueTotal = r.total || r.items.length;
+          this.dueSynced = true;
+          if (this.celebrate) this.dueLeft = this.dueTotal;
+          if (this.autoReview) {
+            this.autoReview = false;
+            if (this.due.length && !this.reviewing) this.startReview();
+          }
         }
-        this.offlineView = false;
+        this.setSnapshotView(staleD, staleR);
         this.applyPendingKp();
         this.applyPendingScanJump();
-        cacheMistakes(d.items, anonUid());
+        if (!staleD) cacheMistakes(d.items, anonUid());
         this.loadMastery();
-        setBookBadge(this.dueTotal);
+        if (!staleR) setBookBadge(this.dueTotal);
       } catch (e) {
         if (seq !== this._loadSeq) return;
         if (isStaleUidErr(e)) {
@@ -1558,9 +1575,10 @@ export default {
         const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+          this.setSnapshotView(c.ts || 0);
           this.offlineView = true;
           this.applyPendingKp();
-          uni.showToast({ title: '当前无网络，展示已缓存的错题', icon: 'none' });
+          uni.showToast({ title: this.offlineText, icon: 'none' });
         } else {
           this.loadErr = e.message || '网络异常';
           uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -1568,6 +1586,26 @@ export default {
         this._pendingScanQid = 0;
       }
       this.loading = false;
+    },
+    // 旧快照展示态：取最旧的快照时刻作横幅时间，首次进入时在 H5 监听 online 一次以兑现「联网后自动更新」；全真实回包时清除
+    setSnapshotView(...ats) {
+      const ts = ats.filter((t) => t > 0);
+      if (!ts.length) {
+        this.offlineView = false;
+        this.snapAt = 0;
+        return;
+      }
+      this.snapAt = Math.min(...ts);
+      this.offlineView = true;
+      // #ifdef H5
+      if (!this._onOnline && typeof window !== 'undefined') {
+        this._onOnline = () => {
+          this._onOnline = null;
+          if (this.offlineView) this.load();
+        };
+        window.addEventListener('online', this._onOnline, { once: true });
+      }
+      // #endif
     },
     // 入向 ?kp=/?kp3= 深链：列表到达后校验命中才生效（fail-closed：无命中丢弃并纠正 URL）
     // provisional：按屏上快照先落地筛选，不消费 pending、无命中不纠正 URL，真实回包后再终判一次
