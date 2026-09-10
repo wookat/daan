@@ -54,7 +54,7 @@ requestfailed 0、console 0、pageerror 0。截图 `~/r586/shots/v-{360,375,390,
 
 - 一手：`state()`（41 表命中 + uid 枚举 + 10 张保护表全表 sha256）在宿主上**单趟 27–84s**（同一天四次：84 / 49 / 65 / 27s，随宿主负载漂）；clean 模式 = before + delete + after 两趟 → 慢窗轻松 >170s。`timeout 170` 发 SIGTERM 时 Python 已 `commit()` 但还没到**唯一一句** `print`（在脚本末尾）→ stdout 空、exit 124；R585 launcher 既不落退出码也不落 stderr，只看 stdout 就成了「回执为空」。所以「空回执 + 独立 ro 已删净」完全自洽。
 - 修：① commit 后立刻单独吐一行 `{"deleted":…,"committed_at":…}` 再算 after 态（after 被杀也不丢删除回执）；② 逐阶段进度写 stderr（`[  49.5s] committed {...}`）；③ launcher 落 `EXIT`（124 = timeout）+ `stdout_bytes` + stderr 文件，stdout 空时明确打印「不能判成功/失败，须独立 ro 复核」；④ timeout 可调（本轮 400）。
-- 本轮清账：`ro 'test-r586-%'` 命中 `{'mistakes': 8, 'practice_results': 1, 'answer_log': 10, 'growth_events': 8, 'daily_set_entries': 1}` 2 uid → clean 删 28 行（逐表相等）→ after `{}` → 独立 `ro` `{}`；共享 `test-r562-modal-%` 42 保持；10 张保护表 digest before == after == 独立 ro。`test-r586-book` 只读走查 0 写入（另 `ro` 核）。
+- 本轮清账：`ro 'test-r586-%'` 命中 `{'mistakes': 8, 'practice_results': 1, 'answer_log': 10, 'growth_events': 8, 'daily_set_entries': 1}` 2 uid → clean 删 28 行（逐表相等）→ after `{}` → 独立 `ro` `{}`；共享 `test-r562-modal-%` 42 保持；10 张保护表 digest before == after == 独立 ro。`test-r586-book`（错题本空态走查，只发 GET + 1 次 `POST /api/track`）独立 `ro` 命中 `{'growth_events': 1}` → clean 删 1 → after `{}`（走查即使「只看」也会落 track 事件，清账不能凭「没答题」跳过 `ro`）。
 
 ## 7. 如实登记
 
