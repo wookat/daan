@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R579 经验：续练「四个数」分账 + `merge_anon` 一手取证 + 退出层不是必经路径
+
+- 续练类断言必须分四个数：`done`（已答数）、`idx`（快照保存的下标，可能指向**已答**题——答完第 3 题停在反馈态即 `idx=2`）、落地下标（`resumeIndex`：当前题已答则其后第一道未答）、首页题号文案 `next`（= 落地下标 + 1）。R579 前 hero 用 `done+1`、落点用 `idx` → 「第 4/10」却落 3/10；修后 hero/落点同源。复验固定「答 k 题停在第 k 题反馈态 → 退出 → 首页 hero 第 k+1 / 续练卡已做 k → 落点 k+1 且无反馈、选项可点」，本机与远端（删 `pendingSession`+`practiceLaunch` 后 F5，远端用服务端 `picks` 判已答）各跑一遍。小程序首页只显「已做 n/N」，不要拿题号断言它。
+- `merge_anon` 取证口径：合并**前后**直接 `SELECT COUNT(*)`/qid 列表 分别数匿名 uid 与目标 uid 的 `answer_log`（及 `practice_progress`/`growth_events`/`mistakes`/`merged_anon`），不要拿 `/api/growth total.n` 与本机进度对比当证据（`total.n` 计 `answer_log` 含强化、「错题本」计 `mistakes`，口径本就不同）。`merge_uid_rows` keyed 表走 `UPDATE OR IGNORE` + `DELETE` 匿名行——目标账号已有同题行时匿名行被丢，该分支需专门 fixture（目标先答同 qid）才触发，R579 未测。
+- 练习页**顶栏返回**不经 R563 退出层直接离页（`quit()` 只挂页内「退出」按钮；每答一题 `saveSession()` 已落盘，返回不清）——脚本不要死等「保留进度并退出」，按落地状态断言。清理：注册账号除 uid `uN` 行外还有 `users`、`auth_tokens.user_id`、`merged_anon.user_id`（整数列）三处；模板 `~/r579/clean579.py ro|clean`（41 表 + 前缀 + 8 张保护表 digest）。页面原文「15 / 累计做题 / 10 / 错题本」按相邻数字-标签配对读，勿把后一个数当前一个标签。
+
 ## R578 经验：完整 H5 链路黑盒脚本 + 第三级 `module` 回退的触发条件 + 「同页开下一场」类断言
 
 - 端到端脚本模板 `~/r578/journey.py <uid> <w> <qid> <tag3>`：`/home/ubuntu/venv-kg/bin/python`（系统 python 无 playwright）连既有 Chrome CDP `:29229`，`extra_http_headers={'X-Kg-Probe':'1'}`；深链 `#/pages/practice/practice?qid=&tag3=&module=`；题包用 `question` 字段（不是 `stem`）与 `.kg-q__stem` 对齐，按 `answer` 反选造全错；抓 `weak` 卡文本/按钮、点「练同考点」、录 reinforce 回包 `id/module/submodule/question_type/tag3` 与 `NAV TITLE`；产物 `q1/done/done-full/reinforce-q1 .png/.txt + journey.json + reqs.json`。别在末尾接 `| tail`（会被环境判成后台）。
