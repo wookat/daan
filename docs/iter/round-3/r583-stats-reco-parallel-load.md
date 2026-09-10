@@ -59,9 +59,20 @@ try { const d = await request(vp); if (!this.noteSnapshot(d)) { this.dueN = d.to
 
 H5 `npm run lint` 0 error（存量 20 warn 不变）/ `npx vitest run` 201 文件 1565 通过 / `npm run build:h5` 产物 `index-DEX103Q0.js` / `git diff --check` 空。小程序 / 后端未改不重跑。
 
-## 生产复验
+## 生产复验（`DEX103Q0`，`~/r583/verify583.py <uid> <width> [seed]`，`about:blank` 冷加载 + `X-Kg-Probe`）
 
-见 PR 评论与 `docs/handoff/状态.md`（发版后回填）。
+发版 `~/r583/pages_deploy.sh`：线上 bundle `index-DEX103Q0.js` 与本机一致、7 种 `Accept-Encoding` 均 `application/javascript`、7 条回归 URL 200、health 前后 `ec8206e5`。
+
+| 用例 | 结果 |
+| --- | --- |
+| 375 空 uid `test-r583-shots`（锁卡态） | `recommend / review / stats` **同 tick 0.0 发出**（修前 review 0.75 才发）；回 0.29 / 0.37 / 0.29 |
+| 1440 空 uid | 同 tick 0.0 / 0.0 / 0.01 发出；回 0.2 / 0.25 / 0.27 |
+| 375 有数据 uid `test-r583-v`（首页 CTA 每日一练答 10 → 8 错） | 同 tick 0.0 发出；`recommend 0.34 / stats 0.35 / review 0.38` 回；到期行 `0.13s「正在同步到期数…」→ 0.63s「8 题今日待复习」`（250ms 轮询粒度）；截图 `shots/375-verify-stats*.png`；API 81 全 2xx、console/pageerror 0 |
+| 1440 有数据 uid（宿主慢窗） | 同 tick 0.0 发出；`recommend 1.87 / stats 2.61 / review 3.9` 回；到期行 4.09s 落「8 题今日待复习」；API 12 全 2xx、console 0 |
+
+如实：1440 那窗 review 自身往返 3.9s > recommend 1.87s，本轮改动在该窗**不缩短**到期行落地时刻（串行下会是 1.87 + 3.9 ≈ 5.8s，并发下 3.9s——省的是 recommend 那一段），改善论证依赖「同 tick 发出」结构事实 + 单测，不拿总耗时当证据（R582 同口径）。
+
+清理 `~/r583/clean583.py` SSH stdin 宿主 ro → clean → ro：两 uid 34 行（`mistakes 8 / practice_results 1 / answer_log 10 / growth_events 14 / daily_set_entries 1`）删除回执逐表相等、41 表 0 残留、`test-r583-%` uid 列表空、共享 `test-r562-modal-%` 42 保持、10 张保护表 digest 三次一致。
 
 ## 登记
 
@@ -70,7 +81,7 @@ H5 `npm run lint` 0 error（存量 20 warn 不变）/ `npx vitest run` 201 文�
 
 ## UNTESTED
 
-- 修后慢窗对照（发版时宿主若处于快窗，只能用结构事实 + 单测证「同 tick 发出」）。
+- 修后「八条全挂 12s」那种极慢窗的对照（复验只拿到 1440 中等慢窗 review 3.9s）。
 - 登录态统计页 `loadReco`（同函数未单独实测）。
 - 首页 `loadHome` 回退分支的真实进入（7d 自然 0 次，未做注入）。
 - 小程序统计页（未改）；真机 / 真 SW / 其它浏览器 / 跨设备（R536-1 累计）。

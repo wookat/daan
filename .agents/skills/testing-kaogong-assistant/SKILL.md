@@ -3,6 +3,14 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R583 经验：串行链要按「加载器内部」逐个找 + 到期行类文案用轮询序列取证 + 宿主慢先三段分账再下判
+
+- 页面顶层 `Promise.all` 齐了不等于没有串行：`stats.vue` 顶层 8 个加载器并发，但 `loadReco()` 内部 recommend → review 仍串行。排查口径：对每个 `async load*()` 方法体 grep 相邻两处 `await request(`，再核两端点是否真依赖（`loadProfile → plan/today` 那种是真依赖，不改）。
+- 「正在同步到期数…」类过渡文案的复验不用单张截图，用 `verify583.py` 的 250ms 轮询记 `(t, innerText)` 变化序列（`DUE_SEQ`），并排 `request/response` 时刻表，才能说「到期行在 review 回包后 X ms 落地」。有数据态要先用首页 CTA 真答 10 题（`seed` 参数）解锁统计页，空 uid 只能证同 tick 不能证到期行。
+- 宿主慢三段分账：客户端 `time_starttransfer` − Caddy `duration` 拆成 pre（进 Caddy 前）/ dur / post；同时对比探针前后 `/proc/net/netstat` `ListenDrops/ListenOverflows`——不涨则不是 accept 队列丢包，别把「慢」直接写成「丢包」。Caddy `duration` 从读完请求起算，dur 小 ≠ 用户等得少。
+- Caddy POST 端点名要对后端路由（`grep -rn '@router.post' backend/app`），进度端点是 `/api/practice/progress` 不是 `/api/practice_progress`（表名），写错会得到 0 条并误判「无流量」。
+- 8 并发探针的报告文件要按 run 编号落盘（`burst-run1-*.txt`），第二次运行覆盖第一次会丢慢窗证据（R583 只抢救出 tail）。
+
 ## R582 经验：页面「慢」先分「发出时刻」与「往返时长」+ 复验要覆盖宿主快窗与慢窗
 
 - 宿主慢不是全部原因：用 CDP `page.on('request'/'response')` 打相对时刻表（`~/r582/timing.py <route> <base> <width>`，`about:blank` 冷加载 + `X-Kg-Probe`），把每条 `/api/*` 的**发出时刻**和**回包时刻**并排列出——「发出被前一条回包卡住」（串行 `await`）是本产品代码可控的部分，「单次往返 5s」才是宿主。我的页 `loadRemote` 三个 `try { await request() }` 串行让 growth 白等 5.4s，同页 `favs`/`badges` 早就同 tick 发出可对照。
