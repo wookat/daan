@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R572 经验：tabBar KeepAlive 页的「暖轮」必测 + `stale_fallback` 埋点按调用方计数
+- 统计/错题本/首页/我的是 uni tabBar KeepAlive 页：冷 Document（F5）旧快照态 PASS **不代表**暖轮 PASS——`data` 里上一轮真实回包留下的 `dueSynced=true` 等「已同步」标志会跨 `onShow → refresh` 沿用。R572 生产 F 就是：真实 2 due → 切错题本 → 只 `route.abort` `/api/review` → 切回统计，横幅出现但仍「2 题今日待复习」（375/1440 同复现）。凡「未同步显 —/待同步」类断言，必须补一条**同一 Document 内先真实后阻断再切回**的序列；恢复用可见「重试」按钮，先 unroute 再点。
+- 统计页故障注入用 `route.abort` 十端点 + 原生 F5（不是 `page.reload()` 才会命中 `snapPeek` 首帧）；`stale_fallback` 事件条数 ≥ 失败 GET 数：埋点在 `getCache.run` 在途合并之外按调用方各记一条（`/api/predict` 两处消费 → 1 GET 2 事件，R572-1），审计以 request-ledger 的唯一失败 GET 为准、事件数只作上界。
+- 生产 fixture 前置：研究阶段截图探针 uid（如 `test-r572-shots`）留下的行要在测试前对账并**经 lead 授权**后按精确 uid 一起清，报告单列「前置 N → 0」与本轮 uid 分开；共享 `test-r562-modal-%` 42 行永不动。
+- 宿主慢窗（health >5s）下解除阻断后的恢复可能耗尽 `request()` 12s/20s 内建重试 → 该项写 UNTESTED（环境）并附同刻独立 `curl` 时延，不额外人工重试冒充恢复。
+
 ## R571 经验：`apiSnap` 旧快照兜底（resolve 路径）的复验口径 + 浏览器在线态不是 Vue 响应式
 - `apiSnap:<path>` 的 localStorage 值是原始 JSON 字符串 `{t,d}`；`mistakesCache` 是 uni wrapper `{type:"object",data:{ts,uid,items}}`——两者别套同一个解码器。R571 起 `request()` 兜底回包带 `staleAt(data)>0` 身份：测旧快照态必须先拿到本人 `/api/mistakes` + `/api/review` 真实 200（两快照存在），再 `route.abort` 两条 GET 并 F5。断言：列表仍渲染、头卡 `—/—` + 「今日待复习需网络恢复后同步」、横幅「网络不稳定 · 展示刚刚缓存的错题，可稍后重试」+「重试」、`mistakesCache` **原字节**不变（不只比条数）、恰 2 条 `stale_fallback`。「不写旧角标」= 冷 Document 空角标未被旧 review 快照写上（uni tabBar 角标本来随 Document 重置），不是「跨 Document 保留原数字」。
 - resolve 路径不进 catch → **没有 toast** 是正确行为，别把缺 toast 记 FAIL；只有两条 API 都无快照才到真 reject 分支（R569 B′ 精确删两键）。
