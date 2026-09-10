@@ -3065,7 +3065,22 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+### R583（2026-09-11，H5 实修 + 生产复验；统计页 `loadReco` recommend/review 并发；首页 `loadHome` 回退论证不立项；宿主慢三段分账；0 后端）：分支 `devin/1789050787-r583-stats-reco-parallel`（从 #761 分支开，链含 #742–#761）→ PR #762；取证 `docs/iter/round-3/r583-stats-reco-parallel-load.md`
+- 研究（一手）：375 生产冷加载 `~/r583/timing.py /pages/stats/stats … 375`（修前 `B90Wn8n0`）——统计页 8 个加载器同 tick 0.0 发出，`/api/review` 恰在 `/api/recommend` 回包 0.75s 那一刻才发；极慢窗八条挂满 12s 内建重试再发一轮、review ≥12s 没发。`stats.vue` `loadReco()` 两个 `try { await request(…) }` 串行是唯一原因（两端点互不依赖；R582 我的页同型）。到期行三态由 `dueSynced` 驱动、只在 review 真实回包置位 → 「正在同步到期数…」时长 = recommend 往返 + review 往返。7d Caddy 自然 recommend p50 0.04 / review 0.01；8 并发探针 recommend Caddy 0.64–1.33s vs review 0.03s（轻的排在重的后面）。
+- 实修：`loadReco()` 快照即显不变，两请求改 `await Promise.all([...])` 两个各自 `try/catch` 的 async 分支，分支体逐字不变（R572 旧快照口径不变）。测试 `tests/r583-stats-reco-parallel-load.test.js`（源锁 + `new Function` 装载方法体运行时：同 tick、review 先落即 `dueN/dueSynced`、recommend reject 不影响、review 旧快照 → `dueSynced=false`）；`r572-stats-stale-snapshot.test.js` 两处源锁只跟随缩进。本地门 H5 lint 0 error / vitest 201 文件 1565 / build:h5 `index-DEX103Q0` / diff --check 空。
+- 首页 `loadHome()` 失败回退串行——论证**不立项**：`loadPlan()`/`loadBadges()` 不 await 已并发起跑，`await loadProfile()` 内 profile → `plan/today` 是真依赖；7d 自然 `/api/home_bundle` 48/48 全 200（非 2xx 全 harness）→ 回退分支 0 次进入，无用户可感知面。
+- 宿主慢三段分账（`~/r583/burst583.sh` 8 并发 × 10 轮 × 2 次只读，`burst-run1-slow.txt` / `burst-run2-report.txt`）：慢窗 80 条 24 条 >2s、最长 8.26s，pre-Caddy 0.9–7.05s / dur 0.1–4.3s / post 0.06–5.55s；快窗全 <1s（total 0.41 = pre 0.31 + dur 0.03 + post 0.07）；`ListenDrops 564 / ListenOverflows 4` 探针前后不变、`TCPTimeouts +164 / SynRetrans +140`（1 分钟）、`:443` SYN-RECV 30–49 来自扫描器 IP、`tcp_max_syn_backlog 128`。推断（未证）CPU 争抢非 accept 丢包，登记 R583-1；未改任何宿主配置、未 kill。
+- 发版 `~/r583/pages_deploy.sh`（复用 R580）Pages `B90Wn8n0 → DEX103Q0`，health 全程 `ec8206e5`。生产复验 `~/r583/verify583.py <uid> <w> [seed]`：375/1440 空 uid 三请求同 tick 0.0 发出；有数据 uid `test-r583-v`（首页 CTA 每日一练 10 题 8 错）375 同 tick、到期行 0.13s「正在同步到期数…」→ 0.63s「8 题今日待复习」（API 81 全 2xx、console 0）；1440 慢窗同 tick、recommend 1.87 / review 3.9 回、到期行 4.09s 落地（review 自身长，如实不归功）。
+- 自然样本（`q583a/d/e.sh` 只读 7d Caddy）：`POST /api/practice_result` 自然 200×4、非 2xx/status 0 **0**（500×2/400×2/503×7/502×1 全 harness）；`answer_log` 自然 200×53；`daily_set/submit` 自然 0。R580-1 继续登记不实施。探针把进度端点写成 `/api/practice_progress` 是错的（实际 `POST /api/practice/progress`），该行不作结论。
+- 清理 `~/r583/clean583.py` SSH stdin 宿主 ro → clean → ro：两 uid 34 行（`mistakes 8 / practice_results 1 / answer_log 10 / growth_events 14 / daily_set_entries 1`），41 表 0 残留、共享 42 保持、10 张保护表 digest 一致。
+- 375 统计页 / 错题本首屏走查：锁卡态 + 有数据态均无其它 P0/P1；雷达 0% 为真实 0% 非 R544-4 口径问题。
+- UNTESTED：极慢窗（八条挂 12s）修后对照、登录态统计页 `loadReco`、`loadHome` 回退真实进入、小程序统计页（未改）、真机/真 SW/其它浏览器/跨设备。
+- 下一步 R584：① 375 生产截图走查错题本 / 复习页首屏择一小改；② 全站 `snapPeek + request` 加载器还有没有内部串行链（只读枚举相邻 `await request` 再论证）；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）。
+
+>>>>>>> 200c5384 (docs(R583): 生产复验回填（DEX103Q0 375/1440 同 tick、到期行 0.63s 落地）+ handoff + 状态.md + SKILL)
 ### R582（2026-09-11，H5 实修 + 生产复验 + 1440 R580 C/D 补测；我的页 `loadRemote` 三端点并发；0 后端）：分支 `devin/1789048590-r582-profile-parallel-load`（从 #760 分支开，链含 #742–#760）→ PR #761；取证 `docs/iter/round-3/r582-profile-parallel-load.md`
 =======
 ### R582（2026-09-11，H5 实修 + 生产复验 + 1440 R580 C/D 补测；我的页 `loadRemote` 三端点并发；0 后端）：分支 `devin/1789048590-r582-profile-parallel-load`（从 #760 分支开，链含 #742–#760）；取证 `docs/iter/round-3/r582-profile-parallel-load.md`
