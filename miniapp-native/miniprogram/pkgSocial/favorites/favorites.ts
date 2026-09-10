@@ -339,12 +339,16 @@ Page({
           // 云条目也清本机同题（题页/报告页收藏同时写本机 favQuestions 与云端，只删云端的话 load() 合并时会以本机条目复活），与 H5 同口径
           const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
           wx.setStorageSync('favQuestions', locals);
+<<<<<<< HEAD
           // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
           const next = dropFavItem(this.items, this.data.folders, it);
           this.items = next.items;
           this.setData({ folders: next.folders, hasItems: this.items.length > 0 });
           this.render();
           this.load({ known: true });
+=======
+          this.load();
+>>>>>>> 09e72974 (R574-fix: 收藏页取消云收藏同时清本机同题（题页/对账写进 favQuestions 的条目不再在 load() 合并时复活）+ syncUrl 保留 history.state / onShow 回写地址栏（R546 同型）；小程序 onUnfav 同口径（生产复验 F 两条既有 FAIL）)
         } catch (err) {
           toastInfo((err as Error).message);
         }
