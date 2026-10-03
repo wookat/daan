@@ -1,6 +1,7 @@
 // AI 问答（对齐 frontend-uni/src/pages/ask/ask.vue）：拍题/文字讲解（流式优先）、答案卡、追问、同款题、
 // 存错题本、评分、进行中会话本机+服务端快照、历史会话跨设备同步与删除墓碑。
 import { postMistake, trackEvent } from '../../api/index';
+import { voiceStart, voiceStop } from '../../utils/kg-voice';
 import {
   deleteAskSession,
   fetchAccessInfo,
@@ -150,6 +151,8 @@ Page({
     qtext: '',
     uanswer: '',
     fuText: '',
+    voiceOn: false,
+    voiceFor: '' as '' | 'qtext' | 'fuText',
     textOpen: false,
     historyOpen: false,
     loading: false,
@@ -281,6 +284,33 @@ Page({
   },
   onFuText(e: WechatMiniprogram.Input) {
     this.setData({ fuText: e.detail.value });
+  },
+
+  // 语音输入（微信同声传译插件；未开通时降级为不可用）
+  onVoice(e: WechatMiniprogram.TouchEvent) {
+    const forField = (e.currentTarget.dataset.for === 'qtext' ? 'qtext' : 'fuText') as 'qtext' | 'fuText';
+    if (this.data.voiceOn) {
+      voiceStop();
+      return;
+    }
+    const field = forField;
+    const base = this.data[field] || '';
+    const ok = voiceStart({
+      onRecognize: (text) => this.setData({ [field]: base + text }),
+      onStop: (text) => {
+        this.setData({ voiceOn: false, [field]: (base + (text || '')).trim() });
+      },
+      onError: (msg) => {
+        this.setData({ voiceOn: false });
+        wx.showToast({ title: msg || '语音不可用', icon: 'none' });
+      },
+    });
+    if (!ok) {
+      wx.showToast({ title: '语音识别不可用：请在小程序后台开通同声传译插件', icon: 'none' });
+      return;
+    }
+    wx.showToast({ title: '正在聆听，说完点停止', icon: 'none' });
+    this.setData({ voiceOn: true, voiceFor: field });
   },
   onPickAns(e: WechatMiniprogram.TouchEvent) {
     const o = String(e.currentTarget.dataset.o || '');

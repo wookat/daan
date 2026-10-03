@@ -155,7 +155,8 @@
       <kg-group title="更多">
         <kg-row icon="calendar" title="学习计划" bind:click="onGoPlanSetup" />
         <kg-row icon="file-text" title="周学习报告" bind:click="onGoWeekly" />
-        <kg-row icon="calendar-check" title="学习日历" value="{{streak ? '连续 ' + streak + ' 天' : ''}}" last bind:click="onGoCalendar" />
+        <kg-row icon="calendar-check" title="学习日历" value="{{streak ? '连续 ' + streak + ' 天' : ''}}" bind:click="onGoCalendar" />
+        <kg-row icon="clock" title="番茄专注" last bind:click="onGoPomo" />
       </kg-group>
     </block>
   </view>

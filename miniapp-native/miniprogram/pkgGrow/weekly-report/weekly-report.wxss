@@ -301,6 +301,51 @@
   font-weight: 600;
 }
 
+/* 典型错题 */
+.tp-item {
+  padding: var(--sp-8) 0;
+  border-top: 1px solid var(--line);
+}
+
+.tp-item:first-of-type {
+  border-top: none;
+}
+
+.tp-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+}
+
+.tp-reason {
+  font-size: var(--fs-caption);
+  color: var(--warn);
+}
+
+.tp-stem {
+  display: block;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sub);
+  line-height: var(--lh-body);
+  color: var(--ink-2);
+}
+
+/* 下周计划 */
+.plan-focus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-8);
+  margin-top: var(--sp-4);
+}
+
+.plan-target {
+  display: block;
+  margin-top: var(--sp-8);
+  font-size: var(--fs-sub);
+  color: var(--ink-3);
+}
+
 /* 分享 */
 .share-img {
   width: 100%;

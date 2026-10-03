@@ -362,6 +362,8 @@ export interface WeeklyReportResp {
   mastery?: { up: WeeklyMasteryChange[]; down: WeeklyMasteryChange[] };
   reasons?: { reason: string; n: number; prev_n: number }[];
   mock?: { attempt_id: number; score: number; n_exams: number; event_title?: string; rank?: number | null; pct?: number } | null;
+  typical?: { mid: number; qid: number; module?: string; tag3?: string; reason?: string; stem: string }[];
+  plan?: { focus: string[]; items: WeeklyAction[]; target_n: number };
   actions?: WeeklyAction[];
 }
 

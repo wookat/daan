@@ -1,0 +1,95 @@
+.wrap {
+  padding: var(--page-x);
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+
+.dial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-16) 0;
+}
+
+.dial-phase {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.dial.focus .dial-phase {
+  color: var(--brand-text);
+}
+
+.dial.break .dial-phase {
+  color: var(--success);
+}
+
+.dial-time {
+  font-size: 56px;
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.dial-bar {
+  width: 70%;
+  height: 6px;
+  border-radius: var(--r-full);
+  background: var(--fill);
+  overflow: hidden;
+}
+
+.dial-fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--brand);
+  transition: width 0.4s linear;
+}
+
+.dial.break .dial-fill {
+  background: var(--success);
+}
+
+.dial-round {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.ops {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.stat-n {
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-semibold);
+  color: var(--ink);
+}
+
+.stat-k {
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}
+
+.tip {
+  display: block;
+  margin-top: var(--sp-8);
+  font-size: var(--fs-caption);
+  color: var(--ink-3);
+}

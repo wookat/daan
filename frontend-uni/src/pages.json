@@ -36,6 +36,10 @@
       "style": { "navigationBarTitleText": "学习日历" }
     },
     {
+      "path": "pages/stats/pomo",
+      "style": { "navigationBarTitleText": "番茄专注" }
+    },
+    {
       "path": "pages/team/join",
       "style": { "navigationBarTitleText": "加入刷题小队" }
     }

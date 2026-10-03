@@ -139,7 +139,8 @@
     <template v-if="tab === 'm'">
       <view class="fltbar">
         <kg-chip-row :model-value="favOnly ? -1 : MTYPES.indexOf(mtype)" :options="mtypeChips" class="chips grow" @update:model-value="setMtype(MTYPES[$event])" />
-        <kg-button variant="secondary" size="sm" icon="star" :tone="favOnly ? 'brand' : undefined" :aria-pressed="favOnly ? 'true' : 'false'" @click="toggleFavOnly">收藏{{ favIds.length ? ' ' + favIds.length : '' }}</kg-button>
+        <kg-button v-if="mtype === '我的笔记'" variant="secondary" size="sm" icon="square-pen" @click="openNoteForm()">写笔记</kg-button>
+        <kg-button v-else-if="mtype !== '热点'" variant="secondary" size="sm" icon="star" :tone="favOnly ? 'brand' : undefined" :aria-pressed="favOnly ? 'true' : 'false'" @click="toggleFavOnly">收藏{{ favIds.length ? ' ' + favIds.length : '' }}</kg-button>
       </view>
       <kg-skeleton v-if="loading" preset="cards" />
       <kg-empty-state
@@ -149,6 +150,62 @@
         cta-text="重试"
         @cta="loadMats()"
       />
+      <!-- 热点：内涵/角度/金句 三段式 -->
+      <template v-if="mtype === '热点'">
+        <kg-empty-state v-if="!loading && !hots.length" icon="book-open" title="暂无热点素材" desc="按「内涵/角度/金句」整理的热点将陆续上线" />
+        <view v-else class="mgrid">
+          <kg-card v-for="g in hots" :key="g.topic" class="m-item">
+            <view class="q-top" role="button" @click="expanded = expanded === 'h' + g.topic ? 0 : 'h' + g.topic">
+              <text class="m-topic">{{ g.topic }}</text>
+              <l-icon :name="expanded === 'h' + g.topic ? 'chevron-up' : 'chevron-down'" :size="18" tone="faint" />
+            </view>
+            <template v-if="expanded === 'h' + g.topic">
+              <view v-for="seg in hotSegRows(g)" :key="seg.name" class="hot-seg">
+                <text class="hot-seg-name">{{ seg.name }}</text>
+                <view v-for="m in seg.items" :key="m.id" class="hot-line">
+                  <text class="hot-line-t">{{ m.content }}</text>
+                  <view class="star-btn" role="button" @click="toggleFav(m)">
+                    <l-icon name="star" :size="16" :tone="favIds.includes(m.id) ? 'warn' : 'faint'" :fill="favIds.includes(m.id) ? 'currentColor' : 'none'" />
+                  </view>
+                </view>
+              </view>
+              <view v-if="g.others && g.others.length" class="hot-seg">
+                <text class="hot-seg-name hot-more" role="button" @click="hotOthers[g.topic] = !hotOthers[g.topic]">其他 {{ g.others.length }} 条 {{ hotOthers[g.topic] ? '收起' : '展开' }}</text>
+                <template v-if="hotOthers[g.topic]">
+                  <view v-for="m in g.others" :key="m.id" class="hot-line">
+                    <text class="hot-line-t">{{ m.type }}·{{ m.content }}</text>
+                    <view class="star-btn" role="button" @click="toggleFav(m)">
+                      <l-icon name="star" :size="16" :tone="favIds.includes(m.id) ? 'warn' : 'faint'" :fill="favIds.includes(m.id) ? 'currentColor' : 'none'" />
+                    </view>
+                  </view>
+                </template>
+              </view>
+            </template>
+          </kg-card>
+        </view>
+        <kg-button v-if="!loading && !mErr && !hotEnd && hots.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
+      </template>
+
+      <!-- 我的笔记 -->
+      <template v-else-if="mtype === '我的笔记'">
+        <kg-empty-state v-if="!loading && !notes.length" icon="square-pen" title="还没有笔记" desc="自己的金句、案例、写作框架记在这里，和素材库放在一起" cta-text="写一条" @cta="openNoteForm()" />
+        <view v-else class="mgrid">
+          <kg-card v-for="n in notes" :key="n.id" class="m-item">
+            <view class="q-top">
+              <text class="m-topic">{{ n.title || n.topic || '笔记' }}</text>
+              <text class="hist-time num">{{ fmtTime(n.updated_at || n.created_at) }}</text>
+            </view>
+            <text v-if="n.topic && n.title" class="note-topic">{{ n.topic }}</text>
+            <text class="m-content">{{ n.content }}</text>
+            <view class="m-foot">
+              <view class="grow"></view>
+              <kg-button variant="text" size="sm" icon="square-pen" @click="openNoteForm(n)">编辑</kg-button>
+              <kg-button variant="text" size="sm" @click="delNote(n)">删除</kg-button>
+            </view>
+          </kg-card>
+        </view>
+      </template>
+
       <kg-empty-state
         v-else-if="!shownMats.length"
         icon="book-open"
@@ -157,7 +214,7 @@
         :cta-text="favOnly || mtype !== '全部' ? '查看全部素材' : ''"
         @cta="setMtype('全部')"
       />
-      <view v-else class="mgrid">
+      <view v-else-if="mtype !== '热点' && mtype !== '我的笔记'" class="mgrid">
         <kg-card v-for="m in shownMats" :key="m.id" class="m-item">
           <view class="q-top">
             <view class="q-tags">
@@ -211,6 +268,19 @@
         </kg-card>
       </view>
     </template>
+
+    <!-- 写/编辑笔记 -->
+    <kg-sheet v-model="noteForm.open" :title="noteForm.id ? '编辑笔记' : '写笔记'">
+      <view class="note-form">
+        <text class="sheet-k">主题（选填）</text>
+        <input v-model="noteForm.topic" class="note-input" placeholder="如：基层治理" maxlength="60" />
+        <text class="sheet-k">标题（选填）</text>
+        <input v-model="noteForm.title" class="note-input" placeholder="如：万能开头句式" maxlength="60" />
+        <text class="sheet-k">内容</text>
+        <textarea v-model="noteForm.content" class="note-ta" placeholder="自己的金句、案例、框架…" maxlength="3000" />
+        <kg-button variant="primary" size="lg" block @click="saveNote">保存</kg-button>
+      </view>
+    </kg-sheet>
   </view>
 </template>
 
@@ -224,7 +294,7 @@ import { adoptServerDraft } from '../../shenlun-draft.js';
 import { segResizeMixin } from '../../seg-resize.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
-const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
+const MTYPES = ['全部', '热点', '金句', '案例', '政策理论', '范文', '我的笔记'];
 const TABS = [
   { label: '真题题库', value: 'q' },
   { label: '素材/范文', value: 'm' },
@@ -259,6 +329,12 @@ export default {
       recLoading: false,
       pinMid: 0,
       hitMid: 0,
+      hots: [],
+      hotEnd: false,
+      hOffset: 0,
+      hotOthers: {},
+      notes: [],
+      noteForm: { open: false, id: 0, topic: '', title: '', content: '' },
       favOnly: false,
       favIds: uni.getStorageSync('slMatFavIds') || [],
       favMats: uni.getStorageSync('slMatFavs') || [],
@@ -389,6 +465,8 @@ export default {
       this.loading = false;
     },
     async loadMats(append) {
+      if (this.mtype === '热点') return this.loadHots(append);
+      if (this.mtype === '我的笔记') return this.loadNotes();
       this.loading = !append;
       this.mErr = '';
       try {
@@ -641,6 +719,8 @@ export default {
       this.mtype = t;
       this.mOffset = 0;
       this.mEnd = false;
+      this.hOffset = 0;
+      this.hotEnd = false;
       this.syncFilterUrl();
       this.loadMats();
     },
@@ -649,8 +729,85 @@ export default {
       this.loadQs(true);
     },
     loadMoreMat() {
+      if (this.mtype === '热点') {
+        this.hOffset += 20;
+        this.loadHots(true);
+        return;
+      }
+      if (this.mtype === '我的笔记') return;
       this.mOffset += 20;
       this.loadMats(true);
+    },
+    // ---------- 热点三段式 ----------
+    hotSegRows(g) {
+      return ['内涵', '角度', '金句'].map((name) => ({ name, items: (g.segs && g.segs[name]) || [] })).filter((r) => r.items.length);
+    },
+    async loadHots(append) {
+      this.loading = !append;
+      this.mErr = '';
+      try {
+        const d = await request('/api/shenlun/hotspots?limit=20&offset=' + this.hOffset);
+        const items = d.items || [];
+        this.hotEnd = items.length < 20;
+        this.hots = append ? this.hots.concat(items) : items;
+      } catch (e) {
+        this.mErr = e.message || '网络异常';
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      }
+      this.loading = false;
+    },
+    // ---------- 我的笔记 ----------
+    async loadNotes() {
+      this.loading = true;
+      this.mErr = '';
+      try {
+        const uid = uni.getStorageSync('anonUid');
+        const d = await request('/api/shenlun/notes?uid=' + encodeURIComponent(uid));
+        this.notes = d.items || [];
+      } catch (e) {
+        this.mErr = e.message || '网络异常';
+        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+      }
+      this.loading = false;
+    },
+    openNoteForm(n) {
+      this.noteForm = n
+        ? { open: true, id: n.id, topic: n.topic || '', title: n.title || '', content: n.content }
+        : { open: true, id: 0, topic: '', title: '', content: '' };
+    },
+    async saveNote() {
+      const f = this.noteForm;
+      if (!f.content.trim()) {
+        uni.showToast({ title: '笔记内容为空', icon: 'none' });
+        return;
+      }
+      try {
+        const uid = uni.getStorageSync('anonUid');
+        await request('/api/shenlun/notes', {
+          method: 'POST',
+          data: { uid, id: f.id || undefined, topic: f.topic, title: f.title, content: f.content },
+        });
+        this.noteForm.open = false;
+        this.loadNotes();
+      } catch (e) {
+        uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+      }
+    },
+    delNote(n) {
+      uni.showModal({
+        title: '删除笔记',
+        content: '确定删除这条笔记吗？',
+        success: async (r) => {
+          if (!r.confirm) return;
+          try {
+            const uid = uni.getStorageSync('anonUid');
+            await request('/api/shenlun/notes/delete', { method: 'POST', data: { uid, id: n.id } });
+            this.loadNotes();
+          } catch (e) {
+            uni.showToast({ title: e.message || '删除失败', icon: 'none' });
+          }
+        },
+      });
     },
     // #ifdef H5
     onSlKeydown(e) {
@@ -827,6 +984,21 @@ export default {
 .m-content { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
 .m-foot { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-4); }
 .m-src { font-size: var(--fs-caption); color: var(--ink-3); max-width: 60%; }
+
+/* 热点三段式 */
+.hot-seg { margin-top: var(--sp-8); }
+.hot-seg-name { display: block; font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--brand); margin-bottom: var(--sp-4); }
+.hot-more { color: var(--ink-3); cursor: pointer; }
+.hot-line { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-4) 0; }
+.hot-line + .hot-line { border-top: 1px solid var(--line); }
+.hot-line-t { flex: 1; font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
+
+/* 我的笔记 */
+.note-topic { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-3); }
+.note-form { display: flex; flex-direction: column; gap: var(--sp-8); }
+.sheet-k { font-size: var(--fs-caption); color: var(--ink-3); }
+.note-input { height: var(--input-h); padding: 0 var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-md); font-size: var(--fs-body); color: var(--ink); background: var(--card); box-sizing: border-box; }
+.note-ta { width: 100%; box-sizing: border-box; min-height: 100px; padding: var(--sp-8) var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-md); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); background: var(--card); }
 
 /* #ifdef H5 */
 @media (min-width: 1024px) {

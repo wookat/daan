@@ -58,3 +58,16 @@
 .m-content { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
 .m-foot { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-4); }
 .m-src { font-size: var(--fs-caption); color: var(--ink-3); max-width: 60%; }
+
+/* 热点三段式 */
+.hot-seg { margin-top: var(--sp-8); }
+.hot-seg-name { display: block; font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--brand); margin-bottom: var(--sp-4); }
+.hot-more { color: var(--ink-3); cursor: pointer; }
+.hot-line { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-4) 0; }
+.hot-line + .hot-line { border-top: 1px solid var(--line); }
+.hot-line-t { flex: 1; font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
+
+/* 我的笔记 */
+.note-topic { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-3); }
+.note-input { height: var(--input-h); padding: 0 var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-md); font-size: var(--fs-body); color: var(--ink); background: var(--card); box-sizing: border-box; }
+.note-ta { width: 100%; box-sizing: border-box; min-height: 200rpx; padding: var(--sp-8) var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-md); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); background: var(--card); margin-bottom: var(--sp-8); }

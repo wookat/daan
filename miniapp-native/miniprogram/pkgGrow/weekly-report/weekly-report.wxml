@@ -66,7 +66,20 @@
         </view>
       </kg-card>
 
-      <!-- 6. 模考回顾 -->
+      <!-- 6. 典型错题 -->
+      <kg-card wx:if="{{r.typical.length}}" variant="raised" class="sec">
+        <text class="h">本周典型错题</text>
+        <view wx:for="{{r.typical}}" wx:key="mid" class="tp-item">
+          <view class="tp-meta">
+            <kg-tag wx:if="{{item.module}}" tone="brand">{{item.module}}</kg-tag>
+            <kg-tag wx:if="{{item.tag3}}" tone="neutral">{{item.tag3}}</kg-tag>
+            <text wx:if="{{item.reason}}" class="tp-reason">{{item.reason}}</text>
+          </view>
+          <text class="tp-stem">{{item.stem}}</text>
+        </view>
+      </kg-card>
+
+      <!-- 7. 模考回顾 -->
       <kg-card variant="raised" class="sec">
         <text class="h">模考回顾</text>
         <block wx:if="{{r.mock}}">
@@ -80,9 +93,15 @@
         </block>
       </kg-card>
 
-      <!-- 7. 下周行动 -->
-      <kg-card wx:if="{{r.actions.length}}" variant="raised" class="sec">
-        <text class="h">下周行动</text>
+      <!-- 8. 下周计划 -->
+      <kg-card wx:if="{{r.plan || r.actions.length}}" variant="raised" class="sec">
+        <text class="h">下周计划</text>
+        <block wx:if="{{r.plan}}">
+          <view wx:if="{{r.plan.focus.length}}" class="plan-focus">
+            <kg-tag wx:for="{{r.plan.focus}}" wx:key="*this" tone="warn">攻克 {{item}}</kg-tag>
+          </view>
+          <text wx:if="{{r.plan.target_n}}" class="plan-target">目标：完成 {{r.plan.target_n}} 题</text>
+        </block>
         <view wx:for="{{r.actions}}" wx:key="index" class="act-row" aria-role="button" hover-class="row--hover" data-i="{{index}}" bind:tap="onAction">
           <text class="act-t">{{item.title}}</text>
           <text class="act-go">去完成</text>

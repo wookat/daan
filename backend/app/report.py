@@ -5,6 +5,7 @@
 """
 import calendar
 import json
+import re
 import time
 
 from fastapi import APIRouter, HTTPException
@@ -208,6 +209,42 @@ def _build(uid: str, ws: float) -> dict | None:
         if not mock:
             actions.append({"type": "mock", "title": "这周没模考，周六九点来一套", "url": "/pkgA/exam/contest"})
 
+        # 典型错题：本周新增错题里最具代表性的 3 条——优先命中本人薄弱考点（weak_tag3s），
+        # 其余按新增时间倒序；前端点击回错题本详情。
+        wrows = conn.execute(
+            """SELECT m.id mid, m.question_id qid, m.error_reason, m.created_at,
+                      q.module, q.submodule, q.tag3, q.question
+               FROM mistakes m LEFT JOIN questions q ON q.id=m.question_id
+               WHERE m.uid=? AND m.created_at>=? AND m.created_at<?
+               ORDER BY m.created_at DESC LIMIT 50""",
+            (uid, ws, we),
+        ).fetchall()
+        weak_set = db.weak_tag3s(uid) if wrows else set()
+        wrows = sorted(
+            wrows,
+            key=lambda r: (0 if (r["tag3"] or "") in weak_set else 1, -r["created_at"]),
+        )[:3]
+        typical = [
+            {
+                "mid": r["mid"],
+                "qid": r["qid"],
+                "module": MOD_NAMES.get(r["module"], r["module"] or ""),
+                "tag3": r["tag3"] or "",
+                "reason": r["error_reason"] or "",
+                "stem": re.sub(r"\s+", "", r["question"] or "")[:48],
+            }
+            for r in wrows
+        ]
+
+        # 下周计划：actions 之外的结构化段——聚焦考点（薄弱前三）+ 目标量（沿用本周量级作基线）
+        plan = {
+            "focus": [
+                (w.get("label") or w.get("submodule") or "") for w in weak[:3]
+            ],
+            "items": actions,
+            "target_n": max(20, cur["n"]),
+        }
+
         return {
             "status": "ok",
             "week_start": ws,
@@ -224,8 +261,10 @@ def _build(uid: str, ws: float) -> dict | None:
             },
             "mastery": {"up": ups, "down": downs},
             "reasons": cur_reasons,
+            "typical": typical,
             "mock": mock,
             "actions": actions,
+            "plan": plan,
         }
     finally:
         conn.close()

@@ -144,43 +144,106 @@
   <block wx:if="{{tab === 'm'}}">
     <view class="fltbar">
       <view class="grow"><kg-chip-row options="{{mtypeChips}}" value="{{favOnly ? '__fav' : mtype}}" bind:change="onMtype" /></view>
-      <kg-button variant="secondary" size="sm" icon="star" bind:click="toggleFavOnly">收藏{{mFavCount ? ' ' + mFavCount : ''}}</kg-button>
+      <kg-button wx:if="{{mtype === '我的笔记'}}" variant="secondary" size="sm" icon="square-pen" bind:click="onNoteAdd">写笔记</kg-button>
+      <kg-button wx:elif="{{mtype !== '热点'}}" variant="secondary" size="sm" icon="star" bind:click="toggleFavOnly">收藏{{mFavCount ? ' ' + mFavCount : ''}}</kg-button>
     </view>
     <t-skeleton wx:if="{{loading}}" theme="paragraph" animation="gradient" />
     <kg-empty wx:elif="{{mErr}}" icon="wifi-off" title="加载失败：{{mErr}}" ctaText="重试" bind:cta="loadMats" />
-    <kg-empty
-      wx:elif="{{!mats.length}}"
-      icon="book-open"
-      title="{{favOnly ? '还没有收藏素材' : '暂无素材'}}"
-      desc="{{favOnly ? '点素材右上角星标收藏，方便写作时随手翻' : '换个类型看看，金句/案例/范文陆续补充'}}"
-      ctaText="{{favOnly || mtype !== '全部' ? '查看全部素材' : ''}}"
-      bind:cta="resetMtype"
-    />
-    <view wx:else class="grid">
-      <kg-card wx:for="{{mats}}" wx:key="id">
-        <view class="q-top">
-          <view class="q-tags">
+
+    <!-- 热点：内涵/角度/金句 三段式 -->
+    <block wx:if="{{mtype === '热点'}}">
+      <kg-empty wx:if="{{!loading && !hots.length}}" icon="book-open" title="暂无热点素材" desc="按「内涵/角度/金句」整理的热点将陆续上线" />
+      <view wx:else class="grid">
+        <kg-card wx:for="{{hots}}" wx:key="topic">
+          <view class="q-top" data-topic="{{item.topic}}" bind:tap="onHotExpand" role="button">
             <text class="m-topic">{{item.topic}}</text>
-            <kg-tag wx:if="{{item.hit}}" tone="warn">搜索命中</kg-tag>
+            <l-icon name="{{item.expanded ? 'chevron-up' : 'chevron-down'}}" size="18" tone="faint" />
           </view>
-          <view class="q-top-r">
-            <kg-tag tone="neutral">{{item.type}}</kg-tag>
-            <view class="star-btn" role="button" aria-label="{{item.faved ? '取消收藏' : '收藏素材'}}" data-id="{{item.id}}" bind:tap="onMatFav">
-              <l-icon name="star" size="20" tone="{{item.faved ? 'warn' : 'faint'}}" filled="{{item.faved}}" />
+          <block wx:if="{{item.expanded}}">
+            <view wx:for="{{item.segRows}}" wx:for-item="seg" wx:key="name" class="hot-seg">
+              <text class="hot-seg-name">{{seg.name}}</text>
+              <view wx:for="{{seg.items}}" wx:for-item="m" wx:key="id" class="hot-line">
+                <text class="hot-line-t">{{m.content}}</text>
+                <view class="star-btn" role="button" data-id="{{m.id}}" bind:tap="onHotFav">
+                  <l-icon name="star" size="16" tone="{{m.faved ? 'warn' : 'faint'}}" filled="{{m.faved}}" />
+                </view>
+              </view>
+            </view>
+            <view wx:if="{{item.others.length}}" class="hot-seg">
+              <text class="hot-seg-name hot-more" data-topic="{{item.topic}}" bind:tap="toggleHotOthers" role="button">其他 {{item.others.length}} 条 {{item.othersOpen ? '收起' : '展开'}}</text>
+              <block wx:if="{{item.othersOpen}}">
+                <view wx:for="{{item.others}}" wx:for-item="m" wx:key="id" class="hot-line">
+                  <text class="hot-line-t">{{m.type}}·{{m.content}}</text>
+                  <view class="star-btn" role="button" data-id="{{m.id}}" bind:tap="onHotFav">
+                    <l-icon name="star" size="16" tone="{{m.faved ? 'warn' : 'faint'}}" filled="{{m.faved}}" />
+                  </view>
+                </view>
+              </block>
+            </view>
+          </block>
+        </kg-card>
+      </view>
+      <view wx:if="{{!loading && !mErr && !hotEnd && hots.length >= 20}}" class="more">
+        <kg-button variant="secondary" size="md" block bind:click="loadMoreMat">加载更多</kg-button>
+      </view>
+    </block>
+
+    <!-- 我的笔记 -->
+    <block wx:elif="{{mtype === '我的笔记'}}">
+      <kg-empty wx:if="{{!loading && !notes.length}}" icon="square-pen" title="还没有笔记" desc="自己的金句、案例、写作框架记在这里，和素材库放在一起" ctaText="写一条" bind:cta="onNoteAdd" />
+      <view wx:else class="grid">
+        <kg-card wx:for="{{notes}}" wx:key="id">
+          <view class="q-top">
+            <text class="m-topic">{{item.title || item.topic || '笔记'}}</text>
+            <text class="hist-time">{{item.timeText}}</text>
+          </view>
+          <text wx:if="{{item.topic && item.title}}" class="note-topic">{{item.topic}}</text>
+          <text class="m-content">{{item.content}}</text>
+          <view class="m-foot">
+            <view class="grow" />
+            <kg-button variant="text" size="sm" icon="square-pen" data-id="{{item.id}}" bind:click="onNoteEdit">编辑</kg-button>
+            <kg-button variant="text" size="sm" data-id="{{item.id}}" bind:click="onNoteDel">删除</kg-button>
+          </view>
+        </kg-card>
+      </view>
+    </block>
+
+    <!-- 通用素材列表 -->
+    <block wx:else>
+      <kg-empty
+        wx:if="{{!mats.length}}"
+        icon="book-open"
+        title="{{favOnly ? '还没有收藏素材' : '暂无素材'}}"
+        desc="{{favOnly ? '点素材右上角星标收藏，方便写作时随手翻' : '换个类型看看，金句/案例/范文陆续补充'}}"
+        ctaText="{{favOnly || mtype !== '全部' ? '查看全部素材' : ''}}"
+        bind:cta="resetMtype"
+      />
+      <view wx:else class="grid">
+        <kg-card wx:for="{{mats}}" wx:key="id">
+          <view class="q-top">
+            <view class="q-tags">
+              <text class="m-topic">{{item.topic}}</text>
+              <kg-tag wx:if="{{item.hit}}" tone="warn">搜索命中</kg-tag>
+            </view>
+            <view class="q-top-r">
+              <kg-tag tone="neutral">{{item.type}}</kg-tag>
+              <view class="star-btn" role="button" aria-label="{{item.faved ? '取消收藏' : '收藏素材'}}" data-id="{{item.id}}" bind:tap="onMatFav">
+                <l-icon name="star" size="20" tone="{{item.faved ? 'warn' : 'faint'}}" filled="{{item.faved}}" />
+              </view>
             </view>
           </view>
-        </view>
-        <text class="m-content {{item.expanded ? '' : 'ellip3'}}" data-id="{{item.id}}" bind:tap="onMatExpand">{{item.content}}</text>
-        <view class="m-foot">
-          <text wx:if="{{item.source}}" class="m-src ellip">出处：{{item.source}}</text>
-          <view class="grow" />
-          <kg-button variant="text" size="sm" icon="copy" data-id="{{item.id}}" bind:click="copyMatLink">复制链接</kg-button>
-        </view>
-      </kg-card>
-    </view>
-    <view wx:if="{{!loading && !mErr && !favOnly && !mEnd && mats.length >= 20}}" class="more">
-      <kg-button variant="secondary" size="md" block bind:click="loadMoreMat">加载更多</kg-button>
-    </view>
+          <text class="m-content {{item.expanded ? '' : 'ellip3'}}" data-id="{{item.id}}" bind:tap="onMatExpand">{{item.content}}</text>
+          <view class="m-foot">
+            <text wx:if="{{item.source}}" class="m-src ellip">出处：{{item.source}}</text>
+            <view class="grow" />
+            <kg-button variant="text" size="sm" icon="copy" data-id="{{item.id}}" bind:click="copyMatLink">复制链接</kg-button>
+          </view>
+        </kg-card>
+      </view>
+      <view wx:if="{{!loading && !mErr && !favOnly && !mEnd && mats.length >= 20}}" class="more">
+        <kg-button variant="secondary" size="md" block bind:click="loadMoreMat">加载更多</kg-button>
+      </view>
+    </block>
   </block>
 
   <!-- 作答记录 -->
@@ -206,5 +269,18 @@
       </kg-card>
     </view>
   </block>
+
+  <!-- 写/编辑笔记 -->
+  <kg-sheet visible="{{noteForm.open}}" title="{{noteForm.id ? '编辑笔记' : '写笔记'}}" bind:close="onNoteClose">
+    <view class="sheet-body">
+      <text class="sheet-k">主题（选填）</text>
+      <input class="note-input" value="{{noteForm.topic}}" placeholder="如：基层治理" maxlength="60" data-k="topic" bindinput="onNoteField" />
+      <text class="sheet-k">标题（选填）</text>
+      <input class="note-input" value="{{noteForm.title}}" placeholder="如：万能开头句式" maxlength="60" data-k="title" bindinput="onNoteField" />
+      <text class="sheet-k">内容</text>
+      <textarea class="note-ta" value="{{noteForm.content}}" placeholder="自己的金句、案例、框架…" maxlength="3000" data-k="content" bindinput="onNoteField" />
+      <kg-button variant="primary" size="lg" block bind:click="onNoteSave">保存</kg-button>
+    </view>
+  </kg-sheet>
 </view>
 </scroll-view>
