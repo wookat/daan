@@ -681,6 +681,7 @@ export default {
         material: m ? m.material : '',
         images: q.image ? [this.imgUrl(q.image)] : [],
         difficulty: qDifficulty(q),
+        difficultyLabel: q.difficulty_label || null,
         accuracy: q.correct_ratio,
         attemptCount: q.attempt_count,
         isReal: !!q.is_real,

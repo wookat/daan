@@ -206,7 +206,7 @@ function extractLetter(s: string | null | undefined): string {
 
 Page({
   data: {
-    tab: 'todo' as 'todo' | 'done' | 'fav',
+    tab: 'todo' as 'todo' | 'done' | 'sticky' | 'fav',
     loading: true,
     all: [] as MRow[],
     shown: [] as MRow[],
@@ -352,6 +352,7 @@ Page({
       const typeOptions = Array.from(new Set(all.map((x) => x.typeName).filter(Boolean)));
       const todoCount = all.filter((x) => !x.mastered).length;
       const doneCount = all.filter((x) => !!x.mastered).length;
+      const stickyCount = all.filter((x) => !x.mastered && x.mastery_state === 'sticky_wrong').length;
       const favs = f.items || [];
       this.setData({
         all,
@@ -362,9 +363,17 @@ Page({
         folders: fd.items || [],
         todoCount,
         doneCount,
+        toolItems: [
+          { key: 'redo', icon: 'shuffle', label: '错题重练' },
+          ...(stickyCount ? [{ key: 'stickyPaper', icon: 'target', label: '易错专项卷' }] : []),
+          { key: 'ai', icon: 'sparkles', label: 'AI 分析' },
+          { key: 'manual', icon: 'pencil-line', label: '手录错题' },
+          { key: 'recap', icon: 'chart-column', label: '本月复盘' },
+        ],
         tabOpts: [
           { value: 'todo', label: `待掌握 ${todoCount}` },
           { value: 'done', label: `已掌握 ${doneCount}` },
+          { value: 'sticky', label: `易错 ${stickyCount}` },
           { value: 'fav', label: `收藏 ${favs.length}` },
         ],
         due: r.items || [],
@@ -389,7 +398,13 @@ Page({
   applyTab() {
     const { tab, all, sortBy, filterMod, filterType } = this.data;
     let shown =
-      tab === 'todo' ? all.filter((x) => !x.mastered) : tab === 'done' ? all.filter((x) => !!x.mastered) : [];
+      tab === 'todo'
+        ? all.filter((x) => !x.mastered)
+        : tab === 'done'
+          ? all.filter((x) => !!x.mastered)
+          : tab === 'sticky'
+            ? all.filter((x) => !x.mastered && x.mastery_state === 'sticky_wrong')
+            : [];
     if (filterMod) shown = shown.filter((x) => x.modName === filterMod);
     if (filterType) shown = shown.filter((x) => x.typeName === filterType);
     shown = [...shown];
@@ -431,7 +446,7 @@ Page({
     this.applyTab();
   },
   onTab(e: ChipChange) {
-    this.setData({ tab: e.detail.value as 'todo' | 'done' | 'fav' });
+    this.setData({ tab: e.detail.value as 'todo' | 'done' | 'sticky' | 'fav' });
     this.applyTab();
   },
   // 「更多」分组菜单：只做弹层开关 + 把选中项转发给原有处理函数（dataset 原样传递）
@@ -750,6 +765,31 @@ Page({
       const skipped = Math.max(0, Number(d.skipped) || 0);
       wx.navigateTo({
         url: '/pages/practice/practice?mode=redoset&source=redo&count=' + d.items.length + (skipped ? '&skipped=' + skipped : ''),
+      });
+    } catch (err) {
+      wx.showToast({ title: '加载失败：' + (err as Error).message, icon: 'none' });
+    }
+  },
+
+  // B2：长期易错专项出卷——只出累计再错 ≥2 且未掌握的错题
+  async onStickyPaper() {
+    const mids = this.data.all
+      .filter((x) => !x.mastered && x.mastery_state === 'sticky_wrong')
+      .map((x) => x.id);
+    if (!mids.length) {
+      wx.showToast({ title: '暂无长期易错错题', icon: 'none' });
+      return;
+    }
+    try {
+      const d = await redoMistakesFiltered({ limit: 10, mids });
+      if (!d.items || !d.items.length) {
+        wx.showToast({ title: '易错题未能匹配到题库原题', icon: 'none' });
+        return;
+      }
+      wx.setStorageSync('redoSet', d.items);
+      const skipped = Math.max(0, Number(d.skipped) || 0);
+      wx.navigateTo({
+        url: '/pages/practice/practice?mode=redoset&source=sticky&count=' + d.items.length + (skipped ? '&skipped=' + skipped : ''),
       });
     } catch (err) {
       wx.showToast({ title: '加载失败：' + (err as Error).message, icon: 'none' });
@@ -1201,7 +1241,8 @@ Page({
     if (k === 'redo') {
       if (this.data.todoCount) this.onRedo();
       else wx.showToast({ title: '暂无待掌握错题', icon: 'none' });
-    } else if (k === 'ai') this.onAiAnalysis();
+    } else if (k === 'stickyPaper') this.onStickyPaper();
+    else if (k === 'ai') this.onAiAnalysis();
     else if (k === 'manual') this.onEntryOpen();
     else if (k === 'recap') {
       if (this.data.recap.total) this.onToggleRecap();

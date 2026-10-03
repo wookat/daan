@@ -49,7 +49,7 @@ import { redoSkippedNote } from '../../utils/redo-note';
 import { fixReportOf, fixReportText, redoReportOf, redoReportTip } from '../../utils/review-advance';
 import type { FixReport, RedoReport } from '../../utils/review-advance';
 import { imgUrl } from '../../utils/request';
-import { kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
+import { difficultyTag, kpChain, qStatLine, sourceLabel } from '../../utils/q-stat';
 import { modName, recordStat, streakDays } from '../../utils/stats';
 
 const BADGE_MILESTONES = [3, 7, 14, 30, 60, 100];
@@ -131,6 +131,7 @@ Page({
     items: [] as PQuestion[],
     idx: 0,
     cur: null as PQuestion | null,
+    diffTag: null as ReturnType<typeof difficultyTag>,
     curImg: '',
     curStat: '',
     curKp: '',
@@ -384,6 +385,7 @@ Page({
       cur,
       curImg: imgUrl(cur.image),
       curStat: qStatLine(cur),
+      diffTag: difficultyTag(cur),
       curKp: kpChain(cur, modName(cur.module)),
       curSource: sourceLabel(cur),
       picked: cur._picked || '',
@@ -828,6 +830,7 @@ Page({
       cur: q,
       curImg: imgUrl(q.image),
       curStat: qStatLine(q),
+      diffTag: difficultyTag(q),
       curKp: kpChain(q, modName(q.module)),
       curSource: sourceLabel(q),
       picked: q._picked || '',

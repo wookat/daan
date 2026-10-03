@@ -27,6 +27,20 @@
             </view>
           </kg-card>
 
+          <!-- B3：难度画像 + 作答均速 -->
+          <kg-card v-if="diffRows.length || secsText" class="diff">
+            <view class="grp-h">
+              <text class="grp-name">难度画像</text>
+              <text class="grp-meta">按全站校准难度档</text>
+            </view>
+            <view v-for="b in diffRows" :key="b.label" class="dim-row">
+              <text class="dim-name">{{ b.label }}</text>
+              <view class="dim-bar"><view class="dim-fill" :style="{ width: b.accPct + '%' }" /></view>
+              <text class="dim-n num">{{ b.accText }} · {{ b.n }}题</text>
+            </view>
+            <text v-if="secsText" class="dim-secs">{{ secsText }}</text>
+          </kg-card>
+
           <!-- 模块导航：≥1024 竖排在辅栏；移动端为横向 chip -->
           <kg-card class="side-nav" :padding="12">
             <view v-for="m in map.modules" :key="'s-' + m.module" class="side-item" :class="{ on: curMod === m.module }" role="button" @click="curMod = m.module">
@@ -138,7 +152,7 @@ const VIEW_OPTS = [
 export default {
   mixins: [segResizeMixin],
   data() {
-    return { LEVELS, map: null, cold: false, nTotal: 0, need: 30, curMod: '', selected: null, selGrp: null, err: '', view: 'grid' };
+    return { LEVELS, map: null, cold: false, nTotal: 0, need: 30, curMod: '', selected: null, selGrp: null, err: '', view: 'grid', diffRows: [], secsText: '' };
   },
   computed: {
     curSubs() {
@@ -187,10 +201,21 @@ export default {
       this.need = d.need || 30;
       if (d.cold) {
         this.cold = true;
+        this.diffRows = [];
+        this.secsText = '';
         return;
       }
       this.cold = false;
       this.map = d;
+      // B3：难度画像（后端 by_difficulty 分档 × 正确率）与作答均速
+      this.diffRows = (d.by_difficulty || [])
+        .filter((b) => b.n > 0)
+        .map((b) => ({ label: b.label, n: b.n, accPct: Math.round(b.acc * 100), accText: Math.round(b.acc * 100) + '%' }));
+      const bs = d.by_secs;
+      this.secsText =
+        bs && bs.correct_avg != null && bs.wrong_avg != null
+          ? `答对均速 ${bs.correct_avg}s · 答错均速 ${bs.wrong_avg}s${bs.wrong_avg > bs.correct_avg * 1.3 ? '（错题多因犹豫）' : bs.correct_avg > bs.wrong_avg * 1.5 ? '（错题多因抢快）' : ''}`
+          : '';
       if (this._pendingMod && d.modules.some((x) => x.module === this._pendingMod)) {
         this.curMod = this._pendingMod;
         this._pendingMod = '';
@@ -280,6 +305,17 @@ export default {
 .sheet-l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sheet-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sheet-s { font-size: var(--fs-caption); color: var(--ink-2); margin-top: 2px; }
+
+/* B3 难度画像 */
+.diff .grp-h { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-8); margin-bottom: var(--sp-4); }
+.diff .grp-name { font-weight: 600; }
+.diff .grp-meta { font-size: var(--fs-caption); color: var(--ink-3); }
+.dim-row { display: flex; align-items: center; gap: var(--sp-8); margin-top: var(--sp-8); }
+.dim-name { width: 48px; font-size: var(--fs-sub); color: var(--ink-2); }
+.dim-bar { flex: 1; height: 6px; border-radius: 999px; background: var(--fill); overflow: hidden; }
+.dim-fill { height: 100%; border-radius: 999px; background: var(--brand); }
+.dim-n { font-size: var(--fs-caption); color: var(--ink-3); white-space: nowrap; }
+.dim-secs { display: block; margin-top: var(--sp-12); font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

@@ -255,6 +255,8 @@ export interface RedoFilter {
   rz?: string | null;
   src?: string | null;
   t3?: string | null;
+  /** 限定 mistakes.id 集合（B2 长期易错专项出卷） */
+  mids?: number[];
 }
 export function redoMistakesFiltered(f: RedoFilter): Promise<{ items: Question[]; skipped?: number }> {
   let q = '/api/mistakes/redo?limit=' + (f.limit || 10) + '&uid=' + encodeURIComponent(anonUid());
@@ -265,6 +267,7 @@ export function redoMistakesFiltered(f: RedoFilter): Promise<{ items: Question[]
   if (f.rz) q += '&rz=' + encodeURIComponent(f.rz);
   if (f.src) q += '&src=' + f.src;
   if (f.t3) q += '&t3=' + encodeURIComponent(f.t3);
+  if (f.mids && f.mids.length) q += '&mids=' + f.mids.join(',');
   return request<{ items: Question[]; skipped?: number }>(q);
 }
 

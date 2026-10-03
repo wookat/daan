@@ -51,6 +51,9 @@ Page({
     subs: [] as SubView[],
     selected: null as MasteryTag3 | null,
     selDesc: '',
+    // B3：难度画像（by_difficulty 分档 × 正确率）与作答均速
+    diffRows: [] as { label: string; n: number; accPct: number; accText: string }[],
+    secsText: '',
   },
 
   _pendingMod: '',
@@ -90,6 +93,14 @@ Page({
       this._pendingMod = '';
     }
     if (!curMod && d.modules.length) curMod = d.modules[0].module;
+    const diffRows = (d.by_difficulty || [])
+      .filter((b) => b.n > 0)
+      .map((b) => ({ label: b.label, n: b.n, accPct: Math.round(b.acc * 100), accText: Math.round(b.acc * 100) + '%' }));
+    const bs = d.by_secs;
+    const secsText =
+      bs && bs.correct_avg != null && bs.wrong_avg != null
+        ? `答对均速 ${bs.correct_avg}s · 答错均速 ${bs.wrong_avg}s${bs.wrong_avg > bs.correct_avg * 1.3 ? '（错题多因犹豫）' : bs.correct_avg > bs.wrong_avg * 1.5 ? '（错题多因抢快）' : ''}`
+        : '';
     this.setData({
       cold: false,
       nTotal,
@@ -97,6 +108,8 @@ Page({
       map: d,
       curMod,
       modChips: d.modules.map((m) => ({ value: m.module, label: m.name + (m.n ? ' ' + Math.round(m.mastery * 100) + '%' : '') })),
+      diffRows,
+      secsText,
     });
     this.renderSubs();
   },

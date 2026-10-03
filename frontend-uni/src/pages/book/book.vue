@@ -120,6 +120,7 @@
             <view class="seg" role="tablist">
               <view class="seg-i" :class="{ on: tab === 'todo' }" role="tab" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
               <view class="seg-i" :class="{ on: tab === 'done' }" role="tab" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
+              <view class="seg-i" :class="{ on: tab === 'sticky' }" role="tab" @click="tab = 'sticky'">易错 {{ stickyItems.length }}</view>
               <view class="seg-i" :class="{ on: tab === 'fav' }" role="tab" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
             </view>
             <kg-button v-if="tab !== 'fav'" variant="secondary" size="md" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true" />
@@ -168,8 +169,8 @@
             <view class="entry-in">
               <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
               <view class="grow">
-                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
-                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
+                <text class="entry-t">{{ tab === 'sticky' ? '长期易错专项卷' : pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+                <text class="entry-s">{{ tab === 'sticky' ? '专出复习中累计再错 2 次以上的题（最多 10 题）' : pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
               </view>
             </view>
           </kg-card>
@@ -204,6 +205,7 @@
           />
           <template v-if="tab !== 'fav' && items.length && !shownItems.length && !loading">
             <kg-empty-state v-if="tab === 'done' && !kw && !hasFilter" compact icon="circle-check" title="还没有已掌握的错题" desc="在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里" />
+            <kg-empty-state v-else-if="tab === 'sticky' && !kw && !hasFilter" compact icon="flag" title="暂无长期易错" desc="复习中累计再错 2 次以上的题会出现在这里，值得专项攻克" />
             <kg-empty-state v-else-if="tab === 'todo' && !kw && !hasFilter" compact icon="circle-check" title="待掌握已清零" :desc="doneItems.length + ' 道错题已全部掌握；再错的题会回到这里，也可去「已掌握」里恢复复习'" cta-text="去刷题" @cta="goPractice" />
             <kg-empty-state v-else compact icon="search" title="没有匹配的错题" desc="换个关键词或清除筛选试试" />
           </template>
@@ -804,9 +806,16 @@ export default {
     doneItems() {
       return this.items.filter((m) => m.mastered);
     },
+    // B2：长期易错 = 未掌握且累计再错 ≥2（后端 mastery_state 状态机）
+    stickyItems() {
+      return this.items.filter((m) => !m.mastered && m.mastery_state === 'sticky_wrong');
+    },
+    tabBase() {
+      return this.tab === 'done' ? this.doneItems : this.tab === 'sticky' ? this.stickyItems : this.todoItems;
+    },
     shownItems() {
       if (this.tab === 'fav') return [];
-      let base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      let base = this.tabBase;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
       if (this.kpFilter && this.qtFilter) base = base.filter((m) => this.tagName(m) === this.qtFilter);
@@ -842,7 +851,7 @@ export default {
     },
     // 批量勾选的错题行（只看当前 tab，与 batchMaster/batchDel 同源；筛选变化后被隐藏的已选项仍算）
     selItems() {
-      const base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      const base = this.tabBase;
       return base.filter((m) => this.selIds[m.id]);
     },
     exportSheetless() {
@@ -896,7 +905,7 @@ export default {
     },
     modGroups() {
       if (this.tab === 'fav') return [];
-      const base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      const base = this.tabBase;
       const map = {};
       for (const m of base) {
         const key = m.module || 'other';
@@ -924,7 +933,7 @@ export default {
     },
     typeGroups() {
       if (this.tab === 'fav') return [];
-      let base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      let base = this.tabBase;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       const map = {};
       for (const m of base) {
@@ -939,7 +948,7 @@ export default {
     // 选中题型组后的细分题型（来源站 question_type）；组内只有一种时不展示
     fineTypes() {
       if (this.tab === 'fav' || !this.kpFilter) return [];
-      let base = this.tab === 'done' ? this.doneItems : this.todoItems;
+      let base = this.tabBase;
       if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
       const map = {};
       for (const m of base) {
@@ -1372,7 +1381,7 @@ export default {
     // 题型筛选 → redo 查询串：题型组走 sub=（覆盖组内全部来源题型）、细分/无组的来源题型走 qtype=、模块名兜底走 module+noqt
     redoTypeQuery() {
       const kp = this.kpFilter;
-      const base = (this.tab === 'done' ? this.doneItems : this.todoItems).filter((m) => this.groupKey(m) === kp);
+      const base = (this.tabBase).filter((m) => this.groupKey(m) === kp);
       if (base.some((m) => m.type_group === kp)) {
         let q = '&sub=' + encodeURIComponent(kp);
         if (this.filterMod) q += '&module=' + this.filterMod;
@@ -1892,6 +1901,7 @@ export default {
       if (this.pidFilter) return this.redoPaper();
       try {
         let q = '/api/mistakes/redo?limit=10&uid=' + encodeURIComponent(anonUid());
+        if (this.tab === 'sticky') q += '&mids=' + this.shownItems.map((m) => m.id).join(',');
         if (this.kpFilter) {
           q += this.redoTypeQuery();
         } else if (this.filterMod) {
