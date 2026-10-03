@@ -137,8 +137,9 @@
         <!-- 讲解区操作：AI 详解 / 讨论 / 笔记 / 纠错 -->
         <view class="exp-acts">
           <kg-button variant="secondary" size="md" block icon="sparkles" bind:click="onDeepExplain">AI 详解与追问</kg-button>
-          <view wx:if="{{cur.id}}" class="exp-acts-row">
-            <kg-button class="exp-act" variant="ghost" size="sm" block icon="message-circle" bind:click="onOpenDiscuss">讨论{{commentN ? ' ' + commentN : ''}}</kg-button>
+          <view class="exp-acts-row">
+            <kg-button class="exp-act" variant="ghost" size="sm" block icon="shuffle" bind:click="onSimilarEntry">练同类题</kg-button>
+            <kg-button wx:if="{{cur.id}}" class="exp-act" variant="ghost" size="sm" block icon="message-circle" bind:click="onOpenDiscuss">讨论{{commentN ? ' ' + commentN : ''}}</kg-button>
             <kg-button class="exp-act" variant="ghost" size="sm" block icon="pen-line" bind:click="onOpenNote">{{favNote ? '改笔记' : '写笔记'}}</kg-button>
             <kg-button class="exp-act" variant="ghost" size="sm" block icon="flag" disabled="{{cur._reported}}" bind:click="onOpenReport">{{cur._reported ? '已纠错' : '纠错'}}</kg-button>
           </view>

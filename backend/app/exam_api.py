@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from . import auth, db, omr, pdf_export, taxonomy
+from . import auth, db, omr, paper_templates, pdf_export, taxonomy
 from .deps import rl
 
 router = APIRouter()
@@ -344,12 +344,26 @@ def api_exam_paper_detail(pid: int):
     return {"paper": paper}
 
 
+@router.get("/api/exam/templates")
+def api_exam_templates():
+    """组卷面板的省份卷型模板选项（paper_templates 纯数据，含总题数/时长）。"""
+    return {"items": paper_templates.options()}
+
+
 @router.post("/api/exam/start")
 def api_exam_start(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    if body.get("mini"):
+    template_id = (body.get("template_id") or "").strip()[:24]
+    if template_id:
+        tpl = paper_templates.get(template_id)
+        if not tpl:
+            raise HTTPException(400, "未知卷型模板")
+        boost = bool(body.get("weak_boost"))
+        weak = db.weak_tag3s(uid) if boost else None
+        pid = db.create_template_paper(tpl["name"], tpl["counts"], tpl["duration_min"], weak, boost)
+    elif body.get("mini"):
         pid = db.create_mock_paper(n=30, duration_min=30)
     else:
         pid = body.get("paper_id")

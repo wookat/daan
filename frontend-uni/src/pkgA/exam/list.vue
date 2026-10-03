@@ -16,10 +16,10 @@
         <kg-card variant="raised" class="mini">
           <view class="mini-ico"><l-icon name="zap" :size="24" tone="warn" /></view>
           <view class="mini-l">
-            <text class="mini-t">迷你模考</text>
-            <text class="mini-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
+            <text class="mini-t">组卷模考</text>
+            <text class="mini-s">按省份卷型快速组卷 · 可加薄弱考点权重</text>
           </view>
-          <kg-button size="md" @click="startMini">开始</kg-button>
+          <kg-button size="md" @click="openTpl">组卷</kg-button>
         </kg-card>
 
         <view v-if="prog.total > 0" class="progrow">
@@ -132,6 +132,48 @@
         </view>
       </view>
     </kg-sheet>
+
+    <kg-sheet v-model="tplOpen" title="组卷模考">
+      <kg-skeleton v-if="tplLoading" preset="lines" />
+      <view v-else>
+        <view v-for="t in templates" :key="t.id" class="tpl-it" :class="{ on: tplId === t.id }" role="radio" :aria-checked="tplId === t.id ? 'true' : 'false'" @click="tplId = t.id">
+          <view class="tpl-l">
+            <text class="tpl-t">{{ t.name }}</text>
+            <text v-if="t.note" class="tpl-s">{{ t.note }}</text>
+          </view>
+          <text class="tpl-n num">{{ t.n }} 题 · {{ t.duration_min }} 分</text>
+        </view>
+        <view class="boost-row">
+          <view class="boost-l">
+            <text class="boost-t">薄弱考点加权</text>
+            <text class="boost-s">优先抽你最近易错的考点</text>
+          </view>
+          <wd-switch v-model="weakBoost" size="small" />
+        </view>
+      </view>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block :disabled="tplLoading || !templates.length" @click="tplStart">开考</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
+
+    <kg-sheet :model-value="!!exportDone" title="试卷已导出" @update:model-value="(v) => { if (!v) exportDone = null; }">
+      <view v-if="exportDone" class="done">
+        <text class="done-t">{{ exportDone.title }}</text>
+        <view class="done-code">
+          <text class="done-k">本卷回填码</text>
+          <text class="done-c num">{{ exportDone.code }}</text>
+        </view>
+        <text class="done-s">纸质作答后：拍答题卡自动判分，或按码手动录入答案</text>
+      </view>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block @click="onGoScan">拍答题卡判分</kg-button>
+          <kg-button variant="secondary" size="md" block @click="onGoFill">按卷码手录答案</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
   </view>
 </template>
 
@@ -169,6 +211,12 @@ export default {
       pageN: 1,
       menuOpen: false,
       menuPaper: null,
+      tplOpen: false,
+      templates: [],
+      tplLoading: false,
+      tplId: 'mini',
+      weakBoost: false,
+      exportDone: null,
     };
   },
   created() {
@@ -370,6 +418,31 @@ export default {
     startMini() {
       uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
     },
+    openTpl() {
+      this.tplOpen = true;
+      if (this.templates.length || this.tplLoading) return;
+      this.tplLoading = true;
+      request('/api/exam/templates')
+        .then((d) => { this.templates = (d && d.items) || []; })
+        .catch(() => { this.tplOpen = false; this.startMini(); })
+        .finally(() => { this.tplLoading = false; });
+    },
+    tplStart() {
+      const id = this.tplId || 'mini';
+      this.tplOpen = false;
+      uni.navigateTo({ url: '/pkgA/exam/exam?template=' + encodeURIComponent(id) + (this.weakBoost ? '&boost=1' : '') });
+    },
+    onGoFill() {
+      const code = this.exportDone && this.exportDone.code;
+      this.exportDone = null;
+      if (code) uni.setStorageSync('bookManualCode', code);
+      uni.switchTab({ url: '/pages/book/book' });
+    },
+    onGoScan() {
+      this.exportDone = null;
+      uni.setStorageSync('bookAutoScan', true);
+      uni.switchTab({ url: '/pages/book/book' });
+    },
     openReport(a) {
       uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + a.id });
     },
@@ -393,7 +466,12 @@ export default {
           ...opts,
         });
         this.exportTarget = null;
-        uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+        const last = (uni.getStorageSync('recentPapers') || [])[0];
+        if (last && last.code) {
+          this.exportDone = { code: last.code, title: p.title };
+        } else {
+          uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+        }
       } catch (e) {
         uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
       }
@@ -453,6 +531,25 @@ export default {
 .rg-wrap { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
 .rg { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--fs-sub); }
 .rg.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.tpl-it { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--cell-h); padding: var(--sp-8) 0; border-bottom: 1px solid var(--line); }
+.tpl-it:last-of-type { border-bottom: none; }
+.tpl-l { flex: 1; min-width: 0; }
+.tpl-t { display: block; font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
+.tpl-it.on .tpl-t { color: var(--brand-text); font-weight: 600; }
+.tpl-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.tpl-n { flex-shrink: 0; font-size: var(--fs-sub); color: var(--ink-3); }
+.tpl-it.on .tpl-n { color: var(--brand-text); }
+.boost-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) 0 var(--sp-4); }
+.boost-l { flex: 1; min-width: 0; }
+.boost-t { display: block; font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
+.boost-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.sheet-acts { display: flex; flex-direction: column; gap: var(--sp-8); }
+.done { display: flex; flex-direction: column; gap: var(--sp-8); }
+.done-t { font-size: var(--fs-sub); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.done-code { display: flex; align-items: baseline; gap: var(--sp-8); }
+.done-k { font-size: var(--fs-sub); color: var(--ink-3); }
+.done-c { font-size: var(--fs-h1); font-weight: 700; color: var(--brand-text); letter-spacing: var(--ls-num); }
+.done-s { font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
 .page :deep(.kg-two__aside) { display: none; }

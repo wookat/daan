@@ -18,10 +18,10 @@
       <view class="mini-row">
         <view class="mini-ico"><l-icon name="zap" size="24" tone="warn" /></view>
         <view class="mini-l">
-          <text class="mini-t">迷你模考</text>
-          <text class="mini-s">30 题 · 30 分钟 · 随机组卷，即刻开考</text>
+          <text class="mini-t">组卷模考</text>
+          <text class="mini-s">卷型模板 + 薄弱加权 · 迷你模考即刻开考</text>
         </view>
-        <kg-button size="md" bind:click="onMini">开始</kg-button>
+        <kg-button size="md" bind:click="onMini">组卷</kg-button>
       </view>
     </kg-card>
 
@@ -125,3 +125,43 @@
   bind:close="onExportClose"
   bind:confirm="onExport"
 />
+
+<!-- 组卷 sheet：卷型模板 picker + 薄弱加权开关 -->
+<kg-sheet visible="{{tplOpen}}" title="组卷模考" bind:close="onTplClose">
+  <block wx:if="{{tplLoading}}"><t-skeleton theme="paragraph" animation="gradient" /></block>
+  <block wx:else>
+    <view class="tpl-list">
+      <view wx:for="{{templates}}" wx:key="id" class="tpl-it {{item.id === tplId ? 'on' : ''}}" data-id="{{item.id}}" bind:tap="onTplPick">
+        <view class="tpl-l">
+          <text class="tpl-name">{{item.name}}</text>
+          <text class="tpl-meta num">{{item.n}} 题 · {{item.duration_min}} 分钟</text>
+          <text wx:if="{{item.note}}" class="tpl-note">{{item.note}}</text>
+        </view>
+        <l-icon wx:if="{{item.id === tplId}}" name="circle-check" size="20" tone="brand" />
+      </view>
+    </view>
+    <view class="boost-row">
+      <view class="boost-l">
+        <text class="boost-t">薄弱加权</text>
+        <text class="boost-s">优先抽你正确率低于 60% 的考点</text>
+      </view>
+      <t-switch value="{{weakBoost}}" size="medium" bind:change="onWeakBoost" />
+    </view>
+  </block>
+  <view slot="footer" class="sheet-acts">
+    <kg-button variant="primary" size="lg" block disabled="{{tplLoading || !templates.length}}" bind:click="onTplStart">开考</kg-button>
+  </view>
+</kg-sheet>
+
+<!-- 导出后卷码面板：打印 → 回填闭环入口 -->
+<kg-sheet visible="{{!!exportDone}}" title="PDF 已导出" bind:close="onExportDoneClose">
+  <view wx:if="{{exportDone}}" class="done-box">
+    <text class="done-k">卷码（答题卡右上角也有）</text>
+    <text class="done-code num">{{exportDone.code}}</text>
+    <text class="done-s">纸质作答后可回这里判分：涂答题卡拍照，或按卷码手录答案</text>
+  </view>
+  <view slot="footer" class="sheet-acts">
+    <kg-button variant="primary" size="lg" block bind:click="onGoScan">拍答题卡判分</kg-button>
+    <kg-button variant="text" size="md" block bind:click="onGoFill">按卷码手录答案 ›</kg-button>
+  </view>
+</kg-sheet>

@@ -32,6 +32,7 @@ import {
   saveReviewCur,
   submitPaperAnswers,
 } from '../../api/learn';
+import { scanSheet } from '../../api/exam';
 import type { FavFolder, FavItem, Mistake } from '../../api/types';
 import { anonUid } from '../../utils/auth';
 import { emptyManualEntry, letterRow, MANUAL_MODULES, manualEntryBody, manualEntryError, manualSavedToast, toggleLetter } from '../../utils/manual-entry';
@@ -306,6 +307,9 @@ Page({
     manualRows: [] as ManualRow[],
     manualPickedCount: 0,
     manualSubmitting: false,
+    // 最近导出过的卷（H5 recentPapers）：录入时一键回填卷码
+    recentPapers: [] as { code: string; title: string }[],
+    scanBusy: false,
     scanOpen: false,
     scanResult: null as PaperAnswersResp | null,
     scanRows: [] as ScanRow[],
@@ -321,6 +325,8 @@ Page({
   _manualPicks: {} as Record<string, string>,
   _snapTimer: 0 as ReturnType<typeof setTimeout> | 0,
   _reviewIntent: false,
+  _autoScan: false,
+  _autoCode: '',
   _qStart: 0,
   onShow() {
     syncTabBar(this, 1);
@@ -328,6 +334,16 @@ Page({
     if (wx.getStorageSync('bookReviewIntent')) {
       wx.removeStorageSync('bookReviewIntent');
       this._reviewIntent = true;
+    }
+    // 导出卷/分享图深链：带回卷码直接开录入，或带图直接拍照判分
+    const autoCode = String(wx.getStorageSync('bookManualCode') || '');
+    if (autoCode) {
+      wx.removeStorageSync('bookManualCode');
+      this._autoCode = autoCode;
+    }
+    if (wx.getStorageSync('bookAutoScan')) {
+      wx.removeStorageSync('bookAutoScan');
+      this._autoScan = true;
     }
     this.load();
   },
@@ -388,6 +404,18 @@ Page({
       if (wx.getStorageSync('autoStartReview') && (r.items || []).length && !this.data.reviewing) {
         wx.removeStorageSync('autoStartReview');
         this.startReview();
+      }
+      // 深链优先级：拍照判分 > 卷码录入（两者互斥，一次 onShow 只消费一个）
+      if (this._autoScan) {
+        this._autoScan = false;
+        this._autoCode = '';
+        this.onScanSheet();
+      } else if (this._autoCode) {
+        const code = this._autoCode;
+        this._autoCode = '';
+        this.onManualOpen();
+        this.setData({ manualCode: code });
+        this.onManualLookup();
       }
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });
@@ -473,6 +501,25 @@ Page({
     else if (act === 'share') this.onShareQ(e);
     else if (act === 'report') this.onReportOpen(e);
     else if (act === 'unfav') this.onUnfav(e);
+    else if (act === 'similar') this.onSimilarEntry(e);
+  },
+  // ---------- 「练一道同类题」（B6：错题卡 ops → ask 页 simSeed 深链） ----------
+  onSimilarEntry(e: WechatMiniprogram.TouchEvent) {
+    const idx = Number(e.currentTarget.dataset.index);
+    const m = this.data.shown[idx];
+    if (!m) return;
+    // 题干拼上选项文字，同类题才有完整上下文（Mistake.options 为 {A:'..'} 映射）
+    const opts = m.options
+      ? '\n' + Object.keys(m.options).sort().map((k) => k + '. ' + m.options![k]).join('\n')
+      : '';
+    wx.setStorageSync('simSeed', {
+      q: (m.question_text || '') + opts,
+      qt: m.question_type || '',
+      mod: m.module || '',
+      modName: m.modName || '',
+    });
+    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
+    trackEvent('similar_entry_book');
   },
   onToggle(e: WechatMiniprogram.TouchEvent) {
     const idx = Number(e.currentTarget.dataset.index);
@@ -575,7 +622,57 @@ Page({
   // ---------- 手动录入答案（按卷：/api/paper/{code} → /api/paper_answers） ----------
   onManualOpen() {
     this._manualPicks = {};
-    this.setData({ manualOpen: true, manualPaper: null, manualCode: '', manualRows: [], manualPickedCount: 0 });
+    const recentPapers = (wx.getStorageSync('recentPapers') || []) as { code: string; title: string }[];
+    this.setData({
+      manualOpen: true, manualPaper: null, manualCode: '', manualRows: [], manualPickedCount: 0,
+      recentPapers: Array.isArray(recentPapers) ? recentPapers.slice(0, 5) : [],
+    });
+  },
+  onRecentPaper(e: WechatMiniprogram.TouchEvent) {
+    const code = String(e.currentTarget.dataset.code || '');
+    if (!code) return;
+    this.setData({ manualCode: code });
+    this.onManualLookup();
+  },
+  // ---------- 拍照判分（B5：打印答题卡 OMR 识别，/api/scan_sheet） ----------
+  onScanSheet() {
+    if (this.data.scanBusy) return;
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      success: async (res) => {
+        const filePath = res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath;
+        if (!filePath) return;
+        this.setData({ scanBusy: true });
+        wx.showLoading({ title: '识别答题卡…', mask: true });
+        try {
+          const d = await scanSheet(filePath);
+          // scan_sheet 行缺 module/secs：补齐为录入判分同款行结构
+          const res: PaperAnswersResp = {
+            ...d,
+            title: d.title ?? null,
+            items: (d.items || []).map((it) => ({
+              no: it.no,
+              question_id: it.question_id ?? null,
+              module: null,
+              picked: it.picked || null,
+              answer: it.answer || null,
+              correct: it.correct,
+              status: it.status,
+              secs: 0,
+              question: it.question || '',
+            })),
+          };
+          this.setData({ manualOpen: false, scanResult: res, scanRows: buildScanRows(res), scanOpen: true });
+          trackEvent('scan_sheet_done');
+        } catch (err) {
+          wx.showToast({ title: (err as Error).message || '识别失败，请重拍', icon: 'none', duration: 3000 });
+        } finally {
+          wx.hideLoading();
+          this.setData({ scanBusy: false });
+        }
+      },
+    });
   },
   onManualClose() {
     this.setData({ manualOpen: false });

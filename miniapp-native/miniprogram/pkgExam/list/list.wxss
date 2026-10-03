@@ -46,3 +46,23 @@
 .menu-it { display: flex; align-items: center; gap: var(--sp-12); min-height: 52px; font-size: var(--fs-body); color: var(--ink); border-bottom: 1px solid var(--line); }
 .menu-it:last-child { border-bottom: none; }
 .menu-it--hover { background: var(--fill); }
+
+/* B4 组卷 sheet */
+.tpl-list { display: flex; flex-direction: column; gap: var(--sp-8); }
+.tpl-it { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-sm); }
+.tpl-it.on { border-color: var(--brand); background: var(--brand-soft, var(--fill)); }
+.tpl-l { flex: 1; min-width: 0; }
+.tpl-name { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.tpl-meta { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-4); }
+.tpl-note { display: block; font-size: var(--fs-caption); color: var(--ink-4); margin-top: var(--sp-4); }
+.boost-row { display: flex; align-items: center; gap: var(--sp-12); margin-top: var(--sp-12); padding: var(--sp-8) var(--sp-12); border: 1px dashed var(--line); border-radius: var(--r-sm); }
+.boost-l { flex: 1; min-width: 0; }
+.boost-t { display: block; font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
+.boost-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+
+/* B5 导出后卷码面板 */
+.done-box { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-8) 0; }
+.done-k { font-size: var(--fs-caption); color: var(--ink-4); }
+.done-code { font-size: 28px; font-weight: 700; color: var(--brand-text); letter-spacing: 4px; }
+.done-s { font-size: var(--fs-sub); color: var(--ink-3); text-align: center; }
+.sheet-acts { display: flex; flex-direction: column; gap: var(--sp-4); }

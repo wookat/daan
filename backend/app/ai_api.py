@@ -282,8 +282,11 @@ async def api_similar(body: dict, request: Request, x_access_code: str | None = 
     qt = body.get("question_text")
     if not qt:
         raise HTTPException(400, "缺少 question_text")
+    difficulty = (body.get("difficulty") or "").strip().lower()[:16]
+    if difficulty and difficulty not in engine.SIMILAR_LEVELS:
+        raise HTTPException(400, "无效的 difficulty")
     try:
-        content = await engine.similar_question(qt, body.get("question_type"))
+        content = await engine.similar_question(qt, body.get("question_type"), difficulty or None)
     except Exception as e:
         raise HTTPException(502, friendly_ai_err(e)) from e
     return {"content": content}

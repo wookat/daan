@@ -119,10 +119,19 @@ export function followup(body: {
   return request<{ answer: string }>('/api/followup', { method: 'POST', data: { uid: anonUid(), ...body } });
 }
 
-export function similarQuestion(questionText: string, questionType?: string): Promise<{ content: string }> {
+export function similarQuestion(
+  questionText: string,
+  questionType?: string,
+  difficulty?: string,
+): Promise<{ content: string }> {
   return request<{ content: string }>('/api/similar', {
     method: 'POST',
-    data: { uid: anonUid(), question_text: questionText, question_type: questionType || null },
+    data: {
+      uid: anonUid(),
+      question_text: questionText,
+      question_type: questionType || null,
+      ...(difficulty ? { difficulty } : {}),
+    },
   });
 }
 

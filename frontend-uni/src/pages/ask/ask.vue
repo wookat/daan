@@ -101,6 +101,13 @@
                 <kg-button :variant="r.saved ? 'ghost' : 'secondary'" size="sm" :icon="r.saved ? 'check' : ''" @click="save(r)">{{ r.saved ? '已存错题本' : '存入错题本' }}</kg-button>
                 <kg-button v-if="viewUrl(r)" variant="text" size="sm" @click="viewQuestion(r)">查看原题</kg-button>
               </view>
+              <view v-if="!r.streaming" class="diff-row">
+                <text class="diff-k">出题难度</text>
+                <view v-for="o in simDiffOpts" :key="o.v" class="diff-chip" :class="{ on: (r.simDiff || 'same') === o.v }" role="radio" :aria-checked="(r.simDiff || 'same') === o.v ? 'true' : 'false'" @click="r.simDiff = o.v">{{ o.t }}</view>
+              </view>
+              <view v-if="!r.streaming && r.explanation" class="wenze-row">
+                <view v-for="q in wenzeChips" :key="q" class="wenze-chip" role="button" @click="quickFollowup(r, q)">{{ q }}</view>
+              </view>
             </kg-card>
           </view>
           <!-- 举一反三 -->
@@ -258,6 +265,13 @@ export default {
       timer: null,
       pendingQid: 0,
       recent: uni.getStorageSync('recentExplains') || [],
+      simDiffOpts: [
+        { v: 'easier', t: '降干扰' },
+        { v: 'same', t: '持平' },
+        { v: 'harder', t: '加复杂度' },
+        { v: 'combo', t: '加综合度' },
+      ],
+      wenzeChips: ['这道题陷阱在哪', '换个方法怎么解', '给一道变式'],
     };
   },
   computed: {
@@ -306,6 +320,11 @@ export default {
       this.textOpen = true;
       uni.removeStorageSync('redoQuestion');
       uni.showToast({ title: '题目已填入，先自己做一遍再点讲解', icon: 'none', duration: 2500 });
+    }
+    const seed = uni.getStorageSync('simSeed');
+    if (seed && seed.q) {
+      uni.removeStorageSync('simSeed');
+      this.openSimSeed(seed);
     }
   },
   // #ifdef H5
@@ -662,6 +681,34 @@ export default {
       r.saved = true;
       this.persistSession();
     },
+    openSimSeed(seed) {
+      const diffs = ['easier', 'same', 'harder', 'combo'];
+      const rec = {
+        ts: Date.now(),
+        qid: '',
+        module_name: seed.modName || '',
+        module: seed.mod || '',
+        question_type: seed.qt || '',
+        question_text: seed.q,
+        html: '',
+        userImage: '',
+        userText: (seed.q || '').slice(0, 200),
+        user_answer: '',
+        explanation: '',
+        saved: false,
+        sim: null,
+        simLoading: false,
+        simSecs: 0,
+        simDiff: diffs.indexOf(seed.diff) >= 0 ? seed.diff : 'same',
+        fu: [],
+        fuLoading: false,
+        streaming: false,
+        ansCard: null,
+      };
+      this.results.unshift(rec);
+      this.scrollBottom();
+      this.genSimilar(rec);
+    },
     async genSimilar(r) {
       if (r.simLoading) return;
       r.simLoading = true;
@@ -670,7 +717,7 @@ export default {
       try {
         const d = await request('/api/similar', {
           method: 'POST',
-          data: { question_text: r.question_text, question_type: r.question_type },
+          data: { question_text: r.question_text, question_type: r.question_type, difficulty: r.simDiff || 'same' },
         });
         const parts = d.content.split('<!--answer-->');
         const m = (parts[1] || '').match(/答案[：:\s*]*([A-D])/);
@@ -966,6 +1013,13 @@ export default {
 .ans-chip.bad { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
 .ans-chip.dim { opacity: 0.4; }
 .ans-chip.locked { cursor: default; }
+.diff-row { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; margin-top: var(--sp-8); }
+.diff-k { font-size: var(--fs-caption); color: var(--ink-3); }
+.diff-chip { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--fs-sub); }
+.diff-chip.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
+.wenze-row { display: flex; gap: var(--sp-8); flex-wrap: wrap; margin-top: var(--sp-8); }
+.wenze-chip { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px dashed var(--line-strong); background: transparent; color: var(--ink-2); font-size: var(--fs-sub); }
+.wenze-chip:hover { border-color: var(--brand); color: var(--brand-text); }
 .ta { width: 100%; min-height: 96px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-body); box-sizing: border-box; background: var(--fill); color: var(--ink); }
 .preview { width: 100%; border-radius: var(--r-sm); margin-top: var(--sp-4); }
 

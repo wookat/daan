@@ -34,3 +34,13 @@
 
 .fu-input { flex: 1; min-width: 0; height: var(--btn-h-md); border-radius: var(--r-full); background: var(--fill); padding: 0 var(--sp-16); font-size: var(--fs-body); color: var(--ink); }
 .preview { width: 100%; max-height: 40vh; border-radius: var(--r-sm); }
+
+/* B6：同款题难度档 + 问泽快捷 chips */
+.diff-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-8); }
+.diff-k { font-size: var(--fs-caption); color: var(--ink-4); flex-shrink: 0; }
+.diff-chip { font-size: var(--fs-caption); color: var(--ink-3); background: var(--fill); border-radius: var(--r-full); padding: var(--sp-4) var(--sp-12); }
+.diff-chip.on { color: var(--brand-text); background: var(--brand-soft); font-weight: var(--fw-semibold); }
+.wenze-row { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-8); }
+.wenze-chip { font-size: var(--fs-caption); color: var(--brand-text); border: 1px solid var(--line); border-radius: var(--r-full); padding: var(--sp-4) var(--sp-12); }
+.wenze-chip:active { background: var(--brand-soft); }
+.muted { color: var(--ink-4); font-size: var(--fs-sub); }

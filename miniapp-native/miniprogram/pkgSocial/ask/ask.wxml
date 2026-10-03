@@ -77,6 +77,31 @@
             <kg-button variant="ghost" size="sm" icon="shuffle" loading="{{r.simLoading}}" data-ts="{{r.ts}}" bind:click="onSimilar">{{r.simLoading ? '出题中 ' + r.simSecs + 's' : '出同款题'}}</kg-button>
           </view>
 
+          <!-- 同款题难度档（B6 四档梯度） -->
+          <view wx:if="{{!r.streaming}}" class="diff-row">
+            <text class="diff-k">出题难度</text>
+            <view
+              wx:for="{{simDiffOpts}}"
+              wx:key="value"
+              class="diff-chip {{r.simDiff === item.value ? 'on' : ''}}"
+              data-ts="{{r.ts}}"
+              data-v="{{item.value}}"
+              bind:tap="onSimDiff"
+            >{{item.label}}</view>
+          </view>
+
+          <!-- 问泽快捷追问（B6） -->
+          <view wx:if="{{!r.streaming}}" class="wenze-row">
+            <view
+              wx:for="{{wenzeChips}}"
+              wx:key="*this"
+              class="wenze-chip"
+              data-ts="{{r.ts}}"
+              data-q="{{item}}"
+              bind:tap="onWenze"
+            >{{item}}</view>
+          </view>
+
           <!-- 追问 -->
           <view wx:for="{{r.fu}}" wx:key="index" wx:for-item="m" class="fu {{m.role === 'user' ? 'fu-me' : 'fu-ai'}}">
             <text wx:if="{{m.role === 'user'}}" class="fu-txt">{{m.content}}</text>
