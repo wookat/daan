@@ -54,9 +54,31 @@ function applyToPage(p: PageLike | undefined): void {
   }
 }
 
+function effectiveDark(): boolean {
+  const m = themeMode();
+  if (m === 'dark') return true;
+  if (m === 'light') return false;
+  try {
+    return wx.getAppBaseInfo().theme === 'dark';
+  } catch {
+    return false;
+  }
+}
+
 function applyAll(): void {
   try {
     for (const p of getCurrentPages() as PageLike[]) applyToPage(p);
+  } catch {
+    /* noop */
+  }
+  // page 元素在 {{tc}} 容器外面吃不到手动档变量——窗口底色/下拉刷新生效
+  // 只能走 wx.setBackgroundColor（与 sem.bg/night.900 同值）。
+  try {
+    const dark = effectiveDark();
+    wx.setBackgroundColor({
+      backgroundColor: dark ? '#15161c' : '#f6f7fb',
+      backgroundTextStyle: dark ? 'light' : 'dark',
+    });
   } catch {
     /* noop */
   }

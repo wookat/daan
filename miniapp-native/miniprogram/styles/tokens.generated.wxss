@@ -320,6 +320,10 @@ page, .kg-theme-root {
   --mod-panduan-soft: #291f45;
   --mod-changshi-soft: #3a2b0e;
 }
+/* page 在 {{tc}} 容器外面吃不到类作用域变量——手动档由容器自身把 --bg 铺满视口（窗口级底色 utils/theme.ts 另走 wx.setBackgroundColor） */
+.tc-light, .tc-dark {
+  background-color: var(--bg);
+}
 /* 皮肤槽：.acc-<key> 覆盖 --brand 系（手动/系统深色各有映射） */
 .acc-forest {
   --brand: #16a34a;

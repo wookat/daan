@@ -447,6 +447,8 @@ export function emitWxss(flat, tree) {
     '/* 手动外观档：utils/theme.ts 给各页顶层容器打 {{tc}}；system 档不带类走上面媒体查询 */',
     cssBlock('.tc-light', lightDecls(flat)),
     cssBlock('.tc-dark', darkDecls(flat)),
+    '/* page 在 {{tc}} 容器外面吃不到类作用域变量——手动档由容器自身把 --bg 铺满视口（窗口级底色 utils/theme.ts 另走 wx.setBackgroundColor） */',
+    cssBlock('.tc-light, .tc-dark', ['  background-color: var(--bg);']),
     accentBlocks(tree),
     '/* component: tdesign-miniprogram（变量名以 tdesign-miniprogram@1.9.x common/style/theme/_light.wxss 为准） */',
     cssBlock(WXSS_ROOT, TD_MAP.map(([k, v]) => decl('  ', k, v))),
