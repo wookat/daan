@@ -1,5 +1,5 @@
-<navbar title="讨论广场" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="讨论广场" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{items.length}}">
       <kg-card variant="soft" class="sec">

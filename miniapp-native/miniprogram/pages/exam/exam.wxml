@@ -1,5 +1,5 @@
-<navbar title="模考" large />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="模考" large />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 焦点：未交卷续考优先，否则迷你模考；一屏一个主按钮 -->
     <view wx:if="{{examResume}}" class="focus">

@@ -1,5 +1,5 @@
-<navbar title="{{title}}" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="{{title}}" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <view class="topbar"><t-skeleton theme="text" animation="gradient" /></view>
@@ -68,7 +68,7 @@
   </view>
 </scroll-view>
 
-<kg-action-bar wx:if="{{!loading && !loadErr && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
+<kg-action-bar class="{{tc}}" wx:if="{{!loading && !loadErr && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
   <kg-button class="abar-btn" variant="ghost" size="lg" disabled="{{idx === 0}}" bind:click="onPrev">上一题</kg-button>
   <kg-button class="abar-btn" variant="ghost" size="lg" bind:click="onOpenCard">答题卡</kg-button>
   <kg-button wx:if="{{idx + 1 < items.length}}" class="abar-btn abar-main" variant="primary" size="lg" bind:click="onNext">下一题</kg-button>
@@ -76,7 +76,7 @@
   <kg-button wx:else class="abar-btn abar-main" variant="primary" size="lg" loading="{{submitting}}" bind:click="onConfirmSubmit">交卷</kg-button>
 </kg-action-bar>
 
-<kg-answer-card
+<kg-answer-card class="{{tc}}"
   visible="{{cardOpen}}"
   cells="{{cells}}"
   current="{{idx}}"

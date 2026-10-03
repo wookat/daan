@@ -1,5 +1,5 @@
-<navbar title="题目讨论" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="题目讨论" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap {{noQid ? '' : 'wrap-bar'}}">
     <kg-empty
       wx:if="{{noQid}}"
@@ -80,7 +80,7 @@
 </scroll-view>
 
 <!-- 输入栏 -->
-<kg-action-bar wx:if="{{!noQid}}" layout="input">
+<kg-action-bar class="{{tc}}" wx:if="{{!noQid}}" layout="input">
   <view class="ibar-in">
     <view wx:if="{{replyTo}}" class="replying">
       <text class="replying-t">回复 {{replyTo.nickname}}</text>

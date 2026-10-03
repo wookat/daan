@@ -1,10 +1,10 @@
-<navbar title="我的" large>
+<navbar class="{{tc}}" title="我的" large>
   <view class="nav-icon-btn" hover-class="nav-icon-btn--hover" aria-role="button" aria-label="消息" bind:tap="onInbox">
     <l-icon name="bell" size="22" tone="ink" />
     <view wx:if="{{inboxUnread}}" class="nav-dot" />
   </view>
 </navbar>
-<scroll-view class="page-scroll" scroll-y type="list">
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="user">
       <view class="avatar">{{avatarChar}}</view>
@@ -57,6 +57,20 @@
         </view>
       </view>
       <kg-row icon="users" title="刷题小队" last bind:click="onTeam" />
+    </kg-group>
+
+    <kg-group title="外观">
+      <view class="theme-sec">
+        <text class="theme-k">深色模式</text>
+        <kg-segmented options="{{themeModes}}" value="{{modeKey}}" bind:change="onThemeMode" />
+        <text class="theme-k">主题色</text>
+        <view class="theme-accs" role="radiogroup">
+          <view wx:for="{{themeAccents}}" wx:key="key" class="theme-acc {{accKey === item.key ? 'on' : ''}}" role="radio" aria-checked="{{accKey === item.key}}" data-key="{{item.key}}" bind:tap="onThemeAcc">
+            <view class="acc-dot" style="background: {{item.color}}" />
+            <text class="acc-t">{{item.label}}</text>
+          </view>
+        </view>
+      </view>
     </kg-group>
 
     <kg-group title="设置">

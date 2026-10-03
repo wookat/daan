@@ -1,5 +1,5 @@
-<navbar title="申论专区" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list" scroll-top="{{scrollTop}}">
+<navbar class="{{tc}}" title="申论专区" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list" scroll-top="{{scrollTop}}">
 <view class="wrap">
   <kg-segmented options="{{tabOpts}}" value="{{tab}}" bind:change="onTab" />
 

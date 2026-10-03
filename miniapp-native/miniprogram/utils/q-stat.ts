@@ -10,6 +10,18 @@ export function qStatLine(q: Question | null | undefined): string {
   return s;
 }
 
+// 判分后的「击败 X%」一行：答对→击败了 (100-正确率)% 考生；答错→本题全站正确率。
+// 与 qStatLine 同样本口径（<5 人次不出），答对时比率 0% 不显示「击败 100%」的水分文案。
+export function beatLine(q: Question | null | undefined, picked: string): string {
+  if (!q || !picked || !q.attempt_count || q.attempt_count < 5 || q.correct_ratio == null) return '';
+  const r = Math.round(q.correct_ratio);
+  if (picked === q.answer) {
+    const beat = 100 - r;
+    return beat >= 10 ? `你击败了 ${beat}% 的考生` : `本题正确率 ${r}%，答对很轻松`;
+  }
+  return `本题全站正确率 ${r}%`;
+}
+
 // B3：难度徽标（后端 difficulty 分档校准值；样本不足返回 null 不渲染）
 export type DifficultyTag = { label: string; tone: 'info' | 'neutral' | 'warn' | 'bad' };
 export function difficultyTag(q: Question | null | undefined): DifficultyTag | null {

@@ -1,5 +1,5 @@
-<navbar title="PK 战绩" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="PK 战绩" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <view class="hero"><t-skeleton theme="text" animation="gradient" /></view>

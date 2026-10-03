@@ -81,6 +81,23 @@
           <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
             <template #icon><view class="cell-ico"><l-icon name="moon" :size="20" tone="info" /></view></template>
           </wd-cell>
+          <wd-cell title="主题色">
+            <template #icon><view class="cell-ico"><l-icon name="palette" :size="20" tone="info" /></view></template>
+            <view class="acc-row">
+              <view
+                v-for="a in themeAccents"
+                :key="a.key"
+                class="acc-chip"
+                :class="{ on: accKey === a.key }"
+                role="radio"
+                :aria-checked="accKey === a.key"
+                @click="setAcc(a.key)"
+              >
+                <view class="acc-dot" :style="{ background: a.color }"></view>
+                <text class="acc-t">{{ a.label }}</text>
+              </view>
+            </view>
+          </wd-cell>
           <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
             <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="20" tone="info" /></view></template>
           </wd-cell>
@@ -169,7 +186,7 @@ import { syncCloudFavs } from '../../fav-sync.js';
 import { favsLocalOnly } from '../../exam-fav.js';
 import { md } from '../../md.js';
 import { getReminderSettings } from '../../reminder.js';
-import { cycleThemeMode, getThemeMode, THEME_LABELS } from '../../theme.js';
+import { cycleThemeMode, getThemeMode, getThemeAccent, setThemeAccent, THEME_ACCENTS, THEME_LABELS } from '../../theme.js';
 import { normFontLv } from '../../font-size.js';
 // #ifdef H5
 import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from '../../pwa.js';
@@ -207,6 +224,8 @@ export default {
       remindOn: false,
       remindTime: '20:30',
       themeMode: 'system',
+      themeAccents: THEME_ACCENTS,
+      accKey: 'default',
       pwaInstallable: false,
       iosInstallable: false,
       offlineN: 0,
@@ -306,6 +325,7 @@ export default {
     this.remindOn = rs.on;
     this.remindTime = rs.time;
     this.themeMode = getThemeMode();
+    this.accKey = getThemeAccent();
     this.offlineN = listPacks().length;
     this.teamName = this.peekTeamName();
     this.refreshAccountData();
@@ -543,6 +563,11 @@ export default {
       this.themeMode = cycleThemeMode();
       uni.showToast({ title: '外观模式：' + this.themeLabel, icon: 'none' });
     },
+    setAcc(key) {
+      this.accKey = key;
+      setThemeAccent(key);
+      uni.showToast({ title: '主题色已切换', icon: 'none' });
+    },
     goOffline() {
       uni.navigateTo({ url: '/pkgA/user/offline' });
     },
@@ -619,6 +644,13 @@ export default {
 :deep(.cellcard .wd-cell__title text) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 :deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
+
+/* 主题色 chips */
+.acc-row { display: flex; gap: var(--sp-8); }
+.acc-chip { display: flex; align-items: center; gap: 6px; padding: 0 var(--sp-12); height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2); }
+.acc-chip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: var(--fw-medium); }
+.acc-dot { width: 10px; height: 10px; border-radius: var(--r-full); }
+.acc-t { font-size: var(--fs-sub); }
 
 .logout { margin-top: var(--sp-24); }
 

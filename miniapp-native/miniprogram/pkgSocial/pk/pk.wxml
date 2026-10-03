@@ -1,5 +1,5 @@
-<navbar title="答题 PK" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="答题 PK" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap {{view === 'result' ? 'wrap-bar' : ''}}">
 
     <!-- 大厅 -->
@@ -138,8 +138,8 @@
   </view>
 </scroll-view>
 
-<kg-action-bar wx:if="{{view === 'result' && !finished}}" layout="actions">
+<kg-action-bar class="{{tc}}" wx:if="{{view === 'result' && !finished}}" layout="actions">
   <kg-button class="bar-btn" variant="ghost" size="lg" bind:click="backHome">返回 PK 大厅</kg-button>
   <kg-button class="bar-btn" variant="primary" size="lg" openType="share" bind:click="shareMatch">转发给好友应战</kg-button>
 </kg-action-bar>
-<kg-action-bar wx:if="{{view === 'result' && finished}}" layout="actions" primaryText="再来一局" secondaryText="晒战绩，喊人来战" bind:primary="rematch" bind:secondary="shareResult" />
+<kg-action-bar class="{{tc}}" wx:if="{{view === 'result' && finished}}" layout="actions" primaryText="再来一局" secondaryText="晒战绩，喊人来战" bind:primary="rematch" bind:secondary="shareResult" />

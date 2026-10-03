@@ -160,7 +160,10 @@ def admin_assets_version() -> str:
     return str(int(latest))
 
 
-@router.api_route("/admin", methods=["GET", "HEAD"])
+# HEAD 只用于探活，不单独进 schema——GET/HEAD 共用函数名会让 openapi 出两个
+# 同名 operationId，openapi-typescript 生成重复键直接编译失败。
+@router.api_route("/admin", methods=["GET"], operation_id="admin_page")
+@router.api_route("/admin", methods=["HEAD"], include_in_schema=False, operation_id="admin_page_head")
 def admin_page():
     with open(os.path.join(ADMIN_DIR, "index.html"), encoding="utf-8") as f:
         html = f.read()

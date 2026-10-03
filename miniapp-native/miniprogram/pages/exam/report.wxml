@@ -1,2 +1,2 @@
-<navbar title="成绩报告" back="{{true}}" />
-<view class="wrap"><t-skeleton theme="paragraph" animation="gradient" /></view>
+<navbar class="{{tc}}" title="成绩报告" back="{{true}}" />
+<view class="{{tc}} wrap"><t-skeleton theme="paragraph" animation="gradient" /></view>

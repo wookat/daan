@@ -1,5 +1,5 @@
-<navbar title="搜索" back="{{true}}" />
-<view class="sticky">
+<navbar class="{{tc}}" title="搜索" back="{{true}}" />
+<view class="{{tc}} sticky">
   <t-search
     value="{{kw}}"
     placeholder="题号 / 题干关键词 / 考点 / 申论"
@@ -15,7 +15,7 @@
   <kg-chip-row options="{{tabs}}" value="{{tab}}" size="sm" bind:change="onTab" />
 </view>
 
-<scroll-view class="page-scroll" scroll-y type="list">
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading || loadErr || hasResult}}">
       <view wx:if="{{loading}}" class="skel" aria-busy="true">

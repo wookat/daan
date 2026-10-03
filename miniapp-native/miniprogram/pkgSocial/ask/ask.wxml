@@ -1,5 +1,5 @@
-<navbar title="AI 问答" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollInto}}" scroll-with-animation>
+<navbar class="{{tc}}" title="AI 问答" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list" scroll-into-view="{{scrollInto}}" scroll-with-animation>
   <view class="wrap wrap-bar">
     <view class="top">
       <view class="hero hero-ask">
@@ -150,7 +150,7 @@
 </scroll-view>
 
 <!-- 追问输入条 -->
-<kg-action-bar wx:if="{{hasResults}}" layout="input">
+<kg-action-bar class="{{tc}}" wx:if="{{hasResults}}" layout="input">
   <view class="mic-btn {{voiceOn && voiceFor === 'fuText' ? 'is-on' : ''}}" role="button" aria-label="语音输入" data-for="fuText" bind:tap="onVoice">
     <l-icon name="mic" size="20" tone="{{voiceOn && voiceFor === 'fuText' ? 'warn' : 'muted'}}" />
   </view>
@@ -159,7 +159,7 @@
 </kg-action-bar>
 
 <!-- 文字题面板 -->
-<t-popup visible="{{textOpen}}" placement="bottom" bind:visible-change="onTextVisible">
+<t-popup class="{{tc}}" visible="{{textOpen}}" placement="bottom" bind:visible-change="onTextVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-t-row">
@@ -181,7 +181,7 @@
 </t-popup>
 
 <!-- 图片确认面板 -->
-<t-popup visible="{{!!imagePath}}" placement="bottom" bind:visible-change="onImageVisible">
+<t-popup class="{{tc}}" visible="{{!!imagePath}}" placement="bottom" bind:visible-change="onImageVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <text class="sheet-t">确认题目照片</text>
@@ -195,7 +195,7 @@
 </t-popup>
 
 <!-- 历史会话 -->
-<t-popup visible="{{historyOpen}}" placement="bottom" bind:visible-change="onHistoryVisible">
+<t-popup class="{{tc}}" visible="{{historyOpen}}" placement="bottom" bind:visible-change="onHistoryVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <text class="sheet-t">历史会话</text>

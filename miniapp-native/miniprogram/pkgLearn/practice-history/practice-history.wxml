@@ -1,5 +1,5 @@
-<navbar title="练习历史" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="练习历史" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{total}}">
       <view wx:for="{{groups}}" wx:key="day" wx:for-item="g" class="group">

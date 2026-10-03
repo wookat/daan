@@ -1,5 +1,5 @@
-<navbar title="模考大赛" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="模考大赛" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
@@ -82,7 +82,7 @@
 </scroll-view>
 
 <!-- 公共榜单（非参赛者也可围观） -->
-<kg-sheet visible="{{boardOpen}}" title="{{boardTitle}} · 榜单" bind:close="closeBoard">
+<kg-sheet class="{{tc}}" visible="{{boardOpen}}" title="{{boardTitle}} · 榜单" bind:close="closeBoard">
   <t-skeleton wx:if="{{boardLoading}}" theme="paragraph" animation="gradient" />
   <block wx:elif="{{board}}">
     <view class="board-meta">

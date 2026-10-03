@@ -1,10 +1,17 @@
 import { lucideIcon } from '../utils/icons';
+import { themeAccent, themeMode, tcClass, onThemeChange as onManualTheme } from '../utils/theme';
 
-// 图标是 data-URI，拿不到 CSS 变量，按主题取 tokens.generated.wxss 里 --ink-3 / --brand 的字面值
-const ICON_COLORS: Record<'light' | 'dark', { off: string; on: string }> = {
-  light: { off: '#6b7280', on: '#2e5bff' },
-  dark: { off: '#8a8ea0', on: '#2e5bff' },
-};
+// 图标是 data-URI，拿不到 CSS 变量，按主题取 tokens.generated.wxss 里 --ink-3 / --brand 的字面值；
+// on 色随 accent 皮肤切换
+const ICON_OFF: Record<'light' | 'dark', string> = { light: '#6b7280', dark: '#8a8ea0' };
+const ACCENT_ON: Record<string, string> = { default: '#2e5bff', forest: '#16a34a', sunset: '#ea580c' };
+
+function effectiveTheme(): 'light' | 'dark' {
+  const m = themeMode();
+  if (m === 'dark') return 'dark';
+  if (m === 'light') return 'light';
+  return wx.getAppBaseInfo().theme === 'dark' ? 'dark' : 'light';
+}
 
 interface TabItem {
   pagePath: string;
@@ -23,35 +30,45 @@ const TABS: Array<{ pagePath: string; text: string; name: string }> = [
 
 const themeListeners = new WeakMap<object, WechatMiniprogram.OnThemeChangeCallback>();
 
-function buildTabs(theme: 'light' | 'dark'): TabItem[] {
-  const c = ICON_COLORS[theme];
+function buildTabs(): TabItem[] {
+  const off = ICON_OFF[effectiveTheme()];
+  const on = ACCENT_ON[themeAccent()] || ACCENT_ON.default;
   return TABS.map((t) => ({
     pagePath: t.pagePath,
     text: t.text,
-    icon: lucideIcon(t.name, c.off),
-    iconOn: lucideIcon(t.name, c.on),
+    icon: lucideIcon(t.name, off),
+    iconOn: lucideIcon(t.name, on),
   }));
 }
+
+const manualListeners = new WeakMap<object, () => void>();
 
 Component({
   data: {
     active: 0,
     tabs: [] as TabItem[],
+    tc: '',
   },
   lifetimes: {
     attached() {
-      const theme = wx.getAppBaseInfo().theme === 'dark' ? 'dark' : 'light';
-      this.setData({ tabs: buildTabs(theme) });
-      const onTheme: WechatMiniprogram.OnThemeChangeCallback = (res) =>
-        this.setData({ tabs: buildTabs(res.theme === 'dark' ? 'dark' : 'light') });
+      this.setData({ tabs: buildTabs(), tc: tcClass() });
+      const onTheme: WechatMiniprogram.OnThemeChangeCallback = () =>
+        this.setData({ tabs: buildTabs(), tc: tcClass() });
       themeListeners.set(this, onTheme);
       wx.onThemeChange(onTheme);
+      // 手动三档/皮肤切换（不走 wx.onThemeChange）
+      manualListeners.set(this, onManualTheme(() => this.setData({ tabs: buildTabs(), tc: tcClass() })));
     },
     detached() {
       const fn = themeListeners.get(this);
       if (fn) {
         wx.offThemeChange(fn);
         themeListeners.delete(this);
+      }
+      const off = manualListeners.get(this);
+      if (off) {
+        off();
+        manualListeners.delete(this);
       }
     },
   },

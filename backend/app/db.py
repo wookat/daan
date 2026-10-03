@@ -4782,6 +4782,8 @@ PROFILE_FIELDS = (
     "group_size",
     "timed_mode",
     "auto_next",
+    "theme_mode",
+    "theme_accent",
 )
 
 
@@ -4799,6 +4801,8 @@ def _ensure_user_profile(conn):
             group_size INTEGER,
             timed_mode INTEGER,
             auto_next INTEGER,
+            theme_mode TEXT,
+            theme_accent TEXT,
             created_at REAL,
             updated_at REAL)"""
     )
@@ -4806,6 +4810,9 @@ def _ensure_user_profile(conn):
     for col in ("daily_goal", "group_size", "timed_mode", "auto_next"):
         if col not in cols:
             conn.execute(f"ALTER TABLE user_profile ADD COLUMN {col} INTEGER")
+    for col in ("theme_mode", "theme_accent"):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE user_profile ADD COLUMN {col} TEXT")
 
 
 def get_user_profile(uid: str) -> dict | None:
@@ -4833,8 +4840,8 @@ def save_user_profile(uid: str, fields: dict) -> dict:
         conn.execute(
             """INSERT INTO user_profile
                (uid, exam_type, target_region, exam_date, target_score, daily_minutes, base_level,
-                daily_goal, group_size, timed_mode, auto_next, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                daily_goal, group_size, timed_mode, auto_next, theme_mode, theme_accent, created_at, updated_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (
                 uid,
                 vals.get("exam_type"),
@@ -4847,6 +4854,8 @@ def save_user_profile(uid: str, fields: dict) -> dict:
                 vals.get("group_size"),
                 vals.get("timed_mode"),
                 vals.get("auto_next"),
+                vals.get("theme_mode"),
+                vals.get("theme_accent"),
                 now,
                 now,
             ),

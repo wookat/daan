@@ -1,5 +1,5 @@
-<navbar title="学习日历" back />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="学习日历" back />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <kg-card variant="raised" class="sec">
       <view class="cal-head">

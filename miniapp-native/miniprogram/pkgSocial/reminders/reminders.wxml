@@ -1,5 +1,5 @@
-<navbar title="学习提醒" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="学习提醒" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <t-cell-group class="cells">
       <t-cell title="每日刷题提醒" description="每天 {{time}} · 未完成今日目标时提醒">

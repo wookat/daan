@@ -1,9 +1,9 @@
-<navbar title="刷题" large>
+<navbar class="{{tc}}" title="刷题" large>
   <view class="nav-icon-btn" hover-class="nav-icon-btn--hover" role="button" aria-label="搜索题目、考点、试卷" bind:tap="onSearch">
     <l-icon name="search" size="24" tone="ink" />
   </view>
 </navbar>
-<scroll-view class="page-scroll" scroll-y type="list">
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 焦点：一句话 + 格点进度（每格 1 题）+ 唯一主按钮 -->
     <view class="focus">
@@ -58,7 +58,7 @@
 </scroll-view>
 
 <!-- 学习计划 sheet：今日任务 + 今日主攻，从首屏收进浮层 -->
-<t-popup visible="{{planOpen}}" placement="bottom" bind:visible-change="onPlanVisible">
+<t-popup class="{{tc}}" visible="{{planOpen}}" placement="bottom" bind:visible-change="onPlanVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">
@@ -80,7 +80,7 @@
 </t-popup>
 
 <!-- 制定学习计划 sheet -->
-<t-popup visible="{{setupOpen}}" placement="bottom" bind:visible-change="onSetupVisible">
+<t-popup class="{{tc}}" visible="{{setupOpen}}" placement="bottom" bind:visible-change="onSetupVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">

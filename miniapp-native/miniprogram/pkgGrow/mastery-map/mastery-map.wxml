@@ -1,5 +1,5 @@
-<navbar title="考点掌握度地图" back />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="考点掌握度地图" back />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap {{selected ? 'has-bar' : ''}}">
     <view wx:if="{{loading}}" class="skel" aria-busy="true">
       <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
@@ -78,7 +78,7 @@
 </scroll-view>
 
 <!-- 选中考点吸底操作条 -->
-<kg-action-bar wx:if="{{selected}}" layout="input">
+<kg-action-bar class="{{tc}}" wx:if="{{selected}}" layout="input">
   <view class="sheet-l">
     <text class="sheet-t">{{selected.name}}</text>
     <text class="sheet-s">{{selDesc}}</text>
