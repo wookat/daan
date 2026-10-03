@@ -96,7 +96,8 @@ describe('R548 practice.vue 接线', () => {
     expect(ap).toContain("if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });");
     const tr = script.slice(script.indexOf('tryResume() {'), script.indexOf('async rateHs('));
     expect(tr).toContain('const title = pendingTitle(s);');
-    expect(tr).toContain("content: (title ? '「' + title + '」' : '') + '上次还有一组未做完（'");
+    // R564：续练确认改 KgSheet（askResume），标题仍由 pendingTitle 供给
+    expect(tr).toContain('{ title, done, total: s.items.length }');
     expect(script).toMatch(/import \{ collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE[^}]*\} from '\.\.\/\.\.\/practice-progress\.js';/);
   });
 

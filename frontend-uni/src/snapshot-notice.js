@@ -1,0 +1,37 @@
+// 旧快照兜底时的横幅文案：区分「真离线」与「网络不稳定 / 服务响应慢」，并明示快照时刻，
+// 不再把请求超时后的旧数据当「当前离线」或「已同步」陈述
+
+/** 快照时刻 → 「刚刚 / n 分钟前 / n 小时前 / n 天前」 */
+export function snapshotAgeText(snapAt, now = Date.now()) {
+  const ms = Math.max(0, now - (Number(snapAt) || 0));
+  if (!snapAt || ms < 60 * 1000) return '刚刚';
+  const min = Math.floor(ms / 60000);
+  if (min < 60) return min + ' 分钟前';
+  const h = Math.floor(min / 60);
+  if (h < 24) return h + ' 小时前';
+  return Math.floor(h / 24) + ' 天前';
+}
+
+/**
+ * @param {number} snapAt 快照时刻（ms），0 = 未知
+ * @param {boolean|null} online navigator.onLine（端不支持传 null → 不断言离线）
+ * @param {string} noun 页面数据名词（错题 / 统计）
+ */
+export function snapshotNotice(snapAt, online, now = Date.now(), noun = '错题') {
+  const head = online === false ? '当前离线' : '网络不稳定';
+  const what = snapAt ? snapshotAgeText(snapAt, now) + '缓存的' + noun : '已缓存的' + noun;
+  const tail = online === false ? '联网后自动更新' : '可稍后重试';
+  return head + ' · 展示' + what + '，' + tail;
+}
+
+/** 续练卡等「进度」类旧快照的一行短注（无重试动作，进度以进入练习页时的最新回包为准） */
+export function snapshotProgressNote(snapAt, online, now = Date.now()) {
+  const head = online === false ? '当前离线' : '网络不稳定';
+  const what = snapAt ? snapshotAgeText(snapAt, now) + '缓存的进度' : '缓存的进度';
+  return head + ' · 以上为' + what;
+}
+
+/** navigator.onLine 快照；端不支持时 null（不断言离线） */
+export function netOnlineNow() {
+  return typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
+}

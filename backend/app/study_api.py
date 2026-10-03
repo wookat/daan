@@ -140,7 +140,8 @@ def api_attempts(uid: str, question_id: int):
 @router.post("/api/answer_log")
 def api_answer_log(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()
-    rl(request, "alog", 120, 3600, uid)
+    # 逐题上送：一张 130 题行测卷 1h 内答完即 130 次，120/h 会把尾段作答打进离线队列（R566 生产复验 429×31）
+    rl(request, "alog", 600, 3600, uid)
     items = body.get("items")
     if not uid or not isinstance(items, list) or not items:
         raise HTTPException(400, "缺少 uid 或答题记录")
@@ -281,7 +282,7 @@ def api_practice_progress(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    rl(request, "ppro", 120, 3600, uid)
+    rl(request, "ppro", 600, 3600, uid)
     raw_qids = body.get("qids")
     if not isinstance(raw_qids, list) or len(raw_qids) > 100:
         raise HTTPException(400, "无效的练习进度")
@@ -349,8 +350,19 @@ def api_practice_progress(body: dict, request: Request):
                               _bounded("right", len(qids)), _bounded("streak", len(qids)),
                               _bounded("best_streak", 10000),
                               module, submodule,
-                              psource=_opt_str("source", 64), ptitle=_opt_str("ptitle", 80))
+                              psource=_opt_str("source", 64), ptitle=_opt_str("ptitle", 80),
+                              daily=_daily_meta(body.get("daily")))
     return {"ok": True}
+
+
+def _daily_meta(raw) -> dict | None:
+    """每日一练场次标记 {date, past}；形状不对则按普通练习存（不 400，老客户端不带此键）。"""
+    if not isinstance(raw, dict):
+        return None
+    date = raw.get("date")
+    if not isinstance(date, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date):
+        return None
+    return {"date": date, "past": bool(raw.get("past"))}
 
 
 @router.get("/api/practice/resume")
@@ -378,6 +390,7 @@ def api_practice_resume(uid: str):
         "submodule": prog["submodule"],
         "source": prog.get("psource"),
         "ptitle": prog.get("ptitle"),
+        "daily": prog.get("daily"),
         "t": prog["updated_at"],
     }
 
@@ -489,7 +502,7 @@ def api_review_cur_save(body: dict, request: Request):
     uid = str(body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
-    rl(request, "rcur", 120, 3600, uid)
+    rl(request, "rcur", 600, 3600, uid)
     snap = body.get("snap")
     if snap is None:
         db.clear_review_cur(uid)

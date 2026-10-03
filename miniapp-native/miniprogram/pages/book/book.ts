@@ -51,11 +51,16 @@ interface MRow extends Mistake {
   attempts?: string[];
 }
 
-// 来源站细题型（H5 tagName）：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
+// 来源站细题型（H5 tagName / 后端 norm_qtype 同口径）：只去「模块名-」前缀（历史数据两种格式并存），
+// 「法律-个税」自带的「-」不切；无题型时用模块名
+const QTYPE_MOD_PREFIXES = ['资料分析', '数量关系', '言语理解', '判断推理', '常识判断', '常识', '时政'];
 function tagName(m: Mistake): string {
-  const qt = m.question_type || '';
+  const qt = (m.question_type || '').trim();
   if (!qt) return modName(m.module);
-  return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
+  const i = qt.indexOf('-');
+  if (i < 0) return qt;
+  const rest = qt.slice(i + 1).trim();
+  return QTYPE_MOD_PREFIXES.includes(qt.slice(0, i)) && rest ? rest : qt;
 }
 
 // 主题型标签（H5 groupKey）：分类树题型组优先，手录/对不回题库的行回退细题型

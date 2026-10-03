@@ -1,6 +1,6 @@
 <template>
   <view class="wrap book" :class="{ 'is-review': reviewing }">
-    <kg-banner v-if="offlineView" tone="warn" icon="plane" text="当前离线 · 展示已缓存错题，联网后自动更新" :closable="false" class="offbar" />
+    <kg-banner v-if="offlineView" tone="warn" icon="plane" :text="offlineText" action-text="重试" :closable="false" class="offbar" @action="load" />
 
     <!-- 复习模式 -->
     <kg-card v-if="reviewing" class="review">
@@ -97,12 +97,9 @@
         <template #main>
           <!-- 首屏：今日待复习 N · 预计 M 分钟 · 累计 K + 开始复习 -->
           <kg-card v-if="!loading || items.length || due.length" class="head">
-            <kg-stat-row :items="[
-              { label: '今日待复习', value: dueTotal, unit: '题', tone: due.length ? 'brand' : undefined },
-              { label: '预计', value: due.length ? Math.max(1, Math.ceil(due.length * 0.8)) : 0, unit: '分钟' },
-              { label: '累计错题', value: items.length, unit: '题' },
-            ]" />
+            <kg-stat-row :items="headStats" />
             <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
+            <text v-else-if="items.length && !dueSynced" class="head-tip">{{ offlineView ? '今日待复习需网络恢复后同步' : '正在同步今日待复习…' }}</text>
             <text v-else-if="items.length" class="head-tip">今天没有到期错题，待掌握 {{ todoItems.length }}，已掌握 {{ doneItems.length }}</text>
           </kg-card>
           <kg-card v-if="resumeInfo" variant="soft" class="resumecard" role="button" aria-label="继续刚才的复习">
@@ -169,7 +166,7 @@
             <view class="entry-in">
               <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
               <view class="grow">
-                <text class="entry-t">{{ tab === 'sticky' ? '长期易错专项卷' : pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+                <text class="entry-t">{{ tab === 'sticky' ? '长期易错专项卷' : pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
                 <text class="entry-s">{{ tab === 'sticky' ? '专出复习中累计再错 2 次以上的题（最多 10 题）' : pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
               </view>
             </view>
@@ -180,7 +177,7 @@
             <view v-if="kw" class="searchclear" role="button" aria-label="清空搜索" @click="kw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
           </view>
           <view v-if="tab !== 'fav' && (filterMod || kpFilter || kp3Filter || srcFilter || rzFilter || pidFilter)" class="curfilter">
-            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; qtFilter = ''; kp3Filter = ''">{{ kp3Filter || (kpFilter && qtFilter ? kpFilter + ' · ' + qtFilter : kpFilter) || modName(filterMod) }}</kg-tag>
+            <kg-tag v-if="filterMod || kpFilter || kp3Filter" tone="brand" icon="x" class="cf" @click="filterMod = ''; kpFilter = ''; qtFilter = ''; kp3Filter = ''">{{ kp3Filter || (kpFilter && qtFilter ? kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) || modName(filterMod) }}</kg-tag>
             <kg-tag v-if="srcFilter" tone="brand" icon="x" class="cf" @click="srcFilter = ''">{{ srcFilter === 'exam' ? '模考错题' : '练习错题' }}</kg-tag>
             <kg-tag v-if="pidFilter" tone="brand" icon="x" class="cf" @click="pidFilter = 0">{{ pidLabel }}</kg-tag>
             <kg-button v-if="pidFilter" variant="text" size="sm" @click="goPaper(pidFilter)">练本卷 ›</kg-button>
@@ -223,7 +220,7 @@
             <view class="mhead">
               <view v-if="batchMode" class="bchk" :class="{ on: selIds[m.id] }" role="checkbox" :aria-checked="String(!!selIds[m.id])"><l-icon v-if="selIds[m.id]" name="check" :size="14" tone="on-brand" /></view>
               <kg-tag tone="brand">{{ groupKey(m) }}</kg-tag>
-              <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineType(m) }}</kg-tag>
+              <kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineLabel(m) }}</kg-tag>
               <kg-tag v-if="m.source === 'exam'" tone="info">模考</kg-tag>
               <kg-tag v-else-if="m.source === 'manual'" tone="info">手录</kg-tag>
               <view v-if="m.error_reason && !m.mastered && !batchMode" class="rzbadge-hit" role="button" :aria-label="'错因：' + m.error_reason + '，点击修改'" @click.stop="itemSheet(m)"><kg-tag tone="warn" icon="pen-line">{{ m.error_reason }}</kg-tag></view>
@@ -477,7 +474,7 @@
         <template v-if="fineTypes.length">
           <text class="sheet-k">{{ kpFilter }} · 细分</text>
           <view class="kpchips">
-            <kg-tag v-for="g in fineTypes" :key="g.name" :tone="qtFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="qtFilter = qtFilter === g.name ? '' : g.name">{{ g.name }} ×{{ g.n }}</kg-tag>
+            <kg-tag v-for="g in fineTypes" :key="g.name" :tone="qtFilter === g.name ? 'brand' : 'neutral'" class="kpchip" @click="qtFilter = qtFilter === g.name ? '' : g.name">{{ fineTypeLabel(kpFilter, g.name) }} ×{{ g.n }}</kg-tag>
           </view>
         </template>
         <template v-if="hasExamMistakes">
@@ -516,7 +513,7 @@
       />
 
       <!-- 批量操作条 -->
-      <kg-sheet :model-value="!!moreSheet" :title="moreSheet ? tagName(moreSheet.m) + ' · 更多操作' : ''" @update:model-value="(v) => { if (!v) moreSheet = null; }">
+      <kg-sheet :model-value="!!moreSheet" :title="moreSheet ? moreTitle(moreSheet.m) + ' · 更多操作' : ''" @update:model-value="(v) => { if (!v) moreSheet = null; }">
         <template v-if="moreSheet">
           <view v-if="!moreSheet.m.mastered" class="reasons more-reasons">
             <text class="rz-t">错因自评：</text>
@@ -597,9 +594,13 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
 <script>
 import { md } from '../../md.js';
 import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api.js';
+import { staleAt } from '../../api.js';
+import { snapshotNotice } from '../../snapshot-notice.js';
 import { cloudFavId } from '../../exam-fav.js';
 import { syncCloudFavs } from '../../fav-sync.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
+import { isBookHref } from '../../book-url.js';
+import { onSheetHistoryLanded } from '../../sheet-history.js';
 import { exportNote, exportNotesMap } from '../../book-export.js';
 import { setBookBadge } from '../../tabbar-badge.js';
 import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
@@ -613,6 +614,7 @@ import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../revie
 import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../review-summary.js';
 import { reviewOptions, reviewOptionsFull } from '../../review-opts.js';
 import { redoSkippedNote } from '../../book-redo-skipped.js';
+import { fineTypeLabel, qtypeName } from '../../type-label.js';
 import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book-manual-entry.js';
 import { inlineSkipNote } from '../../paper-inline-note.js';
 import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';
@@ -635,8 +637,11 @@ export default {
       loading: true,
       loadErr: '',
       offlineView: false,
+      snapAt: 0,
+      netOnline: null,
       due: [],
       dueTotal: 0,
+      dueSynced: false,
       dueLeft: 0,
       autoReview: false,
       reviewing: false,
@@ -725,6 +730,9 @@ export default {
   },
   computed: {
     qStyle() { return { fontSize: fontSizes(this.fontLv).q }; },
+    offlineText() {
+      return snapshotNotice(this.snapAt, this.netOnline);
+    },
     hasFilter() {
       return !!(this.filterMod || this.kpFilter || this.kp3Filter || this.srcFilter || this.rzFilter || this.pidFilter);
     },
@@ -789,6 +797,16 @@ export default {
     },
     todoItems() {
       return this.items.filter((m) => !m.mastered);
+    },
+    // 到期数只来自 /api/review 真实回包；快照即显/离线兜底期间未知，显「—」而非 0
+    headStats() {
+      const known = this.dueSynced;
+      const n = this.due.length;
+      return [
+        { label: '今日待复习', value: known ? this.dueTotal : '—', unit: '题', tone: n ? 'brand' : undefined },
+        { label: '预计', value: known ? (n ? Math.max(1, Math.ceil(n * 0.8)) : 0) : '—', unit: '分钟' },
+        { label: '累计错题', value: this.items.length, unit: '题' },
+      ];
     },
     hasExamMistakes() {
       return this.items.some((m) => m.source === 'exam');
@@ -996,6 +1014,12 @@ export default {
       this.resetAccountState();
     };
     uni.$on('authChanged', this._onAuth);
+    // #ifdef H5
+    // 筛选层/更多操作层留下的哑条目被 Back 跳过后落回本页真条目：那条的 query 是弹层打开前的（层内改筛选只改了哑条目），按当前筛选重写
+    this._offLanded = onSheetHistoryLanded((href) => {
+      if (isBookHref(href) && !this._pendingKp && !this._pendingKp3) this.syncBookUrl();
+    });
+    // #endif
   },
   onReachBottom() {
     if (this.tab !== 'fav' && this.pageN < this.shownItems.length) this.pageN += 20;
@@ -1070,6 +1094,11 @@ export default {
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
     // #ifdef H5
+    if (this._offLanded) {
+      this._offLanded();
+      this._offLanded = null;
+    }
+    this.unbindNet();
     if (this._kbHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._kbHandler);
       this._kbHandler = null;
@@ -1089,6 +1118,7 @@ export default {
       this.items = [];
       this.due = [];
       this.dueTotal = 0;
+      this.dueSynced = false;
       this.masteryMods = {};
       this.masteryT3 = {};
       this.offlineView = false;
@@ -1415,11 +1445,20 @@ export default {
       const t = this.tagName(m);
       return t && t !== m.type_group ? t : '';
     },
-    // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存），无题型时用模块名
+    fineLabel(m) {
+      return fineTypeLabel(m.type_group, this.fineType(m));
+    },
+    /** 更多操作层标题与卡面同口径（组名 + 展示简称），筛选/redo 仍用原值 */
+    moreTitle(m) {
+      const fine = this.fineType(m) ? this.fineLabel(m) : '';
+      return fine ? this.groupKey(m) + ' · ' + fine : this.tagName(m);
+    },
+    fineTypeLabel,
+    // 题型标签统一粒度：去掉「模块名-」前缀（历史数据两种格式并存，与后端 norm_qtype 同口径），无题型时用模块名
     tagName(m) {
       const qt = m.question_type || '';
       if (!qt || ANSWER_FORMATS.includes(qt)) return this.modName(m.module);
-      return qt.includes('-') ? qt.split('-').slice(1).join('-') : qt;
+      return qtypeName(qt);
     },
     unfavItem(f) {
       this.unfav(this.favs.indexOf(f));
@@ -1517,25 +1556,36 @@ export default {
           this.items = snap.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
         }
       }
-      if (this.items.length) this.loading = false;
+      if (this.items.length) {
+        this.loading = false;
+        this.applyPendingKp(true);
+      }
       try {
         const uq = 'uid=' + encodeURIComponent(anonUid());
         const [d, r] = await Promise.all([request('/api/mistakes?' + uq), request('/api/review?' + uq)]);
         if (seq !== this._loadSeq) return;
+        // request() 网络失败时会以旧快照兜底（resolve 而非 reject）：列表照常铺屏，但到期数不能拿旧值当已同步，
+        // 且页面顶部明示网络异常与快照时刻；旧快照不回写 mistakesCache（避免旧数据刷新时间戳）
+        const staleD = staleAt(d);
+        const staleR = staleAt(r);
         this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
-        this.due = r.items;
-        this.dueTotal = r.total || r.items.length;
-        if (this.celebrate) this.dueLeft = this.dueTotal;
-        if (this.autoReview) {
-          this.autoReview = false;
-          if (this.due.length && !this.reviewing) this.startReview();
+        if (!staleR) {
+          this.due = r.items;
+          this.dueTotal = r.total || r.items.length;
+          this.dueSynced = true;
+          if (this.celebrate) this.dueLeft = this.dueTotal;
+          if (this.autoReview) {
+            this.autoReview = false;
+            if (this.due.length && !this.reviewing) this.startReview();
+          }
         }
-        this.offlineView = false;
+        if (staleR) this.dueSynced = false;
+        this.setSnapshotView(staleD, staleR);
         this.applyPendingKp();
         this.applyPendingScanJump();
-        cacheMistakes(d.items, anonUid());
+        if (!staleD) cacheMistakes(d.items, anonUid());
         this.loadMastery();
-        setBookBadge(this.dueTotal);
+        if (!staleR) setBookBadge(this.dueTotal);
       } catch (e) {
         if (seq !== this._loadSeq) return;
         if (isStaleUidErr(e)) {
@@ -1545,8 +1595,9 @@ export default {
         const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
           this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
-          this.offlineView = true;
-          uni.showToast({ title: '当前无网络，展示已缓存的错题', icon: 'none' });
+          this.showSnapshot(c.ts || 0);
+          this.applyPendingKp();
+          uni.showToast({ title: this.offlineText, icon: 'none' });
         } else {
           this.loadErr = e.message || '网络异常';
           uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
@@ -1555,21 +1606,59 @@ export default {
       }
       this.loading = false;
     },
+    // 旧快照展示态：取最旧的快照时刻作横幅时间，每次进入采样 navigator.onLine（非响应式，需落到 data）；
+    // H5 监听 online/offline：断网即时改文案、联网自动重拉以兑现「联网后自动更新」；全真实回包时清除
+    setSnapshotView(...ats) {
+      const ts = ats.filter((t) => t > 0);
+      if (!ts.length) {
+        this.offlineView = false;
+        this.snapAt = 0;
+        this.unbindNet();
+        return;
+      }
+      this.showSnapshot(Math.min(...ts));
+    },
+    // snapAt=0 表示快照时刻未知（旧 mistakesCache 无 ts），横幅不编造时间
+    showSnapshot(snapAt) {
+      this.snapAt = snapAt;
+      this.netOnline = typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
+      this.offlineView = true;
+      // #ifdef H5
+      if (!this._onNet && typeof window !== 'undefined') {
+        this._onNet = (e) => {
+          this.netOnline = e.type === 'online';
+          if (this.netOnline && this.offlineView) this.load();
+        };
+        window.addEventListener('online', this._onNet);
+        window.addEventListener('offline', this._onNet);
+      }
+      // #endif
+    },
+    unbindNet() {
+      if (this._onNet && typeof window !== 'undefined') {
+        window.removeEventListener('online', this._onNet);
+        window.removeEventListener('offline', this._onNet);
+      }
+      this._onNet = null;
+    },
     // 入向 ?kp=/?kp3= 深链：列表到达后校验命中才生效（fail-closed：无命中丢弃并纠正 URL）
-    applyPendingKp() {
+    // provisional：按屏上快照先落地筛选，不消费 pending、无命中不纠正 URL，真实回包后再终判一次
+    applyPendingKp(provisional = false) {
       const kp = this._pendingKp;
       const kp3 = this._pendingKp3;
       if (!kp && !kp3) {
-        if (this._pendingKpFix) {
+        if (this._pendingKpFix && !provisional) {
           this._pendingKpFix = false;
           this.syncBookUrl();
         }
         return;
       }
       const qt = this._pendingQt;
-      this._pendingKp = '';
-      this._pendingQt = '';
-      this._pendingKp3 = '';
+      if (!provisional) {
+        this._pendingKp = '';
+        this._pendingQt = '';
+        this._pendingKp3 = '';
+      }
       if (kp3) {
         const hit = this.items.find((m) => m.tag3_name === kp3);
         if (hit) {
@@ -1585,6 +1674,10 @@ export default {
         this.kp3Filter = '';
         return;
       }
+      if (provisional) return;
+      this.kpFilter = '';
+      this.qtFilter = '';
+      this.kp3Filter = '';
       this.syncBookUrl();
     },
     async loadMastery() {

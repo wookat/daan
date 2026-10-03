@@ -93,11 +93,11 @@ def test_auth_register_rate_per_real_ip():
 
 
 def test_answer_log_uid_rotation_capped_by_ip_bucket():
-    """R189：零限速匿名写端点接入 rl()，answer_log 轮换 uid 由 IP 桶（3×120/3600s）封顶。"""
+    """R189：零限速匿名写端点接入 rl()，answer_log 轮换 uid 由 IP 桶（3×600/3600s）封顶（R566 起逐题上送端点 600/h）。"""
     from app.study_api import api_answer_log
 
     r = _req({"X-Kg-Ip": "9.9.9.9"})
-    for i in range(360):
+    for i in range(1800):
         with pytest.raises(HTTPException) as ei:
             api_answer_log({"uid": f"u{i}", "items": []}, r)
         assert ei.value.status_code == 400  # 通过限速，止步空 items 校验，不插行

@@ -80,6 +80,26 @@ export function wrongRetryPlan(items, ptitle) {
   };
 }
 
+// 完成页固定底栏（与小程序 utils/done-bar.ts doneBarPlan 同口径）：有错题 → 主「只重练本组/本卷错题」+ 次「再来一组 / 回卷库」；
+// 无错题/背题 → 主「再来一组 / 回卷库」+ 次「返回…」（按实际落点文案）。act: redo | retry | list | quit
+// 从卷库进来的按卷练习（back=「返回卷库」）：「回卷库」直接 quit 回上一页而不是 navigateTo 再压一层卷库，
+// 且不再同时给「回卷库」+「返回卷库」两个同落点出路（全对时只剩单键）。
+export function doneBarPlan(items, ptitle, beiMode, back) {
+  const paper = paperFinishState(ptitle).isPaper;
+  const backTo = (typeof back === 'string' && back.trim()) || '返回';
+  const again = paper
+    ? { text: '回卷库', act: backTo === '返回卷库' ? 'quit' : 'list' }
+    : { text: '再来一组', act: 'retry' };
+  const retry = beiMode ? null : wrongRetryPlan(items, ptitle);
+  if (retry) {
+    return { primary: retry.label, primaryAct: 'redo', secondary: again.text, secondaryAct: again.act };
+  }
+  if (again.act === 'quit') {
+    return { primary: again.text, primaryAct: 'quit', secondary: '', secondaryAct: 'quit' };
+  }
+  return { primary: again.text, primaryAct: again.act, secondary: backTo, secondaryAct: 'quit' };
+}
+
 // 按卷练习完成页归卷：有卷名走本卷完成态，fail-closed（非字符串/空串走通用完成态）
 export function paperFinishState(ptitle) {
   if (typeof ptitle === 'string' && ptitle.trim()) {

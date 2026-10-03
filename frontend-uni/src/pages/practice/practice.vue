@@ -1,5 +1,5 @@
 <template>
-  <view class="page" :class="{ 'has-bar': session && cur }">
+  <view class="page" :class="{ 'has-bar': session }">
     <!-- 加载失败 / 骨架（本页仅承载答题会话，选题在首页） -->
     <kg-empty-state
       v-if="!session && loadState === 'fail'"
@@ -304,12 +304,20 @@
         <!-- #endif -->
 
         <view class="done-acts">
-          <kg-button v-if="!beiMode && wrongRetry()" size="lg" block icon="rotate-ccw" @click="retryWrong">{{ wrongRetry().label }}</kg-button>
-          <kg-button v-if="paperFinish().isPaper" :variant="wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="goExamList">回卷库</kg-button>
-          <kg-button v-else :variant="!beiMode && wrongRetry() ? 'ghost' : 'primary'" size="lg" block @click="retryGroup">再来一组</kg-button>
           <kg-button v-if="!beiMode" variant="ghost" size="lg" block icon="share-2" @click="shareResult">分享成绩</kg-button>
-          <kg-button variant="text" size="md" block @click="quit">{{ backLabel }}</kg-button>
+          <kg-button v-if="doneBar().secondaryAct !== 'quit'" variant="text" size="md" block @click="quit">{{ backLabel }}</kg-button>
         </view>
+
+        <!-- 结算态固定底栏（小程序 doneBar 同口径）：主出路不再随长页沉到首屏之下 -->
+        <kg-action-bar
+          layout="actions"
+          class="done-bar"
+          :class="{ 'done-bar--long': doneBar().primaryAct === 'redo' }"
+          :primary-text="doneBar().primary"
+          :secondary-text="doneBar().secondary"
+          @primary="doneAct(doneBar().primaryAct)"
+          @secondary="doneAct(doneBar().secondaryAct)"
+        />
       </template>
     </kg-two-col>
 
@@ -366,6 +374,17 @@
       </template>
     </kg-sheet>
 
+    <!-- 继续上次练习：关层（X / Esc / Back / 遮罩）= 继续；「开新一组」会清本机 + 服务端进度，必须显式点按 -->
+    <kg-sheet v-model="resumeOpen" :title="resumeAsk ? resumeAsk.title : '继续上次练习？'">
+      <text class="quit-tip">{{ resumeAsk ? resumeAsk.tip : '' }}</text>
+      <template #footer>
+        <view class="sheet-acts">
+          <kg-button variant="primary" size="lg" block @click="resumePick(true)">{{ resumeAsk ? resumeAsk.cont : '继续' }}</kg-button>
+          <kg-button variant="ghost" size="lg" block tone="bad" @click="resumePick(false)">{{ resumeAsk ? resumeAsk.drop : '不用了' }}</kg-button>
+        </view>
+      </template>
+    </kg-sheet>
+
     <!-- 题目纠错 -->
     <kg-sheet v-model="reportOpen" title="题目纠错">
       <view class="rp-types" role="group" aria-label="问题类型">
@@ -407,7 +426,7 @@ import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan } from '../../paper-continue.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan, doneBarPlan } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
@@ -418,7 +437,9 @@ import { isExplanationCovered } from '../../exp-dup.js';
 import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
+import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
 import { backLabel } from '../../back-label.js';
+import { practiceNavTitle, practicePageOnTop } from '../../practice-title.js';
 
 
 function loadPStats() {
@@ -482,6 +503,8 @@ export default {
       toolsOpen: false,
       quitOpen: false,
       quitSum: null,
+      resumeOpen: false,
+      resumeAsk: null,
       qsecs: 0,
       qTimer: null,
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
@@ -787,6 +810,8 @@ export default {
   onShow() {
     this.askSeenTick++;
     this.backLabel = backLabel(getCurrentPages());
+    this._navTitle = '';
+    this.syncNavTitle();
     // #ifdef H5
     if (!this._pkHandler && typeof window !== 'undefined') {
       this._pkHandler = (e) => this.onPKeydown(e);
@@ -870,6 +895,7 @@ export default {
       this.lastSubmodule = null;
       this._source = 'redo';
       this._ptitle = null;
+      this._reinforce = null;
       this.session = true;
       this.startQTimer();
       this.saveSession();
@@ -916,8 +942,14 @@ export default {
     items() {
       this.matOpen = {};
     },
+    session() {
+      this.syncNavTitle();
+    },
     idx() {
       this.multiSel = [];
+    },
+    resumeOpen(v) {
+      if (!v && resumeDismissAction(this._resumeAct) === 'cont') this.resumePick(true);
     },
   },
   methods: {
@@ -929,6 +961,28 @@ export default {
     },
     modName(m) {
       return MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '未知';
+    },
+    // 导航栏标题随会话来源（卷名 / 错题重练 / 每日一练 / 模块 · 专项练习），与小程序 navTitleFor 同口径；非会话态回「刷题」
+    syncNavTitle() {
+      const title = practiceNavTitle(
+        {
+          session: this.session,
+          ptitle: this._ptitle,
+          source: this._source,
+          daily: this._daily,
+          dailyPast: this._dailyPast,
+          shizheng: this._shizheng,
+          szPast: this._szPast,
+          reinforce: !!this._reinforce,
+          module: this.lastModule,
+          submodule: this.lastSubmodule,
+        },
+        (m) => this.modName(m)
+      );
+      if (title === this._navTitle) return;
+      if (!practicePageOnTop(getCurrentPages())) return;
+      this._navTitle = title;
+      uni.setNavigationBarTitle({ title, fail: () => {} });
     },
     imgUrl(p) {
       return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
@@ -1133,6 +1187,7 @@ export default {
         this.paperSheet = false;
         this._source = untimed ? (p.source || null) : null;
         this._ptitle = untimed ? (p.title || null) : null;
+        this._reinforce = null;
         this.items = items;
         this.idx = 0;
         this.picked = '';
@@ -1149,6 +1204,7 @@ export default {
           this.examMode = false;
           if (this.examTimer) clearInterval(this.examTimer);
           this.startQTimer();
+          this.saveSession();
           uni.showToast({ title: wrongOnly ? '只练本卷上次答错的题' : p.title + ' 开始：不计时逐题练', icon: 'none', duration: 1800 });
         } else {
           this.examMode = true;
@@ -1320,6 +1376,7 @@ export default {
         this.lastSubmodule = null;
         this._source = 'daily';
         this._ptitle = null;
+        this._reinforce = null;
         this._redoItems = null;
         this._reviewed = [];
         this.session = true;
@@ -1583,6 +1640,16 @@ export default {
     wrongRetry() {
       return wrongRetryPlan(this.items, this._ptitle);
     },
+    // 完成页固定底栏两出路（与小程序 doneBarPlan 同口径）；模板方法调用规避非响应式 _ptitle
+    doneBar() {
+      return doneBarPlan(this.items, this._ptitle, this.beiMode, this.backLabel);
+    },
+    doneAct(act) {
+      if (act === 'redo') this.retryWrong();
+      else if (act === 'retry') this.retryGroup();
+      else if (act === 'list') this.goExamList();
+      else this.quit();
+    },
     // 完成页「只重练本组/本卷错题」：就地以本会话答错题重开会话，保留 _source/_ptitle/lastModule；落 pendingSession 供刷新/前进恢复
     retryWrong() {
       const plan = wrongRetryPlan(this.items, this._ptitle);
@@ -1685,6 +1752,7 @@ export default {
       // 推荐埋点：记录本次练习的入口来源（reco/weak 等），随 answer_log 落库
       this._source = source || null;
       this._ptitle = null;
+      this._reinforce = null;
       this.session = false;
       this.beginLoadState();
       this.lastModule = module;
@@ -1956,11 +2024,11 @@ export default {
     // #ifdef H5
     onPKeydown(e) {
       if (typeof window === 'undefined' || window.innerWidth < 1024) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       if (!this.session || !this.cur) return;
-      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen) return;
+      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen || this.quitOpen || this.resumeOpen) return;
       const k = e.key;
       if (/^[a-dA-D]$/.test(k) && !this.picked && !this.beiMode) {
         const K = k.toUpperCase();
@@ -2095,7 +2163,8 @@ export default {
       const payload = collectPracticeProgress(
         this.items, this.idx, this.right, this.streak, this.bestStreak,
         this.lastModule || '', this.lastSubmodule || '',
-        this._source || '', this._ptitle || ''
+        this._source || '', this._ptitle || '',
+        this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null
       );
       if (!payload) return;
       request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
@@ -2121,6 +2190,7 @@ export default {
       this.lastSubmodule = s.lastSubmodule;
       this._source = (typeof s.source === 'string' && s.source) || null;
       this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
+      this._reinforce = null;
       this._redoItems = redoItemsFromPending(s);
       this._reviewed = reviewedFromPending(s);
       const daily = dailyFromPending(s, Date.now());
@@ -2165,11 +2235,19 @@ export default {
       this.lastSubmodule = snap.submodule || null;
       this._source = snap.source || null;
       this._ptitle = snap.ptitle || null;
+      this._reinforce = null;
+      this._redoItems = snap.redoItems;
+      this._reviewed = [];
+      this._daily = !!snap.daily;
+      this._dailyDate = snap.daily ? snap.daily.date : '';
+      this._dailyPast = snap.daily ? snap.daily.past : false;
       this.autoSaved = false;
       this.resultSent = false;
       this.percentile = null;
       this.session = true;
       this.startQTimer();
+      if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
+      else if (snap.daily) uni.showToast({ title: '继续' + (snap.daily.past ? '往期每日一练' : '今日一练') + ' · 第 ' + (this.idx + 1) + '/' + this.items.length + ' 题', icon: 'none' });
       this.saveSession();
       this.relinkWrongMids();
     },
@@ -2219,20 +2297,15 @@ export default {
             this.adoptRemoteSnap(snap);
             return;
           }
-          uni.showModal({
-            title: '继续上次练习？',
-            content: (snap.ptitle ? '「' + snap.ptitle + '」' : '') + '在其他设备还有一组未做完（' + done + '/' + snap.items.length + ' 题），是否继续？',
-            confirmText: '继续',
-            cancelText: '不用了',
-            success: (res) => {
-              if (res.confirm) {
-                this.adoptRemoteSnap(snap);
-              } else {
-                this.clearServerProgress();
-                this.startDefault();
-              }
-            },
-          });
+          this.askResume(
+            'remote',
+            { title: snap.ptitle, done, total: snap.items.length },
+            () => this.adoptRemoteSnap(snap),
+            () => {
+              this.clearServerProgress();
+              this.startDefault();
+            }
+          );
         })
         .catch(() => {
           this._srvResuming = false;
@@ -2256,21 +2329,16 @@ export default {
         return true;
       }
       const title = pendingTitle(s);
-      uni.showModal({
-        title: '继续上次练习？',
-        content: (title ? '「' + title + '」' : '') + '上次还有一组未做完（' + done + '/' + s.items.length + ' 题），是否继续？',
-        confirmText: '继续',
-        cancelText: '不用了',
-        success: (res) => {
-          if (res.confirm) {
-            this.adoptLocalPending(s);
-          } else {
-            uni.removeStorageSync('pendingSession');
-            this.clearServerProgress();
-            this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
-          }
-        },
-      });
+      this.askResume(
+        'local',
+        { title, done, total: s.items.length },
+        () => this.adoptLocalPending(s),
+        () => {
+          uni.removeStorageSync('pendingSession');
+          this.clearServerProgress();
+          this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
+        }
+      );
       return true;
     },
     async rateHs(q, up) {
@@ -2583,6 +2651,19 @@ export default {
       this.quitSum = sum;
       this.quitOpen = true;
     },
+    askResume(kind, info, cont, drop) {
+      this._resumeAct = { cont, drop, picked: false };
+      this.resumeAsk = resumeAsk(kind, info);
+      this.resumeOpen = true;
+    },
+    resumePick(cont) {
+      const act = this._resumeAct;
+      if (!act || act.picked) return;
+      act.picked = true;
+      this.resumeOpen = false;
+      trackEvent(cont ? 'practice_resume_cont' : 'practice_resume_drop', this._source || 'practice');
+      (cont ? act.cont : act.drop)();
+    },
     quitPick(keep) {
       this.quitOpen = false;
       trackEvent(keep ? 'practice_quit_keep' : 'practice_quit_end', this._source || 'practice');
@@ -2716,6 +2797,9 @@ export default {
 .nudge-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .nudge-s { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); color: var(--ink-2); }
 .done-acts { display: flex; flex-direction: column; gap: var(--sp-12); margin-top: var(--sp-24); }
+/* 结算底栏：主按钮文案带题数（「只重练本组错题（N 题）」）时给主位更多宽度，375 不换行 */
+.done-bar.done-bar--long :deep(.kg-btn--primary) { flex: 1.7; }
+.done-bar :deep(.kg-btn) { min-width: 0; }
 
 /* #ifdef H5 */
 .page :deep(.kg-two__aside) { display: none; }

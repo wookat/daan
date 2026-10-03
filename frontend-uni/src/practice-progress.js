@@ -1,7 +1,7 @@
 // R322：普通刷题「未完成练习」跨设备同步——上送收集与恢复归一纯函数。
 // 语义：非法输入一律 fail-closed（收集返回 null 不上送、恢复返回 null 不采纳）。
 
-export function collectPracticeProgress(items, idx, right, streak, bestStreak, module, submodule, source, ptitle) {
+export function collectPracticeProgress(items, idx, right, streak, bestStreak, module, submodule, source, ptitle, daily) {
   if (!Array.isArray(items) || !items.length || items.length > 100) return null;
   const qids = [];
   const picks = {};
@@ -29,6 +29,7 @@ export function collectPracticeProgress(items, idx, right, streak, bestStreak, m
     submodule: typeof submodule === 'string' ? submodule.slice(0, 64) : '',
     source: typeof source === 'string' ? source.slice(0, 64) : '',
     ptitle: typeof ptitle === 'string' ? ptitle.slice(0, 80) : '',
+    daily: dailyMeta(daily),
   };
 }
 
@@ -52,9 +53,15 @@ export function parsePendingPractice(saved, now) {
 // 每日一练场次的 pendingSession 以 daily:{date,past} 标记（无模块、无卷名）；恢复时据此还原打卡/全站成绩语义。
 // 跨日后接着做昨天的题组按往期补练处理（不打今日卡、不提交全站成绩）
 export function dailyFromPending(saved, now = Date.now()) {
-  const d = saved && saved.daily;
+  const d = dailyMeta(saved && saved.daily);
+  if (!d) return null;
+  return { date: d.date, past: d.past || d.date !== cnDayOf(now) };
+}
+
+// 场次标记原样归一（不按今天重算 past）：上送服务端 / 存本机快照用
+export function dailyMeta(d) {
   if (!d || typeof d !== 'object' || !/^\d{4}-\d{2}-\d{2}$/.test(String(d.date || ''))) return null;
-  return { date: d.date, past: !!d.past || d.date !== cnDayOf(now) };
+  return { date: d.date, past: !!d.past };
 }
 
 export function dailyPendingTitle(d) {
@@ -145,7 +152,8 @@ export function patchPendingMistake(saved, q) {
 }
 
 // R323：首页续练卡数据——/api/practice/resume 应答 -> {done,total,module}（无效/空/已做完返回 null）
-export function parseRemotePractice(d) {
+// 服务端快照的场次身份：psource 'redo' → 错题重练；daily:{date,past} → 每日一练（与本机 pendingSession 同口径）
+export function parseRemotePractice(d, now = Date.now()) {
   if (!d || !Array.isArray(d.items) || !d.items.length) return null;
   const picks = d.picks && typeof d.picks === 'object' ? d.picks : {};
   const done = d.items.filter(
@@ -157,10 +165,18 @@ export function parseRemotePractice(d) {
     total: d.items.length,
     module: typeof d.module === 'string' ? d.module : '',
     ptitle: typeof d.ptitle === 'string' ? d.ptitle : '',
+    redo: d.source === 'redo',
+    daily: dailyFromPending(d, now),
   };
 }
 
-export function adoptPracticeResume(d) {
+// 首页续练卡：远端应答若是 apiSnap 旧快照兜底（staleAt 非 0），卡面要如实标出快照时刻与网络态，不当实时进度陈述
+export function markRemoteResume(r, snapAt, online) {
+  if (!r) return null;
+  return { ...r, snapAt: Number(snapAt) || 0, netOnline: typeof online === 'boolean' ? online : null };
+}
+
+export function adoptPracticeResume(d, now = Date.now()) {
   if (!d || !Array.isArray(d.items) || !d.items.length) return null;
   const picks = d.picks && typeof d.picks === 'object' ? d.picks : {};
   const excl = d.excl && typeof d.excl === 'object' ? d.excl : {};
@@ -185,5 +201,7 @@ export function adoptPracticeResume(d) {
     submodule: typeof d.submodule === 'string' ? d.submodule : '',
     source: typeof d.source === 'string' ? d.source : '',
     ptitle: typeof d.ptitle === 'string' ? d.ptitle : '',
+    redoItems: d.source === 'redo' ? items.map(stripPracticeRuntime) : null,
+    daily: dailyFromPending(d, now),
   };
 }

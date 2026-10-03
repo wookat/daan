@@ -3,6 +3,73 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R572 经验：tabBar KeepAlive 页的「暖轮」必测 + `stale_fallback` 埋点按调用方计数
+- 统计/错题本/首页/我的是 uni tabBar KeepAlive 页：冷 Document（F5）旧快照态 PASS **不代表**暖轮 PASS——`data` 里上一轮真实回包留下的 `dueSynced=true` 等「已同步」标志会跨 `onShow → refresh` 沿用。R572 生产 F 就是：真实 2 due → 切错题本 → 只 `route.abort` `/api/review` → 切回统计，横幅出现但仍「2 题今日待复习」（375/1440 同复现）。凡「未同步显 —/待同步」类断言，必须补一条**同一 Document 内先真实后阻断再切回**的序列；恢复用可见「重试」按钮，先 unroute 再点。
+- 统计页故障注入用 `route.abort` 十端点 + 原生 F5（不是 `page.reload()` 才会命中 `snapPeek` 首帧）；`stale_fallback` 事件条数 ≥ 失败 GET 数：埋点在 `getCache.run` 在途合并之外按调用方各记一条（`/api/predict` 两处消费 → 1 GET 2 事件，R572-1），审计以 request-ledger 的唯一失败 GET 为准、事件数只作上界。
+- 生产 fixture 前置：研究阶段截图探针 uid（如 `test-r572-shots`）留下的行要在测试前对账并**经 lead 授权**后按精确 uid 一起清，报告单列「前置 N → 0」与本轮 uid 分开；共享 `test-r562-modal-%` 42 行永不动。
+- 宿主慢窗（health >5s）下解除阻断后的恢复可能耗尽 `request()` 12s/20s 内建重试 → 该项写 UNTESTED（环境）并附同刻独立 `curl` 时延，不额外人工重试冒充恢复。
+
+## R571 经验：`apiSnap` 旧快照兜底（resolve 路径）的复验口径 + 浏览器在线态不是 Vue 响应式
+- `apiSnap:<path>` 的 localStorage 值是原始 JSON 字符串 `{t,d}`；`mistakesCache` 是 uni wrapper `{type:"object",data:{ts,uid,items}}`——两者别套同一个解码器。R571 起 `request()` 兜底回包带 `staleAt(data)>0` 身份：测旧快照态必须先拿到本人 `/api/mistakes` + `/api/review` 真实 200（两快照存在），再 `route.abort` 两条 GET 并 F5。断言：列表仍渲染、头卡 `—/—` + 「今日待复习需网络恢复后同步」、横幅「网络不稳定 · 展示刚刚缓存的错题，可稍后重试」+「重试」、`mistakesCache` **原字节**不变（不只比条数）、恰 2 条 `stale_fallback`。「不写旧角标」= 冷 Document 空角标未被旧 review 快照写上（uni tabBar 角标本来随 Document 重置），不是「跨 Document 保留原数字」。
+- resolve 路径不进 catch → **没有 toast** 是正确行为，别把缺 toast 记 FAIL；只有两条 API 都无快照才到真 reject 分支（R569 B′ 精确删两键）。
+- 在线态：`navigator.onLine` 不是响应式依赖，快照时刻不变时 computed 文案不会重算——必须在**同一 Document** 先进旧快照态，再 `context.set_offline(True)` 点「重试」，记录 `navigator.onLine` 与横幅各是什么（R571 生产 C FAIL 就是这样抓到的），不能用整页刷新掩盖。R571 热修后口径：断网点重试 / 不点按钮 `offline` 事件 ≈300ms 换「当前离线 · … 联网后自动更新」；`online` 事件不点按钮恰 1 mistakes + 1 review GET；全真实回包后再切网 0 额外 GET、横幅不再出现（监听已摘）。恢复测试先 unroute 再 `set_offline(False)`。
+- 练习页原生页头返回 ≠ 工具栏 `aria-label="退出练习"`（后者才 `quit()` 开「保留/结束/继续」层）。R563 E 前置 = 多题且答 ≥1 题；误点页头 Back 后可 Forward → R548「继续上次练习」恢复**同一** session（不算第二次 redo 启动），再走正确入口。
+
+## R569/R570 经验：cache-first 首帧两态 + 「离线」两层 + History 问题的基线复现归因
+- 错题本带 `?kp/?qt/?kp3` 深链 F5 自 R569 起首帧就是筛选态（provisional：缓存命中即落地、不消费 pending、不校正 URL），真实回包后终判（命不中 fail-closed 清筛选 + `syncBookUrl`）。复验断言分两帧：回包前「1 卡 + `—题/—分钟` + 『正在同步今日待复习…』、无『开始复习』/无『今天没有到期错题』」；回包后「同 1 卡 + 真实到期数/分钟 + CTA」。真 0 到期必须另起用例（PATCH 已掌握 → review `total 0` → F5 显 `0 题 / 0 分钟` + 『今天没有到期错题』，**不是** `—`）。
+- 「离线」有两层，指令必须写清测哪层：① `api.js request()` GET 网络失败回退 `apiSnap:<path>` 快照（R90，`stale_fallback` 埋点）——两条 API 都有快照时页面**不进 catch**，header 直接显旧 5/4，这是既有分层不是 FAIL；② `book.vue` catch 兜底——只有两条 API 都无快照时到达，显离线 banner + 「离线中 · 今日待复习需联网后同步」+ `—/—`。要测 ②，按当前 uid **精确删** `apiSnap:/api/mistakes?uid=…` 与 `apiSnap:/api/review?uid=…` 两键及 `apiSnapIndex` 对应项，`mistakesCache` 保留（byte-for-byte 核对），再 abort + F5。
+- 生产 FAIL 归因铁律：同 fixture（生产专用 uid 只读转发 GET、非 GET 本地 200 不写生产）同流程在**基线 bundle** 上复跑一次再下结论；两套都复现 = 既有，单独立轮修，不动当前 PR。本地服务两套 dist 用 `python -m http.server` 各占端口，Playwright `route.fulfill(ctx.request.get(...))`（`route.continue_(url=)` 跨协议会报 `New URL must have same protocol`）。
+- History 类问题用 `window.__hist` 钩子（`pushState/replaceState` 包一层记 `u` + 调用栈前 4 帧，`popstate/hashchange` 记 `location.href`）逐条对账；「最终 URL 变了」≠「有人 replaceState 改了 URL」——R569 D 是链式补跳落到「开层前 query」的真条目。R570 起链落地会触发 `onSheetHistoryLanded` → book chunk `syncBookUrl` 一次 replaceState 补回全筛选，复验断言：落地 URL 含 kp/qt、`history.state.__kgSheet` 为空、1 卡、随后 F5 保持、再一次 Back 离页；直接从哑条目 Back 离页 / 层开着 / 地址栏改 hash（`away`）时 `__hist` 里**不得**出现该次 replaceState。
+- 哑条目复现序列的 chip 点击用宿主 id `#kgchip-changshi`，`.modchips` 内嵌 text locator 会被宿主 `uni-view` 拦截 pointer events。
+- 练习页「结束本组并退出」（R563 E）要在多题且部分作答后才走 quitSummary 三选项层；未作答单题直接退出是既有门槛不是 FAIL。redo/深页启动在 origin 间歇慢（health 5s+）时 12s+20s 自动重试 abort → 记录 CDP 时间戳按环境分账为 UNTESTED，不为等 origin 无限重试。
+
+## R568 经验：慢 origin 下 cache-first 首屏 vs 稳定态分账 + 宿主级阻塞时的复验/清理收口
+- 更多操作层标题自 R568 起为 `moreTitle` = `组名 · 简称`（「法律 · 个税」），与卡面/chip 同口径；四值（显示 / 库内 `question_type` / URL `qt` / redo `qtype`）仍分开断言，后三者不变。统计页 0 作答：`/api/growth total=0` + `/api/stats` 分布非空 → hero 总正确率 `—`、其余卡仍渲染（`hasData()` 不变）；总数 0 不等于分布空，两口径一起断言。
+- 错题本带筛选（`?mod=&qt=`）物理 F5 是 cache-first：先渲染本地缓存全量卡 + 待复习 0，真实回包后才收敛为筛选态。慢 origin（本轮 ~30s）下这两个状态相隔很久，**必须两态各截时间戳截图 + 对齐 API request/abort/response 时间线**，不能凭早期一张截图判「筛选丢失」（本轮 1440 F5 初判 FAIL 后纠正为既有 P2 R568-1）。
+- 取消归因要存 CDP 单调时间戳 + wallTime：12/15/20s 处 abort + 同 uid 重试是前端超时处理的一致证据，不是「uid 切换」；未直接埋点的因果只能标「推断」。
+- 原生 UI 重试仍拉不到卡（fresh 冷加载两次失败、`/api/review` 520）→ 下游功能用例一律 UNTESTED/blocked，**不得用 fixture JSON 灌应用状态冒充生产 E2E 覆盖**。HTTP 520 body / cf-ray / Browser Log 网络 error 与 JS runtime exception 分列。
+- 静态审计脚本容错 curl exit 28 / status 000 / 无 body：记 exit code、耗时、stderr；拿不到响应头 = 未观测，不是「部署头被去掉」。
+- 清理写请求后 SSH 超时（本轮 280s）是二义状态：**不盲目重发 DELETE**，先跑独立只读 41 表精确/前缀核证，再单独补五类 hash；报告保留「删除回执缺失」偏差即便只读证明 0 行。宿主 load >20 / mem_avail <250MB 时把 hash 全表扫描与删除拆成独立 SSH 会话。
+- 宿主被同机他家 build/prune/celery 压垮（health 19–44s、mistakes 17–81s、520）时：只读采样 `uptime/free/df/ps` 归因、`report_blocker` 上报，不 kill 他家进程、不叠 compose/build/prune；后端 0 改动的发版可只跑 Pages 4c/5/5b/6 段，health rev 对账留 `DEPLOY_RESUME=1`；复验报告写「部分 PASS / 环境阻塞 / 不判整轮通过」。
+
+## R567 经验：题型「显示 / 库内值 / URL qt / redo qtype」四值分账 + 前后端归一化同口径
+- 错题 `question_type` 写入 → 库内值经后端 `db.norm_qtype`（只去 `资料分析/数量关系/言语理解/判断推理/常识判断/常识/时政` + `-`），fixture 写完**必须 GET `/api/mistakes` 回读**库内值再拿它做后续断言；前端任何「见 `-` 就切首段」都是错口径（`法律-个税`/`政治-理论`/`图形推理-空间类` 会被切坏，生产 R567 D FAIL：redo `qtype=个税` → 200 `items:[]`）。H5 `tagName` / 小程序 `tagName` 与 `type-label.js qtypeName` 共用同一份模块名单，改名单要三处同改。
+- 复验把四个值分开断言：卡头/chip/当前筛选/重练入口**显示**（`fineTypeLabel(type_group, fine)` 简称，如「个税」）、库内 `question_type`、URL `?qt=`（应 = 库内值，物理 F5 后仍是）、`GET /api/mistakes/redo?...&qtype=`（应 = 库内值）。redo 只认 `items` 非空且 qid 命中，HTTP 200 空数组 = FAIL。更多操作层标题 `tagName · 更多操作` 是 raw 值（R567-1 登记），不是缺陷。
+- 一组至少造两条不同细分（同 `type_group`）才会出细分 chips；375 下细分 chip 可能在筛选 sheet 视口下方，先 `scrollIntoView` 再截。复习不是独立路由（`#/pages/review/review` 新 Document 直达会重定向首页），要走错题本「开始复习」入口。
+- harness：字符串形式 `page.wait_for_function` 撞站点 CSP（unsafe-eval）会真产生 1 runtime exception + 1 rejection，用 locator 等待或函数式 evaluate；截图前等真实 URL/标题/控件就绪而不是固定 1 s（375 首次 redo 截图拍早，改抽录像帧并标注来源）；收藏 tab 成功后文案「收藏」→「收藏 1」，定位用稳定选择器。
+- 清理：同前缀 `test-r567-%` 有其他 UID 的既有行，只按本人 UID 精确删并报「前缀总数 前→中→后」，不宣称整个前缀残留 0。
+
+## R566 经验：练习页动态 nav 标题的复验口径 + 逐题上送端点限速与「持久化」分账
+- 标题断言同时取 `document.title` 与 `.uni-page-head__title` 文本，再单独量 `clientWidth/scrollWidth` + `white-space/overflow/text-overflow`：375 下真实卷名（≈22 字）**省略是设计**（uni-h5 `pageHead.css` 自带 nowrap+ellipsis），不是「标题被截」缺陷；40 字兑底只有单测，自然卷名到不了。
+- 「返回首页/返回卷库」类离页复验除 URL/内容外必须开 `Runtime.exceptionThrown` + `unhandledrejection`：`leave()` 先 `navigateBack/switchTab` 再 `session=false`，watcher 若在页面出栈后调 `uni.setNavigationBarTitle`（无回调 → promise）就是 `fail page not found` rejection（R566 生产 2 次）。修法是栈顶守卫（`practicePageOnTop(getCurrentPages())`）+ 回调式调用；复验断言「落点正确 且 rejection 0」缺一不可，同时核上一页标题（真题卷库 / 错题本 / 首页「刷题」= `pages.json` 首页静态标题，不是练习页覆盖）。
+- 0 答快照会**静默采纳**不弹恢复层；要走显式恢复层须可见答 1 题、等持久化落地再物理 F5。按卷 0 答 F5 断言：同 75 qid、1/75、`pendingSession.ptitle` 与顶栏一致。
+- 逐题 `POST /api/answer_log` 每题 1 次：连续 75 题 UI 自动化会撞 uid 桶限速（R566 前 120/h → 31×429，DB 恰少 31 行；R566 起 600/h）。审计要把 answer_log 每条响应码单列，429 走 `enqueueAnswers` 离线队列（本机保留、下次 flush 重试），**不能算已持久化**，也不能因为完成页出现就略过；复验限速改动要同节奏重跑并核 DB 行数 = 上送条数 + 本机队列为空。
+- 卷库来源按卷全对完成页只剩一键「回卷库」= `quit()`（`navigateBack` 回**原**卷库条目，`history.length` 不增）；从首页/深链进的按卷仍是 `goExamList()` 压新层。断言用「回库后一次 Back 到首页」区分两者。
+
+## R565 经验：Lighthouse 模拟 LCP 二值跳变的归因法 + 结算态固定底栏的复验口径
+- `perf-budget.sh` 默认是 **simulated** 节流：LCP 违例先把 JSON 落盘（`lighthouse <url> --output=json --output-path=…`），对比 `audits.metrics.details.items[0]` 的 `observedFirstContentfulPaint/observedLargestContentfulPaint`（真实首屏）与 `firstContentfulPaint/largestContentfulPaint`（Lantern 模拟）；再从 `audits['network-requests'].details.items` 数「`networkEndTime` < 观测 FCP 且 `priority ∈ {High, VeryHigh}`」的请求数/字节。通过 vs 违例样本若观测值一致（≈0.2 s）而 High 请求数 3 ↔ 47（`route-preload` 的 modulepreload chunk 赶在观测 FCP 前完成），就是 Lantern 关键链敏感（同 R443），不是首页回归；benchmarkIndex 高低（R562）只解释倍率，不解释二值跳变。`--throttling-method=devtools` 复核会报「loaded too slowly… incomplete」，只作方向证据不作基准。
+- 结算态固定底栏（练习完成页 `.done-bar`，模考报告已有）复验：① 375 底栏 `getBoundingClientRect().bottom === innerHeight` 且 `position:fixed`，两键各一行（`height ≈ 44`，主位文案「只重练本组错题（10 题）」两位数题数也不换行）；② 页内最后一个控件（「分享成绩」/ 文字「返回…」）滚到底后 `bottom <= 底栏 top`（`.page.has-bar` 88 px 留白）；③ 四态文案/落点：有错题「只重练…/再来一组」、按卷「重练本卷…/回卷库」、全对「再来一组/返回…」、背题不出重练，且点主位后与 R553 `retryWrong`（同 qid 集合、`pendingSession` 落 redo）/ 次位 `retryGroup`（新 GET 1/10）语义不变；④ 1440 底栏 `sticky` 在两栏容器内不遮右栏；⑤ 「分享成绩」仍在页内可点。本机预检可用 dist `http.server` + Playwright `route('**/api/**')` 把 GET 转发生产（`X-Kg-Probe: 1`）、非 GET 本地 200/abort，0 生产写入。
+- 完成页出路的**既有语义**别写进断言：同模块「只重练本组错题」`retryWrong` 保留 `lastModule`，`pendingSession.redo` 恒 0（`redo=1` 只标错题本重练）→ 断言原错 qid 集合/N/题干/F5 恢复同 N 题；「再来一组」命中 R555 中场 `prefetchPack` 时 0 GET、无缓存恰 1 GET → 断言 1/10 + 十 qid 与前组零交集，并记录来源。按卷练习入口在生产是首页「模考」→ 卷库卡菜单「按卷练习（不计时）」（不是「真题卷库」），页面 nav 标题静态「刷题」，卷身份以 pending `ptitle` / 完成页卷名为准。CDP 审计把 `data:` 图标事件（无 ExtraInfo）与 HTTPS 分开计数；Playwright 阻止 SW 注册的 9 条 console warning 是 harness，不得写成「warning 0」。
+- 小程序原生 `wx.showModal` 没有 Esc/遮罩/Back 隐式关闭，H5 R564「隐式关层=丢进度」口径不适用；核小程序恢复确认只看两点：`fail` 回调是否被当成 cancel（弹窗失败 ≠ 用户选择），content 是否写明 cancel 的代价（`cancelText` 限 4 字放不下）。
+
+## R564 经验：恢复确认层（F5 后「继续上次练习/模考？」）与弹层按钮 Enter 激活的复验口径
+- 弹层按钮上的 Enter/Space 激活必须断言**同题/同页**（题号计数器、题干、picked、`pendingSession`/`examProgress` 整对象、attempt id），不能只看层关：a11y 宿主把 keydown 转 click 时已 `preventDefault`，同一事件仍会冒泡到 `window` 的页面快捷键，层已关时会被当「下一题」。修法口径：页面级快捷键统一 `if (e.defaultPrevented) return`。Escape 作对照组一起录。
+- 恢复层隐式关层（Esc / Back / X / 遮罩）= 继续，但会发一条 `practice_resume_cont` 埋点：断言「0 业务请求」要排除 `/api/track`，分别核 `progress` POST / `questions` GET / `exam/start` 条数；显式丢弃则恰 1 空 qids progress + 1 新 GET（模考恰 1 `exam/start`）。
+- 任何新埋点事件名先核后端 `/api/track` 白名单：审计非 2xx 时把 `/api/track` 400 `无效事件` 单列，不能混在「全 200」里；前端新增事件名即后端改动，本地门要跑 pytest `test_track_whitelist_sync`。
+- 物理 F5 恢复层是「页面一进来就开」的第一个 sheet，History token 边界在这里必现：F5 → Esc → F5 → Back 必须关层留页；每步记 `history.state.__kgSheet`，新 token 不得与当前条目残留 marker 相同。
+- 模考恢复后核 nav 标题（迷你模考 vs 试卷名）与 `attempt`/`endAt`；练习恢复要在「错答停在反馈态」和「答对已推进」两种前置各测一次 F5。
+- 跨设备快照用第二个 context 同 uid 写 `POST /api/practice/progress` 造真回包，再在无本机 `pendingSession` 的 context 进练习页；本地只有源码契约时如实写 UNTESTED。
+
+## R563 经验：原生 `uni-modal`/`uni-actionsheet` 键盘复验 + History 哑条目链离页口径
+- 原生层焦点时序要分两条测：记录 click/focusin 真实时间戳并在 visibility 过渡内立即发 CDP Shift+Tab（属按键早于可聚焦时刻的窗口）；再独立测焦点已入层后的 Shift+Tab。「过渡期进不了层」不是「重试抢走了层内焦点」的证据；observer 重复安装时先去重 focus trace。
+- `uni-actionsheet` 桌面宽度下可见控件不同：核取消 cell 的祖先与 client rect，不只看它自身 computed display（1440 取消父级隐藏、只循环日期）；证据文件名按观察到的状态起名，不按期望目标。
+- 练习退出走 History 感知的 sheet 时，显式 End/Keep 必须在「首次开层」和「Esc→重开 / Back→重开 / 继续→重开 / Tab」历史后各测一次：`navigateBack` 可能被哑条目消费而不离页，**断言最终 URL 与页面内容**，不能只看 pendingSession 删除或 quit 事件；空壳页上的「返回首页」是 harness 的诚实恢复手段，不是 End 已导航的证据。
+- 取消侧效应观察窗：答对自动下一题 1200ms 会重启 1500ms 进度保存 debounce，答后只等 2200ms 不够零 POST 窗口（4200ms 静默足够）；先等最后一次 pending 变更与网络完成，再快照整个 pendingSession 并开始计数；把先前作答的自动保存与显式 keep/clear 分开归类，不静默丢弃。
+- 需要精确 N 条哑条目时：题页开答题卡 sheet 也会多一条；375 的 ArrowLeft 练习快捷键是桌面限定（`innerWidth >= 1024`）；要保住首题以进真实深页，先点可见「看解析」再点 `.qsb-link` 含「讨论」→ `#/pkgA/social/discuss?qid=…`（只读）。
+- 错题本模块 chip 反映该用户错题实际模块：yanyu-only fixture 用 `#kgchip-yanyu` 断言 `?mod=yanyu`，不假定 `#kgchip-shuliang` 存在。
+- 双向护栏都要保留：同页多次关层后 End 必须离开 practice；两条哑条目后进入深页再 Back 必须停在原 practice。每步记 `history.length/state`（Back 不减 length，后续 push 会替换 forward）；D1 首次 Back 后旧 marker 保留是设计，判 URL/query、焦点归还与第二次 Back 离页。
+- quit/history 类分支按 UID 分开、按精确 UID 核网络与 DB 事件条数；CDP 键盘 helper 记 rawKeyDown/keyUp 与 modifiers（Shift=8），Tab 序列 helper 显式传反向参数。
+
 ## Production CDP recording and audit safeguards
 - Trace actual navigation writers before attributing launcher coverage: exam-library “开始模考” may navigate to the standalone `pkgA/exam/exam?paper_id=…`, while “更多 → 按卷练习（不计时）” writes `practiceLaunch` with `untimed:true` and exercises `practice.startPaper`. Never count the standalone route as execution of an unreachable internal practice timed branch.
 - Verify a physical F5 reload by a new Document request and the native recovery UI. Playwright `page.keyboard.press('F5')` may send a page key event without activating the browser reload accelerator; if so use the foreground computer keyboard, not an assumed successful reload.

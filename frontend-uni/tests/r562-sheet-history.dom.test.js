@@ -265,6 +265,72 @@ describe('sheet-history：Back 先关层', () => {
     expect(window.location.hash).toBe('#/pages/book/book');
   });
 
+  // R564 本地复现：F5 恢复层 Esc 关掉（哑条目留为当前条目）→ 再 F5 → 恢复层再开 → Back 不关层。
+  // 刷新后 seq 归零，新 token 与哑条目的 t 相同，落回哑条目被判成「层仍开着」。
+  it('刷新落在哑条目上再开层：新 token 不与哑条目重合，Back 关层并留在本页，再 Back 跳过哑条目离页', async () => {
+    const t0 = sheetOpened(() => {});
+    sheetClosed(t0); // Esc 关：哑条目仍是当前条目
+    expect(window.history.state.__kgSheet.t).toBe(t0);
+    _resetSheetHistory(); // 模拟 F5：模块状态归零，history 保留
+    installSheetHistory();
+    let open = true;
+    const t = sheetOpened(() => { open = false; });
+    expect(t).not.toBe(t0);
+    await back();
+    expect(open).toBe(false);
+    expect(window.location.hash).toBe('#/pages/book/book');
+    sheetClosed(t);
+    await back();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/home/home');
+  });
+
+  // 生产 c0e05ed5 E375 FAIL：练习退出层 Esc/Back/继续/X/遮罩 各关一次再重开（每次开都 pushState）→ 「结束本组并退出」
+  // leave() 的 navigateBack 落到上一条已关哑条目 → 补跳链把 skipping 置真，落到本页真条目就停 → URL 仍是练习页、界面空壳。
+  // 同形态的 R562 既有缺陷：X 关 → 重开 → X 关 → Back 也停在本页（需再按一次）。
+  // 修法：skipping 只在「从更深页面返回」的链上为真；从本页哑条目离开的链一路补 back 到真正离页。
+  it('R563-fix-2：连开关三次留下三条哑条目 → 关后一次 Back / navigateBack 直接离页（不停在本页真条目）', async () => {
+    const r = mockRouter();
+    installSheetHistory(r);
+    const t1 = sheetOpened(() => {});
+    sheetClosed(t1);
+    const t2 = sheetOpened(() => {});
+    sheetClosed(t2);
+    let open3 = true;
+    const t3 = sheetOpened(() => { open3 = false; });
+    // Back 关层不离页（落到 t2 哑条目）
+    await back();
+    expect(open3).toBe(false);
+    expect(window.location.hash).toBe('#/pages/book/book');
+    sheetClosed(t3);
+    // 再开一次并用按钮关（不动历史）→ 页面 navigateBack（history.back）一次 → 链式补跳到离页
+    const t4 = sheetOpened(() => {});
+    sheetClosed(t4);
+    await back();
+    await flush();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    r.detach();
+  });
+
+  it('R563-fix-2 反向护栏：两条哑条目后 navigateTo 更深页 → Back 一次跳过整串哑条目回到本页（不越过去离页）', async () => {
+    const r = mockRouter();
+    installSheetHistory(r);
+    const t1 = sheetOpened(() => {});
+    sheetClosed(t1);
+    const t2 = sheetOpened(() => {});
+    sheetClosed(t2);
+    r.push(2, '/pages/practice/practice');
+    await back();
+    await flush();
+    await flush();
+    expect(window.location.hash).toBe('#/pages/book/book');
+    expect(window.history.state.__kgSheet).toBeUndefined();
+    await back();
+    expect(window.location.hash).toBe('#/pages/home/home');
+    r.detach();
+  });
+
   it('无 vue-router state（position 缺失）不叠条目，Back 行为与修前一致', async () => {
     window.history.replaceState(null, '', '/#/pages/book/book');
     let open = true;

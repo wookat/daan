@@ -36,6 +36,14 @@ export function buildBookUrl(f) {
   return parts.length ? BOOK_PATH + '?' + parts.join('&') : BOOK_PATH;
 }
 
+/** 该地址是否落在错题本页（hash 路由路径相同，忽略 query） */
+export function isBookHref(href) {
+  const h = String(href || '');
+  const i = h.indexOf('#');
+  if (i < 0) return false;
+  return h.slice(i).split('?')[0] === BOOK_PATH.slice(1);
+}
+
 // uni-h5 tabBar 页复用按 `$page.fullPath === switchTab(url)` 全等匹配，而 fullPath 取自进入时的
 // route.fullPath（含 query）：带筛选深链/刷新进入后，切到别的 tab 再切回匹配不到 → 新建页面实例、
 // onLoad 无 query、筛选与地址一起清零。入页即把 fullPath 归一为纯路径，让切 tab 回来复用 KeepAlive 实例。

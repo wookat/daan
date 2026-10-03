@@ -129,6 +129,28 @@ def test_r363_source_ptitle_fail_closed(client):
     _cleanup()
 
 
+def test_r573_daily_meta_roundtrip_and_fail_closed(client):
+    qids = seed_questions()[:3]
+    uid = "test-pprog-u9"
+    client.post("/api/practice/progress", json={
+        "uid": uid, "qids": qids, "source": "daily", "daily": {"date": "2026-09-08", "past": 0},
+    })
+    d = client.get(f"/api/practice/resume?uid={uid}").json()
+    assert d["source"] == "daily" and d["daily"] == {"date": "2026-09-08", "past": False}
+    client.post("/api/practice/progress", json={
+        "uid": uid, "qids": qids, "source": "daily", "daily": {"date": "2026-09-01", "past": True},
+    })
+    assert client.get(f"/api/practice/resume?uid={uid}").json()["daily"] == {"date": "2026-09-01", "past": True}
+    # 形状不对 / 日期非法 / 老客户端不带 → None，不 400
+    for raw in ("2026-09-08", {"date": "09-08"}, {"date": 20260908}, ["2026-09-08"], None):
+        body = {"uid": uid, "qids": qids}
+        if raw is not None:
+            body["daily"] = raw
+        assert client.post("/api/practice/progress", json=body).status_code == 200
+        assert client.get(f"/api/practice/resume?uid={uid}").json()["daily"] is None
+    _cleanup()
+
+
 def test_resume_skips_removed_questions(client):
     qids = seed_questions()[:3]
     uid = "test-pprog-u6"
