@@ -90,7 +90,20 @@
             </view>
           </kg-card>
 
-          <!-- 6. 模考回顾 -->
+          <!-- 6. 典型错题 -->
+          <kg-card v-if="r.typical && r.typical.length" class="sec">
+            <text class="h">本周典型错题</text>
+            <view v-for="t in r.typical" :key="t.mid" class="tp-item">
+              <view class="tp-meta">
+                <kg-tag v-if="t.module" tone="brand">{{ t.module }}</kg-tag>
+                <kg-tag v-if="t.tag3" tone="neutral">{{ t.tag3 }}</kg-tag>
+                <text v-if="t.reason" class="tp-reason">{{ t.reason }}</text>
+              </view>
+              <text class="tp-stem">{{ t.stem }}</text>
+            </view>
+          </kg-card>
+
+          <!-- 7. 模考回顾 -->
           <kg-card class="sec">
             <text class="h">模考回顾</text>
             <template v-if="r.mock">
@@ -104,9 +117,15 @@
             </template>
           </kg-card>
 
-          <!-- 7. 下周行动 -->
-          <kg-card v-if="r.actions.length" class="sec">
-            <text class="h">下周行动</text>
+          <!-- 8. 下周计划 -->
+          <kg-card v-if="r.plan || r.actions.length" class="sec">
+            <text class="h">下周计划</text>
+            <template v-if="r.plan">
+              <view v-if="r.plan.focus && r.plan.focus.length" class="plan-focus">
+                <kg-tag v-for="(f, i) in r.plan.focus" :key="i" tone="warn">攻克 {{ f }}</kg-tag>
+              </view>
+              <text v-if="r.plan.target_n" class="plan-target">目标：完成 {{ r.plan.target_n }} 题</text>
+            </template>
             <view v-for="(a, i) in r.actions" :key="i" class="act-row" role="button" @click="goAction(a)">
               <text class="act-t">{{ a.title }}</text>
               <text class="act-go">去完成</text>
@@ -446,6 +465,13 @@ export default {
 .act-row:last-child { border-bottom: none; }
 .act-t { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); }
 .act-go { flex-shrink: 0; font-size: var(--fs-sub); color: var(--brand-text); font-weight: 600; }
+.tp-item { padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
+.tp-item:first-of-type { border-top: none; }
+.tp-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-4); }
+.tp-reason { font-size: var(--fs-caption); color: var(--warn); }
+.tp-stem { display: block; margin-top: var(--sp-4); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); }
+.plan-focus { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-4); }
+.plan-target { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-3); }
 .share-img { width: 100%; border-radius: var(--r-md); }
 .share-wait { display: flex; flex-direction: column; align-items: center; gap: var(--sp-12); padding: var(--sp-16) 0; }
 .share-wait-t { font-size: var(--fs-sub); color: var(--ink-2); }

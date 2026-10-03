@@ -315,6 +315,17 @@ def init_db():
         )"""
     )
     conn.execute(
+        """CREATE TABLE IF NOT EXISTS shenlun_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL,
+            topic TEXT,
+            title TEXT,
+            content TEXT NOT NULL,
+            created_at REAL NOT NULL,
+            updated_at REAL NOT NULL
+        )"""
+    )
+    conn.execute(
         """CREATE TABLE IF NOT EXISTS shizheng_questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
@@ -1275,6 +1286,79 @@ def shenlun_materials_by_type(mtype: str) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+SHENLUN_SEG_TYPES = ("内涵", "角度", "金句")
+
+
+def shenlun_hotspots(limit: int = 30, offset: int = 0) -> dict:
+    """热点素材三段式聚合：按 topic 分组，组内按 内涵/角度/金句 分桶，其余类型进 others。
+
+    三段式素材经 /api/shenlun/import 以 type∈{内涵,角度,金句}+topic=热点名 灌入；
+    老数据（金句/案例/政策理论/范文等类型）仍归 others，不丢可见性。"""
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, type, topic, content, source FROM shenlun_materials"
+        " WHERE (disabled IS NULL OR disabled=0) AND topic IS NOT NULL AND TRIM(topic)<>''"
+        " ORDER BY topic, id"
+    ).fetchall()
+    conn.close()
+    topics: dict[str, dict] = {}
+    for r in rows:
+        m = dict(r)
+        g = topics.setdefault(
+            m["topic"],
+            {"topic": m["topic"], "segs": {k: [] for k in SHENLUN_SEG_TYPES}, "others": []},
+        )
+        item = {"id": m["id"], "type": m["type"], "content": m["content"], "source": m["source"]}
+        seg = g["segs"].get(m["type"])
+        (seg if seg is not None else g["others"]).append(item)
+    ordered = sorted(
+        topics.values(),
+        key=lambda g: (-sum(len(g["segs"][k]) for k in SHENLUN_SEG_TYPES), -len(g["others"]), g["topic"]),
+    )
+    return {"total": len(ordered), "items": ordered[offset: offset + min(max(limit, 0), 50)]}
+
+
+def shenlun_notes_list(uid: str) -> list[dict]:
+    conn = get_conn()
+    rows = conn.execute(
+        "SELECT id, topic, title, content, created_at, updated_at FROM shenlun_notes"
+        " WHERE uid=? ORDER BY updated_at DESC LIMIT 200",
+        (uid,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def shenlun_note_save(uid: str, nid: int | None, topic: str, title: str, content: str) -> dict:
+    conn = get_conn()
+    now = time.time()
+    if nid:
+        cur = conn.execute(
+            "UPDATE shenlun_notes SET topic=?, title=?, content=?, updated_at=? WHERE id=? AND uid=?",
+            (topic, title, content, now, nid, uid),
+        )
+        conn.commit()
+        conn.close()
+        return {"id": nid, "updated": bool(cur.rowcount)}
+    cur = conn.execute(
+        "INSERT INTO shenlun_notes(uid, topic, title, content, created_at, updated_at)"
+        " VALUES(?,?,?,?,?,?)",
+        (uid, topic, title, content, now, now),
+    )
+    nid_new = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return {"id": nid_new, "updated": True}
+
+
+def shenlun_note_del(uid: str, nid: int) -> bool:
+    conn = get_conn()
+    cur = conn.execute("DELETE FROM shenlun_notes WHERE id=? AND uid=?", (nid, uid))
+    conn.commit()
+    conn.close()
+    return bool(cur.rowcount)
 
 
 def question_counts() -> list[dict]:

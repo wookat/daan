@@ -341,6 +341,16 @@
             </view>
           </view>
         </kg-card>
+
+        <kg-card class="sec" clickable chevron @click="goPomo">
+          <view class="km-entry">
+            <view class="todo-ico"><l-icon name="clock" :size="20" tone="brand" /></view>
+            <view class="grow">
+              <text class="km-entry-t">番茄专注</text>
+              <text class="km-entry-s">25 分钟专注 + 5 分钟休息，今日番茄数本地累计</text>
+            </view>
+          </view>
+        </kg-card>
       </template>
     </kg-two-col>
   </view>
@@ -721,6 +731,9 @@ export default {
     },
     goCalendar() {
       uni.navigateTo({ url: '/pages/stats/calendar' });
+    },
+    goPomo() {
+      uni.navigateTo({ url: '/pages/stats/pomo' });
     },
     goPlanSetup() {
       uni.setStorageSync('openPlanSetup', '1');

@@ -1,0 +1,33 @@
+<navbar title="番茄专注" back />
+<scroll-view class="page-scroll" scroll-y type="list">
+  <view class="wrap">
+    <kg-card variant="raised" class="sec">
+      <view class="dial {{phase}}">
+        <text class="dial-phase">{{phase === 'focus' ? '专注中' : phase === 'break' ? '休息一下' : phase === 'done' ? '本轮完成' : '准备开始'}}</text>
+        <text class="dial-time num">{{leftText}}</text>
+        <view class="dial-bar"><view class="dial-fill" style="width:{{pct}}%" /></view>
+        <text wx:if="{{round}}" class="dial-round">今日第 {{round}} 个</text>
+      </view>
+      <view class="ops">
+        <kg-button wx:if="{{phase === 'idle' || phase === 'done'}}" variant="primary" size="lg" block icon="clock" bind:click="onStart">开始专注 25 分钟</kg-button>
+        <block wx:if="{{phase === 'focus'}}">
+          <kg-button wx:if="{{running}}" variant="secondary" size="lg" block bind:click="onPause">暂停</kg-button>
+          <kg-button wx:else variant="primary" size="lg" block bind:click="onResume">继续</kg-button>
+          <kg-button variant="text" size="md" block bind:click="onReset">放弃本轮</kg-button>
+        </block>
+        <block wx:if="{{phase === 'break'}}">
+          <kg-button variant="secondary" size="lg" block bind:click="onSkipBreak">跳过休息</kg-button>
+        </block>
+      </view>
+    </kg-card>
+
+    <kg-card variant="raised" class="sec">
+      <view class="stat-row">
+        <view class="stat"><text class="stat-n num">{{todayDone}}</text><text class="stat-k">今日番茄</text></view>
+        <view class="stat"><text class="stat-n num">{{todayMins}}</text><text class="stat-k">今日分钟</text></view>
+        <view class="stat"><text class="stat-n num">{{total}}</text><text class="stat-k">累计番茄</text></view>
+      </view>
+      <text class="tip">每 25 分钟专注 + 5 分钟休息为一轮，计时中可切后台。</text>
+    </kg-card>
+  </view>
+</scroll-view>

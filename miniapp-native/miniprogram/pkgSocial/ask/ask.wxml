@@ -151,6 +151,9 @@
 
 <!-- 追问输入条 -->
 <kg-action-bar wx:if="{{hasResults}}" layout="input">
+  <view class="mic-btn {{voiceOn && voiceFor === 'fuText' ? 'is-on' : ''}}" role="button" aria-label="语音输入" data-for="fuText" bind:tap="onVoice">
+    <l-icon name="mic" size="20" tone="{{voiceOn && voiceFor === 'fuText' ? 'warn' : 'muted'}}" />
+  </view>
   <input class="fu-input" value="{{fuText}}" placeholder="继续追问，如：第二步为什么这样算" confirm-type="send" bindinput="onFuText" bindconfirm="sendFollowup" />
   <kg-button variant="primary" size="md" icon="send" disabled="{{!fuText}}" bind:click="sendFollowup">发送</kg-button>
 </kg-action-bar>
@@ -159,7 +162,13 @@
 <t-popup visible="{{textOpen}}" placement="bottom" bind:visible-change="onTextVisible">
   <view class="sheet">
     <view class="sheet-handle" />
-    <text class="sheet-t">粘贴题目文字</text>
+    <view class="sheet-t-row">
+      <text class="sheet-t">粘贴题目文字</text>
+      <view class="mic-btn {{voiceOn && voiceFor === 'qtext' ? 'is-on' : ''}}" role="button" aria-label="语音输入题目" data-for="qtext" bind:tap="onVoice">
+        <l-icon name="mic" size="20" tone="{{voiceOn && voiceFor === 'qtext' ? 'warn' : 'muted'}}" />
+        <text class="mic-lab">{{voiceOn && voiceFor === 'qtext' ? '停止' : '语音'}}</text>
+      </view>
+    </view>
     <view class="sheet-ta">
       <t-textarea value="{{qtext}}" placeholder="把题目原文（含选项）粘贴到这里" maxlength="{{3000}}" indicator autosize="{{taSize}}" bordered="{{false}}" bind:change="onQtext" />
     </view>

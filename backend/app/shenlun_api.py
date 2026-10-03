@@ -162,3 +162,46 @@ def api_shenlun_draft_set(body: dict):
 def api_shenlun_materials(topic: str | None = None, type: str | None = None, limit: int = 20, offset: int = 0,
                           id: int | None = None):
     return {"items": db.shenlun_materials(topic, type, limit, offset, mid=id)}
+
+
+@router.get("/api/shenlun/hotspots")
+def api_shenlun_hotspots(limit: int = 30, offset: int = 0):
+    """热点素材三段式聚合视图：topic → {内涵/角度/金句 分桶 + others}。"""
+    return db.shenlun_hotspots(limit, offset)
+
+
+@router.get("/api/shenlun/notes")
+def api_shenlun_notes(uid: str):
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    return {"items": db.shenlun_notes_list(uid[:64])}
+
+
+@router.post("/api/shenlun/notes")
+def api_shenlun_note_save(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    content = str(body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(400, "笔记内容为空")
+    if len(content) > 3000:
+        raise HTTPException(400, "笔记内容过长")
+    nid = body.get("id")
+    return db.shenlun_note_save(
+        uid,
+        int(nid) if nid else None,
+        str(body.get("topic") or "")[:60],
+        str(body.get("title") or "")[:60],
+        content,
+    )
+
+
+@router.post("/api/shenlun/notes/delete")
+def api_shenlun_note_del(body: dict):
+    uid = (body.get("uid") or "").strip()[:64]
+    nid = body.get("id")
+    if not uid or not nid:
+        raise HTTPException(400, "缺少 uid 或笔记 id")
+    return {"ok": db.shenlun_note_del(uid, int(nid))}

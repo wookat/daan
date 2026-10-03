@@ -403,6 +403,10 @@ Page({
   onGoCalendar() {
     wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });
   },
+
+  onGoPomo() {
+    wx.navigateTo({ url: '/pkgGrow/pomo/pomo' });
+  },
   onGoMasteryMap() {
     wx.navigateTo({ url: '/pkgGrow/mastery-map/mastery-map' });
   },

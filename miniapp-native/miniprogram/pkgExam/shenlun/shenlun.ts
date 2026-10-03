@@ -1,19 +1,23 @@
 // 申论专区：对照 H5 pkgA/shenlun/shenlun.vue（真题题库/素材范文/作答记录三 tab、详情作答+草稿+AI 批改+历史、收藏本地+服务端同步、深链）
 import {
+  delShenlunNote,
   fetchShenlunDraft,
   fetchShenlunFilters,
   fetchShenlunHistory,
+  fetchShenlunHotspots,
   fetchShenlunMatFavs,
   fetchShenlunMaterials,
+  fetchShenlunNotes,
   fetchShenlunQFavs,
   fetchShenlunQuestion,
   fetchShenlunQuestions,
   saveShenlunDraft,
+  saveShenlunNote,
   setShenlunMatFav,
   setShenlunQFav,
   shenlunGrade,
 } from '../../api/exam';
-import type { ShenlunHistoryItem, ShenlunMaterial, ShenlunQuestion, ShenlunQuestionDetail } from '../../api/exam-types';
+import type { ShenlunHistoryItem, ShenlunHotspot, ShenlunMaterial, ShenlunNote, ShenlunQuestion, ShenlunQuestionDetail } from '../../api/exam-types';
 import {
   MFAV_IDS_KEY,
   MFAV_SNAPS_KEY,
@@ -55,6 +59,23 @@ interface MVM extends ShenlunMaterial {
   faved: boolean;
   hit: boolean;
   expanded: boolean;
+}
+
+interface HotSegVM {
+  name: string;
+  items: Array<ShenlunHotspot['others'][number] & { faved: boolean }>;
+}
+
+interface HotVM {
+  topic: string;
+  segRows: HotSegVM[];
+  others: Array<ShenlunHotspot['others'][number] & { faved: boolean }>;
+  othersOpen: boolean;
+  expanded: boolean;
+}
+
+interface NoteVM extends ShenlunNote {
+  timeText: string;
 }
 
 interface RVM extends ShenlunHistoryItem {
@@ -115,6 +136,12 @@ Page({
     favOnly: false,
     mFavCount: 0,
     mErr: '',
+    // 热点三段式
+    hots: [] as HotVM[],
+    hotEnd: false,
+    // 我的笔记
+    notes: [] as NoteVM[],
+    noteForm: { open: false, id: 0, topic: '', title: '', content: '' },
     // 记录
     recs: [] as RVM[],
     recLoading: false,
@@ -133,6 +160,8 @@ Page({
   _draftTimer: 0 as ReturnType<typeof setTimeout> | 0,
   _matsRaw: [] as ShenlunMaterial[],
   _qsRaw: [] as ShenlunQuestion[],
+  _hotsRaw: [] as ShenlunHotspot[],
+  _hOffset: 0,
 
   onLoad(opts: Record<string, string>) {
     this._qFavIds = readIds(QFAV_IDS_KEY);
@@ -507,6 +536,8 @@ Page({
 
   // ---------- 素材 ----------
   async loadMats(append = false) {
+    if (this.data.mtype === '热点') return this.loadHots(append);
+    if (this.data.mtype === '我的笔记') return this.loadNotes();
     this.setData({ loading: !append, mErr: '' });
     try {
       const d = await fetchShenlunMaterials({ type: this.data.mtype, offset: this._mOffset, limit: PAGE });
@@ -540,6 +571,11 @@ Page({
     this.setData({ loading: false });
   },
   loadMoreMat() {
+    if (this.data.mtype === '热点') {
+      this._hOffset += PAGE;
+      return this.loadHots(true);
+    }
+    if (this.data.mtype === '我的笔记') return;
     this._mOffset += PAGE;
     this.loadMats(true);
   },
@@ -548,8 +584,140 @@ Page({
   },
   setMtype(t: string) {
     this._mOffset = 0;
-    this.setData({ favOnly: false, mtype: t, mEnd: false });
+    this._hOffset = 0;
+    this.setData({ favOnly: false, mtype: t, mEnd: false, hotEnd: false });
     this.loadMats();
+  },
+
+  // ---------- 热点三段式 ----------
+  hotvm(g: ShenlunHotspot): HotVM {
+    const fav = (m: ShenlunHotspot['others'][number]) => ({ ...m, faved: this._mFavIds.includes(m.id) });
+    const segRows = (['内涵', '角度', '金句'] as const)
+      .map((name) => ({ name, items: ((g.segs || {})[name] || []).map(fav) }))
+      .filter((r) => r.items.length);
+    return {
+      topic: g.topic,
+      segRows,
+      others: (g.others || []).map(fav),
+      othersOpen: this._expanded === 'h' + g.topic,
+      expanded: this._expanded === 'h' + g.topic,
+    };
+  },
+  renderHots() {
+    this.setData({ hots: this._hotsRaw.map((g) => this.hotvm(g)), mFavCount: this._mFavIds.length });
+  },
+  async loadHots(append = false) {
+    this.setData({ loading: !append, mErr: '' });
+    try {
+      const d = await fetchShenlunHotspots({ offset: this._hOffset, limit: PAGE });
+      const items = d.items || [];
+      this._hotsRaw = append ? this._hotsRaw.concat(items) : items;
+      this.setData({ hotEnd: items.length < PAGE });
+      this.renderHots();
+    } catch (e) {
+      const msg = (e as Error).message || '网络异常';
+      this.setData({ mErr: msg });
+      wx.showToast({ title: '加载失败：' + msg, icon: 'none' });
+    }
+    this.setData({ loading: false });
+  },
+  onHotExpand(e: WechatMiniprogram.TouchEvent) {
+    const topic = String(e.currentTarget.dataset.topic || '');
+    this._expanded = this._expanded === 'h' + topic ? 0 : 'h' + topic;
+    this.renderHots();
+  },
+  toggleHotOthers(e: WechatMiniprogram.TouchEvent) {
+    const topic = String(e.currentTarget.dataset.topic || '');
+    const g = this._hotsRaw.find((x) => x.topic === topic);
+    if (!g) return;
+    this._expanded = this._expanded === 'o' + topic ? 'h' + topic : 'o' + topic;
+    const hots = this.data.hots.map((h) =>
+      h.topic === topic ? { ...h, othersOpen: this._expanded === 'o' + topic } : h);
+    this.setData({ hots });
+  },
+  onHotFav(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id);
+    const all = this._hotsRaw.flatMap((g) =>
+      (['内涵', '角度', '金句'] as const).flatMap((k) => g.segs[k] || []).concat(g.others));
+    const m = all.find((x) => x.id === id);
+    if (!m) return;
+    const i = this._mFavIds.indexOf(m.id);
+    const on = i < 0;
+    if (on) {
+      this._mFavIds.push(m.id);
+      this._mFavs.unshift(m as ShenlunMaterial);
+    } else {
+      this._mFavIds.splice(i, 1);
+      this._mFavs = this._mFavs.filter((x) => x.id !== m.id);
+    }
+    wx.setStorageSync(MFAV_IDS_KEY, this._mFavIds);
+    wx.setStorageSync(MFAV_SNAPS_KEY, this._mFavs);
+    setShenlunMatFav(m.id, on).catch(() => {});
+    this.renderHots();
+  },
+
+  // ---------- 我的笔记 ----------
+  async loadNotes() {
+    this.setData({ loading: true, mErr: '' });
+    try {
+      const d = await fetchShenlunNotes();
+      this.setData({
+        notes: (d.items || []).map((n) => ({ ...n, timeText: fmtTime(n.updated_at || n.created_at) })),
+      });
+    } catch (e) {
+      const msg = (e as Error).message || '网络异常';
+      this.setData({ mErr: msg });
+      wx.showToast({ title: '加载失败：' + msg, icon: 'none' });
+    }
+    this.setData({ loading: false });
+  },
+  onNoteAdd() {
+    this.setData({ noteForm: { open: true, id: 0, topic: '', title: '', content: '' } });
+  },
+  onNoteEdit(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id);
+    const n = this.data.notes.find((x) => x.id === id);
+    if (!n) return;
+    this.setData({
+      noteForm: { open: true, id: n.id, topic: n.topic || '', title: n.title || '', content: n.content },
+    });
+  },
+  onNoteClose() {
+    this.setData({ 'noteForm.open': false });
+  },
+  onNoteField(e: WechatMiniprogram.CustomEvent) {
+    const k = String(e.currentTarget.dataset.k || '');
+    if (k) this.setData({ ['noteForm.' + k]: e.detail.value } as never);
+  },
+  async onNoteSave() {
+    const f = this.data.noteForm;
+    if (!f.content.trim()) {
+      wx.showToast({ title: '笔记内容为空', icon: 'none' });
+      return;
+    }
+    try {
+      await saveShenlunNote({ id: f.id || undefined, topic: f.topic, title: f.title, content: f.content });
+      this.setData({ 'noteForm.open': false });
+      this.loadNotes();
+    } catch (e) {
+      wx.showToast({ title: (e as Error).message || '保存失败', icon: 'none' });
+    }
+  },
+  onNoteDel(e: WechatMiniprogram.TouchEvent) {
+    const id = Number(e.currentTarget.dataset.id);
+    wx.showModal({
+      title: '删除笔记',
+      content: '确定删除这条笔记吗？',
+      success: async (r) => {
+        if (!r.confirm) return;
+        try {
+          await delShenlunNote(id);
+          this.loadNotes();
+        } catch (e2) {
+          wx.showToast({ title: (e2 as Error).message || '删除失败', icon: 'none' });
+        }
+      },
+    });
   },
   resetMtype() {
     this.setMtype('全部');

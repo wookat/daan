@@ -2,7 +2,7 @@
 import type { ShenlunQFavsResp, ShenlunQuestion } from '../api/exam-types';
 
 export const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
-export const MTYPES = ['全部', '金句', '案例', '政策理论', '范文'];
+export const MTYPES = ['全部', '热点', '金句', '案例', '政策理论', '范文', '我的笔记'];
 export const QFAV_IDS_KEY = 'slQFavIds';
 export const QFAV_SNAPS_KEY = 'slQFavs';
 export const MFAV_IDS_KEY = 'slMatFavIds';

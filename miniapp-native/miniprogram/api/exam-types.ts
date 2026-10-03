@@ -278,6 +278,33 @@ export interface ShenlunMaterial {
   source?: string | null;
 }
 
+export interface ShenlunHotspotItem {
+  id: number;
+  type?: string | null;
+  content?: string | null;
+  source?: string | null;
+}
+
+export interface ShenlunHotspot {
+  topic: string;
+  segs: { 内涵?: ShenlunHotspotItem[]; 角度?: ShenlunHotspotItem[]; 金句?: ShenlunHotspotItem[] };
+  others: ShenlunHotspotItem[];
+}
+
+export interface ShenlunHotspotsResp {
+  total: number;
+  items: ShenlunHotspot[];
+}
+
+export interface ShenlunNote {
+  id: number;
+  topic?: string | null;
+  title?: string | null;
+  content: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface ShenlunFilters {
   years: number[];
   regions: string[];

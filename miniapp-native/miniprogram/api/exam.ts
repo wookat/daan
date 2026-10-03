@@ -28,7 +28,9 @@ import type {
   ShenlunFilters,
   ShenlunGradeResp,
   ShenlunHistoryItem,
+  ShenlunHotspotsResp,
   ShenlunListResp,
+  ShenlunNote,
   ShenlunMatFavsResp,
   ShenlunMaterial,
   ShenlunQFavsResp,
@@ -349,6 +351,28 @@ export function fetchShenlunMaterials(p: {
 
 export function fetchShenlunFilters(): Promise<ShenlunFilters> {
   return request<ShenlunFilters>('/api/shenlun/filters');
+}
+
+export function fetchShenlunHotspots(p: { offset?: number; limit?: number } = {}): Promise<ShenlunHotspotsResp> {
+  return request<ShenlunHotspotsResp>('/api/shenlun/hotspots?limit=' + (p.limit || 30) + '&offset=' + (p.offset || 0));
+}
+
+export function fetchShenlunNotes(): Promise<{ items: ShenlunNote[] }> {
+  return request<{ items: ShenlunNote[] }>('/api/shenlun/notes?' + uidQ());
+}
+
+export function saveShenlunNote(p: { id?: number; topic?: string; title?: string; content: string }): Promise<{ id: number; updated: boolean }> {
+  return request<{ id: number; updated: boolean }>('/api/shenlun/notes', {
+    method: 'POST',
+    data: { uid: anonUid(), ...p },
+  });
+}
+
+export function delShenlunNote(id: number): Promise<{ ok: boolean }> {
+  return request<{ ok: boolean }>('/api/shenlun/notes/delete', {
+    method: 'POST',
+    data: { uid: anonUid(), id },
+  });
 }
 
 export function fetchShenlunDraft(qid: number): Promise<ShenlunDraftResp> {

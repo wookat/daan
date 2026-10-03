@@ -44,3 +44,9 @@
 .wenze-chip { font-size: var(--fs-caption); color: var(--brand-text); border: 1px solid var(--line); border-radius: var(--r-full); padding: var(--sp-4) var(--sp-12); }
 .wenze-chip:active { background: var(--brand-soft); }
 .muted { color: var(--ink-4); font-size: var(--fs-sub); }
+
+/* 语音输入 */
+.sheet-t-row { display: flex; align-items: center; justify-content: space-between; }
+.mic-btn { display: flex; align-items: center; gap: var(--sp-4); min-width: var(--hit-min); min-height: var(--hit-min); justify-content: center; }
+.mic-lab { font-size: var(--fs-caption); color: var(--ink-3); }
+.mic-btn.is-on .mic-lab { color: var(--warn); font-weight: var(--fw-semibold); }
