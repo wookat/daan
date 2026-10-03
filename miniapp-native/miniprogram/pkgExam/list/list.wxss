@@ -63,6 +63,6 @@
 /* B5 导出后卷码面板 */
 .done-box { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-8) 0; }
 .done-k { font-size: var(--fs-caption); color: var(--ink-4); }
-.done-code { font-size: 28px; font-weight: 700; color: var(--brand-text); letter-spacing: 4px; }
+.done-code { font-size: var(--fs-display); font-weight: 700; color: var(--brand-text); letter-spacing: 4px; }
 .done-s { font-size: var(--fs-sub); color: var(--ink-3); text-align: center; }
 .sheet-acts { display: flex; flex-direction: column; gap: var(--sp-4); }
