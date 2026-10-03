@@ -91,6 +91,67 @@ export function examStartMini(): Promise<ExamStartResp> {
   });
 }
 
+// ---------- 卷型模板组卷（B4）+ 拍照判分（B5） ----------
+
+export interface ExamTemplate {
+  id: string;
+  name: string;
+  n: number;
+  duration_min: number;
+  note: string;
+}
+
+export function fetchExamTemplates(): Promise<{ items: ExamTemplate[] }> {
+  return request<{ items: ExamTemplate[] }>('/api/exam/templates');
+}
+
+export function examStartTemplate(templateId: string, weakBoost: boolean): Promise<ExamStartResp> {
+  return request<ExamStartResp>('/api/exam/start', {
+    method: 'POST',
+    data: { uid: anonUid(), template_id: templateId, weak_boost: weakBoost },
+  });
+}
+
+// /api/scan_sheet 返回行比 learn.ts PaperAnswerRow 少 module/secs（判分页也只用到 no/picked/answer/correct/status）
+export interface ScanSheetResp {
+  code: string;
+  title?: string | null;
+  total: number;
+  answered: number;
+  correct: number;
+  saved: boolean;
+  page?: number;
+  pages?: number;
+  items: Array<{ no: number; question_id?: number | null; picked: string; answer: string; correct: boolean; status: string; question?: string }>;
+}
+
+// /api/scan_sheet 是 multipart：与 social.ts uploadExplain 同模式走 wx.uploadFile
+export function scanSheet(filePath: string): Promise<ScanSheetResp> {
+  return new Promise<ScanSheetResp>((resolve, reject) => {
+    const header: Record<string, string> = { 'X-Access-Code': getAccessCode() };
+    const token = getToken();
+    if (token) header.Authorization = 'Bearer ' + token;
+    wx.uploadFile({
+      url: BASE_URL + '/api/scan_sheet',
+      filePath,
+      name: 'image',
+      formData: { uid: anonUid() },
+      header,
+      timeout: 120000,
+      success: (res) => {
+        try {
+          const data = JSON.parse(res.data) as ScanSheetResp & { detail?: string };
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
+          else reject(new Error(data.detail || `HTTP ${res.statusCode}`));
+        } catch (e) {
+          reject(e as Error);
+        }
+      },
+      fail: (err) => reject(new Error(err.errMsg || '上传失败')),
+    });
+  });
+}
+
 export interface ExamProgressPayload {
   picks: ExamPicks;
   idx: number;

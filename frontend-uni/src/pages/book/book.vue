@@ -1035,7 +1035,20 @@ export default {
         this.rzFilter = rzIntent;
       }
     }
-    this.load();
+    const autoScan = uni.getStorageSync('bookAutoScan');
+    if (autoScan) uni.removeStorageSync('bookAutoScan');
+    const autoCode = uni.getStorageSync('bookManualCode');
+    if (autoCode) uni.removeStorageSync('bookManualCode');
+    const loadDone = this.load();
+    if (autoScan) {
+      Promise.resolve(loadDone).then(() => this.scanSheetPick());
+    } else if (autoCode) {
+      Promise.resolve(loadDone).then(() => {
+        this.manualOpenSheet();
+        this.manualCode = autoCode;
+        this.manualLookup(autoCode);
+      });
+    }
     // #ifdef H5
     // 离开本页时 vue-router 会用它自己记的（不含筛选 query 的）地址覆写当前历史条目，返回后地址栏丢 mod/kp/qt；
     // 深链首次进入时 kp/qt 尚未由 applyPendingKp 落地，此时不同步以免抹掉入参
@@ -1956,6 +1969,12 @@ export default {
       uni.setStorageSync('practicePreset', { module: m.module, submodule: similarSubmodule(m), count: 3 });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    similarEntry(m) {
+      const text = askPrefill(m.question_text, m.options);
+      if (!text) return;
+      uni.setStorageSync('simSeed', { q: text, qt: m.question_type || '', mod: m.module || '', modName: this.modName(m.module) || '' });
+      uni.switchTab({ url: '/pages/ask/ask' });
+    },
     openReport(m) {
       if (!m.question_id) return;
       this.reportTarget = m;
@@ -1985,6 +2004,7 @@ export default {
       const acts = [];
       if (m.tag3) acts.push({ t: '练同考点 5 道新题', f: () => this.reinforceFromMistake(m) });
       if (hasSimilarPool(m)) acts.push({ t: '练3道同类', f: () => this.practiceSimilar(m) });
+      acts.push({ t: 'AI 出一道变式题', f: () => this.similarEntry(m) });
       if (m.question_id) acts.push({ t: '题目纠错', f: () => this.openReport(m) });
       if (m.question_id) acts.push({ t: '分享给队友', f: () => this.shareToMates(m) });
       if (!m.mastered) acts.push({ t: '标为已掌握', f: () => this.master(m) });

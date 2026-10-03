@@ -90,7 +90,7 @@ def extract_from_qbank(q: dict | None, text: str | None) -> dict | None:
     }
 
 
-SIMILAR_SYSTEM = """你是公考出题老师。根据用户给出的原题，出一道考察同一方法/技巧的新题（自编数据，不照搬真题原文），难度相当。
+SIMILAR_SYSTEM = """你是公考出题老师。根据用户给出的原题，出一道考察同一方法/技巧的新题（自编数据，不照搬真题原文），{level_clause}。
 输出 Markdown：
 ## 练习题
 （题干+选项 A/B/C/D）
@@ -101,12 +101,26 @@ SIMILAR_SYSTEM = """你是公考出题老师。根据用户给出的原题，出
 （答案+按方法分步简解）
 必须包含 <!--answer--> 分隔标记。禁止 LaTeX，算式用纯文本。"""
 
+# 同类题难度梯度（前端「练一道同类题」四档）：值即传给引擎的 key
+SIMILAR_LEVELS = {
+    "easier": "难度下调：减少干扰项迷惑性、数据取整好算，保持同一方法考点（巩固基础）",
+    "same": "难度相当",
+    "harder": "难度上调：增加条件复杂度或计算量（如多一步换算、数据更别扭），仍是同一方法",
+    "combo": "提高综合度：主考点不变，再叠加一个相邻考点或陷阱组合（临门一脚）",
+}
 
-async def similar_question(question_text: str, question_type: str | None = None) -> str:
+
+def similar_level_clause(level: str | None) -> str:
+    """难度档→prompt 语义；未知/空回落到「难度相当」，保证旧客户端行为不变。"""
+    return SIMILAR_LEVELS.get(level or "", SIMILAR_LEVELS["same"])
+
+
+async def similar_question(question_text: str, question_type: str | None = None,
+                           difficulty: str | None = None) -> str:
     user_msg = f"原题（题型：{question_type or '未知'}）：\n{question_text}"
     return await llm.chat(
         [
-            {"role": "system", "content": SIMILAR_SYSTEM},
+            {"role": "system", "content": SIMILAR_SYSTEM.format(level_clause=similar_level_clause(difficulty))},
             {"role": "user", "content": user_msg},
         ],
         temperature=0.7,

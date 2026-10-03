@@ -246,9 +246,22 @@
 
 <kg-sheet visible="{{manualOpen}}" title="按卷码录入答案" bind:close="onManualClose">
   <block wx:if="{{!manualPaper}}">
+    <block wx:if="{{recentPapers.length}}">
+      <text class="sheet-k">最近导出的卷</text>
+      <view class="recent-chips">
+        <view wx:for="{{recentPapers}}" wx:key="code" class="recent-chip" data-code="{{item.code}}" bind:tap="onRecentPaper">
+          <text class="recent-code num">{{item.code}}</text>
+          <text class="recent-title">{{item.title}}</text>
+        </view>
+      </view>
+    </block>
     <text class="sheet-k">输入卷面上的卷码</text>
     <view class="codebar">
       <t-input value="{{manualCode}}" placeholder="如 A1B2C3D4（封面/答题卡顶部）" borderless confirm-type="done" bind:change="onManualCode" bind:enter="onManualLookup" />
+    </view>
+    <view class="scan-cta" bind:tap="onScanSheet">
+      <l-icon name="camera" size="20" />
+      <text>涂了纸质答题卡？拍照自动判分 ›</text>
     </view>
   </block>
   <block wx:else>
@@ -329,6 +342,7 @@
     <block wx:if="{{opsKind === 'mistake'}}">
       <t-cell-group title="学习" bordered>
         <t-cell title="笔记" description="记方法、记陷阱，随解析展示" hover arrow data-act="note" data-qid="{{opsQid}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="pen-line" size="20" tone="brand" /></t-cell>
+        <t-cell title="练一道同类题" description="AI 按此题考点出变式，可选难度档" hover arrow data-act="similar" data-index="{{opsIdx}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="shuffle" size="20" tone="brand" /></t-cell>
         <t-cell title="分享给队友" description="生成链接，答完可看大家选了啥" hover arrow data-act="share" data-index="{{opsIdx}}" bind:click="onOpsPick"><l-icon slot="left-icon" name="share-2" size="20" tone="brand" /></t-cell>
       </t-cell-group>
       <t-cell-group title="反馈" bordered>

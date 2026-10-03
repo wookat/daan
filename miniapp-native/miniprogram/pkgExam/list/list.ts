@@ -6,6 +6,8 @@ import {
   examResume,
   examProgressDrop,
   exportPdf,
+  fetchExamTemplates,
+  type ExamTemplate,
 } from '../../api/exam';
 import type { ExamPaper, ExamPaperFilters, ExamAttempt } from '../../api/exam-types';
 import { type ResumeInfo, resolveResume, dropResume, resumeUrl } from '../../utils/kg-exam-progress';
@@ -119,6 +121,14 @@ Page({
     menuOpen: false,
     exportTarget: null as PaperVM | null,
     exporting: false,
+    // 组卷 sheet（B4：卷型模板 + 薄弱加权）
+    tplOpen: false,
+    templates: [] as ExamTemplate[],
+    tplLoading: false,
+    tplId: '',
+    weakBoost: false,
+    // 导出后卷码面板（B5：打印→回填闭环入口）
+    exportDone: null as { code: string; title: string } | null,
   },
   _pending: null as ListOpts | null,
   _pendingPid: 0,
@@ -271,8 +281,42 @@ Page({
   },
 
   // ---------- 开考 / 菜单 ----------
+  // 迷你模考卡 → 组卷 sheet：卷型模板 picker（含迷你模考）+ 薄弱加权开关
   onMini() {
-    wx.navigateTo({ url: '/pkgExam/exam/exam?mini=1' });
+    this.setData({ tplOpen: true });
+    if (this.data.templates.length || this.data.tplLoading) return;
+    this.setData({ tplLoading: true });
+    fetchExamTemplates()
+      .then((d) => {
+        const items = d.items || [];
+        this.setData({ templates: items, tplId: this.data.tplId || (items.length ? items[0].id : '') });
+      })
+      .catch(() => {
+        // 模板接口不可用时退化为纯迷你模考（老行为）
+        this.setData({ tplOpen: false });
+        wx.navigateTo({ url: '/pkgExam/exam/exam?mini=1' });
+      })
+      .finally(() => this.setData({ tplLoading: false }));
+  },
+  onTplClose() {
+    this.setData({ tplOpen: false });
+  },
+  onTplPick(e: WechatMiniprogram.TouchEvent) {
+    this.setData({ tplId: String(e.currentTarget.dataset.id || '') });
+  },
+  onWeakBoost(e: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({ weakBoost: !!(e.detail && e.detail.value) });
+  },
+  onTplStart() {
+    const id = this.data.tplId;
+    this.setData({ tplOpen: false });
+    if (!id) {
+      wx.navigateTo({ url: '/pkgExam/exam/exam?mini=1' });
+      return;
+    }
+    wx.navigateTo({
+      url: '/pkgExam/exam/exam?template=' + encodeURIComponent(id) + (this.data.weakBoost ? '&boost=1' : ''),
+    });
   },
   onStart(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id);
@@ -320,8 +364,8 @@ Page({
     this.setData({ exporting: true });
     try {
       const d = await fetchExamPaperDetail(p.id);
-      await exportPdf({ title: p.title, question_ids: d.paper.question_ids, ...e.detail });
-      this.setData({ exportTarget: null });
+      const r = await exportPdf({ title: p.title, question_ids: d.paper.question_ids, ...e.detail });
+      this.setData({ exportTarget: null, exportDone: r.code ? { code: r.code, title: p.title } : null });
     } catch (err) {
       wx.showToast({ title: '导出失败：' + (err as Error).message, icon: 'none' });
     }
@@ -330,5 +374,21 @@ Page({
   onAttempt(e: WechatMiniprogram.TouchEvent) {
     const id = Number(e.currentTarget.dataset.id);
     if (id) wx.navigateTo({ url: '/pkgExam/report/report?attempt_id=' + id });
+  },
+  // ---------- 导出后：卷码面板 → 错题本回填/拍照判分 ----------
+  onExportDoneClose() {
+    this.setData({ exportDone: null });
+  },
+  onGoFill() {
+    const d = this.data.exportDone;
+    if (!d) return;
+    this.setData({ exportDone: null });
+    wx.setStorageSync('bookManualCode', d.code);
+    wx.switchTab({ url: '/pages/book/book' });
+  },
+  onGoScan() {
+    this.setData({ exportDone: null });
+    wx.setStorageSync('bookAutoScan', 1);
+    wx.switchTab({ url: '/pages/book/book' });
   },
 });

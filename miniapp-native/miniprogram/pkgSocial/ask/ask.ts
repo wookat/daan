@@ -66,6 +66,8 @@ interface Rec {
   sim: SimState | null;
   simLoading: boolean;
   simSecs: number;
+  // 出同款题难度档（B6：easier/same/harder/combo，默认持平）
+  simDiff: string;
   fu: FuMsg[];
   fuLoading: boolean;
   streaming: boolean;
@@ -109,6 +111,7 @@ function blankRec(ts: number): Rec {
     sim: null,
     simLoading: false,
     simSecs: 0,
+    simDiff: 'same',
     fu: [],
     fuLoading: false,
     streaming: false,
@@ -159,6 +162,15 @@ Page({
     hasResults: false,
     sessions: [] as AskSession[],
     sessionRows: [] as { id: number; n: number; title: string; meta: string; on: boolean }[],
+    // 同款题难度四档（与后端 SIMILAR_LEVELS 一致）
+    simDiffOpts: [
+      { value: 'easier', label: '降干扰' },
+      { value: 'same', label: '持平' },
+      { value: 'harder', label: '加复杂度' },
+      { value: 'combo', label: '加综合度' },
+    ],
+    // 问泽快捷提问（B6）
+    wenzeChips: ['这道题陷阱在哪', '换个方法怎么解', '给一道变式'],
     curSid: 0,
     recent: [] as RecentItem[],
     taSize: { minHeight: 96, maxHeight: 220 },
@@ -197,6 +209,23 @@ Page({
       wx.removeStorageSync('redoQuestion');
       this.setData({ qtext: redo, uanswer: /^[A-D]$/.test(ra) ? ra : '', imagePath: '', textOpen: true });
       wx.showToast({ title: '题目已填入，先自己做一遍再点讲解', icon: 'none', duration: 2500 });
+    }
+    // 「练一道同类题」深链（错题本/刷题详情 → storage simSeed）：落一条轻量 rec 并自动出题
+    const seed = wx.getStorageSync('simSeed') as { q?: string; qt?: string; mod?: string; modName?: string; diff?: string } | '';
+    if (seed && seed.q) {
+      wx.removeStorageSync('simSeed');
+      const r = blankRec(Date.now());
+      r.question_text = seed.q;
+      r.question_type = seed.qt || '';
+      r.module = seed.mod || '';
+      r.module_name = seed.modName || '';
+      r.userText = seed.q;
+      r.userText = r.userText.slice(0, 200);
+      if (seed.diff && ['easier', 'harder', 'combo'].includes(seed.diff)) r.simDiff = seed.diff;
+      r.html = '<p class="muted">从「练一道同类题」进入——已按你的难度档生成练习题，先做再讲</p>';
+      this.results.unshift(r);
+      this.syncConvo(true);
+      this.genSimilar(r);
     }
   },
 
@@ -506,8 +535,27 @@ Page({
     this.scrollBottom();
   },
 
+  onSimDiff(e: WechatMiniprogram.TouchEvent) {
+    const r = this.recByEvent(e);
+    const v = String(e.currentTarget.dataset.v || 'same');
+    if (!r || r.simDiff === v) return;
+    r.simDiff = v;
+    this.patchRec(r, ['simDiff']);
+  },
+
+  // 问泽 chips：快捷追问（本题上下文，同 sendFollowup 管线）
+  onWenze(e: WechatMiniprogram.BaseEvent) {
+    const r = this.recByEvent(e);
+    const q = String(e.currentTarget.dataset.q || '');
+    if (r && q) this.quickFollowup(r, q);
+  },
+
   async onSimilar(e: WechatMiniprogram.BaseEvent) {
     const r = this.recByEvent(e);
+    if (r) await this.genSimilar(r);
+  },
+
+  async genSimilar(r: Rec) {
     if (!r || r.simLoading) return;
     r.simLoading = true;
     r.simSecs = 0;
@@ -517,7 +565,7 @@ Page({
       this.patchRec(r, ['simSecs']);
     }, 1000);
     try {
-      const d = await similarQuestion(r.question_text, r.question_type);
+      const d = await similarQuestion(r.question_text, r.question_type, r.simDiff);
       const parts = d.content.split('<!--answer-->');
       const m = (parts[1] || '').match(/答案[：:\s*]*([A-D])/);
       const sim: SimState = {

@@ -1,8 +1,9 @@
-// 全真模考 / 迷你模考 / 按卷练习（不计时）— 对齐 frontend-uni/src/pkgA/exam/exam.vue
-// 入参：paper_id=<id>[&event_id=<eid>] | mini=1 | mode=practice&pid=<id>&src=<psource>
+// 全真模考 / 迷你模考 / 组卷模考（卷型模板+薄弱加权）/ 按卷练习（不计时）— 对齐 frontend-uni/src/pkgA/exam/exam.vue
+// 入参：paper_id=<id>[&event_id=<eid>] | mini=1 | template=<id>&boost=<0|1> | mode=practice&pid=<id>&src=<psource>
 import {
   examStartPaper,
   examStartMini,
+  examStartTemplate,
   examProgress,
   examSubmitFull,
   fetchExamReportQuick,
@@ -76,6 +77,8 @@ Page({
   _paper: null as ExamPaperInfo | null,
   _paperId: 0,
   _src: '',
+  _tpl: '',
+  _boost: false,
   _eventId: null as number | null,
   _endAt: 0,
   _clock: null as unknown as ExamTimer,
@@ -98,9 +101,13 @@ Page({
     }
     const mini = opt.mini === '1' || opt.mini === 'true';
     this._paperId = Number(opt.paper_id) || 0;
-    this.setData({ mini, title: mini ? '迷你模考' : '全真模考' });
+    // B4：卷型模板组卷（template=<id>&boost=1）——不进 mini 快照链路
+    this._tpl = String(opt.template || '');
+    this._boost = opt.boost === '1' || opt.boost === 'true';
+    this.setData({ mini, title: mini ? '迷你模考' : this._tpl ? '组卷模考' : '全真模考' });
     const saved = loadSnap();
     if (
+      !this._tpl &&
       saved &&
       saved.endAt > Date.now() &&
       ((opt.paper_id && String(saved.paperId) === String(opt.paper_id)) || (mini && saved.mini))
@@ -154,14 +161,19 @@ Page({
   },
 
   async start(opt: Record<string, string>, mini: boolean) {
-    if (!mini && !opt.paper_id) {
+    const tpl = this._tpl;
+    if (!mini && !tpl && !opt.paper_id) {
       wx.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
       setTimeout(() => wx.redirectTo({ url: '/pkgExam/list/list' }), 1200);
       return;
     }
     this.setData({ loading: true, loadErr: '' });
     try {
-      const d = mini ? await examStartMini() : await examStartPaper(Number(opt.paper_id));
+      const d = tpl
+        ? await examStartTemplate(tpl, this._boost)
+        : mini
+          ? await examStartMini()
+          : await examStartPaper(Number(opt.paper_id));
       this._attemptId = d.attempt_id;
       this._paper = d.paper;
       this._paperId = d.paper.id;
@@ -177,13 +189,21 @@ Page({
       this.startPractice(this._paperId, this._src);
       return;
     }
-    this.start(this.data.mini ? { mini: '1' } : { paper_id: String(this._paperId) }, this.data.mini);
+    this.start(
+      this._tpl
+        ? { template: this._tpl }
+        : this.data.mini
+          ? { mini: '1' }
+          : { paper_id: String(this._paperId) },
+      this.data.mini
+    );
   },
   onBack() {
     wx.navigateBack({ fail: () => wx.redirectTo({ url: '/pkgExam/list/list' }) });
   },
   mount(items: PQuestion[], idx: number, paper: ExamPaperInfo) {
     const title = this.data.mini ? '迷你模考' : paper.title.slice(0, 16);
+    // 模板卷标题带模板名（后端 title_prefix 已是模板名/「· 薄弱加权」）
     this.setData({
       loading: false,
       loadErr: '',

@@ -4219,22 +4219,43 @@ def get_exam_paper(pid: int) -> dict | None:
 
 def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     """迷你模考：随机组 n 题（按行测模块顺序），kind=mock 即时生成。"""
+    share = {"changshi": 0.15, "yanyu": 0.3, "shuliang": 0.1, "panduan": 0.3, "ziliao": 0.15}
+    counts = {mod: max(1, round(n * share[mod])) for mod in MODULE_ORDER}
+    return _compose_paper("迷你模考", counts, n, duration_min)
+
+
+def _compose_paper(title_prefix: str, counts: dict, total: int, duration_min: int,
+                   weak: set | None = None) -> int:
+    """按模块题量分布抽题组卷（kind=mock）；weak（薄弱考点 tag3 集）非空时，
+    每模块先抽薄弱考点题（至多六成名额），再随机补齐——显著抬高薄弱占比同时保住卷型结构。"""
     conn = get_conn()
     _ensure_exam_tables(conn)
-    share = {"changshi": 0.15, "yanyu": 0.3, "shuliang": 0.1, "panduan": 0.3, "ziliao": 0.15}
+    weak = weak or set()
     ids: list[int] = []
     for mod in MODULE_ORDER:
-        want = max(1, round(n * share[mod]))
-        ids += [r["id"] for r in conn.execute(
-            "SELECT id FROM questions WHERE module=? AND disabled=0 "
-            "ORDER BY has_hs DESC, RANDOM() LIMIT ?", (mod, want))]
-    if len(ids) < n:
+        want = max(0, int(counts.get(mod) or 0))
+        if not want:
+            continue
+        picked: list[int] = []
+        if weak:
+            marks = ",".join("?" * len(weak))
+            picked = [r["id"] for r in conn.execute(
+                f"SELECT id FROM questions WHERE module=? AND disabled=0 AND tag3 IN ({marks}) "
+                "ORDER BY RANDOM() LIMIT ?", (mod, *weak, max(1, round(want * 0.6))))]
+        left = want - len(picked)
+        if left > 0:
+            ph = ",".join("?" * len(picked)) or "0"
+            picked += [r["id"] for r in conn.execute(
+                f"SELECT id FROM questions WHERE module=? AND disabled=0 AND id NOT IN ({ph}) "
+                "ORDER BY has_hs DESC, RANDOM() LIMIT ?", (mod, *picked, left))]
+        ids += picked[:want]
+    if len(ids) < total:
         placeholders = ",".join("?" * len(ids)) or "0"
         ids += [r["id"] for r in conn.execute(
             f"SELECT id FROM questions WHERE disabled=0 AND id NOT IN ({placeholders}) "
-            "ORDER BY RANDOM() LIMIT ?", (*ids, n - len(ids)))]
-    ids = ids[:n]
-    title = "迷你模考 " + time.strftime("%m-%d %H:%M:%S") + " #" + secrets.token_hex(3)
+            "ORDER BY RANDOM() LIMIT ?", (*ids, total - len(ids)))]
+    ids = ids[:total]
+    title = title_prefix + " " + time.strftime("%m-%d %H:%M:%S") + " #" + secrets.token_hex(3)
     conn.execute(
         "INSERT INTO exam_papers (title, kind, year, region, question_ids, duration_min, created_at) "
         "VALUES (?,?,?,?,?,?,?)",
@@ -4245,6 +4266,30 @@ def create_mock_paper(n: int = 30, duration_min: int = 30) -> int:
     conn.close()
     _papers_cache.clear()
     return pid
+
+
+def create_template_paper(name: str, counts: dict, duration_min: int,
+                          weak: set | None = None, boost: bool = False) -> int:
+    """省份卷型模板组卷：title 前缀体现模板与是否薄弱加权，题量严格按模板 counts。"""
+    prefix = name + (" · 薄弱加权" if boost and weak else "")
+    return _compose_paper(prefix, counts, sum(counts.values()), duration_min, weak if boost else None)
+
+
+def weak_tag3s(uid: str, min_n: int = 3, max_acc: float = 0.6, limit: int = 15) -> set:
+    """本人薄弱考点 tag3 集：作答 ≥min_n 且正确率 <max_acc，按正确率升序取前 limit。
+    供组卷「按薄弱点加权」——样本不足时返回空集（不加权，退化为普通模板卷）。"""
+    conn = get_conn()
+    _ensure_answer_log(conn)
+    rows = conn.execute(
+        """SELECT q.tag3, COUNT(*) n, SUM(a.correct) c
+           FROM answer_log a JOIN questions q ON q.id = a.question_id
+           WHERE a.uid=? AND q.tag3 IS NOT NULL AND q.tag3!='' AND q.tag3!='UNKNOWN'
+           GROUP BY q.tag3 HAVING n>=? AND (c*1.0/n)<?
+           ORDER BY (c*1.0/n) LIMIT ?""",
+        (uid, min_n, max_acc, limit),
+    ).fetchall()
+    conn.close()
+    return {r["tag3"] for r in rows}
 
 
 def start_exam_attempt(uid: str, paper_id: int, probe: bool = False,

@@ -241,13 +241,17 @@ export default {
   methods: {
     modName(m) { return MODULES[m] ? moduleLabel(m) : '行测'; },
     async start(opt) {
-      if (!opt.mini && !opt.paper_id) {
+      if (!opt.mini && !opt.paper_id && !opt.template) {
         uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
         setTimeout(() => uni.reLaunch({ url: '/pkgA/exam/list' }), 1200);
         return;
       }
       try {
-        const data = opt.mini ? { uid: anonUid(), mini: true } : { uid: anonUid(), paper_id: Number(opt.paper_id) };
+        const data = opt.template
+          ? { uid: anonUid(), template_id: String(opt.template), weak_boost: opt.boost === '1' || opt.boost === 'true' }
+          : opt.mini
+            ? { uid: anonUid(), mini: true }
+            : { uid: anonUid(), paper_id: Number(opt.paper_id) };
         const d = await request('/api/exam/start', { method: 'POST', data });
         this.attemptId = d.attempt_id;
         this.paper = d.paper;

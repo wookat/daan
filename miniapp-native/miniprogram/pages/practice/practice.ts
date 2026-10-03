@@ -1011,6 +1011,18 @@ Page({
     });
   },
 
+  // 「练一道同类题」（B6）：seed 当前题干 → ask 页按难度档出变式
+  onSimilarEntry() {
+    const q = this.data.cur;
+    if (!q) return;
+    wx.setStorageSync('simSeed', {
+      q: askPrefill(q.question, q.options),
+      qt: q.question_type || '',
+      mod: q.module || '',
+    });
+    wx.navigateTo({ url: '/pkgSocial/ask/ask' });
+  },
+
   // ---------- 题目纠错 ----------
 
   onOpenReport() {
