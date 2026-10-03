@@ -79,7 +79,7 @@
   "tabBar": {
     "custom": true,
     "color": "#7D818F",
-    "selectedColor": "#1e4a6b",
+    "selectedColor": "#2e5bff",
     "backgroundColor": "#ffffff",
     "list": [
       { "pagePath": "pages/home/home", "text": "刷题" },

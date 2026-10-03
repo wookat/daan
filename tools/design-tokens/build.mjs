@@ -587,8 +587,7 @@ export function runChecks(tree, flat, { zalizeCss }) {
     }
   }
 
-  // SPEC open question #1 已定：品牌主色 = color.inkblue.500（书案墨蓝 #1e4a6b）。
-  if (byName.brand?.light !== '#1e4a6b') errors.push('--brand 必须为 #1e4a6b（书案墨蓝，SPEC open question #1 已定）');
+  if (byName.brand?.light !== '#2e5bff') errors.push('--brand 必须为 #2e5bff（SPEC open question #1 已定）');
   return errors;
 }
 

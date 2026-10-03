@@ -156,8 +156,8 @@ function roundRect(ctx, x, y, w, h, rr) {
 
 function drawShare(ctx, r) {
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  g.addColorStop(0, '#4d83a6');
-  g.addColorStop(1, '#17394f');
+  g.addColorStop(0, '#5B8AF8');
+  g.addColorStop(1, '#2C5AD6');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
   ctx.fill();

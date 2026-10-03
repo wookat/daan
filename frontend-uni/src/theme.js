@@ -41,7 +41,7 @@ export function applyTheme() {
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', dark ? '#171511' : '#f6f1e7');
+  if (meta) meta.setAttribute('content', dark ? '#15161c' : '#eef3ff');
   // #endif
 }
 
