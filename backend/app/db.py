@@ -11,7 +11,7 @@ import threading
 import time
 from datetime import date, timedelta
 
-from . import quality, similarity, taxonomy
+from . import difficulty, quality, review_fields, similarity, taxonomy
 from .tagging import classify_question
 
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "data.db"))
@@ -118,10 +118,33 @@ def init_db():
         ("mastered_at", "ALTER TABLE mistakes ADD COLUMN mastered_at REAL"),
         ("times", "ALTER TABLE mistakes ADD COLUMN times INTEGER DEFAULT 1"),
         ("source", "ALTER TABLE mistakes ADD COLUMN source TEXT"),
+        # B1：AI 复盘结构化字段（review_fields.parse_explain 产出）
+        ("mistake_analysis", "ALTER TABLE mistakes ADD COLUMN mistake_analysis TEXT"),
+        ("fastest_solution", "ALTER TABLE mistakes ADD COLUMN fastest_solution TEXT"),
+        ("trap_analysis", "ALTER TABLE mistakes ADD COLUMN trap_analysis TEXT"),
+        ("review_tip", "ALTER TABLE mistakes ADD COLUMN review_tip TEXT"),
+        # B2：掌握状态机（new/reviewing/mastered/sticky_wrong）+ 累计再错计数
+        ("mastery_state", "ALTER TABLE mistakes ADD COLUMN mastery_state TEXT"),
+        ("wrong_review_count", "ALTER TABLE mistakes ADD COLUMN wrong_review_count INTEGER"),
     ]:
         if col not in cols:
             conn.execute(ddl)
     _ensure_mistake_uid(conn)
+    # B2 回填：wrong_review_count ← 入库后的累计再错次数 = 去重重存(times-1) + 复习期答错事件；
+    # mastery_state ← 既有字段推导
+    _ensure_review_log(conn)
+    conn.execute(
+        "UPDATE mistakes SET wrong_review_count = COALESCE(times,1)-1 + (SELECT COUNT(*) FROM review_log rl "
+        "WHERE rl.mistake_id=mistakes.id AND rl.correct=0) WHERE wrong_review_count IS NULL"
+    )
+    conn.execute("UPDATE mistakes SET wrong_review_count=0 WHERE wrong_review_count IS NULL")
+    conn.execute(
+        "UPDATE mistakes SET mastery_state = CASE "
+        "WHEN mastered=1 THEN 'mastered' "
+        "WHEN wrong_review_count>=2 AND review_streak=0 THEN 'sticky_wrong' "
+        "WHEN review_count>0 THEN 'reviewing' ELSE 'new' END "
+        "WHERE mastery_state IS NULL"
+    )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mist_uid ON mistakes(uid, created_at)")
     # 历史 question_type 混存「模块名-细分」与「细分」两种格式，统一回填为细分题型名（幂等）
     conn.execute(
@@ -738,6 +761,9 @@ def questions_by_ids(ids: list[int]) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        # B3：全站正确率 → 难度分档（1 最易…5 最难，样本不足 → None=待校准）
+        d["difficulty"] = difficulty.band(d.get("correct_ratio"), d.get("attempt_count"))
+        d["difficulty_label"] = difficulty.label(d["difficulty"])
         by_id[d["id"]] = d
     out = [by_id[i] for i in ids if i in by_id]
     out.sort(key=lambda q: (q.get("module") or "", q.get("submodule") or ""))
@@ -2445,6 +2471,8 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
             if byid:
                 d = dict(byid)
                 d["options"] = json.loads(d.get("options") or "{}")
+                d["difficulty"] = difficulty.band(d.get("correct_ratio"), d.get("attempt_count"))
+                d["difficulty_label"] = difficulty.label(d["difficulty"])
                 d["mistake_id"] = r["id"]
                 out.append(d)
                 if len(out) >= limit:
@@ -3189,12 +3217,18 @@ def mistake_analysis_stats(uid: str) -> dict:
            HAVING n>=5 ORDER BY s DESC LIMIT 5""",
         (uid,),
     ).fetchall()
+    # B1：已落库结构化复盘字段的错题数（观测解析覆盖度）
+    fields_n = conn.execute(
+        f"SELECT COUNT(*) n FROM mistakes WHERE mastered=0 AND mistake_analysis IS NOT NULL AND mistake_analysis!=''{uc}",
+        ua,
+    ).fetchone()
     conn.close()
     return {
         "mistake_types": [dict(r) for r in types],
         "error_reasons": [dict(r) for r in reasons],
         "last7days": {"n": week["n"], "correct": week["c"], "avg_secs": round(week["s"], 1)},
         "slowest_types": [{"t": r["t"], "n": r["n"], "avg_secs": round(r["s"], 1), "correct": r["c"]} for r in slow],
+        "structured_n": fields_n["n"],
     }
 
 
@@ -3486,11 +3520,33 @@ def save_mistake(rec: dict, probe: bool = False) -> int:
             f"SELECT id FROM mistakes WHERE question_text=?{uc} LIMIT 1", (qtext, *ua)
         ).fetchone()
     if dup:
+        # 再错一次：累计 wrong_review_count 并同步状态机（累计再错≥2 → sticky_wrong）；
+        # 带来新解析时顺带刷新结构化复盘字段（B1）
+        rf_dup = review_fields.parse_explain(rec.get("explanation"))
+        has_new_expl = bool((rec.get("explanation") or "").strip())
         conn.execute(
             "UPDATE mistakes SET times=COALESCE(times,1)+1, mastered=0, mastered_at=NULL, review_streak=0, "
+            "wrong_review_count=COALESCE(wrong_review_count,0)+1, "
+            "mastery_state=CASE WHEN COALESCE(wrong_review_count,0)+1>=2 THEN 'sticky_wrong' ELSE 'reviewing' END, "
             "next_review=?, user_answer=COALESCE(?, user_answer), "
-            "question_id=COALESCE(question_id, ?), source=COALESCE(source, ?) WHERE id=?",
-            (time.time(), rec.get("user_answer"), qid, rec.get("source"), dup["id"]),
+            "question_id=COALESCE(question_id, ?), source=COALESCE(source, ?), "
+            "explanation=CASE WHEN ? THEN ? ELSE explanation END, "
+            "mistake_analysis=CASE WHEN ? THEN ? ELSE mistake_analysis END, "
+            "fastest_solution=CASE WHEN ? THEN ? ELSE fastest_solution END, "
+            "trap_analysis=CASE WHEN ? THEN ? ELSE trap_analysis END, "
+            "review_tip=CASE WHEN ? THEN ? ELSE review_tip END, "
+            "error_reason=CASE WHEN ? AND (error_reason IS NULL OR error_reason='') THEN ? ELSE error_reason END "
+            "WHERE id=?",
+            (
+                time.time(), rec.get("user_answer"), qid, rec.get("source"),
+                1 if has_new_expl else 0, rec.get("explanation"),
+                1 if has_new_expl else 0, rf_dup["mistake_analysis"],
+                1 if has_new_expl else 0, rf_dup["fastest_solution"],
+                1 if has_new_expl else 0, review_fields.trap_json(rf_dup["trap_items"]),
+                1 if has_new_expl else 0, rf_dup["review_tip"],
+                1 if has_new_expl else 0, rf_dup["error_reason_tag"],
+                dup["id"],
+            ),
         )
         conn.commit()
         conn.close()
@@ -3500,11 +3556,18 @@ def save_mistake(rec: dict, probe: bool = False) -> int:
         # 快照写入侧回落：隔离/无官方解析的题，客户端传空时用 hs 兜底，与 list_mistakes/due_reviews 读取侧口径一致
         hs_row = conn.execute("SELECT hs_explanation FROM questions WHERE id=?", (qid,)).fetchone()
         explanation = (hs_row["hs_explanation"] if hs_row else None) or explanation
+    # B1：把 AI 讲解的六段式解析成结构化字段；用户没自评错因时用解析归类的标签补齐
+    rf = review_fields.parse_explain(explanation)
+    methods = list(rec.get("methods") or [])
+    if rf["method"] and rf["method"] not in methods:
+        methods.append(rf["method"])
+    error_reason = rec.get("error_reason") or rf["error_reason_tag"]
     cur = conn.execute(
         """INSERT INTO mistakes
            (created_at, module, question_type, question_text, user_answer,
-            correct_answer, methods, error_reason, explanation, uid, question_id, source, probe)
-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            correct_answer, methods, error_reason, explanation, uid, question_id, source, probe,
+            mistake_analysis, fastest_solution, trap_analysis, review_tip, mastery_state, wrong_review_count)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (
             time.time(),
             rec.get("module"),
@@ -3512,13 +3575,19 @@ def save_mistake(rec: dict, probe: bool = False) -> int:
             rec.get("question_text"),
             rec.get("user_answer"),
             rec.get("correct_answer"),
-            json.dumps(rec.get("methods", []), ensure_ascii=False),
-            rec.get("error_reason"),
+            json.dumps(methods, ensure_ascii=False),
+            error_reason,
             explanation,
             (rec.get("uid") or None),
             qid,
             rec.get("source"),
             1 if probe else 0,
+            rf["mistake_analysis"],
+            rf["fastest_solution"],
+            review_fields.trap_json(rf["trap_items"]),
+            rf["review_tip"],
+            "new",
+            0,
         ),
     )
     conn.commit()
@@ -3718,6 +3787,21 @@ def _hydrate_mistake(d: dict) -> None:
     d["explanation"] = d.get("explanation") or hs or ""
     d["submodule"] = (d.pop("q_submodule", None) or "").strip() or None
     d["type_group"] = taxonomy.group_name(d.get("module"), d["submodule"])
+    # B1：结构化复盘字段——存量行没有落库值时按 explanation 现解析（读侧兜底，不写库）
+    if d["explanation"] and d.get("mistake_analysis") is None:
+        rf = review_fields.parse_explain(d["explanation"])
+        for k in ("mistake_analysis", "fastest_solution", "review_tip"):
+            if d.get(k) is None:
+                d[k] = rf[k]
+        if d.get("trap_analysis") is None:
+            d["trap_analysis"] = review_fields.trap_json(rf["trap_items"])
+        if not d.get("error_reason") and rf["error_reason_tag"]:
+            d["error_reason"] = rf["error_reason_tag"]
+    d["trap_items"] = review_fields.trap_list(d.pop("trap_analysis", None))
+    # B2：状态机列兜底（理论上迁移已回填，防异常路径下的 NULL）
+    if not d.get("mastery_state"):
+        d["mastery_state"] = "mastered" if d.get("mastered") else ("reviewing" if d.get("review_count") else "new")
+    d["wrong_review_count"] = d.get("wrong_review_count") or 0
 
 
 def _ensure_review_log(conn):
@@ -3753,7 +3837,7 @@ def _advance_review(
     via='answer' 表示由练习 answer_log 连带推进（同一次作答已在 answer_log 有行，历次作答时间线不重复计）。"""
     cl, args = _uid_clause(uid)
     row = conn.execute(
-        f"SELECT review_streak FROM mistakes WHERE id=?{cl}", (mid, *args)
+        f"SELECT review_streak, wrong_review_count FROM mistakes WHERE id=?{cl}", (mid, *args)
     ).fetchone()
     if not row:
         return None
@@ -3777,11 +3861,21 @@ def _advance_review(
     # 到期点落在中国日历日 00:00，与 UI「今日到期 / 明天复习」及 cn_day 的「今天」同口径
     nxt = cn_day_start() + days * 86400
     mastered = 1 if streak > len(REVIEW_INTERVALS_DAYS) else 0
+    # B2 状态机（唯一跃迁点）：再错累计 wrong_review_count；连对>间隔数 → mastered；
+    # 复习中再错累计≥2 → sticky_wrong；sticky_wrong 再答对 → reviewing（不直接 mastered，防震荡）
+    wrc = (row["wrong_review_count"] or 0) + (0 if correct else 1)
+    if mastered:
+        state = "mastered"
+    elif not correct and wrc >= 2:
+        state = "sticky_wrong"
+    else:
+        state = "reviewing"
     conn.execute(
         "UPDATE mistakes SET review_count=review_count+1, review_streak=?, next_review=?, "
-        "mastered=?, mastered_at=CASE WHEN ? THEN COALESCE(mastered_at, ?) ELSE NULL END "
+        "mastered=?, mastered_at=CASE WHEN ? THEN COALESCE(mastered_at, ?) ELSE NULL END, "
+        "wrong_review_count=?, mastery_state=? "
         f"WHERE id=?{cl}",
-        (streak, nxt, mastered, mastered, time.time(), mid, *args),
+        (streak, nxt, mastered, mastered, time.time(), wrc, state, mid, *args),
     )
     return {"streak": streak, "next_review_days": days, "mastered": bool(mastered)}
 
@@ -5216,7 +5310,8 @@ def mastery_snapshot(uid: str, fresh: bool = False) -> dict:
     conn = get_conn()
     _ensure_answer_log(conn)
     rows = conn.execute(
-        """SELECT a.module, a.submodule, a.correct, a.created_at, q.tag3
+        """SELECT a.module, a.submodule, a.correct, a.created_at, a.secs,
+                  q.tag3, q.correct_ratio, q.attempt_count
            FROM answer_log a LEFT JOIN questions q ON q.id = a.question_id
            WHERE a.uid=? AND a.module IS NOT NULL AND a.module!=''
            ORDER BY a.created_at""",
@@ -5229,10 +5324,20 @@ def mastery_snapshot(uid: str, fresh: bool = False) -> dict:
     # 按 tag3 / 二级分组聚合原始作答
     t3_stat: dict = {}
     grp_stat: dict = {}
+    # B3 画像两维：按全站难度分档的正确率 + 答对/答错均时
+    diff_stat: dict[int | None, list[int]] = {}
+    secs_c: list[float] = []
+    secs_w: list[float] = []
     total_n = len(rows)
     for r in rows:
-        tag3 = r["tag3"] if r["tag3"] and r["tag3"] != "UNKNOWN" and r["tag3"] in tidx else None
         c = 1 if r["correct"] else 0
+        b = difficulty.band(r["correct_ratio"], r["attempt_count"])
+        bs = diff_stat.setdefault(b, [0, 0])
+        bs[0] += 1
+        bs[1] += c
+        if r["secs"] and r["secs"] > 0:
+            (secs_c if c else secs_w).append(float(r["secs"]))
+        tag3 = r["tag3"] if r["tag3"] and r["tag3"] != "UNKNOWN" and r["tag3"] in tidx else None
         ts = r["created_at"]
         if tag3:
             s = t3_stat.setdefault(tag3, [0, 0, 0.0])
@@ -5318,6 +5423,22 @@ def mastery_snapshot(uid: str, fresh: bool = False) -> dict:
             "practiced": len(practiced),
             "total": total_t3,
             "pct": round(100 * len(practiced) / total_t3) if total_t3 else 0,
+        },
+        # B3：画像两维——难度分档正确率（含未校准桶）+ 答对/答错均时
+        "by_difficulty": [
+            {
+                "band": b,
+                "label": difficulty.label(b) or "待校准",
+                "n": s[0],
+                "acc": round(s[1] / s[0], 3) if s[0] else 0,
+            }
+            for b, s in sorted(diff_stat.items(), key=lambda kv: (kv[0] is None, kv[0]))
+        ],
+        "by_secs": {
+            "correct_avg": round(sum(secs_c) / len(secs_c), 1) if secs_c else 0,
+            "wrong_avg": round(sum(secs_w) / len(secs_w), 1) if secs_w else 0,
+            "n_correct": len(secs_c),
+            "n_wrong": len(secs_w),
         },
         "modules": modules,
     }

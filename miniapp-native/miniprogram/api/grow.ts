@@ -294,12 +294,29 @@ export interface MasteryModule {
   subs: MasterySub[];
 }
 
+export interface MasteryDiffBand {
+  band: number | null;
+  label: string;
+  n: number;
+  acc: number;
+}
+
+export interface MasterySecs {
+  correct_avg: number | null;
+  wrong_avg: number | null;
+  n_correct: number;
+  n_wrong: number;
+}
+
 export interface MasteryMapResp {
   n_total: number;
   cold: boolean;
   need: number;
   coverage: { practiced: number; total: number; pct: number };
   modules: MasteryModule[];
+  /** B3：按全站难度档聚合的作答画像 + 答对/答错均速（秒） */
+  by_difficulty?: MasteryDiffBand[];
+  by_secs?: MasterySecs;
 }
 
 export function fetchMasteryMap(): Promise<MasteryMapResp> {

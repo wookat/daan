@@ -57,9 +57,9 @@ function roundRect(ctx, x, y, w, h, r) {
 function drawPoster(ctx, d) {
   // 背景渐变
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  g.addColorStop(0, '#5B8AF8');
-  g.addColorStop(0.55, '#2E5BFF');
-  g.addColorStop(1, '#2C5AD6');
+  g.addColorStop(0, '#4d83a6');
+  g.addColorStop(0.55, '#1e4a6b');
+  g.addColorStop(1, '#17394f');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
   ctx.fill();
@@ -184,9 +184,9 @@ function drawQr(ctx, url) {
 
 function drawExamPoster(ctx, d) {
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  g.addColorStop(0, '#5B8AF8');
-  g.addColorStop(0.55, '#2E5BFF');
-  g.addColorStop(1, '#2C5AD6');
+  g.addColorStop(0, '#4d83a6');
+  g.addColorStop(0.55, '#1e4a6b');
+  g.addColorStop(1, '#17394f');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
   ctx.fill();

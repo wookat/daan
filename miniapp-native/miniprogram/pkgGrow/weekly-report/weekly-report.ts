@@ -59,8 +59,8 @@ const TREND_TEXT = { up: '↑ 进步', down: '↓ 回落', flat: '→ 持平', n
 // 与 H5 drawShare 同构；canvas 绘制色值不经 WXSS，故使用品牌色字面量
 function drawShare(ctx: Ctx2D, r: WeeklyReportResp): void {
   const g = ctx.createLinearGradient(0, 0, W * 0.7, H);
-  g.addColorStop(0, '#5B8AF8');
-  g.addColorStop(1, '#2C5AD6');
+  g.addColorStop(0, '#4d83a6');
+  g.addColorStop(1, '#17394f');
   roundRect(ctx, 0, 0, W, H, 36);
   ctx.fillStyle = g;
   ctx.fill();

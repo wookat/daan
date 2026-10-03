@@ -26,6 +26,20 @@
         </view>
       </kg-card>
 
+      <!-- B3：难度画像 + 作答均速 -->
+      <kg-card wx:if="{{diffRows.length || secsText}}" variant="raised" class="sec">
+        <view class="grp-h">
+          <text class="grp-name">难度画像</text>
+          <text class="grp-meta">按全站校准难度档</text>
+        </view>
+        <view wx:for="{{diffRows}}" wx:key="label" class="dim-row">
+          <text class="dim-name">{{item.label}}</text>
+          <view class="dim-bar"><view class="dim-fill" style="width: {{item.accPct}}%" /></view>
+          <text class="dim-n num">{{item.accText}} · {{item.n}}题</text>
+        </view>
+        <text wx:if="{{secsText}}" class="dim-secs">{{secsText}}</text>
+      </kg-card>
+
       <kg-chip-row class="tabs" options="{{modChips}}" value="{{curMod}}" bind:change="onModChange" />
       <view class="toolbar">
         <kg-segmented options="{{viewOpts}}" value="{{view}}" size="sm" bind:change="onViewChange" />

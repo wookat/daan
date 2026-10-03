@@ -2,8 +2,8 @@ import { lucideIcon } from '../utils/icons';
 
 // 图标是 data-URI，拿不到 CSS 变量，按主题取 tokens.generated.wxss 里 --ink-3 / --brand 的字面值
 const ICON_COLORS: Record<'light' | 'dark', { off: string; on: string }> = {
-  light: { off: '#6b7280', on: '#2e5bff' },
-  dark: { off: '#8a8ea0', on: '#2e5bff' },
+  light: { off: '#5e6470', on: '#1e4a6b' },
+  dark: { off: '#948b7c', on: '#7fb4cf' },
 };
 
 interface TabItem {

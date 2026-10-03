@@ -259,3 +259,11 @@
   color: var(--ink-2);
   margin-top: 2px;
 }
+
+/* B3 难度画像 */
+.dim-row { display: flex; align-items: center; gap: 16rpx; margin-top: 16rpx; }
+.dim-name { width: 96rpx; font-size: 24rpx; color: var(--ink-2); }
+.dim-bar { flex: 1; height: 12rpx; border-radius: 999rpx; background: var(--fill); overflow: hidden; }
+.dim-fill { height: 100%; border-radius: 999rpx; background: var(--brand); }
+.dim-n { font-size: 22rpx; color: var(--ink-3); white-space: nowrap; }
+.dim-secs { display: block; margin-top: 20rpx; font-size: 22rpx; color: var(--ink-3); }

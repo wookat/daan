@@ -181,7 +181,7 @@ import { moduleLabel } from '../../module-meta.js';
 
 // 旧版缓存的 AI 建议 HTML 内联了旧紫色，读取时映射到品牌色
 function cleanCoach(s) {
-  return s.replace(/#4f46e5/g, '#2e5bff').replace(/#6366f1/g, '#5c82ff').replace(/#3730a3/g, '#2f5cd8').replace(/#f4f5ff/g, '#eef3ff');
+  return s.replace(/#4f46e5/g, '#1e4a6b').replace(/#6366f1/g, '#4d83a6').replace(/#3730a3/g, '#17394f').replace(/#f4f5ff/g, '#eef4f7');
 }
 
 function typeName(t) {

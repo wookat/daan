@@ -10,6 +10,15 @@ export function qStatLine(q: Question | null | undefined): string {
   return s;
 }
 
+// B3：难度徽标（后端 difficulty 分档校准值；样本不足返回 null 不渲染）
+export type DifficultyTag = { label: string; tone: 'info' | 'neutral' | 'warn' | 'bad' };
+export function difficultyTag(q: Question | null | undefined): DifficultyTag | null {
+  if (!q || q.difficulty == null || !q.difficulty_label) return null;
+  const d = q.difficulty;
+  const tone = d >= 5 ? 'bad' : d === 4 ? 'warn' : d === 3 ? 'neutral' : 'info';
+  return { label: q.difficulty_label, tone };
+}
+
 // 考点链：模块 › 子模块 › 题型末段（与 H5 practice.vue kpChain 同口径）
 export function kpChain(q: Question | null | undefined, modLabel: string): string {
   if (!q) return '';

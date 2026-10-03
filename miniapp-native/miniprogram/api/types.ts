@@ -26,6 +26,9 @@ export interface Question {
   /** 普通练习混入的本人到期错题（/api/questions?mix_due=1）对应的 mistakes.id；卡面标「曾错题」，answer_log 以 mid 上送 */
   due_mid?: number;
   due_streak?: number;
+  /** B3：全站正确率校准的难度档 1-5（样本不足为 null），difficulty_label 为展示文案 */
+  difficulty?: number | null;
+  difficulty_label?: string | null;
 }
 
 export interface QuestionsResp {
@@ -74,6 +77,14 @@ export interface Mistake {
   created_at?: number | string;
   options?: Record<string, string> | null;
   source?: string | null;
+  /** B1：AI 讲解解析出的结构化复盘字段 */
+  mistake_analysis?: string | null;
+  fastest_solution?: string | null;
+  trap_items?: string[];
+  review_tip?: string | null;
+  /** B2：掌握状态机 new/reviewing/sticky_wrong/mastered；wrong_review_count 累计再错次数 */
+  mastery_state?: string | null;
+  wrong_review_count?: number;
 }
 
 export interface MistakesResp {

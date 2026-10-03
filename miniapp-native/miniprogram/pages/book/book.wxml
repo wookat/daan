@@ -108,8 +108,8 @@
       <kg-empty
         wx:if="{{!shown.length}}"
         icon="{{tab === 'todo' ? 'party-popper' : 'inbox'}}"
-        title="{{tab === 'todo' ? '暂无待掌握错题' : '还没有已掌握的错题'}}"
-        desc="{{tab === 'todo' ? (filterMod || filterType ? '换个筛选条件试试' : '继续刷题，答错的题会自动进入这里') : '在待掌握列表里点「标记已掌握」即可归档'}}"
+        title="{{tab === 'todo' ? '暂无待掌握错题' : tab === 'sticky' ? '暂无长期易错错题' : '还没有已掌握的错题'}}"
+        desc="{{tab === 'todo' ? (filterMod || filterType ? '换个筛选条件试试' : '继续刷题，答错的题会自动进入这里') : tab === 'sticky' ? '复习中累计再错 2 次以上的题会出现在这里，值得专项攻克' : '在待掌握列表里点「标记已掌握」即可归档'}}"
         ctaText="{{tab === 'todo' && !filterMod && !filterType ? '去刷题' : ''}}"
         ctaTo="/pages/practice/practice"
       />

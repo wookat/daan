@@ -4,6 +4,7 @@
       <kg-tag v-if="q.module" tone="module" :module="q.module">{{ modLabel }}</kg-tag>
       <text v-if="q.tag3" class="kg-q__kp" role="button" @click="$emit('tag', q.tag3)">{{ q.tag3 }}</text>
       <text v-if="stars" class="kg-q__stars" aria-label="难度">{{ stars }}</text>
+      <kg-tag v-if="q.difficultyLabel" :tone="diffTone">难度·{{ q.difficultyLabel }}</kg-tag>
       <text v-if="accText" class="kg-q__acc num">{{ accText }}</text>
       <kg-tag v-if="q.isReal" tone="warn">真题</kg-tag>
       <kg-tag v-if="q.dueMix" tone="info">曾错题 · 到期复习</kg-tag>
@@ -33,7 +34,7 @@ import { fontSizes } from '../../font-size.js';
 
 /**
  * KgQuestionCard（COMPONENTS §2.1）：meta 行 + 材料折叠 + 题干 + 图片。选项/解析是独立组件（模考不显解析、分享页选项只读）。
- * q: {id, module, tag3, stem, material?, images?, difficulty?(1-5), accuracy?(0-100), attemptCount?, isReal?, dueMix?, groupSeq?}
+ * q: {id, module, tag3, stem, material?, images?, difficulty?(1-5), difficultyLabel?, accuracy?(0-100), attemptCount?, isReal?, dueMix?, groupSeq?}
  */
 export default {
   name: 'KgQuestionCard',
@@ -56,6 +57,11 @@ export default {
       const c = this.q.attemptCount;
       if (this.q.accuracy == null || (c != null && c < 5)) return '';
       return `全站正确率 ${this.q.accuracy}%`;
+    },
+    // B3：校准难度档标签的色调（与小程序 q-stat.ts difficultyTag 同映射）
+    diffTone() {
+      const d = this.q.difficulty;
+      return d >= 5 ? 'bad' : d === 4 ? 'warn' : d === 3 ? 'neutral' : 'info';
     },
     stemSize() { return fontSizes(this.fontLevel).q; },
   },

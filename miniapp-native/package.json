@@ -15,6 +15,7 @@
     "@typescript-eslint/parser": "^8.46.4",
     "eslint": "^8.57.1",
     "miniprogram-api-typings": "^4.0.7",
+    "miniprogram-automator": "^0.12.1",
     "typescript": "^5.9.3"
   }
 }
