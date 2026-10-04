@@ -32,19 +32,19 @@ nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:var(--ha
 .brand-name{font-weight:700;font-size:17px;letter-spacing:.5px}
 .nav-links{margin-left:auto;display:flex;gap:26px;font-size:13.5px;color:var(--ink-3)}
 .nav-links a:hover{color:var(--brand)}
-.btn{display:inline-flex;align-items:center;gap:8px;border-radius:12px;font-weight:600;font-size:14px;padding:12px 22px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
 .btn-brand{background:var(--brand);color:#fff}
 .btn-brand:hover,.btn-brand:active{background:var(--brand-press)}
 .btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
 .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
-.btn-sm{padding:8px 16px;font-size:13px;border-radius:10px}
+.btn-sm{padding:8px 18px;font-size:13px}
 
 /* ---- hero ---- */
 .hero{padding:84px 0}
 .hero-in{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--brand-soft);color:var(--brand-text);border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600}
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--brand);display:inline-block}
-h1{font-size:clamp(34px,4.6vw,52px);line-height:1.18;font-weight:800;margin:20px 0 16px;letter-spacing:-.5px}
+h1{font-size:clamp(34px,4.6vw,52px);line-height:1.18;font-weight:800;margin:20px 0 16px;letter-spacing:-.02em}
 h1 em{font-style:normal;color:var(--brand)}
 .lede{font-size:16.5px;color:var(--ink-3);line-height:1.8;max-width:30em}
 .hero-cta{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
@@ -62,9 +62,18 @@ h1 em{font-style:normal;color:var(--brand)}
 /* ---- numbers band ---- */
 .band{background:var(--brand);border-radius:var(--r-lg);padding:36px 44px;display:grid;grid-template-columns:repeat(5,1fr);gap:28px}
 .band div{color:#fff;text-align:center}
+@media(min-width:921px){.band div+div{border-left:1px solid rgba(255,255,255,.22)}}
 .band b{font-size:30px;font-weight:800;display:block}
 .band small{opacity:.78;font-size:12.5px}
-@media(max-width:760px){.band{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.band{grid-template-columns:repeat(2,1fr)}.band div+div{border-left:0}}
+
+/* ---- module chip strip (Duolingo 式横向分隔带) ---- */
+.chipstrip{border-top:var(--hairline);border-bottom:var(--hairline);background:var(--card);padding:14px 0}
+.chipstrip-in{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none}
+.chipstrip-in::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:var(--hairline);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card)}
+.chip i{width:8px;height:8px;border-radius:2px;background:var(--brand);display:inline-block}
+.chip.accent{background:var(--brand-soft);border-color:var(--brand-soft-2);color:var(--brand-text)}
 
 /* ---- section head ---- */
 .shead{max-width:640px;margin-bottom:44px}
@@ -193,6 +202,21 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
     </div>
   </div>
 </section>
+
+<div class="chipstrip">
+  <div class="wrap chipstrip-in">
+    <span class="chip accent"><i></i>全站题库 63,992 题</span>
+    <span class="chip"><i></i>言语理解</span>
+    <span class="chip"><i></i>判断推理</span>
+    <span class="chip"><i></i>数量关系</span>
+    <span class="chip"><i></i>资料分析</span>
+    <span class="chip"><i></i>常识判断</span>
+    <span class="chip"><i></i>申论</span>
+    <span class="chip"><i></i>面试陪练</span>
+    <span class="chip"><i></i>时政每日一练</span>
+    <span class="chip"><i></i>全真模考</span>
+  </div>
+</div>
 
 <section id="features">
   <div class="wrap">
