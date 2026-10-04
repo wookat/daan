@@ -1,5 +1,5 @@
 {
-    "name" : "错题邦",
+    "name" : "岸上见",
     "appid" : "__UNI__KAOGONG",
     "description" : "Zalize · 考公刷题 + 错题讲解（原考公错题助手，花生十三方法体系）",
     "versionName" : "1.0.1",
@@ -60,7 +60,7 @@
     },
     /* H5：uni 构建会用 h5.title（缺省 name）覆写 index.html 的 <title>，SEO 标题以此为准 */
     "h5" : {
-        "title" : "错题邦 - 公务员考试行测真题免费在线刷题 · 错题本 · 模考",
+        "title" : "岸上见 - 公务员考试行测真题免费在线刷题 · 错题本 · 模考",
         "async" : {
             "timeout" : 20000
         }

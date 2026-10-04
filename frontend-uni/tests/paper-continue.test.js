@@ -105,8 +105,8 @@ describe('R364 paperFinishState 完成页归卷', () => {
 
 describe('R365 paperShareText 按卷分享基句', () => {
   it('合法卷名+n+pct 生成带卷名基句（trim）', () => {
-    expect(paperShareText('2015年新疆卷', 38, 87)).toBe('我在错题邦练完了「2015年新疆卷」全卷 38 题，正确率 87%');
-    expect(paperShareText('  卷名  ', 10, 0)).toBe('我在错题邦练完了「卷名」全卷 10 题，正确率 0%');
+    expect(paperShareText('2015年新疆卷', 38, 87)).toBe('我在岸上见练完了「2015年新疆卷」全卷 38 题，正确率 87%');
+    expect(paperShareText('  卷名  ', 10, 0)).toBe('我在岸上见练完了「卷名」全卷 10 题，正确率 0%');
   });
 
   it('无卷名/空白/非字符串 fail-closed 返回 null', () => {

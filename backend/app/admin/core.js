@@ -104,7 +104,7 @@
     document.querySelectorAll('.side nav a[data-page]').forEach((a) =>
       a.classList.toggle('on', a.dataset.page === (PAGES[name] ? name : 'dashboard')));
     $('crumb').innerHTML = `<b>${esc(page.title)}</b>　${esc(page.crumb)}`;
-    document.title = page.title + ' · 错题邦管理后台';
+    document.title = page.title + ' · 岸上见管理后台';
     const el = $('content');
     el.innerHTML = '<div class="empty"><div class="eico">⏳</div>加载中…</div>';
     try {

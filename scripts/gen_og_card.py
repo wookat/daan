@@ -29,7 +29,7 @@ def main() -> None:
     f_sub = ImageFont.truetype(str(FONT), 46)
     f_chip = ImageFont.truetype(str(FONT), 32)
 
-    d.text((90, 150), "错题邦", font=f_site, fill=(255, 255, 255))
+    d.text((90, 150), "岸上见", font=f_site, fill=(255, 255, 255))
     d.text((90, 290), "10万+ 行测题 · 1.5万+ 历年真题免费在线刷", font=f_sub, fill=(255, 255, 255))
 
     chips = ["AI 拍题讲解", "智能错题本", "每日一练", "迷你模考"]

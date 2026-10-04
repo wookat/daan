@@ -266,7 +266,7 @@ export default {
       const t = this.panel.team;
       trackEvent('team_invite_copy', 'team', t.invite_code);
       uni.setClipboardData({
-        data: `我在错题邦建了刷题小队「${t.name}」，一起打卡刷题冲上岸！邀请码 ${t.invite_code}，点链接直接加入：${this.inviteUrl()}`,
+        data: `我在岸上见建了刷题小队「${t.name}」，一起打卡刷题冲上岸！邀请码 ${t.invite_code}，点链接直接加入：${this.inviteUrl()}`,
         success: () => uni.showToast({ title: '邀请链接已复制，发给考友吧', icon: 'none' }),
       });
     },
@@ -288,7 +288,7 @@ export default {
     },
     remind(m) {
       uni.setClipboardData({
-        data: `「${m.nickname}」今天还没刷题哦！我在错题邦小队「${this.panel.team.name}」等你打卡，别掉队：${this.inviteUrl()}`,
+        data: `「${m.nickname}」今天还没刷题哦！我在岸上见小队「${this.panel.team.name}」等你打卡，别掉队：${this.inviteUrl()}`,
         success: () => uni.showToast({ title: '催打卡文案已复制，发给 TA 吧', icon: 'none' }),
       });
     },

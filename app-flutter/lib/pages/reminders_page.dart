@@ -127,7 +127,7 @@ class _RemindersPageState extends State<RemindersPage> {
                                 fontWeight: FontWeight.w800)),
                       ),
                       const SizedBox(width: 6),
-                      Text('考公错题助手 · $time',
+                      Text('岸上见 · $time',
                           style:
                               const TextStyle(fontSize: 10.5, color: KgColors.t3)),
                     ],

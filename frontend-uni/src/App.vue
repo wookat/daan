@@ -39,7 +39,7 @@ export default {
         const h1 = document.createElement('h1')
         h1.setAttribute('data-a11y', '1')
         h1.style.cssText = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0'
-        h1.textContent = (headTitle || document.title || '').trim() || '错题邦'
+        h1.textContent = (headTitle || document.title || '').trim() || '岸上见'
         cur.prepend(h1)
       }
       // tabbar 图标为装饰图（文字 label 承载语义），uni 生成的 img 无 alt

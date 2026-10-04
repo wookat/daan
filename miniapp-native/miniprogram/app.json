@@ -71,7 +71,7 @@
   "themeLocation": "theme.json",
   "window": {
     "navigationStyle": "custom",
-    "navigationBarTitleText": "错题邦",
+    "navigationBarTitleText": "岸上见",
     "navigationBarTextStyle": "@navTxtStyle",
     "backgroundColor": "@bgColor",
     "backgroundTextStyle": "@bgTxtStyle"

@@ -2443,7 +2443,7 @@ export default {
     shareResult() {
       if (this._dailyDoneDate && (this.dailyStats || this.dailyErr)) {
         const ds = this.dailyStats || {};
-        let txt = '我完成了错题邦 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
+        let txt = '我完成了岸上见 ' + this._dailyDoneDate + ' 每日一练（全站同题 ' + this.items.length + ' 题），答对 ' + this.right + ' 题';
         txt += dailySetShareTail(ds);
         if (ds.streak >= 2) txt += '，已连续参与 ' + ds.streak + ' 天';
         txt += '！同题挑战我：https://kaogong.zalize.com/#/pages/practice/practice?daily=1&src=share';
@@ -2458,7 +2458,7 @@ export default {
       const paperBase = paperShareText(this._ptitle, this.items.length, pct);
       let txt =
         paperBase ||
-        '我在错题邦刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
+        '我在岸上见刷了 ' + this.items.length + ' 道' + (this.lastModule ? this.modName(this.lastModule) : '行测') + '题，正确率 ' + pct + '%';
       if (this.bestStreak >= 3) txt += '，最高连对 ' + this.bestStreak + ' 题';
       txt += percentileShareTail(this.percentile);
       txt += paperBase ? '！也来练这套卷：https://kaogong.zalize.com/#/pkgA/exam/list' : '！一起来刷：https://kaogong.zalize.com';

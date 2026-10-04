@@ -42,7 +42,7 @@ from .storm_guard import ErrorStormGuard
 
 _DOCS_OFF = os.environ.get("DISABLE_API_DOCS") == "1"
 app = FastAPI(
-    title="错题邦",
+    title="岸上见",
     docs_url=None if _DOCS_OFF else "/docs",
     redoc_url=None if _DOCS_OFF else "/redoc",
     openapi_url=None if _DOCS_OFF else "/openapi.json",
@@ -468,7 +468,7 @@ _NOT_FOUND_HTML = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>页面不存在（404）｜错题邦</title>
+<title>页面不存在（404）｜岸上见</title>
 <style>
 body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#f6f7fb;color:#1f2329;display:flex;min-height:100vh;align-items:center;justify-content:center}
 .card{max-width:420px;padding:40px 32px;text-align:center}
@@ -480,7 +480,7 @@ a{display:inline-block;margin-top:16px;padding:10px 28px;background:#3b6df0;colo
 <body>
 <div class="card">
 <h1>404</h1>
-<p>你要找的页面不存在或已被移动。<br>可以回到错题邦首页继续刷题。</p>
+<p>你要找的页面不存在或已被移动。<br>可以回到岸上见首页继续刷题。</p>
 <a href="/">返回首页</a>
 </div>
 </body>

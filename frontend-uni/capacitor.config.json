@@ -1,6 +1,6 @@
 {
   "appId": "com.zalize.kaogong",
-  "appName": "考公错题助手",
+  "appName": "岸上见",
   "webDir": "dist/build/h5",
   "android": {
     "allowMixedContent": false
