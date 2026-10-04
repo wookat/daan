@@ -4208,7 +4208,7 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     rows = conn.execute(
         f"""SELECT id, title, kind, year, region, question_ids, duration_min, created_at
             FROM exam_papers WHERE {' AND '.join(where)}
-            ORDER BY year DESC, id DESC LIMIT 200""",
+            ORDER BY year DESC, id DESC LIMIT 500""",
         args,
     ).fetchall()
     takers: dict[int, dict] = {}
