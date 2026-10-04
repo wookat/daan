@@ -4,7 +4,7 @@
 // 其余资源按文件名排序跟在后面：首页停留几秒内点进练习时分包已在缓存，而不是等清单按字母序爬到 p。
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseRouteDeps, ENTRY_ROUTES } from './route-preload.mjs';
+import { parseRouteDeps, ENTRY_ROUTES, H5_BASE } from './route-preload.mjs';
 
 /** 预取优先级：主循环页优先，其余入口路由随后。 */
 export const PRECACHE_FIRST_ROUTES = ['pages/practice/practice', 'pages/book/book', ...ENTRY_ROUTES];
@@ -31,10 +31,10 @@ if (process.argv[1] && process.argv[1].endsWith('gen-precache-manifest.mjs')) {
   const files = readdirSync(join(dist, 'assets'))
     .filter((f) => /\.(js|css)$/.test(f))
     .sort()
-    .map((f) => `/assets/${f}`);
+    .map((f) => `${H5_BASE}assets/${f}`);
   const indexJs = files.find((f) => /\/index-[\w-]+\.js$/.test(f));
-  if (!indexJs) throw new Error('gen-precache-manifest: 产物中未找到 /assets/index-*.js');
-  const deps = parseRouteDeps(readFileSync(join(dist, indexJs.slice(1)), 'utf8'), PRECACHE_FIRST_ROUTES);
+  if (!indexJs) throw new Error(`gen-precache-manifest: 产物中未找到 ${H5_BASE}assets/index-*.js`);
+  const deps = parseRouteDeps(readFileSync(join(dist, indexJs.slice(H5_BASE.length)), 'utf8'), PRECACHE_FIRST_ROUTES);
   const list = orderPrecache(files, deps);
   writeFileSync(join(dist, 'precache.json'), JSON.stringify(list));
   const firstSet = new Set(PRECACHE_FIRST_ROUTES.flatMap((r) => deps[r] || []));

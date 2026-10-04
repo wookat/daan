@@ -151,7 +151,7 @@ def _page(
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">岸上见 · 考公题库</a>'
         f'<form class="hdr-s" action="/tiku/search" method="get" role="search">'
         f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
-        f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
+        f'<a class="hdr-cta" href="/app/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">岸上见</a> · 10万+ 行测题 · 1.5万+ 历年真题'
         f' · <a href="/tiku/papers/">真题卷</a>'
@@ -164,7 +164,7 @@ def _page(
 # 题库无题但 App 内有对应专区的模块：404 页给专区直达出路，而非死胡同
 _EMPTY_MODULE_OUTLET = {
     "shenlun": (
-        '<p><a class="cta" href="/#/pkgA/shenlun/shenlun">'
+        '<p><a class="cta" href="/app/#/pkgA/shenlun/shenlun">'
         "申论请前往「申论专区」：历年真题 + 素材范文 + 在线作答 →</a></p>"
     ),
 }
@@ -177,7 +177,7 @@ def _not_found(msg: str, cta_html: str = "") -> HTMLResponse:
         f"{cta_html}"
         "<p>你访问的页面不存在或已下架，可从以下入口继续：</p>"
         '<p><a href="/tiku/">题库首页</a> · <a href="/tiku/papers/">真题卷</a>'
-        ' · <a href="/tiku/daily/">每日一练</a> · <a href="/">去刷题</a></p>'
+        ' · <a href="/tiku/daily/">每日一练</a> · <a href="/app/">去刷题</a></p>'
     )
     return HTMLResponse(
         _page(f"{msg}_岸上见", "页面不存在或已下架。", "/tiku/", body, noindex=True),

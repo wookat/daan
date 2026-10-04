@@ -41,7 +41,7 @@ def _shenlun_q_items(items) -> str:
         )
         lis.append(
             f'<li><span class="meta">【{_e(meta)}】</span>{paper_link}{_e(text)} '
-            f'<a href="/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
+            f'<a href="/app/#/pkgA/shenlun/shenlun?id={it["id"]}">去作答 →</a></li>'
         )
     return "".join(lis)
 
@@ -61,7 +61,7 @@ def _render_shenlun_paper(paper: str) -> str:
             f'<p>{_e((q["reference"] or "").strip()).replace(chr(10), "<br>")}</p></details>'
             if (q["reference"] or "").strip() else ""
         )
-        + f'<p><a href="/#/pkgA/shenlun/shenlun?id={q["id"]}">去作答本题 →</a></p></div>'
+        + f'<p><a href="/app/#/pkgA/shenlun/shenlun?id={q["id"]}">去作答本题 →</a></p></div>'
         for i, q in enumerate(items, 1)
     )
     other_papers = [pc for pc in db.shenlun_paper_counts() if pc[0] != paper]
@@ -83,7 +83,7 @@ def _render_shenlun_paper(paper: str) -> str:
         + f'<div class="card"><h2>给定资料</h2><p>{material_html}</p></div>'
         + q_cards
         + (f'<div class="card"><h2>其他套卷申论真题</h2><div class="tags">{others}</div></div>' if others else "")
-        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?paper={quote(paper)}">进入申论专区在线作答本套真题 →</a>'
+        + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?paper={quote(paper)}">进入申论专区在线作答本套真题 →</a>'
     )
     return _page(
         f"{paper}申论真题_给定资料与参考解析_岸上见",
@@ -122,7 +122,7 @@ def _render_shenlun_year(year: int, page: int) -> str:
         + "</ul></div>"
         + _pager(_year_path(year, "shenlun"), page, total)
         + (f'<div class="card"><h2>其他年份申论真题</h2><div class="tags">{other_years}</div></div>' if other_years else "")
-        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?year={year}">进入申论专区在线作答{year}年申论真题 →</a>'
+        + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?year={year}">进入申论专区在线作答{year}年申论真题 →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
@@ -162,7 +162,7 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
         + "</ul></div>"
         + _pager(_sub_path("shenlun", qtype), page, total)
         + (f'<div class="card"><h2>其他题型申论真题</h2><div class="tags">{other_types}</div></div>' if other_types else "")
-        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?qtype={quote(qtype)}">进入申论专区在线作答{_e(qtype)}真题 →</a>'
+        + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?qtype={quote(qtype)}">进入申论专区在线作答{_e(qtype)}真题 →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
@@ -195,7 +195,7 @@ def _render_shenlun_sucai(mtype: str) -> str:
         cards.append(
             f'<div class="card"><p>{content}</p>'
             + (f'<p class="meta">出处：{_e(source)}</p>' if source else "")
-            + f'<p><a href="/#/pkgA/shenlun/shenlun?tab=m&amp;mid={m["id"]}&amp;mtype={quote(mtype)}">在 App 中查看/收藏 →</a></p></div>'
+            + f'<p><a href="/app/#/pkgA/shenlun/shenlun?tab=m&amp;mid={m["id"]}&amp;mtype={quote(mtype)}">在 App 中查看/收藏 →</a></p></div>'
         )
     others = "".join(
         f'<a href="{_e(_shenlun_sucai_path(t))}">{_e(t)}（{n} 条）</a>'
@@ -207,7 +207,7 @@ def _render_shenlun_sucai(mtype: str) -> str:
         + f'<p class="meta">申论{_e(mtype)}写作素材，按主题归类并附权威出处，可在 App 申论专区浏览、收藏与分享</p>'
         + "".join(cards)
         + (f'<div class="card"><h2>其他类型写作素材</h2><div class="tags">{others}</div></div>' if others else "")
-        + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(mtype)}">进入申论专区浏览{_e(mtype)}素材 →</a>'
+        + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(mtype)}">进入申论专区浏览{_e(mtype)}素材 →</a>'
     )
     return _page(
         f"申论{mtype}写作素材（{len(items)} 条）_申论素材库_岸上见",
@@ -268,7 +268,7 @@ def _tiku_shenlun(page: int):
         for y, n in db.shenlun_year_counts()
     )
     region_chips = "".join(
-        f'<a href="/#/pkgA/shenlun/shenlun?region={quote(r)}">{_e(r)}</a>'
+        f'<a href="/app/#/pkgA/shenlun/shenlun?region={quote(r)}">{_e(r)}</a>'
         for r in filters["regions"][:12]
     )
     qtype_chips = "".join(
@@ -308,7 +308,7 @@ def _tiku_shenlun(page: int):
         + "</ul></div>"
         + mat_html
         + _pager("/tiku/shenlun/", page, total)
-        + '<a class="cta" href="/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
+        + '<a class="cta" href="/app/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(

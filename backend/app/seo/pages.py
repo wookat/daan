@@ -139,7 +139,7 @@ def tiku_index():
 @router.get("/search", include_in_schema=False)
 def tiku_search(q: str = ""):
     q = q.strip()[:64]
-    dest = "/#/pkgA/search/search" + (f"?q={quote(q)}" if q else "")
+    dest = "/app/#/pkgA/search/search" + (f"?q={quote(q)}" if q else "")
     return RedirectResponse(dest, status_code=302)
 
 
@@ -191,12 +191,12 @@ def _render_daily(day: str, archived: bool):
         board_html = f'<section class="card"><h2>{label}（前 {len(board)} 名）</h2>{rows}</section>'
     if archived:
         cta = (
-            f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;date={_e(day)}&amp;src=seo">'
+            f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?daily=1&amp;date={_e(day)}&amp;src=seo">'
             "去主站补练这期同题（免费）→</a>"
         )
         archive_html = '<p class="meta"><a href="/tiku/daily/">← 回今日每日一练</a></p>'
     else:
-        cta = f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?daily=1&amp;src=seo">去主站作答今日同题（免费）→</a>'
+        cta = f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?daily=1&amp;src=seo">去主站作答今日同题（免费）→</a>'
         links = " · ".join(f'<a href="/tiku/daily/{d}/">{d}</a>' for d in _daily_archive_days())
         archive_html = f'<section class="card"><h2>往期每日一练</h2><p class="meta">{links}</p></section>'
     path = f"/tiku/daily/{day}/" if archived else "/tiku/daily/"
@@ -289,7 +289,7 @@ def tiku_discuss():
         + f"<h1>考友热议题目（{len(cards)} 题）</h1>"
         + '<p class="meta">全站正在讨论的题目，按最近活跃排序，点题干看题目解析与全部讨论</p>'
         + listing
-        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/plaza">进入讨论广场参与互动（免费）→</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/social/plaza">进入讨论广场参与互动（免费）→</a>'
     )
     return _page(
         "考友热议题目_公务员考试题目讨论区_岸上见",
@@ -315,11 +315,11 @@ def tiku_papers():
     papers = db.list_exam_papers(kind="zhenti")
     filters = db.exam_paper_filters()
     year_chips = "".join(
-        f'<a href="/#/pkgA/exam/list?year={f["y"]}">{f["y"]}年（{f["n"]}）</a>'
+        f'<a href="/app/#/pkgA/exam/list?year={f["y"]}">{f["y"]}年（{f["n"]}）</a>'
         for f in filters["years"]
     )
     region_chips = "".join(
-        f'<a href="/#/pkgA/exam/list?region={quote(f["r"])}">{_e(f["r"])}（{f["n"]}）</a>'
+        f'<a href="/app/#/pkgA/exam/list?region={quote(f["r"])}">{_e(f["r"])}（{f["n"]}）</a>'
         for f in filters["regions"]
     )
     lis = "".join(
@@ -425,7 +425,7 @@ def tiku_paper_detail(pid: int):
         + _e(social_text)
         + "</p>"
         + (f'<div class="card"><h2>模块分布</h2><div class="tags">{dist_links}</div></div>' if dist_links else "")
-        + f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/exam/list{_exam_list_query(p)}">在线模考本卷 →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/exam/list{_exam_list_query(p)}">在线模考本卷 →</a>'
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
@@ -509,7 +509,7 @@ def _render_q_comments(qid: int) -> str:
         for r in rows
     )
     cta = (
-        f'<a class="cta" href="{_e(SITE_BASE)}/#/pkgA/social/discuss?qid={qid}">参与讨论（免费）→</a>'
+        f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/social/discuss?qid={qid}">参与讨论（免费）→</a>'
     )
     return f'<section class="card noprint"><h2>考友讨论（{total} 条）</h2><ul class="qlist">{items}</ul>{cta}</section>'
 
@@ -562,7 +562,7 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
         if m == module and y != year
     )
     cta = (
-        f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?module={quote(module)}'
+        f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?module={quote(module)}'
         f'&real=1&year={year}&source=seo">在线刷{year}年{_e(mod_name)}真题（免费）→</a>'
     )
     body = (
@@ -660,7 +660,7 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
         )
     )
     cta = (
-        f'<a class="cta" href="{_e(SITE_BASE)}/#/pages/practice/practice?tag3={quote(code)}'
+        f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?tag3={quote(code)}'
         f'&module={quote(mod_key)}&source=seo">在线练习「{_e(name)}」（免费）→</a>'
     )
     body = (
@@ -794,7 +794,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
             img_html += f'<p class="meta">图源：{credit}</p>'
     # 搜索访客的意图是「这道题」：选项本身可点（点即带着选择进练习页作答），答案不在首屏摊开
     practice_href = (
-        f'{_e(SITE_BASE)}/#/pages/practice/practice?qid={qid}'
+        f'{_e(SITE_BASE)}/app/#/pages/practice/practice?qid={qid}'
         f'{"&tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
         f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo_q'
     )

@@ -11,7 +11,7 @@ async function run() {
     const c = navigator.connection;
     if (c && (c.saveData || /2g/.test(c.effectiveType || ''))) return;
     if (!navigator.onLine) return;
-    const res = await fetch('/precache.json');
+    const res = await fetch('precache.json');
     if (!res.ok) return;
     const list = await res.json();
     if (!Array.isArray(list) || !list.length) return;

@@ -13,7 +13,7 @@ def share_landing(sid: str):
     """分享落地页：服务端输出动态 OG（题干摘要作 og:description）后跳转 SPA 分享页。
 
     社交爬虫（微信/QQ/微博/Telegram 等）抓 head 里的 OG；真实用户被 JS 立即带去
-    /#/pkgA/share/share-q。不含答案/解析，noindex 避免瘦内容进索引。
+    /app/#/pkgA/share/share-q。不含答案/解析，noindex 避免瘦内容进索引。
     """
     sid = sid.strip()[:16]
     conn = db.get_conn()
@@ -36,7 +36,7 @@ def share_landing(sid: str):
         summary = summary[:90] + "…"
     from_name = (s["from_name"] or "考友").strip()[:20]
     title = f"{from_name}分享了一道{mod}题，敢来挑战吗？"
-    spa = f"/#/pkgA/share/share-q?sid={quote(sid)}"
+    spa = f"/app/#/pkgA/share/share-q?sid={quote(sid)}"
     page_url = _url(f"/s/{quote(sid)}")
     return HTMLResponse(
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
@@ -86,7 +86,7 @@ def pk_landing(rid: str):
     mod = _module_name(m["module"]) or "行测"
     title = f"{creator} {m['creator_score']} : {m['opponent_score']} {opponent}｜答题PK战绩，不服来战！"
     summary = f"岸上见答题 PK（{mod}）实时对局战绩，免注册打开即可应战。"
-    spa = f"/#/pkgA/share/pk-result?rid={quote(code)}"
+    spa = f"/app/#/pkgA/share/pk-result?rid={quote(code)}"
     page_url = _url(f"/p/{quote(code)}")
     return HTMLResponse(
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'

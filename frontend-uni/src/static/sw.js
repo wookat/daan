@@ -1,13 +1,13 @@
-// H5 离线壳：仅缓存 SPA 壳（/），静态资源走 HTTP immutable 长缓存；
+// H5 离线壳：仅缓存 SPA 壳（/app/），静态资源走 HTTP immutable 长缓存；
 // API 请求不缓存（离线做题由页面内离线题包逻辑处理）。
-const CACHE = 'kg-shell-v4';
+const CACHE = 'kg-shell-v5';
 
 self.addEventListener('install', (e) => {
   // cache:'reload' 绕过 HTTP 缓存，保证入库的壳是最新 HTML
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.add(new Request('/', { cache: 'reload' })))
+      .then((c) => c.add(new Request('/app/', { cache: 'reload' })))
       .then(() => self.skipWaiting())
   );
 });
@@ -47,12 +47,12 @@ self.addEventListener('fetch', (e) => {
           // 仅 2xx 回写壳缓存：错误页（故障窗口 5xx 等）直出给页面但不得污染离线兜底壳
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put('/', copy));
+            caches.open(CACHE).then((c) => c.put('/app/', copy));
           }
           return res;
         }),
         new Promise((_, rej) => setTimeout(() => rej(new Error('sw-nav-timeout')), 8000)),
-      ]).catch(() => caches.match('/').then((hit) => hit || fetch(req)))
+      ]).catch(() => caches.match('/app/').then((hit) => hit || fetch(req)))
     );
     return;
   }
@@ -72,16 +72,16 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(d.title || '岸上见', {
       body: d.body || '',
-      icon: '/static/logo.png',
-      badge: '/static/logo.png',
-      data: { url: d.url || '/' },
+      icon: '/app/static/logo.png',
+      badge: '/app/static/logo.png',
+      data: { url: d.url || '/app/' },
     })
   );
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || '/';
+  const url = (e.notification.data && e.notification.data.url) || '/app/';
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
       for (const c of cs) {

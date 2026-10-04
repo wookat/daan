@@ -481,7 +481,7 @@ a{display:inline-block;margin-top:16px;padding:10px 28px;background:#3b6df0;colo
 <div class="card">
 <h1>404</h1>
 <p>你要找的页面不存在或已被移动。<br>可以回到岸上见首页继续刷题。</p>
-<a href="/">返回首页</a>
+<a href="/app/">返回首页</a>
 </div>
 </body>
 </html>

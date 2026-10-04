@@ -208,19 +208,20 @@ export CLOUDFLARE_API_KEY="$CLOUDFLARE_NEW_GLOBAL_API_KEY" CLOUDFLARE_EMAIL="$CL
 export CLOUDFLARE_ACCOUNT_ID="${KG_CF_ACCOUNT_ID:-583090ace6fb9a02db3f2625487ed865}"
 unset CLOUDFLARE_API_TOKEN
 PAGES_PROJECT="${KG_PAGES_PROJECT:-kaogong-h5-zalize}"
-# wrangler 4.129 要求 Node ≥22；shell 默认 Node 20 时切到 nvm 22，否则后端已上线而静态层落空
-if [[ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -lt 22 ]]; then
-  # shellcheck disable=SC1090
-  source "${NVM_DIR:-$HOME/.nvm}/nvm.sh" 2>/dev/null && nvm use 22 >/dev/null \
-    || { echo "FAIL: Pages 部署需 Node ≥22（当前 $(node -v 2>/dev/null || echo none)），nvm 22 不可用"; exit 1; }
-  echo "node $(node -v) (nvm)"
+# wrangler@3 兼容 Node ≥18；升级到 wrangler@4 时需 Node ≥22（shell 默认 Node 20 时切 nvm 22）
+if [[ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -lt 18 ]]; then
+  echo "FAIL: Pages 部署需 Node ≥18（当前 $(node -v 2>/dev/null || echo none)）"; exit 1
 fi
+echo "node $(node -v)"
+# 站点布局：/ = landing 落地页（landing/），/app/ = H5 主程序（dist/build/h5 全部内容），
+# _routes.json exclude 已把 /app/*、/lp-assets/* 划给静态层，其余路径走 functions 代理回源
 PAGES_DIR=$(mktemp -d)
-cp -r "$DIST" "$PAGES_DIR/dist"
-mkdir -p "$PAGES_DIR/functions"
+mkdir -p "$PAGES_DIR/dist/app" "$PAGES_DIR/functions"
+cp -r "$REPO_DIR/landing/." "$PAGES_DIR/dist/"
+cp -r "$DIST/." "$PAGES_DIR/dist/app/"
 cp -r "$REPO_DIR/deploy/cf-pages/functions/." "$PAGES_DIR/functions/"
 cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
-(cd "$PAGES_DIR" && npx -y wrangler@4.129.1 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true)
+(cd "$PAGES_DIR" && npx -y wrangler@3 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true)
 rm -rf "$PAGES_DIR"
 
 # Pages 新部署发布后别名域切换存在数秒~数十秒传播窗口，校验采用窗口内轮询而非单次探测

@@ -10,6 +10,9 @@ import { fileURLToPath } from 'node:url';
 export const ENTRY_ROUTES = ['pages/home/home', 'pages/practice/practice', 'pages/book/book', 'pages/team/join'];
 export const DEFAULT_ROUTE = 'pages/home/home';
 export const MARK = 'data-kg-route-preload';
+// H5 部署在 /app/ 子路径；Capacitor/根路径构建用 KG_H5_BASE=/ 覆盖。
+export const H5_BASE = process.env.KG_H5_BASE || '/app/';
+const H5_BASE_RE = H5_BASE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** 从 index-*.js 解析 __vite__mapDeps 文件表与各路由分包的依赖索引，返回 { 'pages/a/b': ['/assets/x.js', ...] }。 */
 export function parseRouteDeps(indexJs, routes = ENTRY_ROUTES) {
@@ -25,7 +28,7 @@ export function parseRouteDeps(indexJs, routes = ENTRY_ROUTES) {
     const idx = hit[2] ? hit[2].split(',').map(Number) : [];
     out[route] = idx.map((i) => {
       if (!files[i]) throw new Error(`route-preload: 依赖索引 ${i} 越界（${route}）`);
-      return '/' + files[i];
+      return H5_BASE + files[i];
     });
   }
   return out;
@@ -47,8 +50,8 @@ export function buildInlineScript(routeDeps, defaultRoute = DEFAULT_ROUTE) {
 /** 把内联脚本插到入口 <script type="module"> 之前；重复运行幂等（先移除旧注入）。 */
 export function injectIntoHtml(html, script) {
   const cleaned = html.replace(new RegExp(`<script ${MARK}>[\\s\\S]*?</script>`, 'g'), '');
-  const entry = cleaned.match(/<script type="module"[^>]*src="\/assets\/index-[\w-]+\.js"[^>]*><\/script>/);
-  if (!entry) throw new Error('route-preload: 未找到入口 <script type="module" src="/assets/index-*.js">');
+  const entry = cleaned.match(new RegExp(`<script type="module"[^>]*src="${H5_BASE_RE}assets/index-[\\w-]+\\.js"[^>]*></script>`));
+  if (!entry) throw new Error(`route-preload: 未找到入口 <script type="module" src="${H5_BASE}assets/index-*.js">`);
   return cleaned.replace(entry[0], script + entry[0]);
 }
 
@@ -57,13 +60,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const outDir = resolve(root, 'dist/build/h5');
   const htmlPath = resolve(outDir, 'index.html');
   const html = readFileSync(htmlPath, 'utf8');
-  const entry = html.match(/src="\/assets\/(index-[\w-]+\.js)"/);
-  if (!entry) throw new Error('route-preload: index.html 未引用 /assets/index-*.js');
+  const entry = html.match(new RegExp(`src="${H5_BASE_RE}assets/(index-[\\w-]+\\.js)"`));
+  if (!entry) throw new Error(`route-preload: index.html 未引用 ${H5_BASE}assets/index-*.js`);
   const indexJs = readFileSync(resolve(outDir, 'assets', entry[1]), 'utf8');
   const deps = parseRouteDeps(indexJs);
   const missing = ENTRY_ROUTES.filter((r) => !deps[r]);
   if (missing.length) throw new Error(`route-preload: 入口路由分包未在 index.js 中找到：${missing.join(', ')}`);
-  const assets = new Set(readdirSync(resolve(outDir, 'assets')).map((f) => '/assets/' + f));
+  const assets = new Set(readdirSync(resolve(outDir, 'assets')).map((f) => H5_BASE + 'assets/' + f));
   for (const [route, list] of Object.entries(deps)) {
     for (const p of list) if (!assets.has(p)) throw new Error(`route-preload: ${route} 依赖 ${p} 不在产物中`);
   }

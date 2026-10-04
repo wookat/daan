@@ -3,13 +3,13 @@
   "short_name": "岸上见",
   "description": "10万+行测题 · 1.5万+历年真题免费在线练习，含讲解、错题本、迷你模考与打卡组队",
   "lang": "zh-CN",
-  "start_url": "/?utm_source=pwa",
-  "scope": "/",
+  "start_url": "/app/?utm_source=pwa",
+  "scope": "/app/",
   "display": "standalone",
   "theme_color": "#eef3ff",
   "background_color": "#f6f7fb",
   "icons": [
-    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/app/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

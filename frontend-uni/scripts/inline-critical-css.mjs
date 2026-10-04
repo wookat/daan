@@ -3,6 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { H5_BASE } from './route-preload.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = resolve(root, 'dist/build/h5');
@@ -13,7 +14,9 @@ const linkRe = /<link\s+rel="stylesheet"[^>]*?href="(\/[^"]+\.css)"[^>]*>/g;
 
 let count = 0;
 html = html.replace(linkRe, (tag, href) => {
-  const css = readFileSync(resolve(outDir, '.' + href), 'utf8').trim();
+  // href 带部署基座前缀（如 /app/assets/x.css），落盘路径按产物目录还原
+  const rel = href.startsWith(H5_BASE) ? href.slice(H5_BASE.length) : href.replace(/^\//, '');
+  const css = readFileSync(resolve(outDir, rel), 'utf8').trim();
   count += 1;
   return `<style>/* inlined: ${href} */\n${css}\n</style>`;
 });

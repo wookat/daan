@@ -84,18 +84,18 @@ def build_push_payload(day: str, daily_done: bool, due_n: int) -> dict | None:
             return {
                 "title": "今日学习提醒",
                 "body": f"{day} 全站同题 10 题；另有 {n} 道错题今日到期",
-                "url": "/#/pages/practice/practice?daily=1&src=push",
+                "url": "/app/#/pages/practice/practice?daily=1&src=push",
             }
         return {
             "title": "每日一练已更新",
             "body": f"{day} 全站同题 10 题，来试试今天能击败多少人",
-            "url": "/#/pages/practice/practice?daily=1&src=push",
+            "url": "/app/#/pages/practice/practice?daily=1&src=push",
         }
     if n:
         return {
             "title": "错题复习提醒",
             "body": f"你有 {n} 道错题今日到期，趁热复习巩固",
-            "url": "/#/pages/book/book?review=1&src=push",
+            "url": "/app/#/pages/book/book?review=1&src=push",
         }
     return None
 
