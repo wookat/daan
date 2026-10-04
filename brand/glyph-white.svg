@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="岸上见">
+  <g fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round">
+    <path d="M48 37v-7"/>
+    <path d="M37 47l-9-9"/>
+    <path d="M59 47l9-9"/>
+    <path d="M33 58a15 15 0 0 1 30 0"/>
+    <path d="M26 66h44"/>
+    <path d="M32 76h16"/>
+    <path d="M56 76h10"/>
+  </g>
+</svg>

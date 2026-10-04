@@ -2,7 +2,7 @@
 <scroll-view class="page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="l-logo-box">
-      <view class="l-logo">岸</view>
+      <image class="l-logo" src="/images/brand/icon.png" mode="aspectFit" />
       <text class="l-app">岸上见</text>
     </view>
     <kg-card variant="raised" class="l-card">
