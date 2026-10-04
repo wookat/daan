@@ -6,7 +6,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def _pins():
-    lines = [ln.strip() for ln in (ROOT / "backend" / "requirements.txt").read_text().splitlines()]
+    lines = [
+        ln.strip()
+        for ln in (ROOT / "backend" / "requirements.txt").read_text(encoding="utf-8").splitlines()
+    ]
     return [ln for ln in lines if ln and not ln.startswith("#")]
 
 
@@ -26,7 +29,7 @@ def test_runtime_deps_covered_by_pins():
 
 def test_dockerfiles_install_only_from_requirements():
     for df in [ROOT / "Dockerfile", ROOT / "deploy" / "Dockerfile.runtime"]:
-        text = df.read_text()
+        text = df.read_text(encoding="utf-8")
         assert "pip install --no-cache-dir -r backend/requirements.txt" in text, df
         assert "COPY backend/requirements.txt backend/requirements.txt" in text, df
         for ln in text.splitlines():
