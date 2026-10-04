@@ -32,9 +32,10 @@ nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:var(--ha
 .brand-name{font-weight:700;font-size:17px;letter-spacing:.5px}
 .nav-links{margin-left:auto;display:flex;gap:26px;font-size:13.5px;color:var(--ink-3)}
 .nav-links a:hover{color:var(--brand)}
-.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
-.btn-brand{background:var(--brand);color:#fff}
-.btn-brand:hover,.btn-brand:active{background:var(--brand-press)}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s,transform .1s,box-shadow .1s}
+.btn-brand{background:var(--brand);color:#fff;box-shadow:0 3px 0 var(--brand-press)}
+.btn-brand:hover{background:var(--brand-press)}
+.btn-brand:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brand-press)}
 .btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
 .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
 .btn-sm{padding:8px 18px;font-size:13px}
@@ -125,8 +126,9 @@ h1 em{font-style:normal;color:var(--brand)}
 .cta{background:var(--brand);border-radius:var(--r-lg);text-align:center;padding:64px 32px;color:#fff}
 .cta h2{font-size:30px;font-weight:800;margin-bottom:14px}
 .cta p{opacity:.85;font-size:15px;margin-bottom:30px}
-.cta .btn-brand{background:#fff;color:var(--brand-text)}
+.cta .btn-brand{background:#fff;color:var(--brand-text);box-shadow:0 3px 0 var(--brand-press)}
 .cta .btn-brand:hover{background:var(--brand-soft)}
+.cta .btn-brand:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brand-press)}
 .cta .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
 .cta .btn-ghost:hover{border-color:#fff}
 @media(max-width:920px){.band{grid-template-columns:repeat(2,1fr)}}
