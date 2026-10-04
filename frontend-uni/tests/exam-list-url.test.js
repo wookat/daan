@@ -30,6 +30,7 @@ describe('parseExamListOpts', () => {
       region: '江苏',
       pid: 0,
       st: '',
+      kind: 'zhenti',
     });
   });
 
@@ -52,11 +53,20 @@ describe('parseExamListOpts', () => {
     expect(buildExamListUrl({ year: 2023, pid: 96 })).toBe(EXAM_LIST_PATH + '?year=2023');
   });
 
+  it('kind 模考大赛：白名单收，默认真题', () => {
+    expect(parseExamListOpts({ kind: 'mokao' }).kind).toBe('mokao');
+    expect(parseExamListOpts({ kind: 'zhenti' }).kind).toBe('zhenti');
+    expect(parseExamListOpts({ kind: 'x' }).kind).toBe('zhenti');
+    expect(parseExamListOpts().kind).toBe('zhenti');
+    expect(buildExamListUrl({ kind: 'mokao' })).toBe(EXAM_LIST_PATH + '?kind=mokao');
+    expect(buildExamListUrl({ kind: 'zhenti' })).toBe(EXAM_LIST_PATH);
+  });
+
   it('非法回空', () => {
-    expect(parseExamListOpts({ year: 'x', region: 3 })).toEqual({ year: 0, region: '', pid: 0, st: '' });
-    expect(parseExamListOpts({ year: '1899' })).toEqual({ year: 0, region: '', pid: 0, st: '' });
-    expect(parseExamListOpts()).toEqual({ year: 0, region: '', pid: 0, st: '' });
-    expect(parseExamListOpts({ region: '%E4%B8%8A%E6%B5%B7' })).toEqual({ year: 0, region: '上海', pid: 0, st: '' });
-    expect(parseExamListOpts({ region: '%zz' })).toEqual({ year: 0, region: '', pid: 0, st: '' });
+    expect(parseExamListOpts({ year: 'x', region: 3 })).toEqual({ year: 0, region: '', pid: 0, st: '', kind: 'zhenti' });
+    expect(parseExamListOpts({ year: '1899' })).toEqual({ year: 0, region: '', pid: 0, st: '', kind: 'zhenti' });
+    expect(parseExamListOpts()).toEqual({ year: 0, region: '', pid: 0, st: '', kind: 'zhenti' });
+    expect(parseExamListOpts({ region: '%E4%B8%8A%E6%B5%B7' })).toEqual({ year: 0, region: '上海', pid: 0, st: '', kind: 'zhenti' });
+    expect(parseExamListOpts({ region: '%zz' })).toEqual({ year: 0, region: '', pid: 0, st: '', kind: 'zhenti' });
   });
 });

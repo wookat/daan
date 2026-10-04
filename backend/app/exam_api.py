@@ -331,7 +331,7 @@ def api_exam_papers(kind: str | None = None, year: int | None = None,
     items = db.list_exam_papers(kind, year, region, uid=(uid or "").strip()[:64] or None)
     return {
         "items": [p for p in items if p["n"] >= 5],
-        "filters": db.exam_paper_filters(),
+        "filters": db.exam_paper_filters(kind or 'zhenti'),
     }
 
 

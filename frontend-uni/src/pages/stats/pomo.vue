@@ -63,9 +63,11 @@ export default {
       todayDone: 0,
       todayMins: 0,
       total: 0,
-      _timer: null,
-      _leftAt: 0,
     };
+  },
+  created() {
+    this._timer = null;
+    this._leftAt = 0;
   },
   computed: {
     phaseText() {

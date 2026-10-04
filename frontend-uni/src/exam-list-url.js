@@ -9,6 +9,7 @@ export function buildExamListUrl(f) {
   const r = typeof o.region === 'string' ? o.region.trim() : '';
   if (r) parts.push('region=' + encodeURIComponent(r));
   if (o.st === 'todo' || o.st === 'done') parts.push('st=' + o.st);
+  if (o.kind === 'mokao') parts.push('kind=mokao');
   return parts.length ? EXAM_LIST_PATH + '?' + parts.join('&') : EXAM_LIST_PATH;
 }
 
@@ -27,5 +28,6 @@ export function parseExamListOpts(opts) {
     region,
     pid: Number.isInteger(pid) && pid > 0 ? pid : 0,
     st: o.st === 'todo' || o.st === 'done' ? o.st : '',
+    kind: o.kind === 'mokao' ? 'mokao' : 'zhenti',
   };
 }

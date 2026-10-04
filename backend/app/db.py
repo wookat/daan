@@ -4309,15 +4309,15 @@ def exam_active_qids(question_ids: list[int]) -> list[int]:
     return [i for i in question_ids if i in active]
 
 
-def exam_paper_filters() -> dict:
+def exam_paper_filters(kind: str = 'zhenti') -> dict:
     conn = get_conn()
     _ensure_exam_tables(conn)
     years = [dict(r) for r in conn.execute(
-        "SELECT year y, COUNT(*) n FROM exam_papers WHERE kind='zhenti' AND year IS NOT NULL "
-        "GROUP BY year ORDER BY year DESC")]
+        "SELECT year y, COUNT(*) n FROM exam_papers WHERE kind=? AND year IS NOT NULL "
+        "GROUP BY year ORDER BY year DESC", (kind,))]
     regions = [dict(r) for r in conn.execute(
-        "SELECT region r, COUNT(*) n FROM exam_papers WHERE kind='zhenti' AND region IS NOT NULL AND region!='' "
-        "GROUP BY region ORDER BY n DESC")]
+        "SELECT region r, COUNT(*) n FROM exam_papers WHERE kind=? AND region IS NOT NULL AND region!='' "
+        "GROUP BY region ORDER BY n DESC", (kind,))]
     conn.close()
     return {"years": years, "regions": regions}
 

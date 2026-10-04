@@ -30,6 +30,10 @@
           <kg-progress :value="prog.done" :max="prog.total" :aria-label="'已刷 ' + prog.done + '/' + prog.total + ' 卷'" />
         </view>
 
+        <view class="kinds">
+          <wd-segmented :value="kindLabel" :options="KIND_LABELS" size="small" @change="onKind" />
+        </view>
+
         <view v-if="filters.years.length || filters.regions.length" class="filters">
           <wd-segmented ref="seg" :value="stLabel" :options="ST_LABELS" size="small" @change="onSt" />
           <kg-chip-row v-if="filters.years.length" :options="yearOpts" :model-value="year == null ? '' : year" @update:model-value="setYear($event === '' ? null : $event)" />
@@ -48,8 +52,8 @@
         <kg-empty-state
           v-else-if="!shown.length"
           icon="inbox"
-          title="暂无成套真题卷"
-          :desc="year || region || st ? '试试放宽筛选条件' : '真题卷持续录入中，先来一场迷你模考'"
+          :title="kind === 'mokao' ? '暂无模考卷' : '暂无成套真题卷'"
+          :desc="year || region || st ? '试试放宽筛选条件' : (kind === 'mokao' ? '模考大赛卷持续录入中' : '真题卷持续录入中，先来一场迷你模考')"
           :cta-text="year || region || st ? '清除筛选' : '迷你模考'"
           @cta="year || region || st ? clearFilters() : startMini()"
         />
@@ -191,6 +195,8 @@ import { segResizeMixin } from '../../seg-resize.js';
 const PAGE = 20;
 const ST_LABELS = ['全部', '没考过', '考过的'];
 const ST_VALUES = ['', 'todo', 'done'];
+const KIND_LABELS = ['真题卷', '模考大赛'];
+const KIND_VALUES = ['zhenti', 'mokao'];
 
 export default {
   mixins: [segResizeMixin],
@@ -199,6 +205,7 @@ export default {
       items: [],
       filters: { years: [], regions: [] },
       attempts: [],
+      kind: 'zhenti',
       year: null,
       region: null,
       st: '',
@@ -234,6 +241,8 @@ export default {
     },
     ST_LABELS() { return ST_LABELS; },
     stLabel() { return ST_LABELS[Math.max(0, ST_VALUES.indexOf(this.st))]; },
+    kindLabel() { return KIND_LABELS[Math.max(0, KIND_VALUES.indexOf(this.kind))]; },
+    KIND_LABELS() { return KIND_LABELS; },
     yearOpts() {
       return [{ value: '', label: '全部年份' }].concat(this.filters.years.map((y) => ({ value: y.y, label: y.y + '年' })));
     },
@@ -248,6 +257,7 @@ export default {
     const p = parseExamListOpts(opts);
     this._pendingFilter = p;
     this._pendingPid = p.pid;
+    this.kind = p.kind;
     if (p.st) {
       this.st = p.st;
       this.syncUrl();
@@ -261,7 +271,7 @@ export default {
   methods: {
     async load() {
       this.loadErr = '';
-      const q = ['kind=zhenti', 'uid=' + encodeURIComponent(anonUid())];
+      const q = ['kind=' + this.kind, 'uid=' + encodeURIComponent(anonUid())];
       if (this.year) q.push('year=' + this.year);
       if (this.region) q.push('region=' + encodeURIComponent(this.region));
       const p = '/api/exam/papers?' + q.join('&');
@@ -368,7 +378,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildExamListUrl({ year: this.year, region: this.region, st: this.st }));
+        window.history.replaceState(null, '', buildExamListUrl({ year: this.year, region: this.region, st: this.st, kind: this.kind }));
       }
       // #endif
     },
@@ -378,6 +388,19 @@ export default {
     onSt(e) {
       const i = ST_LABELS.indexOf(e && e.value);
       this.setSt(i > 0 ? ST_VALUES[i] : '');
+    },
+    onKind(e) {
+      const i = KIND_LABELS.indexOf(e && e.value);
+      const k = i > 0 ? KIND_VALUES[i] : 'zhenti';
+      if (k === this.kind) return;
+      this.kind = k;
+      this.year = null;
+      this.region = null;
+      this.st = '';
+      this.pinnedId = 0;
+      this.pageN = 1;
+      this.syncUrl();
+      this.load();
     },
     clearFilters() {
       this.st = '';
@@ -495,6 +518,7 @@ export default {
 .mini-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .mini-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-4); }
 .progrow { padding: var(--sp-4) 0 var(--sp-16); }
+.kinds { margin-bottom: var(--sp-16); }
 .prog-txt { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-8); }
 .prog-t { font-size: var(--fs-sub); font-weight: 500; color: var(--ink); }
 .prog-p { font-size: var(--fs-sub); color: var(--brand-text); }

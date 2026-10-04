@@ -14,6 +14,7 @@
 .mini-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .mini-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-4); }
 .progrow { padding: var(--sp-4) 0 var(--sp-16); }
+.kinds { margin-bottom: var(--sp-16); }
 .prog-txt { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-8); }
 .prog-t { font-size: var(--fs-sub); font-weight: 500; color: var(--ink); }
 .prog-p { font-size: var(--fs-sub); color: var(--brand-text); }

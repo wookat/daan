@@ -1,4 +1,4 @@
-// SW 离线壳导航分支回归：仅 2xx 回写壳缓存（R207）。
+﻿// SW 离线壳导航分支回归：仅 2xx 回写壳缓存（R207）。
 // sw.js 是 classic script（无 export），以源码 + 注入桩全局的方式在沙箱内执行。
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -56,24 +56,24 @@ describe('sw.js 导航分支壳缓存回写', () => {
     const { handlers, store } = boot({
       fetchImpl: async () => realResponse('<html>ok</html>', { status: 200 }),
     });
-    const { event, result } = navEvent(ORIGIN + '/');
+    const { event, result } = navEvent(ORIGIN + '/app/');
     handlers.fetch(event);
     const res = await result();
     expect(res.status).toBe(200);
     await new Promise((r) => setTimeout(r, 0));
-    expect(store.has('/')).toBe(true);
+    expect(store.has('/app/')).toBe(true);
   });
 
   it('502 导航响应直出但不污染壳缓存', async () => {
     const { handlers, store } = boot({
       fetchImpl: async () => realResponse('bad gateway', { status: 502 }),
     });
-    const { event, result } = navEvent(ORIGIN + '/');
+    const { event, result } = navEvent(ORIGIN + '/app/');
     handlers.fetch(event);
     const res = await result();
     expect(res.status).toBe(502);
     await new Promise((r) => setTimeout(r, 0));
-    expect(store.has('/')).toBe(false);
+    expect(store.has('/app/')).toBe(false);
   });
 
   it('fetch 异常时回退既有壳缓存副本', async () => {
@@ -82,8 +82,8 @@ describe('sw.js 导航分支壳缓存回写', () => {
         throw new Error('offline');
       },
     });
-    store.set('/', realResponse('<html>shell</html>', { status: 200 }));
-    const { event, result } = navEvent(ORIGIN + '/');
+    store.set('/app/', realResponse('<html>shell</html>', { status: 200 }));
+    const { event, result } = navEvent(ORIGIN + '/app/');
     handlers.fetch(event);
     const res = await result();
     expect(res.status).toBe(200);

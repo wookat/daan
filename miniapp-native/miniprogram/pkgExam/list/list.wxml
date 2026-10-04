@@ -1,4 +1,4 @@
-<navbar class="{{tc}}" title="{{histView ? '模考记录' : '真题卷库'}}" back="{{true}}" />
+<navbar class="{{tc}}" title="{{histView ? '模考记录' : (kind === 'mokao' ? '模考大赛' : '真题卷库')}}" back="{{true}}" />
 <scroll-view class="{{tc}} page-scroll" scroll-y type="list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
   <view class="wrap">
     <kg-card wx:if="{{resume}}" variant="flat" selected class="resume">
@@ -24,6 +24,10 @@
         <kg-button size="md" bind:click="onMini">组卷</kg-button>
       </view>
     </kg-card>
+
+    <view class="kinds">
+      <kg-segmented options="{{kindOpts}}" value="{{kind}}" bind:change="onKind" />
+    </view>
 
     <view wx:if="{{prog.total > 0}}" class="progrow">
       <view class="prog-txt">
@@ -53,8 +57,8 @@
     <kg-empty
       wx:elif="{{!shown.length}}"
       icon="inbox"
-      title="暂无成套真题卷"
-      desc="{{hasFilter ? '试试放宽筛选条件' : '真题卷持续录入中，先来一场迷你模考'}}"
+      title="{{kind === 'mokao' ? '暂无模考卷' : '暂无成套真题卷'}}"
+      desc="{{hasFilter ? '试试放宽筛选条件' : (kind === 'mokao' ? '模考大赛卷持续录入中' : '真题卷持续录入中，先来一场迷你模考')}}"
       ctaText="{{hasFilter ? '清除筛选' : '迷你模考'}}"
       bind:cta="onEmptyCta"
     />

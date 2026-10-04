@@ -19,6 +19,10 @@ const ST_OPTS = [
   { value: 'todo', label: '没考过' },
   { value: 'done', label: '考过的' },
 ];
+const KIND_OPTS = [
+  { value: 'zhenti', label: '真题卷' },
+  { value: 'mokao', label: '模考大赛' },
+];
 
 type PaperVM = ExamPaper & {
   metaText: string;
@@ -36,6 +40,7 @@ interface ListOpts {
   region: string;
   pid: number;
   st: '' | 'todo' | 'done';
+  kind: 'zhenti' | 'mokao';
   /** history：从「模考记录」入口进入，页题改名并定位到历史成绩 */
   view: '' | 'history';
 }
@@ -54,6 +59,7 @@ function parseListOpts(o: Record<string, string>): ListOpts {
     region,
     pid: Number.isInteger(pid) && pid > 0 ? pid : 0,
     st: o.st === 'todo' || o.st === 'done' ? o.st : '',
+    kind: o.kind === 'mokao' ? 'mokao' : 'zhenti',
     view: o.view === 'history' ? 'history' : '',
   };
 }
@@ -105,6 +111,8 @@ Page({
     yearOpts: [] as Array<{ value: number | string; label: string }>,
     regionOpts: [] as Array<{ value: string; label: string }>,
     stOpts: ST_OPTS,
+    kindOpts: KIND_OPTS,
+    kind: 'zhenti' as 'zhenti' | 'mokao',
     year: '' as number | '',
     region: '',
     st: '' as '' | 'todo' | 'done',
@@ -139,6 +147,7 @@ Page({
     this._pending = p;
     this._pendingPid = p.pid;
     if (p.st) this.setData({ st: p.st, hasFilter: true });
+    if (p.kind === 'mokao') this.setData({ kind: 'mokao' });
     if (p.view === 'history') this.setData({ histView: true });
   },
   onShow() {
@@ -154,6 +163,7 @@ Page({
     this.setData({ loadErr: '', loading: !this.data.items.length });
     try {
       const d = await fetchExamPapers({
+        kind: this.data.kind,
         year: this.data.year ? Number(this.data.year) : undefined,
         region: this.data.region || undefined,
       });
@@ -250,6 +260,12 @@ Page({
   },
 
   // ---------- 筛选 ----------
+  onKind(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const k = e.detail.value === 'mokao' ? 'mokao' : 'zhenti';
+    if (k === this.data.kind) return;
+    this.setData({ kind: k, year: '', region: '', st: '', pinnedId: 0, pageN: 1 });
+    this.load();
+  },
   onSt(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const v = e.detail.value;
     this.setData({ st: v === 'todo' || v === 'done' ? v : '', pinnedId: 0, pageN: 1 });
