@@ -112,5 +112,5 @@ export function paperFinishState(ptitle) {
 export function paperShareText(ptitle, n, pct) {
   if (!(typeof ptitle === 'string' && ptitle.trim())) return null;
   if (!Number.isInteger(n) || n <= 0 || !Number.isFinite(pct)) return null;
-  return '我在错题邦练完了「' + ptitle.trim() + '」全卷 ' + n + ' 题，正确率 ' + pct + '%';
+  return '我在岸上见练完了「' + ptitle.trim() + '」全卷 ' + n + ' 题，正确率 ' + pct + '%';
 }

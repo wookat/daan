@@ -6,7 +6,7 @@ def test_llms_txt_ok(client):
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/markdown")
     body = r.text
-    assert body.startswith("# 错题邦公考题库")
+    assert body.startswith("# 岸上见公考题库")
     assert "\n> " in body
     for path in ("/tiku/", "/tiku/papers/", "/tiku/daily/", "/tiku/discuss/", "/sitemap.xml"):
         assert f"https://kaogong.zalize.com{path}" in body

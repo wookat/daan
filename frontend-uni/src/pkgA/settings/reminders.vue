@@ -58,7 +58,7 @@
       <template #main>
         <kg-section-header title="提醒样式预览" />
         <kg-card class="push">
-          <view class="hd"><text class="appico">岸</text><text>错题邦 · <text class="num">{{ time }}</text></text></view>
+          <view class="hd"><text class="appico">岸</text><text>岸上见 · <text class="num">{{ time }}</text></text></view>
           <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡' }}</text>
           <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
         </kg-card>

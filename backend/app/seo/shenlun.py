@@ -86,7 +86,7 @@ def _render_shenlun_paper(paper: str) -> str:
         + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?paper={quote(paper)}">进入申论专区在线作答本套真题 →</a>'
     )
     return _page(
-        f"{paper}申论真题_给定资料与参考解析_错题邦",
+        f"{paper}申论真题_给定资料与参考解析_岸上见",
         f"{paper}申论真题共 {len(items)} 题，含完整给定资料与参考解析，可在线作答。",
         _shenlun_paper_path(paper),
         body,
@@ -126,7 +126,7 @@ def _render_shenlun_year(year: int, page: int) -> str:
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"{year}年申论真题{suffix}_{year}年公务员考试申论真题及参考解析_错题邦",
+        f"{year}年申论真题{suffix}_{year}年公务员考试申论真题及参考解析_岸上见",
         f"{year}年公务员考试申论真题共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{suffix}",
         _year_path(year, "shenlun") + (f"?page={page}" if page > 1 else ""),
         body,
@@ -166,7 +166,7 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"申论{qtype}真题{suffix}_历年申论{qtype}题型真题及参考解析_错题邦",
+        f"申论{qtype}真题{suffix}_历年申论{qtype}题型真题及参考解析_岸上见",
         f"申论{qtype}题型真题共 {total} 题，附参考解析，可在线作答。{suffix}",
         _sub_path("shenlun", qtype) + (f"?page={page}" if page > 1 else ""),
         body,
@@ -210,7 +210,7 @@ def _render_shenlun_sucai(mtype: str) -> str:
         + f'<a class="cta" href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote(mtype)}">进入申论专区浏览{_e(mtype)}素材 →</a>'
     )
     return _page(
-        f"申论{mtype}写作素材（{len(items)} 条）_申论素材库_错题邦",
+        f"申论{mtype}写作素材（{len(items)} 条）_申论素材库_岸上见",
         f"申论{mtype}写作素材共 {len(items)} 条，按主题归类并附权威出处，可在 App 申论专区浏览、收藏与分享。",
         _shenlun_sucai_path(mtype),
         body,
@@ -312,7 +312,7 @@ def _tiku_shenlun(page: int):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"申论真题库{suffix}_历年申论真题及参考解析_错题邦",
+        f"申论真题库{suffix}_历年申论真题及参考解析_岸上见",
         f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{mat_desc}{suffix}",
         "/tiku/shenlun/" + (f"?page={page}" if page > 1 else ""),
         body,

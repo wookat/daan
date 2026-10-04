@@ -70,7 +70,7 @@ self.addEventListener('push', (e) => {
     d = {};
   }
   e.waitUntil(
-    self.registration.showNotification(d.title || '错题邦', {
+    self.registration.showNotification(d.title || '岸上见', {
       body: d.body || '',
       icon: '/static/logo.png',
       badge: '/static/logo.png',

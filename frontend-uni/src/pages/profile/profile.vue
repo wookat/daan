@@ -124,7 +124,7 @@
           <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
             <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="20" tone="warn" /></view></template>
           </wd-cell>
-          <wd-cell title="关于" value="错题邦" is-link clickable @click="about">
+          <wd-cell title="关于" value="岸上见" is-link clickable @click="about">
             <template #icon><view class="cell-ico"><l-icon name="info" :size="20" tone="warn" /></view></template>
           </wd-cell>
         </wd-cell-group>
@@ -142,7 +142,7 @@
             <text class="zl-link" @click="zlOpen('https://career.zalize.com/terms/')">服务条款</text>
             <text class="zl-link" @click="zlOpen('mailto:support@zalize.com')">联系我们</text>
           </view>
-          <text class="zl-copy">© 2026 Zalize 上岸 · 错题邦</text>
+          <text class="zl-copy">© 2026 Zalize 上岸 · 岸上见</text>
         </view>
       </template>
     </kg-two-col>
@@ -597,7 +597,7 @@ export default {
       // #endif
     },
     about() {
-      uni.showModal({ title: '错题邦', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
+      uni.showModal({ title: '岸上见', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
     },
     doLogout() {
       uni.showModal({

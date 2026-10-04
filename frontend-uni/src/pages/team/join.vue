@@ -39,7 +39,7 @@
 <script>
 import { teamJoin, trackEvent } from '../../api.js';
 
-const SEO_TITLE = '队友邀请你加入刷题小队，一起打卡冲上岸 - 错题邦';
+const SEO_TITLE = '队友邀请你加入刷题小队，一起打卡冲上岸 - 岸上见';
 
 export default {
   data() {

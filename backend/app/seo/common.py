@@ -141,19 +141,19 @@ def _page(
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(description)}">'
         '<meta property="og:type" content="website">'
-        '<meta property="og:site_name" content="错题邦">'
+        '<meta property="og:site_name" content="岸上见">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(description)}">'
         f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
         '<meta name="twitter:card" content="summary_large_image">'
         f"{head_meta}"
         f"<style>{_CSS}</style>{ld}</head><body>"
-        f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">错题邦 · 考公题库</a>'
+        f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">岸上见 · 考公题库</a>'
         f'<form class="hdr-s" action="/tiku/search" method="get" role="search">'
         f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
         f'<a class="hdr-cta" href="/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
-        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">错题邦</a> · 10万+ 行测题 · 1.5万+ 历年真题'
+        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">岸上见</a> · 10万+ 行测题 · 1.5万+ 历年真题'
         f' · <a href="/tiku/papers/">真题卷</a>'
         f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
         f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
@@ -180,7 +180,7 @@ def _not_found(msg: str, cta_html: str = "") -> HTMLResponse:
         ' · <a href="/tiku/daily/">每日一练</a> · <a href="/">去刷题</a></p>'
     )
     return HTMLResponse(
-        _page(f"{msg}_错题邦", "页面不存在或已下架。", "/tiku/", body, noindex=True),
+        _page(f"{msg}_岸上见", "页面不存在或已下架。", "/tiku/", body, noindex=True),
         status_code=404,
     )
 
@@ -192,7 +192,7 @@ def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[st
         "name": name,
         "description": description[:200],
         "url": _url(path),
-        "isPartOf": {"@type": "WebSite", "name": "错题邦", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "岸上见", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [

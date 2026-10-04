@@ -191,7 +191,7 @@ def _footer(canvas, doc):
     canvas.saveState()
     canvas.setFont(_ensure_font(), 8)
     canvas.setFillColor(colors.HexColor("#8F959E"))
-    canvas.drawCentredString(A4[0] / 2, 10 * mm, f"第 {doc.page} 页 · 本卷由错题邦免费生成 kaogong.zalize.com")
+    canvas.drawCentredString(A4[0] / 2, 10 * mm, f"第 {doc.page} 页 · 本卷由岸上见免费生成 kaogong.zalize.com")
     canvas.restoreState()
 
 

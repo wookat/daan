@@ -88,7 +88,7 @@ Page({
   onShareAppMessage() {
     const ev = this.data.event;
     return {
-      title: ev ? `${ev.title} · 全站同卷模考大赛，敢来吗？` : '考公错题助手 · 模考大赛',
+      title: ev ? `${ev.title} · 全站同卷模考大赛，敢来吗？` : '岸上见 · 模考大赛',
       path: '/pkgExam/contest/contest',
     };
   },

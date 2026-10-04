@@ -5,5 +5,5 @@ export function buildExamReportShareText(report, origin) {
   const correct = Number(report.correct) || 0;
   const total = Number(report.total) || 0;
   const base = origin || '';
-  return `我在错题邦模考《${paper.title}》答对 ${correct}/${total} 题，敢来挑战吗？同卷在线模考：${base}/tiku/papers/${paper.id}`;
+  return `我在岸上见模考《${paper.title}》答对 ${correct}/${total} 题，敢来挑战吗？同卷在线模考：${base}/tiku/papers/${paper.id}`;
 }
