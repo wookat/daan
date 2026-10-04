@@ -25,6 +25,8 @@ const mkVm = (state) => {
   vm.redoTypeQuery = method('redoTypeQuery', '');
   Object.defineProperty(vm, 'todoItems', { get: () => vm.items.filter((m) => !m.mastered) });
   Object.defineProperty(vm, 'doneItems', { get: () => vm.items.filter((m) => m.mastered) });
+  Object.defineProperty(vm, 'stickyItems', { get: () => vm.items.filter((m) => !m.mastered && m.mastery_state === 'sticky_wrong') });
+  Object.defineProperty(vm, 'tabBase', { get: () => (vm.tab === 'done' ? vm.doneItems : vm.tab === 'sticky' ? vm.stickyItems : vm.todoItems) });
   Object.defineProperty(vm, 'fineTypes', { get: () => new Function('vm', `return (function(){${fn('fineTypes')}}).call(vm)`)(vm) });
   return vm;
 };

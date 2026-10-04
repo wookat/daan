@@ -80,11 +80,11 @@ export default {
 .kg-btn.kg-btn--tone-inverse.kg-btn--ghost { background: rgba(255, 255, 255, 0.16) !important; color: var(--on-brand) !important; border-color: transparent !important; }
 .kg-btn.is-disabled, .kg-btn[disabled] { opacity: 0.4 !important; pointer-events: none; }
 .kg-btn__in { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); }
-/* sm(28)/md(36) 视觉高度不变，命中区纵向扩到 --hit-min（并排间距 ≥ sp-8 不会互相吞）。
+/* sm(30)/md(32)/lg(40) 视觉高度不变，命中区纵向扩到 --hit-min（并排间距 ≥ sp-8 不会互相吞）。
    uni-h5 给 button 默认 overflow:hidden 会把伸出的 ::after 裁掉，须放开 */
-.kg-btn.kg-btn--sm, .kg-btn.kg-btn--md { position: relative; overflow: visible !important; }
+.kg-btn.kg-btn--sm, .kg-btn.kg-btn--md, .kg-btn.kg-btn--lg { position: relative; overflow: visible !important; }
 /* 复用 wd-button 自带的 ::after（text 变体下它 display:none、宽 200% 做 hairline），全部覆写成命中层 */
-.kg-btn.kg-btn--sm::after, .kg-btn.kg-btn--md::after { content: ''; display: block; position: absolute; left: 0; right: 0; width: auto; top: 50%; height: var(--hit-min); border: none; transform: translateY(-50%); }
+.kg-btn.kg-btn--sm::after, .kg-btn.kg-btn--md::after, .kg-btn.kg-btn--lg::after { content: ''; display: block; position: absolute; left: 0; right: 0; width: auto; top: 50%; height: var(--hit-min); border: none; transform: translateY(-50%); }
 @media (min-width: 1024px) {
   .kg-btn.kg-btn--primary:hover { background: var(--brand-press) !important; }
   .kg-btn.kg-btn--secondary:hover { background: var(--brand-soft-2) !important; }

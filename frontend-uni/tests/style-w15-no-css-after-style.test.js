@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 // </style> 之后的 CSS 不会进编译产物（R414/R428 多选提示曾在生产完全无样式）；全仓源锁，不再靠人眼。
-const SRC = new URL('../src/', import.meta.url).pathname;
+const SRC = fileURLToPath(new URL('../src/', import.meta.url));
 
 function vueFiles(dir, out = []) {
   for (const name of readdirSync(dir)) {

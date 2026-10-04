@@ -54,3 +54,17 @@
 .kg-btn__icon {
   margin-right: var(--sp-8);
 }
+/* sm/md/lg 视觉高度不变（30/32/40px），命中区纵向扩到 --hit-min(44px)，
+   与 H5 kg-button.vue 的 ::after 命中层同口径 */
+.kg-btn { position: relative; }
+.kg-btn::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: var(--hit-min);
+  border: none;
+  transform: translateY(-50%);
+}

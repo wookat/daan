@@ -104,7 +104,7 @@ page, .kg-theme-root {
   --card-gap: 10px;
   --page-x: 16px;
   --opt-letter: 22px;
-  --acard-cell: 36px;
+  --acard-cell: 40px;
   --hit-min: 44px;
   --prog-track: #dbe6ff;
   --streak: #ff8a3d;
@@ -266,7 +266,7 @@ page, .kg-theme-root {
   --card-gap: 10px;
   --page-x: 16px;
   --opt-letter: 22px;
-  --acard-cell: 36px;
+  --acard-cell: 40px;
   --hit-min: 44px;
   --prog-track: #dbe6ff;
   --streak: #ff8a3d;

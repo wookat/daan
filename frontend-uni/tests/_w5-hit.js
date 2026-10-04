@@ -33,10 +33,10 @@ export function legacyHit(expect, src, sel, extra = HIT40) {
 export function assertHitLayer(expect) {
   const tokens = read('styles/tokens.generated.css');
   expect(tokens).toMatch(/--hit-min:\s*44px;/);
-  expect(tokens).toMatch(/--btn-h-lg:\s*44px;/);
+  expect(tokens).toMatch(/--btn-h-lg:\s*40px;/);
   const btn = read('components/kg-button/kg-button.vue');
-  expect(btn).toMatch(/\.kg-btn\.kg-btn--sm::after, \.kg-btn\.kg-btn--md::after \{[^}]*height: var\(--hit-min\)/);
-  expect(btn).toMatch(/\.kg-btn\.kg-btn--sm, \.kg-btn\.kg-btn--md \{ position: relative; overflow: visible !important; \}/);
+  expect(btn).toMatch(/\.kg-btn\.kg-btn--sm::after, \.kg-btn\.kg-btn--md::after, \.kg-btn\.kg-btn--lg::after \{[^}]*height: var\(--hit-min\)/);
+  expect(btn).toMatch(/\.kg-btn\.kg-btn--sm, \.kg-btn\.kg-btn--md, \.kg-btn\.kg-btn--lg \{ position: relative; overflow: visible !important; \}/);
   const sheet = read('components/kg-sheet/kg-sheet.vue');
   expect(sheet).toMatch(/class="kg-sheet__x" role="button" aria-label="关闭"/);
   expect(rule(styleOf(sheet), '.kg-sheet__x')).toMatch(/width: var\(--hit-min\); height: var\(--hit-min\)/);

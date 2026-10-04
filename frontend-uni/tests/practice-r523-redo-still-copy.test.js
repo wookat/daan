@@ -8,7 +8,7 @@ const DB = readFileSync(new URL('../../backend/app/db.py', import.meta.url), 'ut
 
 describe('错题重练效果「仍错」文案', () => {
   it('服务端语义：重复命中的错题 next_review=time.time()（当天到期，不是明天）', () => {
-    const m = DB.match(/UPDATE mistakes SET times=COALESCE\(times,1\)\+1, mastered=0, mastered_at=NULL, review_streak=0, "\s*\n\s*"next_review=\?,[\s\S]{0,400}?\(time\.time\(\), rec\.get\("user_answer"\)/);
+    const m = DB.match(/UPDATE mistakes SET times=COALESCE\(times,1\)\+1, mastered=0, mastered_at=NULL, review_streak=0,[\s\S]{0,1500}?next_review=\?,[\s\S]{0,1500}?\(\s*time\.time\(\), rec\.get\("user_answer"\)/);
     expect(m).not.toBeNull();
   });
   it('完成页文案按「今日待复习」口径，不再说「明天」', () => {

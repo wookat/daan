@@ -44,7 +44,8 @@ describe('redoSel', () => {
   });
 
   it('selItems 取当前 tab 全量（不只本页），与 batchMaster/batchDel 同源', () => {
-    expect(BOOK).toContain("selItems() {\n      const base = this.tab === 'done' ? this.doneItems : this.todoItems;\n      return base.filter((m) => this.selIds[m.id]);\n    },");
+    expect(BOOK).toContain("selItems() {\n      const base = this.tabBase;\n      return base.filter((m) => this.selIds[m.id]);\n    },");
+    expect(BOOK).toContain("tabBase() {\n      return this.tab === 'done' ? this.doneItems : this.tab === 'sticky' ? this.stickyItems : this.todoItems;\n    },");
   });
 });
 

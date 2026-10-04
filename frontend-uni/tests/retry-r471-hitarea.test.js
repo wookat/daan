@@ -30,13 +30,13 @@ describe('R471 全仓「加载失败 → 重试」热区（源文件锁）', () 
     });
   }
 
-  it('kg-empty-state 的 cta 是 kg-button（lg=44 / sm 走 ::after 命中 44），按钮行与文案分行', () => {
+  it('kg-empty-state 的 cta 是 kg-button（视觉 40/32/30，::after 命中 44），按钮行与文案分行', () => {
     const empty = read('components/kg-empty-state/kg-empty-state.vue');
     expect(empty).toMatch(/<kg-button v-if="ctaText" variant="primary" :size="compact \? 'sm' : 'lg'" @click="go">\{\{ ctaText \}\}<\/kg-button>/);
     expect(rule(styleOf(empty), '.kg-empty__acts')).toMatch(/display:\s*flex/);
     const btn = read('components/kg-button/kg-button.vue');
-    expect(btn).toMatch(/\.kg-btn\.kg-btn--sm::after, \.kg-btn\.kg-btn--md::after \{[^}]*height: var\(--hit-min\)/);
-    expect(read('styles/tokens.generated.css')).toMatch(/--btn-h-lg:\s*44px;/);
+    expect(btn).toMatch(/\.kg-btn\.kg-btn--sm::after, \.kg-btn\.kg-btn--md::after, \.kg-btn\.kg-btn--lg::after \{[^}]*height: var\(--hit-min\)/);
+    expect(read('styles/tokens.generated.css')).toMatch(/--btn-h-lg:\s*40px;/);
   });
 
   it('首页专项练习骨架「点此重试」整块 .skelwrap 可点（不靠 12px 提示文字本体）', () => {

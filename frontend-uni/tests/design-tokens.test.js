@@ -26,9 +26,9 @@ describe('design tokens 一源多端（SPEC §6）', () => {
     }
   });
 
-  it('字阶 7 档 px 且 rpx 换算为偶数；字重仅 400/500/600', () => {
+  it('字阶 6 档 px 且 rpx 换算为偶数；字重仅 400/500/600', () => {
     const sizes = [...css.matchAll(/--fs-[a-z0-9]+:\s*(\d+)px;/g)].map((m) => Number(m[1]));
-    expect(new Set(sizes)).toEqual(new Set([28, 22, 18, 16, 14, 13, 12]));
+    expect(new Set(sizes)).toEqual(new Set([26, 20, 17, 15, 13, 12]));
     for (const s of sizes) expect((s * 2) % 2).toBe(0);
     expect(css).not.toMatch(/--fw-[a-z]+:\s*(700|800)/);
   });

@@ -31,7 +31,7 @@
         </view>
 
         <view class="kinds">
-          <wd-segmented :value="kindLabel" :options="KIND_LABELS" size="small" @change="onKind" />
+          <wd-segmented ref="seg" :value="kindLabel" :options="KIND_LABELS" size="small" @change="onKind" />
         </view>
 
         <view v-if="filters.years.length || filters.regions.length" class="filters">

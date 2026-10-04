@@ -1,4 +1,4 @@
-// R410 SOP-10 一手审计（375×812 / 1440×900，rev c79a9a8）命中的可用性缺陷源文件锁：
+﻿// R410 SOP-10 一手审计（375×812 / 1440×900，rev c79a9a8）命中的可用性缺陷源文件锁：
 // 375 列表见底时悬浮「＋」盖住末卡「···」；uni.showActionSheet 在 375 越过 TabBar、在 1440 被裁切；
 // 错因/筛选 chip 24–26px、搜索清除 ✕ 24×16 低于 40px 热区。
 import { describe, it, expect } from 'vitest';
@@ -39,7 +39,7 @@ describe('book.vue R410 审计修复（源文件锁）', () => {
     const rz = rule(practice.slice(practice.indexOf('<style')), 'rz');
     expect(rz).toMatch(/min-height:\s*40px/);
     expect(rz).toMatch(/font-size:\s*var\(--fs-sub\)/);
-    expect(tokens).toMatch(/--fs-sub:\s*13px;/);
+    expect(tokens).toMatch(/--fs-sub:\s*12px;/);
     const kp = rule(style, 'kpchip');
     expect(kp).toMatch(/min-height:\s*40px/);
     expect(rule(style, 'searchclear')).toMatch(/width:\s*var\(--hit-min\);\s*height:\s*var\(--hit-min\)/);

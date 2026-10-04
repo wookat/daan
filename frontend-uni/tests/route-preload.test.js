@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseRouteDeps, buildInlineScript, injectIntoHtml, MARK, ENTRY_ROUTES } from '../scripts/route-preload.mjs';
+import { parseRouteDeps, buildInlineScript, injectIntoHtml, MARK, ENTRY_ROUTES, H5_BASE } from '../scripts/route-preload.mjs';
+const A = H5_BASE + 'assets/';
 
 // 仿 Vite 5 产物：文件表 + 各路由分包 import() 与依赖索引
 const INDEX_JS = `function __vite__mapDeps(indexes) {
@@ -12,18 +13,18 @@ const Mb=()=>t(()=>import("./pages-home-home.B422Y6dP.js"),__vite__mapDeps([0,1,
 Pb=()=>t(()=>import("./pages-practice-practice.EYAwWWBe.js"),__vite__mapDeps([3,1,4])).then(e=>Kg(e.default||e)),
 Nb=()=>t(()=>import("./pages-stats-stats.ZXTNl5fn.js"),__vite__mapDeps([5,1])).then(e=>Kg(e.default||e));`;
 
-const HTML = '<html><head><style>x</style><script type="module" crossorigin src="/assets/index-Bctw4Xpu.js"></script></head><body></body></html>';
+const HTML = `<html><head><style>x</style><script type="module" crossorigin src="${A}index-Bctw4Xpu.js"></script></head><body></body></html>`;
 
 describe('route-preload: 解析路由分包依赖', () => {
-  it('只取入口白名单路由，依赖按文件表映射成 /assets 绝对路径且保持 Vite 顺序', () => {
+  it('只取入口白名单路由，依赖按文件表映射成 ${H5_BASE}assets 绝对路径且保持 Vite 顺序', () => {
     const deps = parseRouteDeps(INDEX_JS);
     expect(Object.keys(deps).sort()).toEqual(['pages/home/home', 'pages/practice/practice']);
     expect(deps['pages/home/home']).toEqual([
-      '/assets/pages-home-home.B422Y6dP.js',
-      '/assets/l-icon.DL6Ooo0O.js',
-      '/assets/home-DJtSE6Fm.css',
+      `${A}pages-home-home.B422Y6dP.js`,
+      `${A}l-icon.DL6Ooo0O.js`,
+      `${A}home-DJtSE6Fm.css`,
     ]);
-    expect(deps['pages/practice/practice'][0]).toBe('/assets/pages-practice-practice.EYAwWWBe.js');
+    expect(deps['pages/practice/practice'][0]).toBe(`${A}pages-practice-practice.EYAwWWBe.js`);
     expect(deps['pages/stats/stats']).toBeUndefined();
   });
 
@@ -58,12 +59,12 @@ describe('route-preload: 内联脚本与注入', () => {
       return links.map((l) => `${l.rel}${l.as ? ':' + l.as : ''} ${l.href}`);
     };
     expect(run('')).toEqual([
-      'modulepreload:script /assets/pages-home-home.B422Y6dP.js',
-      'modulepreload:script /assets/l-icon.DL6Ooo0O.js',
-      'preload:style /assets/home-DJtSE6Fm.css',
+      `modulepreload:script ${A}pages-home-home.B422Y6dP.js`,
+      `modulepreload:script ${A}l-icon.DL6Ooo0O.js`,
+      `preload:style ${A}home-DJtSE6Fm.css`,
     ]);
     expect(run('#/')).toHaveLength(3);
-    expect(run('#/pages/practice/practice?module=yanyu&src=seo')[0]).toBe('modulepreload:script /assets/pages-practice-practice.EYAwWWBe.js');
+    expect(run('#/pages/practice/practice?module=yanyu&src=seo')[0]).toBe(`modulepreload:script ${A}pages-practice-practice.EYAwWWBe.js`);
     expect(run('#/pages/stats/stats')).toEqual([]);
   });
 

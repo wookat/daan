@@ -27,10 +27,13 @@ function mockRouter() {
   };
 }
 
-const flush = () => new Promise((r) => setTimeout(r, 20));
+const flush = () => new Promise((r) => setTimeout(r, 60));
 
+// jsdom 的 traversal 走任务队列；全量跑 CPU 竞争时固定延时不可靠，等 popstate 事件更稳
 async function back() {
+  const popped = new Promise((r) => window.addEventListener('popstate', r, { once: true }));
   window.history.back();
+  await Promise.race([popped, flush()]);
   await flush();
 }
 
@@ -217,7 +220,9 @@ describe('sheet-history：Back 先关层', () => {
     await flush();
     expect(window.location.hash).toBe('#/pages/home/home');
     // 回到错题本再来一轮：关层后 push 更深页（非 pop 的 afterEach 照常同步），Back 一次回错题本不跳过
+    const fwd = new Promise((r) => window.addEventListener('popstate', r, { once: true }));
     window.history.forward();
+    await Promise.race([fwd, flush()]);
     await flush();
     expect(window.location.hash).toBe('#/pages/book/book?mod=yanyu');
     const t2 = sheetOpened(() => {});
