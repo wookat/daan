@@ -1,4 +1,6 @@
 """错题本存储（SQLite）。"""
+import glob
+import gzip
 import hashlib
 import json
 import math
@@ -354,18 +356,47 @@ def _seed_bank_path(name: str) -> str | None:
     return path if os.path.exists(path) else None
 
 
+def _seed_bank_paths() -> list[str]:
+    """knowledge/questions_bank*.jsonl(.gz) 全量种子文件（主库在前，外部库分文件便于重生成覆盖）。"""
+    out = []
+    for pat in ("questions_bank*.jsonl", "questions_bank*.jsonl.gz"):
+        for p in glob.glob(os.path.join(os.path.dirname(DB_PATH) if os.path.dirname(DB_PATH) else ".", "knowledge", pat)) + glob.glob(
+            os.path.join(os.path.dirname(__file__), "..", "..", "knowledge", pat)
+        ):
+            p = os.path.normpath(p)
+            if p not in out:
+                out.append(p)
+    out.sort(key=lambda p: (not p.endswith("questions_bank.jsonl"), p))
+    return out
+
+
+def _open_seed(path: str):
+    """种子文件读取：.gz 走 gzip，其余按 utf-8 文本。"""
+    if path.endswith(".gz"):
+        return gzip.open(path, "rt", encoding="utf-8")
+    return open(path, encoding="utf-8")
+
+
 def _ensure_seed_tables(conn):
     conn.execute("CREATE TABLE IF NOT EXISTS seed_index (stem_hash TEXT PRIMARY KEY, question_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS seed_runs (path TEXT PRIMARY KEY, fingerprint TEXT, ran_at REAL)")
 
 
 def _seed_questions(path: str | None = None) -> int:
-    """启动时从 knowledge/questions_bank.jsonl 导入题库，返回本次新插入条数。
+    """启动时从 knowledge/questions_bank*.jsonl 导入题库，返回本次新插入条数。
 
     去重键是 seed_index（题干原文 sha1 → 首次导入的 id），不是 questions.question 当前值：
     种子题之后被改写/下线/删除都视为已导入，不再重插；文件内容指纹未变则整体跳过。
+    path 传参时只导该文件（测试/工具用）；默认循环 _seed_bank_paths() 全部文件。
     """
-    path = path or _seed_bank_path("questions_bank.jsonl")
+    paths = [path] if path else _seed_bank_paths()
+    total = 0
+    for p in paths:
+        total += _seed_questions_file(p)
+    return total
+
+
+def _seed_questions_file(path: str | None) -> int:
     if not path:
         return 0
     with open(path, "rb") as f:
@@ -378,7 +409,7 @@ def _seed_questions(path: str | None = None) -> int:
         return 0
     known = {r["stem_hash"] for r in conn.execute("SELECT stem_hash FROM seed_index")}
     inserted = 0
-    with open(path, encoding="utf-8") as f:
+    with _open_seed(path) as f:
         for line in f:
             line = line.strip()
             if not line:
@@ -394,7 +425,7 @@ def _seed_questions(path: str | None = None) -> int:
             if h in known:
                 continue
             cur = conn.execute(
-                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                "INSERT OR IGNORE INTO questions (module, question_type, question, options, answer, explanation, source, submodule, is_real, exam_year, exam_region, import_batch, image, image_credit, correct_ratio, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     q.get("module"),
                     q.get("question_type"),
@@ -404,6 +435,13 @@ def _seed_questions(path: str | None = None) -> int:
                     q.get("explanation"),
                     q.get("source"),
                     q.get("submodule"),
+                    1 if q.get("is_real") else 0,
+                    q.get("exam_year"),
+                    q.get("exam_region"),
+                    q.get("import_batch") or "seed",
+                    q.get("image"),
+                    q.get("image_credit"),
+                    q.get("correct_ratio"),
                     time.time(),
                 ),
             )
@@ -414,6 +452,12 @@ def _seed_questions(path: str | None = None) -> int:
             else:
                 row = conn.execute("SELECT id FROM questions WHERE question=?", (stem,)).fetchone()
                 qid = row["id"] if row else None
+                if qid is not None and q.get("is_real"):
+                    # 既有题命中真题源：升级 is_real 并补来源维度（与 import_questions 同口径）
+                    conn.execute(
+                        "UPDATE questions SET is_real=1, exam_year=COALESCE(exam_year,?), exam_region=COALESCE(exam_region,?), source=COALESCE(NULLIF(source,'original'),?), correct_ratio=COALESCE(correct_ratio,?), image=COALESCE(image,?), updated_at=? WHERE id=?",
+                        (q.get("exam_year"), q.get("exam_region"), q.get("source"), q.get("correct_ratio"), q.get("image"), time.time(), qid),
+                    )
             if qid is None:
                 continue
             if q.get("submodule"):
