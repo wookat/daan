@@ -223,3 +223,13 @@
 .row--hover {
   opacity: 0.7;
 }
+
+/* 外观设置 */
+.theme-sec { padding: var(--card-pad) var(--card-pad) var(--sp-4); }
+.theme-k { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-8) 0 var(--sp-8); }
+.theme-k:first-child { margin-top: 0; }
+.theme-accs { display: flex; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.theme-acc { display: flex; align-items: center; gap: var(--sp-8); padding: 0 var(--sp-12); height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2); }
+.theme-acc.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: var(--fw-medium); }
+.acc-dot { width: 10px; height: 10px; border-radius: var(--r-full); }
+.acc-t { font-size: var(--fs-sub); }

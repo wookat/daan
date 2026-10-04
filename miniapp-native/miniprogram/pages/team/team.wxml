@@ -1,5 +1,5 @@
-<navbar title="刷题小队" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="刷题小队" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="hero">
       <view class="hero-ico"><l-icon name="users" size="28" tone="on-brand" /></view>
@@ -61,7 +61,7 @@
 </scroll-view>
 
 <!-- 创建小队弹层 -->
-<t-popup visible="{{showCreate}}" placement="bottom" bind:visible-change="onCreateVisible">
+<t-popup class="{{tc}}" visible="{{showCreate}}" placement="bottom" bind:visible-change="onCreateVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <text class="sheet-t">创建刷题小队</text>

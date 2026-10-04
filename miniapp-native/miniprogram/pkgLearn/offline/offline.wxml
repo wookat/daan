@@ -1,5 +1,5 @@
-<navbar title="离线题包" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="离线题包" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <view wx:if="{{!online}}" class="offbar" role="status">
       <l-icon name="plane" size="16" tone="warn" />

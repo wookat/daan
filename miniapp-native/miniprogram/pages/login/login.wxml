@@ -1,5 +1,5 @@
-<navbar title="{{mode === 'login' ? '登录' : '注册'}}" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="{{mode === 'login' ? '登录' : '注册'}}" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="l-logo-box">
       <view class="l-logo">岸</view>

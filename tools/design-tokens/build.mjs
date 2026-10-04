@@ -357,6 +357,32 @@ function darkDecls(flat) {
   return flat.filter((t) => t.dark !== t.light).map((t) => decl('  ', t.cssName, t.dark));
 }
 
+/* 手动外观档 + 皮肤槽：
+   .tc-light/.tc-dark = 用户手动浅色/深色（class 打在页面/组件顶层容器，system 档不带类走媒体查询）；
+   .acc-<key> = tokens.json accent 皮肤，覆盖 --brand 系。
+   选择器同时覆盖「类在祖先」与「类在同一元素」两种形态。 */
+function accentBlocks(tree) {
+  const acc = tree.accent || {};
+  const keys = Object.keys(acc).filter((k) => !k.startsWith('$') && acc[k] && acc[k].brand);
+  if (!keys.length) return '';
+  const decls = (a, dark) => [
+    `--brand: ${a.brand}`,
+    `--brand-press: ${a.press}`,
+    `--brand-grad: linear-gradient(135deg, ${a.gradFrom}, ${a.brand})`,
+    `--brand-text: ${dark ? a.dText : a.text}`,
+    `--brand-soft: ${dark ? a.dSoft : a.soft}`,
+    `--brand-soft-2: ${dark ? a.dSoft2 : a.soft2}`,
+  ].join(';\n  ') + ';';
+  const parts = ['/* 皮肤槽：.acc-<key> 覆盖 --brand 系（手动/系统深色各有映射） */'];
+  for (const k of keys) {
+    const a = acc[k];
+    parts.push(`.acc-${k} {\n  ${decls(a, false)}\n}`);
+    parts.push(`.tc-dark .acc-${k}, .tc-dark.acc-${k}, .theme-dark .acc-${k}, .theme-dark.acc-${k} {\n  ${decls(a, true)}\n}`);
+    parts.push(`@media (prefers-color-scheme: dark) {\n  .acc-${k} {\n  ${decls(a, true)}\n  }\n  .tc-light .acc-${k}, .tc-light.acc-${k} {\n  ${decls(a, false)}\n  }\n}`);
+  }
+  return parts.join('\n');
+}
+
 const UTIL_CSS = `/* utilities */
 .num {
   font-variant-numeric: tabular-nums;
@@ -387,7 +413,7 @@ function reducedMotion(selectors) {
   return `@media (prefers-reduced-motion: reduce) {\n  ${selectors} {\n${REDUCED_MOTION_DECLS}\n  }\n}`;
 }
 
-export function emitCss(flat) {
+export function emitCss(flat, tree) {
   const compat = H5_COMPAT.map(([k, v]) => `  ${k}: ${v}; /* deprecated */`);
   return [
     HEADER,
@@ -396,6 +422,7 @@ export function emitCss(flat) {
     '/* uni-h5 把 page 编成 uni-page-body；tabbar/page-head 壳在其外层，需要 :root 镜像才能读到 token */',
     cssBlock(':root', lightDecls(flat)),
     cssBlock('.theme-dark uni-page-body, html.theme-dark', darkDecls(flat)),
+    accentBlocks(tree),
     '/* #endif */',
     '/* component: wot-design-uni（变量名以 wot-design-uni@1.14.0 components/common/abstracts/variable.scss 为准） */',
     cssBlock('page', WOT_MAP.map(([k, v]) => decl('  ', k, v))),
@@ -411,12 +438,18 @@ export function emitCss(flat) {
    WXSS 不支持 `*` 选择器（整文件编译失败→模拟器白屏），prefers-reduced-motion 的标签枚举块在 app.wxss 手写 */
 const WXSS_ROOT = 'page, .kg-theme-root';
 
-export function emitWxss(flat) {
+export function emitWxss(flat, tree) {
   const compat = MP_COMPAT.map(([k, v]) => `  ${k}: ${v}; /* deprecated */`);
   return [
     HEADER,
     cssBlock(WXSS_ROOT, lightDecls(flat)),
     `@media (prefers-color-scheme: dark) {\n${cssBlock(`  ${WXSS_ROOT}`, darkDecls(flat).map((l) => '  ' + l)).replace(/\n}$/, '\n  }')}\n}`,
+    '/* 手动外观档：utils/theme.ts 给各页顶层容器打 {{tc}}；system 档不带类走上面媒体查询 */',
+    cssBlock('.tc-light', lightDecls(flat)),
+    cssBlock('.tc-dark', darkDecls(flat)),
+    '/* page 在 {{tc}} 容器外面吃不到类作用域变量——手动档由容器自身把 --bg 铺满视口（窗口级底色 utils/theme.ts 另走 wx.setBackgroundColor） */',
+    cssBlock('.tc-light, .tc-dark', ['  background-color: var(--bg);']),
+    accentBlocks(tree),
     '/* component: tdesign-miniprogram（变量名以 tdesign-miniprogram@1.9.x common/style/theme/_light.wxss 为准） */',
     cssBlock(WXSS_ROOT, TD_MAP.map(([k, v]) => decl('  ', k, v))),
     '/* compat：过渡期别名，页面组接入后删除（foundation-2） */',
@@ -600,8 +633,8 @@ export async function generate(tree = JSON.parse(fs.readFileSync(TOKENS_PATH, 'u
     flat,
     files: {
       [OUTPUTS.scss]: emitScss(flat),
-      [OUTPUTS.css]: emitCss(flat),
-      [OUTPUTS.wxss]: emitWxss(flat),
+      [OUTPUTS.css]: emitCss(flat, tree),
+      [OUTPUTS.wxss]: emitWxss(flat, tree),
       [OUTPUTS.moduleMetaJs]: emitModuleMetaJs(tree),
       [OUTPUTS.moduleMetaTs]: emitModuleMetaTs(tree),
       [OUTPUTS.iconPathsTs]: emitIconPathsTs(icons),

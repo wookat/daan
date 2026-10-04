@@ -1,5 +1,5 @@
-<navbar title="AI 面试陪练" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="AI 面试陪练" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 第一步：选分类 -->
     <block wx:if="{{step === 'pick'}}">

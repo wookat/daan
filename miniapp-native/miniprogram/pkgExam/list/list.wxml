@@ -1,5 +1,5 @@
-<navbar title="{{histView ? '模考记录' : '真题卷库'}}" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
+<navbar class="{{tc}}" title="{{histView ? '模考记录' : '真题卷库'}}" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list" scroll-into-view="{{scrollTo}}" scroll-with-animation>
   <view class="wrap">
     <kg-card wx:if="{{resume}}" variant="flat" selected class="resume">
       <view class="resume-row">
@@ -103,7 +103,7 @@
   </view>
 </scroll-view>
 
-<kg-sheet visible="{{menuOpen}}" title="{{menuPaper ? menuPaper.title : ''}}" bind:close="onMenuClose">
+<kg-sheet class="{{tc}}" visible="{{menuOpen}}" title="{{menuPaper ? menuPaper.title : ''}}" bind:close="onMenuClose">
   <view wx:if="{{menuPaper}}" class="menu">
     <view wx:if="{{menuPaper.psource}}" class="menu-it" role="button" hover-class="menu-it--hover" bind:tap="onPractice">
       <l-icon name="pencil-line" size="20" tone="ink-2" /><text>按卷练习（不计时）</text>
@@ -117,7 +117,7 @@
   </view>
 </kg-sheet>
 
-<kg-export-sheet
+<kg-export-sheet class="{{tc}}"
   visible="{{!!exportTarget}}"
   scope="{{exportTarget ? exportTarget.title : ''}}"
   count="{{exportTarget ? exportTarget.n : null}}"
@@ -127,7 +127,7 @@
 />
 
 <!-- 组卷 sheet：卷型模板 picker + 薄弱加权开关 -->
-<kg-sheet visible="{{tplOpen}}" title="组卷模考" bind:close="onTplClose">
+<kg-sheet class="{{tc}}" visible="{{tplOpen}}" title="组卷模考" bind:close="onTplClose">
   <block wx:if="{{tplLoading}}"><t-skeleton theme="paragraph" animation="gradient" /></block>
   <block wx:else>
     <view class="tpl-list">
@@ -154,7 +154,7 @@
 </kg-sheet>
 
 <!-- 导出后卷码面板：打印 → 回填闭环入口 -->
-<kg-sheet visible="{{!!exportDone}}" title="PDF 已导出" bind:close="onExportDoneClose">
+<kg-sheet class="{{tc}}" visible="{{!!exportDone}}" title="PDF 已导出" bind:close="onExportDoneClose">
   <view wx:if="{{exportDone}}" class="done-box">
     <text class="done-k">卷码（答题卡右上角也有）</text>
     <text class="done-code num">{{exportDone.code}}</text>

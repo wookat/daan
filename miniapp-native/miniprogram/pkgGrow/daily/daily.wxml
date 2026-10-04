@@ -1,5 +1,5 @@
-<navbar title="{{title}}" back />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="{{title}}" back />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 加载态 -->
     <view wx:if="{{state === 'loading'}}" class="sec">
@@ -132,7 +132,7 @@
   </view>
 </scroll-view>
 
-<kg-action-bar
+<kg-action-bar class="{{tc}}"
   wx:if="{{state === 'play' && cur && cur._picked}}"
   layout="answer"
   index="{{idx}}"

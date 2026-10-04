@@ -1,2 +1,2 @@
-<navbar title="迷你模考" back="{{true}}" />
-<view class="wrap"><t-skeleton theme="paragraph" animation="gradient" /></view>
+<navbar class="{{tc}}" title="迷你模考" back="{{true}}" />
+<view class="{{tc}} wrap"><t-skeleton theme="paragraph" animation="gradient" /></view>

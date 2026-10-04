@@ -16,6 +16,7 @@ import type { DailyDoneRec, DailyPlanResp, HomeBundleResp, HomeProfile, PlanToda
 import { fetchAnnouncement, fetchPracticeResume, fetchReviewCur, postPracticeProgress, saveReviewCur } from '../../api/learn';
 import type { Announcement } from '../../api/learn';
 import { anonUid } from '../../utils/auth';
+import { PF_COUNTS_KEY, readCountsCache } from '../../utils/prefetch';
 import { examResume, examProgressDrop } from '../../api/exam';
 import { type ResumeInfo, resolveResume, dropResume, resumeUrl } from '../../utils/kg-exam-progress';
 import { fmtClock } from '../../utils/kg-exam-timer';
@@ -197,11 +198,16 @@ Page({
     });
     this.loadCounts();
   },
-  // 题数与 H5 首页同源 /api/question_counts，失败保持静态回退
+  // 题数与 H5 首页同源 /api/question_counts；先读启动预取缓存秒渲染，再 revalidate
   async loadCounts() {
+    const cached = readCountsCache();
+    if (cached) this.setData({ mods: applyCounts(MODS, cached.counts) });
     try {
       const d = await fetchQuestionCounts();
-      if (d.counts && d.counts.length) this.setData({ mods: applyCounts(MODS, d.counts) });
+      if (d.counts && d.counts.length) {
+        this.setData({ mods: applyCounts(MODS, d.counts) });
+        wx.setStorageSync(PF_COUNTS_KEY, { counts: d.counts, ts: Date.now() });
+      }
     } catch (e) {
       /* 非关键路径 */
     }

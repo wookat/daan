@@ -1,5 +1,5 @@
-<navbar title="成绩报告" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="成绩报告" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <view class="hero hero-skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
@@ -191,10 +191,10 @@
   </view>
 </scroll-view>
 
-<kg-action-bar wx:if="{{!loading && report}}" layout="actions" primaryText="再考一次" secondaryText="返回卷库" bind:primary="retake" bind:secondary="goList" />
+<kg-action-bar class="{{tc}}" wx:if="{{!loading && report}}" layout="actions" primaryText="再考一次" secondaryText="返回卷库" bind:primary="retake" bind:secondary="goList" />
 
 <!-- 解析浮层 -->
-<kg-sheet visible="{{!!detail}}" title="{{detailTitle}}" bind:close="onDetailClose">
+<kg-sheet class="{{tc}}" visible="{{!!detail}}" title="{{detailTitle}}" bind:close="onDetailClose">
   <block wx:if="{{detail}}">
     <view class="d-tools">
       <kg-tag wx:if="{{detail.marked}}" tone="warn">考试时标记过本题</kg-tag>
@@ -249,7 +249,7 @@
 </kg-sheet>
 
 <!-- 题目纠错 -->
-<kg-sheet visible="{{qcOpen}}" title="题目纠错" bind:close="onQcClose">
+<kg-sheet class="{{tc}}" visible="{{qcOpen}}" title="题目纠错" bind:close="onQcClose">
   <view class="rp-types">
     <text wx:for="{{qcTypes}}" wx:key="*this" class="chip {{qcType === item ? 'on' : ''}}" data-t="{{item}}" bind:tap="onQcType">{{item}}</text>
   </view>

@@ -1,5 +1,5 @@
-<navbar title="赛后报告" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="赛后报告" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <view class="hero hero-skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
@@ -95,4 +95,4 @@
   </view>
 </scroll-view>
 
-<kg-action-bar wx:if="{{!loading && r}}" layout="actions" primaryText="弱项练 5 题" secondaryText="逐题回顾" bind:primary="goWeakPractice" bind:secondary="openAttempt" />
+<kg-action-bar class="{{tc}}" wx:if="{{!loading && r}}" layout="actions" primaryText="弱项练 5 题" secondaryText="逐题回顾" bind:primary="goWeakPractice" bind:secondary="openAttempt" />

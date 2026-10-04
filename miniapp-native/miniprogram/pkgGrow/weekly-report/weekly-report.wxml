@@ -1,5 +1,5 @@
-<navbar title="周学习报告" back />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="周学习报告" back />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <view wx:if="{{loading}}" class="skel" aria-busy="true">
       <kg-card variant="raised" class="sec"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>

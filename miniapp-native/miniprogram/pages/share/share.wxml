@@ -1,5 +1,5 @@
-<navbar title="题目分享" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="题目分享" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <kg-card variant="raised" class="qcard"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>

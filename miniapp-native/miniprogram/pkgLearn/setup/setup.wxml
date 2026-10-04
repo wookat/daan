@@ -1,5 +1,5 @@
-<navbar title="选题 · 练习设置" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="选题 · 练习设置" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 练习设置（H5 home.vue「练习设置」sheet 同项同序） -->
     <kg-card class="set">
@@ -82,7 +82,7 @@
 </scroll-view>
 
 <!-- 选二级题型 sheet（H5 home.vue「选择题型」） -->
-<kg-sheet visible="{{subOpen}}" title="{{subModuleName}} · 选择题型" bind:close="onSubClose">
+<kg-sheet class="{{tc}}" visible="{{subOpen}}" title="{{subModuleName}} · 选择题型" bind:close="onSubClose">
   <view class="sub-list">
     <kg-card clickable chevron class="sub-chip is-all" padding="{{12}}" bind:click="onSubAll">
       <view class="sub-row">

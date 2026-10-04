@@ -95,6 +95,8 @@ function fmtAttempts(items: AttemptItem[]): string[] {
 }
 
 const LETTERS = ['A', 'B', 'C', 'D'];
+// 列表分片大小：首屏只 setData 这么多行，滚到底再按片补
+const BOOK_PAGE = 20;
 interface ManualRow {
   no: number;
   opts: { L: string; on: boolean }[];
@@ -216,6 +218,8 @@ Page({
     loading: true,
     all: [] as MRow[],
     shown: [] as MRow[],
+    shownHasMore: false,
+    shownTotal: 0,
     favs: [] as FavItem[],
     todoCount: 0,
     doneCount: 0,
@@ -333,6 +337,8 @@ Page({
   _autoScan: false,
   _autoCode: '',
   _qStart: 0,
+  // 分片渲染的全量过滤结果（不进 data，避免整表进 setData 通道）
+  _shownAll: [] as MRow[],
   onShow() {
     syncTabBar(this, 1);
     // 首页「继续未完成复习」→ tabBar 页无法带参，走 storage 意图位（H5 bookReviewIntent）
@@ -448,7 +454,24 @@ Page({
     } else if (sortBy === 'reason') {
       shown.sort((a, b) => (a.error_reason || '未标注').localeCompare(b.error_reason || '未标注'));
     }
-    this.setData({ shown });
+    // 分片渲染：全量结果放 _shownAll，setData 只推首屏 20 条，余量滚到再补。
+    // 长列表一次全量 setData 是大错题本首屏卡顿的主因。
+    this._shownAll = shown;
+    this.setData({
+      shown: shown.slice(0, BOOK_PAGE),
+      shownHasMore: shown.length > BOOK_PAGE,
+      shownTotal: shown.length,
+    });
+  },
+  onMore() {
+    const full = this._shownAll || [];
+    const cur = this.data.shown.length;
+    if (cur >= full.length) return;
+    const patch: Record<string, unknown> = {};
+    const end = Math.min(cur + BOOK_PAGE, full.length);
+    for (let i = cur; i < end; i++) patch[`shown[${i}]`] = full[i];
+    patch.shownHasMore = end < full.length;
+    this.setData(patch);
   },
   // ---------- 筛选/排序 ----------
   onFilterOpen() {
@@ -557,7 +580,7 @@ Page({
     this.setData({ selIds: sel, selCount: Object.keys(sel).length });
   },
   onSelAll() {
-    const shown = this.data.shown;
+    const shown = this._shownAll || this.data.shown;
     if (this.data.selCount === shown.length) {
       this.setData({ selIds: {}, selCount: 0 });
       return;

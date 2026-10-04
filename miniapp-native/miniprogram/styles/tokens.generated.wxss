@@ -160,6 +160,239 @@ page, .kg-theme-root {
     --mod-changshi-soft: #3a2b0e;
   }
 }
+/* 手动外观档：utils/theme.ts 给各页顶层容器打 {{tc}}；system 档不带类走上面媒体查询 */
+.tc-light {
+  /* semantic */
+  --brand: #2e5bff;
+  --brand-press: #1e44d9;
+  --brand-text: #1e44d9;
+  --brand-soft: #eef3ff;
+  --brand-soft-2: #dbe6ff;
+  --brand-grad: linear-gradient(135deg, #5c82ff, #2e5bff);
+  --on-brand: #ffffff;
+  --on-brand-2: rgba(255,255,255,.78);
+  --ok: #16a34a;
+  --ok-strong: #15803d;
+  --ok-soft: #ecfdf5;
+  --bad: #dc2626;
+  --bad-strong: #b91c1c;
+  --bad-soft: #fef2f2;
+  --warn: #d97706;
+  --warn-strong: #b45309;
+  --warn-soft: #fffbeb;
+  --info: #0284c7;
+  --info-strong: #075985;
+  --info-soft: #f0f9ff;
+  --ink: #17181c;
+  --ink-2: #40434e;
+  --ink-3: #6b7280;
+  --ink-4: #b0b4c0;
+  --line: #e7e9f0;
+  --line-strong: #c9cdd8;
+  --fill: #f2f3f7;
+  --card: #ffffff;
+  --bg: #f6f7fb;
+  --mask: rgba(23,24,28,.45);
+  --card-fade: rgba(255,255,255,.9);
+  --card-fade-2: rgba(255,255,255,.25);
+  --hl-bg: #fef08a;
+  --hl-ink: inherit;
+  --sh-1: 0 2px 8px rgba(23,24,28,.06);
+  --sh-2: 0 8px 24px rgba(23,24,28,.12);
+  --sh-3: 0 12px 32px rgba(23,24,28,.18);
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'HarmonyOS Sans', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --lh-display: 1.2;
+  --lh-h1: 1.25;
+  --lh-h2: 1.3;
+  --lh-h3: 1.3;
+  --lh-body: 1.55;
+  --lh-sub: 1.45;
+  --lh-caption: 1.4;
+  --lh-question: 1.7;
+  /* scale */
+  --fs-display: 26px;
+  --fs-h1: 20px;
+  --fs-h2: 17px;
+  --fs-h3: 15px;
+  --fs-body: 13px;
+  --fs-sub: 12px;
+  --fs-caption: 12px;
+  --sp-4: 4px;
+  --sp-8: 8px;
+  --sp-12: 12px;
+  --sp-16: 16px;
+  --sp-20: 20px;
+  --sp-24: 24px;
+  --sp-32: 32px;
+  --sp-40: 40px;
+  --sp-48: 48px;
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-full: 999px;
+  --dur-instant: 100ms;
+  --dur-fast: 150ms;
+  --dur-base: 250ms;
+  --dur-slow: 400ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decel: cubic-bezier(0.05, 0.7, 0.1, 1);
+  --ease-accel: cubic-bezier(0.3, 0, 0.8, 0.15);
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+  --icon-xl: 32px;
+  --z-sticky: 10;
+  --z-bar: 50;
+  --z-overlay: 1000;
+  --z-toast: 1100;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1366px;
+  /* component */
+  --btn-h-lg: 40px;
+  --btn-h-md: 32px;
+  --btn-h-sm: 30px;
+  --input-h: 40px;
+  --chip-h: 28px;
+  --tag-h: 18px;
+  --cell-h: 44px;
+  --bar-h: 60px;
+  --tab-h: 52px;
+  --card-pad: 14px;
+  --card-gap: 10px;
+  --page-x: 16px;
+  --opt-letter: 22px;
+  --acard-cell: 36px;
+  --hit-min: 44px;
+  --prog-track: #dbe6ff;
+  --streak: #ff8a3d;
+  --streak-soft: #fff1e8;
+  /* module */
+  --mod-ziliao: #0d9488;
+  --mod-ziliao-soft: #e6f5f3;
+  --mod-shuliang: #2e5bff;
+  --mod-shuliang-soft: #e8effe;
+  --mod-yanyu: #e11d48;
+  --mod-yanyu-soft: #fce8ec;
+  --mod-panduan: #7c3aed;
+  --mod-panduan-soft: #f1eafd;
+  --mod-changshi: #d97706;
+  --mod-changshi-soft: #fbf1e0;
+}
+.tc-dark {
+  --brand-text: #8fa8ff;
+  --brand-soft: #1e2a4a;
+  --brand-soft-2: #24345c;
+  --ok-strong: #4ade80;
+  --ok-soft: #0e2b1e;
+  --bad-strong: #f87171;
+  --bad-soft: #331416;
+  --warn-strong: #fbbf24;
+  --warn-soft: #33260e;
+  --info-strong: #7dd3fc;
+  --info-soft: #0e2233;
+  --ink: #f2f3f7;
+  --ink-2: #c3c7d4;
+  --ink-3: #8a8ea0;
+  --ink-4: #5c6070;
+  --line: #2b2e3a;
+  --line-strong: #3a3e4c;
+  --fill: #23252f;
+  --card: #1d1f28;
+  --bg: #15161c;
+  --mask: rgba(0,0,0,.6);
+  --card-fade: rgba(29,31,40,.9);
+  --card-fade-2: rgba(29,31,40,.25);
+  --hl-bg: rgba(250,204,21,.22);
+  --hl-ink: #fde047;
+  --sh-1: none;
+  --sh-2: none;
+  --sh-3: none;
+  --prog-track: #2b2e3a;
+  --streak-soft: #3a2418;
+  --mod-ziliao-soft: #0e332f;
+  --mod-shuliang-soft: #1c2742;
+  --mod-yanyu-soft: #3b1520;
+  --mod-panduan-soft: #291f45;
+  --mod-changshi-soft: #3a2b0e;
+}
+/* page 在 {{tc}} 容器外面吃不到类作用域变量——手动档由容器自身把 --bg 铺满视口（窗口级底色 utils/theme.ts 另走 wx.setBackgroundColor） */
+.tc-light, .tc-dark {
+  background-color: var(--bg);
+}
+/* 皮肤槽：.acc-<key> 覆盖 --brand 系（手动/系统深色各有映射） */
+.acc-forest {
+  --brand: #16a34a;
+  --brand-press: #15803d;
+  --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
+  --brand-text: #15803d;
+  --brand-soft: #ecfdf5;
+  --brand-soft-2: #d1fae5;
+}
+.tc-dark .acc-forest, .tc-dark.acc-forest, .theme-dark .acc-forest, .theme-dark.acc-forest {
+  --brand: #16a34a;
+  --brand-press: #15803d;
+  --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
+  --brand-text: #4ade80;
+  --brand-soft: #0e2b1e;
+  --brand-soft-2: #14532d;
+}
+@media (prefers-color-scheme: dark) {
+  .acc-forest {
+  --brand: #16a34a;
+  --brand-press: #15803d;
+  --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
+  --brand-text: #4ade80;
+  --brand-soft: #0e2b1e;
+  --brand-soft-2: #14532d;
+  }
+  .tc-light .acc-forest, .tc-light.acc-forest {
+  --brand: #16a34a;
+  --brand-press: #15803d;
+  --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
+  --brand-text: #15803d;
+  --brand-soft: #ecfdf5;
+  --brand-soft-2: #d1fae5;
+  }
+}
+.acc-sunset {
+  --brand: #ea580c;
+  --brand-press: #c2410c;
+  --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
+  --brand-text: #c2410c;
+  --brand-soft: #fff7ed;
+  --brand-soft-2: #ffedd5;
+}
+.tc-dark .acc-sunset, .tc-dark.acc-sunset, .theme-dark .acc-sunset, .theme-dark.acc-sunset {
+  --brand: #ea580c;
+  --brand-press: #c2410c;
+  --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
+  --brand-text: #fb923c;
+  --brand-soft: #3a2418;
+  --brand-soft-2: #4a2f1a;
+}
+@media (prefers-color-scheme: dark) {
+  .acc-sunset {
+  --brand: #ea580c;
+  --brand-press: #c2410c;
+  --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
+  --brand-text: #fb923c;
+  --brand-soft: #3a2418;
+  --brand-soft-2: #4a2f1a;
+  }
+  .tc-light .acc-sunset, .tc-light.acc-sunset {
+  --brand: #ea580c;
+  --brand-press: #c2410c;
+  --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
+  --brand-text: #c2410c;
+  --brand-soft: #fff7ed;
+  --brand-soft-2: #ffedd5;
+  }
+}
 /* component: tdesign-miniprogram（变量名以 tdesign-miniprogram@1.9.x common/style/theme/_light.wxss 为准） */
 page, .kg-theme-root {
   --td-brand-color: var(--brand);

@@ -1,5 +1,5 @@
-<navbar title="{{navTitle}}" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="{{navTitle}}" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <!-- 公告条（/api/announcement，关闭后按 id 记忆） -->
     <view wx:if="{{announce}}" class="ann">
@@ -91,6 +91,10 @@
 
       <!-- 解析卡（kg-analysis-card 小程序版未落地，页内实现） -->
       <kg-card wx:if="{{picked || beiMode}}" variant="flat" class="exp-card">
+        <view wx:if="{{beatText && !beiMode}}" class="exp-row">
+          <text class="exp-k">全站对比</text>
+          <text class="exp-v">{{beatText}}</text>
+        </view>
         <view wx:if="{{timedMode && !beiMode && picked}}" class="exp-row">
           <text class="exp-k">用时</text>
           <text class="exp-v num {{cur._secs > targetSecs ? 'badc' : ''}}">{{cur._secs}}s / 目标 {{targetSecs}}s</text>
@@ -184,7 +188,7 @@
   </view>
 </scroll-view>
 
-<kg-action-bar wx:if="{{!loading && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
+<kg-action-bar class="{{tc}}" wx:if="{{!loading && cur}}" layout="answer" index="{{idx}}" total="{{items.length}}">
   <view class="abar-tools">
     <view wx:if="{{cur.id}}" class="kg-tool {{isFav ? 'on' : ''}}" hover-class="kg-tool--hover" role="button" aria-label="{{isFav ? '取消收藏' : '收藏本题'}}" bind:tap="onToggleFav">
       <l-icon name="star" size="24" tone="{{isFav ? 'warn' : 'ink-2'}}" />
@@ -205,10 +209,10 @@
 </kg-action-bar>
 
 <!-- 结算态操作栏：有错题时主按钮「只重练本组错题（N 题）」、「再来一组」降次级（practice.vue R553 同层级）；无错题/背题维持「再来一组 / 返回」 -->
-<kg-action-bar wx:if="{{finished}}" layout="actions" primaryText="{{doneBar.primary}}" secondaryText="{{doneBar.secondary}}" bind:primary="onDonePrimary" bind:secondary="onDoneSecondary" />
+<kg-action-bar class="{{tc}}" wx:if="{{finished}}" layout="actions" primaryText="{{doneBar.primary}}" secondaryText="{{doneBar.secondary}}" bind:primary="onDonePrimary" bind:secondary="onDoneSecondary" />
 
 <!-- 答题卡 -->
-<kg-sheet visible="{{cardOpen}}" title="答题卡" bind:close="onCloseCard">
+<kg-sheet class="{{tc}}" visible="{{cardOpen}}" title="答题卡" bind:close="onCloseCard">
   <view class="acard-grid">
     <view wx:for="{{cardCells}}" wx:key="i" class="acard-n num {{item.cls}}" role="button" aria-label="第 {{item.i + 1}} 题" data-i="{{item.i}}" bind:tap="onJumpTo">{{item.i + 1}}</view>
   </view>
@@ -216,7 +220,7 @@
 </kg-sheet>
 
 <!-- 练习工具（与 H5 练习工具 sheet 同项） -->
-<kg-sheet visible="{{toolsOpen}}" title="练习工具" bind:close="onCloseTools">
+<kg-sheet class="{{tc}}" visible="{{toolsOpen}}" title="练习工具" bind:close="onCloseTools">
   <view class="tool-row" role="button" bind:tap="onCycleFont">
     <text class="tool-name">字号大小</text>
     <text class="tool-val">{{fontLv === 0 ? '小' : fontLv === 2 ? '大' : '标准'}} · 点击切换</text>
@@ -240,7 +244,7 @@
 </kg-sheet>
 
 <!-- 题目纠错 -->
-<kg-sheet visible="{{reportOpen}}" title="题目纠错" bind:close="onCloseReport">
+<kg-sheet class="{{tc}}" visible="{{reportOpen}}" title="题目纠错" bind:close="onCloseReport">
   <view class="rp-types" role="group" aria-label="问题类型">
     <view wx:for="{{reportTypes}}" wx:key="*this" class="rz {{reportType === item ? 'on' : ''}}" role="button" data-t="{{item}}" bind:tap="onReportType">{{item}}</view>
   </view>
@@ -253,7 +257,7 @@
 </kg-sheet>
 
 <!-- 笔记 -->
-<kg-sheet visible="{{noteOpen}}" title="我的笔记" bind:close="onCloseNote">
+<kg-sheet class="{{tc}}" visible="{{noteOpen}}" title="我的笔记" bind:close="onCloseNote">
   <view class="rp-field">
     <t-textarea value="{{noteDraft}}" placeholder="记下解题思路、易错点…（500 字内）" maxlength="{{500}}" autosize="{{true}}" bordered="{{false}}" bind:change="onNoteInput" />
   </view>

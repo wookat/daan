@@ -1,1 +1,1 @@
-<navbar title="PK 战绩" back="{{true}}" />
+<navbar class="{{tc}}" title="PK 战绩" back="{{true}}" />

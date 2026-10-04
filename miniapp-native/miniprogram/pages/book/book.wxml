@@ -1,5 +1,5 @@
-<navbar title="错题本" large />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="错题本" large />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list" lower-threshold="200" bindscrolltolower="onMore">
   <view class="wrap {{batchMode ? 'is-batch' : ''}}">
     <!-- 复习模式（kg-question-card / kg-option-group 小程序版未落地，页内按 T3 结构实现） -->
     <block wx:if="{{reviewing && rCur}}">
@@ -188,12 +188,14 @@
       </view>
     </block>
     </block>
+    <view wx:if="{{shownHasMore}}" class="more-tip">上拉加载更多 · 已显 {{shown.length}}/{{shownTotal}}</view>
+    <view wx:elif="{{shown.length > 0 && shown.length === shownTotal && shownTotal > 20}}" class="more-tip">已显全部 {{shownTotal}} 条</view>
   </view>
 </scroll-view>
 
 <!-- 批量操作条（H5 batchbar） -->
-<view wx:if="{{batchMode && tab !== 'fav' && !reviewing}}" class="batchbar">
-  <kg-button variant="text" size="md" bind:click="onSelAll">{{selCount === shown.length ? '取消全选' : '全选'}}</kg-button>
+<view wx:if="{{batchMode && tab !== 'fav' && !reviewing}}" class="{{tc}} batchbar">
+  <kg-button variant="text" size="md" bind:click="onSelAll">{{selCount === shownTotal ? '取消全选' : '全选'}}</kg-button>
   <text class="batch-n">已选 {{selCount}}</text>
   <view class="batch-grow" />
   <kg-button wx:if="{{tab === 'todo'}}" variant="secondary" size="lg" disabled="{{!selCount || batchBusy}}" data-on="1" bind:click="onBatchMaster">标已掌握</kg-button>
@@ -202,7 +204,7 @@
 </view>
 
 <!-- AI 错题分析 -->
-<kg-sheet visible="{{aiOpen}}" title="AI 错题分析" bind:close="onAiClose">
+<kg-sheet class="{{tc}}" visible="{{aiOpen}}" title="AI 错题分析" bind:close="onAiClose">
   <view wx:if="{{aiLoading}}" class="ai-loading">
     <t-skeleton theme="paragraph" animation="gradient" />
     <text class="side-s">正在分析你的错题与作答数据，约需 30-60 秒…</text>
@@ -213,7 +215,7 @@
 
 <!-- 手动录入答案（按卷） -->
 <!-- 手录错题（免 AI，不对回题库；question_id=NULL 走复习/PDF 路径，不参与重练） -->
-<kg-sheet visible="{{entryOpen}}" title="手录错题" bind:close="onEntryClose">
+<kg-sheet class="{{tc}}" visible="{{entryOpen}}" title="手录错题" bind:close="onEntryClose">
   <text class="sheet-k">模块</text>
   <view class="sheet-chips"><kg-chip-row size="sm" options="{{manualModOpts}}" value="{{entry.module}}" bind:change="onEntryModule" /></view>
   <text class="sheet-k">题干（可连选项一起粘贴，选项一行一个如「A. …」）</text>
@@ -244,7 +246,7 @@
   </view>
 </kg-sheet>
 
-<kg-sheet visible="{{manualOpen}}" title="按卷码录入答案" bind:close="onManualClose">
+<kg-sheet class="{{tc}}" visible="{{manualOpen}}" title="按卷码录入答案" bind:close="onManualClose">
   <block wx:if="{{!manualPaper}}">
     <block wx:if="{{recentPapers.length}}">
       <text class="sheet-k">最近导出的卷</text>
@@ -283,7 +285,7 @@
 </kg-sheet>
 
 <!-- 对答案结果 -->
-<kg-sheet visible="{{scanOpen && scanResult !== null}}" title="对答案结果 · {{scanResult.title || '试卷'}}" bind:close="onScanClose">
+<kg-sheet class="{{tc}}" visible="{{scanOpen && scanResult !== null}}" title="对答案结果 · {{scanResult.title || '试卷'}}" bind:close="onScanClose">
   <block wx:if="{{scanResult}}">
     <text class="scan-sum">卷码 {{scanResult.code}} · 已作答 {{scanResult.answered}}/{{scanResult.total}} · 答对 <text class="scan-good num">{{scanResult.correct}}</text> 题{{scanResult.saved ? ' · 已记入做题记录' : ''}}</text>
     <view class="scan-list">
@@ -299,7 +301,7 @@
 </kg-sheet>
 
 <!-- 复习清零庆祝态；同考点强化建议随小结一屏展示，「回错题本」始终直接回列表 -->
-<t-popup visible="{{celebrate}}" placement="center" bind:visible-change="onCelebrateVisible">
+<t-popup class="{{tc}}" visible="{{celebrate}}" placement="center" bind:visible-change="onCelebrateVisible">
   <view class="cb-card">
     <view class="cb-ico"><l-icon name="party-popper" size="32" tone="ok" /></view>
     <view class="cb-t">{{celebrateCopy.title}}</view>
@@ -332,7 +334,7 @@
 </t-popup>
 
 <!-- 错题卡「更多」分组菜单 -->
-<t-popup visible="{{opsOpen}}" placement="bottom" bind:visible-change="onOpsVisible">
+<t-popup class="{{tc}}" visible="{{opsOpen}}" placement="bottom" bind:visible-change="onOpsVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">
@@ -361,7 +363,7 @@
 </t-popup>
 
 <!-- 筛选与排序 -->
-<t-popup visible="{{filterOpen}}" placement="bottom" bind:visible-change="onFilterVisible">
+<t-popup class="{{tc}}" visible="{{filterOpen}}" placement="bottom" bind:visible-change="onFilterVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">
@@ -386,7 +388,7 @@
 </t-popup>
 
 <!-- 题目纠错 -->
-<t-popup visible="{{reportOpen}}" placement="bottom" bind:visible-change="onReportVisible">
+<t-popup class="{{tc}}" visible="{{reportOpen}}" placement="bottom" bind:visible-change="onReportVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">
@@ -403,7 +405,7 @@
 </t-popup>
 
 <!-- 题目笔记 -->
-<t-popup visible="{{noteOpen}}" placement="bottom" bind:visible-change="onNoteVisible">
+<t-popup class="{{tc}}" visible="{{noteOpen}}" placement="bottom" bind:visible-change="onNoteVisible">
   <view class="sheet">
     <view class="sheet-handle" />
     <view class="sheet-h">

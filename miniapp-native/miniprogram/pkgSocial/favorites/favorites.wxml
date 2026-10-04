@@ -1,5 +1,5 @@
-<navbar title="收藏与笔记" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="收藏与笔记" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <view class="seg"><kg-segmented options="{{tabOpts}}" value="{{tab}}" bind:change="onTab" /></view>
 

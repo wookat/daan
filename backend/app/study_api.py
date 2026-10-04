@@ -26,6 +26,8 @@ PROFILE_EXAM_TYPES = {"国考", "省考", "事业单位", "其他"}
 PROFILE_BASE_LEVELS = {"零基础", "有基础", "二战"}
 PROFILE_DAILY_GOALS = {20, 50, 100}
 PROFILE_GROUP_SIZES = {10, 20, 30, 50}
+THEME_MODES = {"system", "light", "dark"}
+THEME_ACCENTS = {"default", "forest", "sunset"}
 
 
 @router.get("/api/profile")
@@ -90,6 +92,16 @@ def api_profile_save(body: dict):
         if v and v not in PROFILE_BASE_LEVELS:
             raise HTTPException(400, "基础自评无效")
         fields["base_level"] = v or None
+    if "theme_mode" in body:
+        v = (body.get("theme_mode") or "").strip()
+        if v and v not in THEME_MODES:
+            raise HTTPException(400, "外观模式无效")
+        fields["theme_mode"] = v or None
+    if "theme_accent" in body:
+        v = (body.get("theme_accent") or "").strip()
+        if v and v not in THEME_ACCENTS:
+            raise HTTPException(400, "主题色无效")
+        fields["theme_accent"] = v or None
     return {"profile": db.save_user_profile(uid[:64], fields)}
 
 

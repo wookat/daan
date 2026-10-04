@@ -1,5 +1,5 @@
-<navbar title="打卡海报" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<navbar class="{{tc}}" title="打卡海报" back="{{true}}" />
+<scroll-view class="{{tc}} page-scroll" scroll-y type="list">
   <view class="wrap">
     <block wx:if="{{loading}}">
       <view class="poster poster-skel"><t-skeleton theme="image" animation="gradient" /></view>

@@ -3,6 +3,7 @@ import { fetchCommentInbox, pkMine } from '../../api/social';
 import type { CheckinBadgesResp } from '../../api/types';
 import { anonUid, clearAuth, getAuthUser, getToken } from '../../utils/auth';
 import { subscribeAvailable } from '../../utils/config';
+import { THEME_ACCENTS, THEME_MODES, themeAccent, themeMode, setThemeAccent, setThemeMode, type ThemeAccent, type ThemeMode } from '../../utils/theme';
 import { buildMedals, type Medal } from '../../utils/kg-medals';
 import { listPacks } from '../../utils/offline-pack';
 import { loadPStats, streakDays } from '../../utils/stats';
@@ -28,6 +29,10 @@ Page({
     mistakeN: 0,
     offlineN: 0,
     version: '',
+    themeModes: THEME_MODES.map((m) => ({ value: m.key, label: m.label })),
+    themeAccents: THEME_ACCENTS,
+    modeKey: 'system' as ThemeMode,
+    accKey: 'default' as ThemeAccent,
   },
   onShow() {
     syncTabBar(this, 4);
@@ -51,6 +56,8 @@ Page({
       offlineN: listPacks().length,
       remindAvail: subscribeAvailable(),
       version: acc.miniProgram.version || '开发版',
+      modeKey: themeMode(),
+      accKey: themeAccent(),
     });
     this.recomputeMedals();
     this.loadBadges();
@@ -171,6 +178,18 @@ Page({
     } else {
       wx.showToast({ title: `连续打卡 ${days} 天即可解锁`, icon: 'none' });
     }
+  },
+  onThemeMode(e: WechatMiniprogram.CustomEvent) {
+    const v = (e.detail as { value?: string }).value;
+    if (v !== 'system' && v !== 'light' && v !== 'dark') return;
+    setThemeMode(v);
+    this.setData({ modeKey: v });
+  },
+  onThemeAcc(e: WechatMiniprogram.TouchEvent) {
+    const v = (e.currentTarget.dataset as { key?: string }).key;
+    if (v !== 'default' && v !== 'forest' && v !== 'sunset') return;
+    setThemeAccent(v);
+    this.setData({ accKey: v });
   },
   onTeam() {
     wx.navigateTo({ url: '/pages/team/team' });
