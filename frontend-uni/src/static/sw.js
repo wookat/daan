@@ -1,6 +1,7 @@
 // H5 离线壳：仅缓存 SPA 壳（/app/），静态资源走 HTTP immutable 长缓存；
 // API 请求不缓存（离线做题由页面内离线题包逻辑处理）。
-const CACHE = 'kg-shell-v5';
+// 缓存名独立 kg-app-*：根 /sw.js 的退役脚本会清掉旧 kg-shell-*，不可撞名被误删
+const CACHE = 'kg-app-v1';
 
 self.addEventListener('install', (e) => {
   // cache:'reload' 绕过 HTTP 缓存，保证入库的壳是最新 HTML

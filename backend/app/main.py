@@ -446,20 +446,27 @@ FRONTEND_DIR = _H5_DIR if os.path.isdir(_H5_DIR) else os.path.join(_ROOT, "front
 app.mount("/admin/static", StaticFiles(directory=admin_api.ADMIN_DIR), name="admin_static")
 
 
+_SW_RETIRE_JS = """// H5 已迁 /app/：根作用域 SW 退役脚本（自注销 + 清旧壳缓存）
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches.keys()
+      .then((ks) => Promise.all(ks.filter((k) => k.startsWith('kg-shell')).map((k) => caches.delete(k))))
+      .then(() => self.registration.unregister())
+  );
+});
+"""
+
+
 @app.get("/sw.js", include_in_schema=False)
-def api_sw_js(if_none_match: str | None = Header(None)):
-    """Service Worker 需从站点根路径提供才能获得 '/' 作用域（H5 离线壳）。"""
-    p = os.path.join(FRONTEND_DIR, "static", "sw.js")
-    if not os.path.isfile(p):
-        raise HTTPException(404, "not found")
-    # SW 脚本必须免启发式缓存：否则浏览器最长 24h 不回源校验，新发版对存量用户长时间不生效。
-    # FileResponse 只生成 ETag 不做条件判断，这里自行处理 If-None-Match 返 304
-    st = os.stat(p)
-    etag = f'"{hashlib.md5(f"{st.st_mtime}-{st.st_size}".encode()).hexdigest()}"'
-    headers = {"Cache-Control": "no-cache", "ETag": etag}
-    if if_none_match and etag in {t.strip() for t in if_none_match.split(",")}:
-        return Response(status_code=304, headers=headers)
-    return FileResponse(p, media_type="application/javascript", headers=headers)
+def api_sw_js():
+    """根 /sw.js 只发退役脚本：旧版 SW 作用域是 '/'，浏览器回源拿到此文件即自注销清缓存；
+    真正的离线壳在 /app/sw.js（Pages 静态层），作用域 '/app/'。"""
+    return Response(
+        _SW_RETIRE_JS,
+        media_type="application/javascript",
+        headers={"Cache-Control": "no-cache"},
+    )
 
 
 _NOT_FOUND_HTML = """<!DOCTYPE html>
