@@ -38,7 +38,7 @@ nav{position:sticky;top:0;z-index:50;background:rgba(246,247,251,.85);backdrop-f
 .btn-sm{padding:8px 16px;font-size:13px;border-radius:10px}
 
 /* ---- hero ---- */
-.hero{padding:76px 0 90px}
+.hero{padding:84px 0}
 .hero-in{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--brand-soft);color:var(--brand-text);border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600}
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--brand);display:inline-block}
@@ -58,10 +58,11 @@ h1 em{font-style:normal;color:var(--brand)}
 .phone-cap{text-align:center;color:var(--ink-4);font-size:11.5px;margin-top:14px;letter-spacing:2px}
 
 /* ---- numbers band ---- */
-.band{background:var(--brand-grad);border-radius:var(--r-lg);padding:38px 44px;display:flex;justify-content:space-between;gap:28px;flex-wrap:wrap;box-shadow:var(--shadow)}
-.band div{color:#fff}
+.band{background:var(--brand-grad);border-radius:var(--r-lg);padding:38px 44px;display:grid;grid-template-columns:repeat(5,1fr);gap:28px;box-shadow:var(--shadow)}
+.band div{color:#fff;text-align:center}
 .band b{font-size:30px;font-weight:800;display:block}
 .band small{opacity:.78;font-size:12.5px}
+@media(max-width:760px){.band{grid-template-columns:repeat(2,1fr)}}
 
 /* ---- section head ---- */
 .shead{max-width:640px;margin-bottom:44px}
@@ -71,12 +72,13 @@ h1 em{font-style:normal;color:var(--brand)}
 
 /* ---- features ---- */
 .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.feat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px 24px;transition:.18s}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px 24px;transition:.18s;display:flex;flex-direction:column}
 .feat:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--brand-soft-2)}
-.feat .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;font-size:20px;margin-bottom:16px}
+.feat .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:16px;color:var(--brand)}
+.feat .ic svg{width:22px;height:22px}
 .feat h3{font-size:16.5px;font-weight:700;margin-bottom:8px}
-.feat p{font-size:13.5px;color:var(--ink-3);line-height:1.75}
-.feat .k{display:inline-block;margin-top:12px;font-size:12px;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:3px 10px;font-weight:600}
+.feat p{font-size:13.5px;color:var(--ink-3);line-height:1.75;padding-bottom:14px}
+.feat .k{display:inline-block;align-self:flex-start;margin-top:auto;font-size:12px;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:3px 10px;font-weight:600}
 
 /* ---- screens strip ---- */
 .screens{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
@@ -99,8 +101,9 @@ h1 em{font-style:normal;color:var(--brand)}
 
 /* ---- platforms ---- */
 .plat{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px;text-align:center}
-.pcard .pi{font-size:26px;margin-bottom:12px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px 24px;text-align:center}
+.pcard .pi{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;margin:0 auto 14px}
+.pcard .pi svg{width:22px;height:22px}
 .pcard b{display:block;font-size:15.5px;margin-bottom:6px}
 .pcard p{font-size:13px;color:var(--ink-3);line-height:1.7}
 .pcard .btn{margin-top:18px}
@@ -113,6 +116,7 @@ h1 em{font-style:normal;color:var(--brand)}
 .cta .btn-brand:hover{background:#f0f4ff}
 .cta .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
 .cta .btn-ghost:hover{border-color:#fff}
+@media(max-width:920px){.band{grid-template-columns:repeat(2,1fr)}}
 
 /* ---- footer ---- */
 footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-size:12.5px}
@@ -194,12 +198,12 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
       <p>不是再做一个题库 App——是把「做题→错因→讲解→复习→模考」串成一条学习回路。</p>
     </div>
     <div class="feat-grid">
-      <div class="feat"><div class="ic">📷</div><h3>拍题 AI 讲解</h3><p>拍题或粘贴文字，AI 按花生十三方法体系给出六段式讲解：判对答案、速解方法、步骤拆解、易错陷阱、可迁移技巧、同类题入口。</p><span class="k">支持追问 · 举一反三</span></div>
-      <div class="feat"><div class="ic">📄</div><h3>真题卷库</h3><p>69 套整套试卷：国考 2012–2026 全链 + 多省省考、选调真题，每套 48–135 题按原卷结构还原，可整卷模考也可续考。</p><span class="k">含正确率先验</span></div>
-      <div class="feat"><div class="ic">📕</div><h3>错题本 · 间隔复习</h3><p>错题自动归集，SM-2 算法按遗忘曲线推送到期待复习；易错专项卷、掌握状态机（含「长期易错」终态）、错因 TOP 聚合。</p><span class="k">越练越懂你</span></div>
-      <div class="feat"><div class="ic">🏆</div><h3>全真模考 · 排位</h3><p>省份卷型模板（国考副省/地市、江苏 ABC 等 7 套）+ 薄弱加权智能组卷；计时判分 + 全站排位百分位 + 答对/答错均速。</p><span class="k">考出真实水平</span></div>
-      <div class="feat"><div class="ic">✍️</div><h3>申论批改 · 素材库</h3><p>申论作答 AI 批改打分点评；素材库按热点聚合「内涵/角度/金句」三段式，支持我的笔记与逐条收藏。</p><span class="k">范文 + 素材双链路</span></div>
-      <div class="feat"><div class="ic">🤖</div><h3>AI 问泽 · 面试陪练</h3><p>逐题「问泽」追问、AI 面试陪练抽真题 + 考官打分点评、语音输入作答，番茄钟、打卡热力图、周报陪伴整个备考周期。</p><span class="k">碎片时间全利用</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h2.5l1.5-2.5h8L17.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.4"/></svg></div><h3>拍题 AI 讲解</h3><p>拍题或粘贴文字，AI 按花生十三方法体系给出六段式讲解：判对答案、速解方法、步骤拆解、易错陷阱、可迁移技巧、同类题入口。</p><span class="k">支持追问 · 举一反三</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg></div><h3>真题卷库</h3><p>69 套整套试卷：国考 2012–2026 全链 + 多省省考、选调真题，每套 48–135 题按原卷结构还原，可整卷模考也可续考。</p><span class="k">含正确率先验</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 18a2 2 0 0 0 2 2h11"/><path d="M9 8h6"/></svg></div><h3>错题本 · 间隔复习</h3><p>错题自动归集，SM-2 算法按遗忘曲线推送到期待复习；易错专项卷、掌握状态机（含「长期易错」终态）、错因 TOP 聚合。</p><span class="k">越练越懂你</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4"/><path d="M12 13v3"/><path d="M8 20h8M9.5 16.5h5l.7 3.5H8.8z"/></svg></div><h3>全真模考 · 排位</h3><p>省份卷型模板（国考副省/地市、江苏 ABC 等 7 套）+ 薄弱加权智能组卷；计时判分 + 全站排位百分位 + 答对/答错均速。</p><span class="k">考出真实水平</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4.5L16.5 4a2.1 2.1 0 0 1 3 3L8 18.5 4 20z"/><path d="M14.5 6l3 3"/></svg></div><h3>申论批改 · 素材库</h3><p>申论作答 AI 批改打分点评；素材库按热点聚合「内涵/角度/金句」三段式，支持我的笔记与逐条收藏。</p><span class="k">范文 + 素材双链路</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8.5 10h7M8.5 13h4"/></svg></div><h3>AI 问泽 · 面试陪练</h3><p>逐题「问泽」追问、AI 面试陪练抽真题 + 考官打分点评、语音输入作答，番茄钟、打卡热力图、周报陪伴整个备考周期。</p><span class="k">碎片时间全利用</span></div>
     </div>
   </div>
 </section>
@@ -247,9 +251,9 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
       <h2>在哪都能练</h2>
     </div>
     <div class="plat">
-      <div class="pcard"><div class="pi">💬</div><b>微信小程序</b><p>微信搜索「错题邦」<br>碎片时间掏出手机就刷</p></div>
-      <div class="pcard"><div class="pi">🌐</div><b>H5 网页版</b><p>浏览器直接打开<br>kaogong.zalize.com，与小程序数据互通</p><a class="btn btn-ghost btn-sm" href="https://kaogong.zalize.com/">打开 →</a></div>
-      <div class="pcard"><div class="pi">🌙</div><b>深色模式 · 皮肤</b><p>跟随系统或手动切换<br>晚间刷题不伤眼，皮肤随心情换</p></div>
+      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.8 4C5.2 4 2.5 6.6 2.5 9.8c0 1.9 1 3.5 2.6 4.6l-.7 2.6 3-1.5c.5.1 1 .2 1.4.2"/><path d="M21.5 14.8c0-2.9-2.6-5.2-5.8-5.2s-5.8 2.3-5.8 5.2 2.6 5.2 5.8 5.2c.6 0 1.2-.1 1.7-.2l2.6 1.3-.7-2.3c1.3-.9 2.2-2.3 2.2-4z"/></svg></div><b>微信小程序</b><p>微信搜索「错题邦」<br>碎片时间掏出手机就刷</p></div>
+      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.3 3.8 5.2 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5.2-3.8-8.5s1.3-6.2 3.8-8.5z"/></svg></div><b>H5 网页版</b><p>浏览器直接打开<br>kaogong.zalize.com，与小程序数据互通</p><a class="btn btn-ghost btn-sm" href="https://kaogong.zalize.com/">打开 →</a></div>
+      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A8 8 0 0 1 10.5 4 8 8 0 1 0 20 13.5z"/></svg></div><b>深色模式 · 皮肤</b><p>跟随系统或手动切换<br>晚间刷题不伤眼，皮肤随心情换</p></div>
     </div>
   </div>
 </section>
