@@ -377,6 +377,9 @@ def _open_seed(path: str):
     return open(path, encoding="utf-8")
 
 
+_MOCK_SRC_RE = re.compile(r"模考|模拟|预测|密卷|冲刺|大赛|专项|练习|刷题")
+
+
 def _ensure_seed_tables(conn):
     conn.execute("CREATE TABLE IF NOT EXISTS seed_index (stem_hash TEXT PRIMARY KEY, question_id INTEGER)")
     conn.execute("CREATE TABLE IF NOT EXISTS seed_runs (path TEXT PRIMARY KEY, fingerprint TEXT, ran_at REAL)")
@@ -435,7 +438,8 @@ def _seed_questions_file(path: str | None) -> int:
                     q.get("explanation"),
                     q.get("source"),
                     q.get("submodule"),
-                    1 if q.get("is_real") else 0,
+                    # 源名带模考/模拟/大赛等字样的按练习题处理，不是真题
+                    1 if (q.get("is_real") and not _MOCK_SRC_RE.search(q.get("source") or "")) else 0,
                     q.get("exam_year"),
                     q.get("exam_region"),
                     q.get("import_batch") or "seed",
@@ -452,7 +456,7 @@ def _seed_questions_file(path: str | None) -> int:
             else:
                 row = conn.execute("SELECT id FROM questions WHERE question=?", (stem,)).fetchone()
                 qid = row["id"] if row else None
-                if qid is not None and q.get("is_real"):
+                if qid is not None and q.get("is_real") and not _MOCK_SRC_RE.search(q.get("source") or ""):
                     # 既有题命中真题源：升级 is_real 并补来源维度（与 import_questions 同口径）
                     conn.execute(
                         "UPDATE questions SET is_real=1, exam_year=COALESCE(exam_year,?), exam_region=COALESCE(exam_region,?), source=COALESCE(NULLIF(source,'original'),?), correct_ratio=COALESCE(correct_ratio,?), image=COALESCE(image,?), updated_at=? WHERE id=?",
