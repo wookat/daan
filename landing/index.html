@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>错题邦 · 考公错题助手</title>
+<meta name="description" content="错题邦：考公考编错题助手。拍题 AI 讲解（花生十三方法体系）、63,992 题智能题库、69 套国考省考整卷真题、错题本间隔复习、全真模考排位、申论批改。">
+<style>
+:root{
+  --brand:#2e5bff;--brand-press:#1e44d9;--brand-text:#1e44d9;
+  --brand-soft:#eef3ff;--brand-soft-2:#dbe6ff;
+  --brand-grad:linear-gradient(135deg,#5c82ff,#2e5bff);
+  --ink:#17181c;--ink-2:#40434e;--ink-3:#6b7280;--ink-4:#b0b4c0;
+  --line:#e7e9f0;--fill:#f2f3f7;--bg:#f6f7fb;--card:#fff;
+  --r-lg:20px;--r-md:14px;--r-sm:10px;
+  --shadow:0 8px 30px rgba(23,24,28,.07);
+  --font:Inter,-apple-system,BlinkMacSystemFont,'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+section{padding:84px 0}
+
+/* ---- nav ---- */
+nav{position:sticky;top:0;z-index:50;background:rgba(246,247,251,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav-in{display:flex;align-items:center;gap:10px;height:60px}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--brand-grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:15px}
+.brand-name{font-weight:700;font-size:17px;letter-spacing:.5px}
+.nav-links{margin-left:auto;display:flex;gap:26px;font-size:13.5px;color:var(--ink-3)}
+.nav-links a:hover{color:var(--brand)}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:12px;font-weight:600;font-size:14px;padding:12px 22px;cursor:pointer;border:1px solid transparent;transition:.15s}
+.btn-brand{background:var(--brand);color:#fff;box-shadow:0 4px 14px rgba(46,91,255,.32)}
+.btn-brand:hover{background:var(--brand-press)}
+.btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+.btn-ghost:hover{border-color:var(--brand-300,#8aa9ff);color:var(--brand)}
+.btn-sm{padding:8px 16px;font-size:13px;border-radius:10px}
+
+/* ---- hero ---- */
+.hero{padding:76px 0 90px}
+.hero-in{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--brand-soft);color:var(--brand-text);border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600}
+.eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--brand);display:inline-block}
+h1{font-size:clamp(34px,4.6vw,52px);line-height:1.18;font-weight:800;margin:20px 0 16px;letter-spacing:-.5px}
+h1 em{font-style:normal;color:var(--brand)}
+.lede{font-size:16.5px;color:var(--ink-3);line-height:1.8;max-width:30em}
+.hero-cta{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+.hero-stats{display:flex;gap:34px;margin-top:40px;flex-wrap:wrap}
+.hstat b{font-size:26px;font-weight:800;color:var(--ink)}
+.hstat b span{color:var(--brand)}
+.hstat small{display:block;color:var(--ink-3);font-size:12.5px;margin-top:3px}
+
+/* phone mockup */
+.hero-visual{display:flex;justify-content:center}
+.phone{width:300px;border-radius:38px;background:#17181c;padding:11px;box-shadow:0 30px 70px rgba(23,24,28,.28),0 4px 14px rgba(46,91,255,.14)}
+.phone img{width:100%;border-radius:28px;display:block;background:#fff}
+.phone-cap{text-align:center;color:var(--ink-4);font-size:11.5px;margin-top:14px;letter-spacing:2px}
+
+/* ---- numbers band ---- */
+.band{background:var(--brand-grad);border-radius:var(--r-lg);padding:38px 44px;display:flex;justify-content:space-between;gap:28px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.band div{color:#fff}
+.band b{font-size:30px;font-weight:800;display:block}
+.band small{opacity:.78;font-size:12.5px}
+
+/* ---- section head ---- */
+.shead{max-width:640px;margin-bottom:44px}
+.shead .tag{color:var(--brand-text);font-size:12.5px;font-weight:700;letter-spacing:2px}
+.shead h2{font-size:30px;font-weight:800;margin:10px 0 12px;letter-spacing:-.3px}
+.shead p{color:var(--ink-3);font-size:15px;line-height:1.8}
+
+/* ---- features ---- */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px 24px;transition:.18s}
+.feat:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--brand-soft-2)}
+.feat .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;font-size:20px;margin-bottom:16px}
+.feat h3{font-size:16.5px;font-weight:700;margin-bottom:8px}
+.feat p{font-size:13.5px;color:var(--ink-3);line-height:1.75}
+.feat .k{display:inline-block;margin-top:12px;font-size:12px;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:3px 10px;font-weight:600}
+
+/* ---- screens strip ---- */
+.screens{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.strip{display:flex;gap:22px;overflow-x:auto;padding:8px 4px 20px;scrollbar-width:thin}
+.strip::-webkit-scrollbar{height:6px}
+.strip::-webkit-scrollbar-thumb{background:var(--ink-4);border-radius:3px}
+.shot{flex:0 0 232px}
+.shot .frame{border-radius:26px;background:#17181c;padding:7px;box-shadow:0 12px 30px rgba(23,24,28,.14)}
+.shot img{width:100%;border-radius:20px;display:block}
+.shot p{text-align:center;font-size:12.5px;color:var(--ink-3);margin-top:12px}
+
+/* ---- method ---- */
+.method-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
+.method-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:30px}
+.mrow{display:flex;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line)}
+.mrow:last-child{border-bottom:0}
+.mrow .dot{flex:0 0 34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:14px}
+.mrow b{font-size:14.5px}
+.mrow p{font-size:13px;color:var(--ink-3);margin-top:3px;line-height:1.7}
+
+/* ---- platforms ---- */
+.plat{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px;text-align:center}
+.pcard .pi{font-size:26px;margin-bottom:12px}
+.pcard b{display:block;font-size:15.5px;margin-bottom:6px}
+.pcard p{font-size:13px;color:var(--ink-3);line-height:1.7}
+.pcard .btn{margin-top:18px}
+
+/* ---- cta ---- */
+.cta{background:var(--brand-grad);border-radius:var(--r-lg);text-align:center;padding:64px 32px;color:#fff;box-shadow:var(--shadow)}
+.cta h2{font-size:30px;font-weight:800;margin-bottom:14px}
+.cta p{opacity:.82;font-size:15px;margin-bottom:30px}
+.cta .btn-brand{background:#fff;color:var(--brand-text);box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.cta .btn-brand:hover{background:#f0f4ff}
+.cta .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.5)}
+.cta .btn-ghost:hover{border-color:#fff}
+
+/* ---- footer ---- */
+footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-size:12.5px}
+.foot-in{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+
+@media(max-width:920px){
+  .hero-in,.method-in{grid-template-columns:1fr}
+  .hero-visual{order:-1}
+  .feat-grid,.plat{grid-template-columns:1fr 1fr}
+  .nav-links{display:none}
+}
+@media(max-width:640px){
+  section{padding:60px 0}
+  .feat-grid,.plat{grid-template-columns:1fr}
+  .band{padding:30px 26px}
+  .band b{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="logo">错</div>
+    <div class="brand-name">错题邦</div>
+    <div class="nav-links">
+      <a href="#features">功能</a>
+      <a href="#screens">界面</a>
+      <a href="#method">方法体系</a>
+      <a href="#get">开始使用</a>
+    </div>
+    <a class="btn btn-brand btn-sm" href="https://kaogong.zalize.com/" style="margin-left:18px">打开 H5</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="wrap hero-in">
+    <div>
+      <span class="eyebrow"><i></i>考公考编 · 花生十三方法体系</span>
+      <h1>把每一道错题<br>讲成<em>下次不再错</em></h1>
+      <p class="lede">错题邦是面向国考、省考、事业单位的行测+申论备考助手：拍题即得花生十三速解讲解，错题自动归集按间隔复习召回，69 套整卷真题 + 全真模考排位，让练习的每一题都算数。</p>
+      <div class="hero-cta">
+        <a class="btn btn-brand" href="https://kaogong.zalize.com/">立即体验 H5 →</a>
+        <a class="btn btn-ghost" href="#get">微信小程序</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><b>63,992<span>+</span></b><small>智能题库</small></div>
+        <div class="hstat"><b>23,205</b><small>历年真题</small></div>
+        <div class="hstat"><b>69<span> 套</span></b><small>整卷可考</small></div>
+        <div class="hstat"><b>5<span> 大</span></b><small>行测模块</small></div>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <div>
+        <div class="phone"><img src="assets/home.png" alt="错题邦刷题首页"></div>
+        <div class="phone-cap">CUOTIBANG · 刷题首页</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="band">
+      <div><b>2012–2026</b><small>国考省考整卷覆盖</small></div>
+      <div><b>六段式</b><small>AI 讲解结构</small></div>
+      <div><b>SM-2</b><small>间隔复习调度</small></div>
+      <div><b>全站先验</b><small>每题正确率校准</small></div>
+      <div><b>双端同步</b><small>小程序 + H5</small></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="shead">
+      <div class="tag">FEATURES</div>
+      <h2>练、错、讲、考，一个闭环</h2>
+      <p>不是再做一个题库 App——是把「做题→错因→讲解→复习→模考」串成一条学习回路。</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat"><div class="ic">📷</div><h3>拍题 AI 讲解</h3><p>拍题或粘贴文字，AI 按花生十三方法体系给出六段式讲解：判对答案、速解方法、步骤拆解、易错陷阱、可迁移技巧、同类题入口。</p><span class="k">支持追问 · 举一反三</span></div>
+      <div class="feat"><div class="ic">📄</div><h3>真题卷库</h3><p>69 套整套试卷：国考 2012–2026 全链 + 多省省考、选调真题，每套 48–135 题按原卷结构还原，可整卷模考也可续考。</p><span class="k">含正确率先验</span></div>
+      <div class="feat"><div class="ic">📕</div><h3>错题本 · 间隔复习</h3><p>错题自动归集，SM-2 算法按遗忘曲线推送到期待复习；易错专项卷、掌握状态机（含「长期易错」终态）、错因 TOP 聚合。</p><span class="k">越练越懂你</span></div>
+      <div class="feat"><div class="ic">🏆</div><h3>全真模考 · 排位</h3><p>省份卷型模板（国考副省/地市、江苏 ABC 等 7 套）+ 薄弱加权智能组卷；计时判分 + 全站排位百分位 + 答对/答错均速。</p><span class="k">考出真实水平</span></div>
+      <div class="feat"><div class="ic">✍️</div><h3>申论批改 · 素材库</h3><p>申论作答 AI 批改打分点评；素材库按热点聚合「内涵/角度/金句」三段式，支持我的笔记与逐条收藏。</p><span class="k">范文 + 素材双链路</span></div>
+      <div class="feat"><div class="ic">🤖</div><h3>AI 问泽 · 面试陪练</h3><p>逐题「问泽」追问、AI 面试陪练抽真题 + 考官打分点评、语音输入作答，番茄钟、打卡热力图、周报陪伴整个备考周期。</p><span class="k">碎片时间全利用</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="screens" id="screens">
+  <div class="wrap">
+    <div class="shead">
+      <div class="tag">SCREENS</div>
+      <h2>真实界面，真实数据</h2>
+      <p>以下均为当前版本实拍——你看到的就是实际长相。</p>
+    </div>
+    <div class="strip">
+      <div class="shot"><div class="frame"><img src="assets/practice.png" alt="作答判分"></div><p>作答判分 · 击败百分位</p></div>
+      <div class="shot"><div class="frame"><img src="assets/exam.png" alt="真题卷库"></div><p>真题卷库 · 组卷开考</p></div>
+      <div class="shot"><div class="frame"><img src="assets/ask.png" alt="AI 问答"></div><p>AI 问答 · 拍题讲解</p></div>
+      <div class="shot"><div class="frame"><img src="assets/book.png" alt="错题本"></div><p>错题本 · 待复习队列</p></div>
+      <div class="shot"><div class="frame"><img src="assets/shenlun.png" alt="申论"></div><p>申论素材 · 热点三段式</p></div>
+      <div class="shot"><div class="frame"><img src="assets/stats.png" alt="学习统计"></div><p>学习统计 · 难度画像</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap method-in">
+    <div class="shead" style="margin-bottom:0">
+      <div class="tag">METHODOLOGY</div>
+      <h2>花生十三方法体系</h2>
+      <p style="margin-bottom:0">不是泛泛的「AI 讲题」——讲解严格落在速解方法上：每题给出适用于该题型的方法名称（赋值法、特殊值法、排除法、整除特性……）、操作步骤、以及可迁移到同类题的技巧，让一题的讲解变成一类题的能力。</p>
+    </div>
+    <div class="method-card">
+      <div class="mrow"><div class="dot">1</div><div><b>判答案</b><p>先判对错给出正解，不绕弯。</p></div></div>
+      <div class="mrow"><div class="dot">2</div><div><b>点方法</b><p>点名花生十三速解方法（如工程问题→赋特殊值法）。</p></div></div>
+      <div class="mrow"><div class="dot">3</div><div><b>拆步骤</b><p>把方法落成可复现的步骤序列。</p></div></div>
+      <div class="mrow"><div class="dot">4</div><div><b>防陷阱</b><p>指出本题的易错点与干扰项设计。</p></div></div>
+      <div class="mrow"><div class="dot">5</div><div><b>给迁移</b><p>同类题的识别信号与通法。</p></div></div>
+      <div class="mrow"><div class="dot">6</div><div><b>练同类</b><p>一键进入同类题巩固。</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="get" style="padding-top:0">
+  <div class="wrap">
+    <div class="shead">
+      <div class="tag">PLATFORMS</div>
+      <h2>在哪都能练</h2>
+    </div>
+    <div class="plat">
+      <div class="pcard"><div class="pi">💬</div><b>微信小程序</b><p>微信搜索「错题邦」<br>碎片时间掏出手机就刷</p></div>
+      <div class="pcard"><div class="pi">🌐</div><b>H5 网页版</b><p>浏览器直接打开<br>kaogong.zalize.com，与小程序数据互通</p><a class="btn btn-ghost btn-sm" href="https://kaogong.zalize.com/">打开 →</a></div>
+      <div class="pcard"><div class="pi">🌙</div><b>深色模式 · 皮肤</b><p>跟随系统或手动切换<br>晚间刷题不伤眼，皮肤随心情换</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="cta">
+      <h2>今天练的题，明天还记得</h2>
+      <p>打开错题邦，把第一道错题交给它。</p>
+      <a class="btn btn-brand" href="https://kaogong.zalize.com/" style="margin-right:14px">立即体验 →</a>
+      <a class="btn btn-ghost" href="#top">微信搜「错题邦」</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div>错题邦（原上岸错题）· 上岸 Zalize 体系</div>
+    <div>题库数据含公开真题整理 · 部分解析由 AI 生成</div>
+  </div>
+</footer>
+
+</body>
+</html>
