@@ -1,10 +1,10 @@
-# 错题邦落地页 · 设计锚（DESIGN.md）
+# 岸上见落地页 · 设计锚（DESIGN.md）
 
 唯一视觉基准：与小程序/H5 共用 `tools/design-tokens/tokens.json` 的色板、字族、圆角。
 落地页不是营销站皮肤，是**小程序扁平 VIS 的放大版**——用户在页面看到的观感应等同于把 App 截图放大。
 
 ## 气质与方向
-- **方向**：严格扁平（flat, utilitarian）。DNA 供体：IBM Carbon（无投影、靠底色分层、单一品牌蓝）+ Vercel（hairline 描边哲学）。主源为错题邦自身 tokens。
+- **方向**：严格扁平（flat, utilitarian）。DNA 供体：IBM Carbon（无投影、靠底色分层、单一品牌蓝）+ Vercel（hairline 描边哲学）。主源为岸上见自身 tokens。
 - **一句话**：白卡 + 1px 描边 + 实色按钮 + 零渐变零投影。
 
 ## 硬规则（Do / Don't）
