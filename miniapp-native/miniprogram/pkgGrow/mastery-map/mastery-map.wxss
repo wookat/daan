@@ -61,29 +61,29 @@
   border-radius: var(--r-xs);
 }
 
-/* 掌握度 4 级色阶：语义 soft/strong 对；无接触=中性 */
+/* 掌握度 5 级色轨：lv-* 专属语义 token（未接触灰→入门琥珀→巩固蓝→熟练紫→精通绿） */
 .untouched {
-  background: var(--fill);
+  background: var(--lv-untouched-soft);
   color: var(--ink-3);
 }
 
 .rumen {
-  background: var(--bad-soft);
-  color: var(--bad-strong);
+  background: var(--lv-rumen-soft);
+  color: var(--lv-rumen);
 }
 
 .gonggu {
-  background: var(--warn-soft);
-  color: var(--warn-strong);
+  background: var(--lv-gonggu-soft);
+  color: var(--lv-gonggu);
 }
 
 .shulian {
-  background: var(--ok-soft);
-  color: var(--ok-strong);
+  background: var(--lv-shulian-soft);
+  color: var(--lv-shulian);
 }
 
 .jingtong {
-  background: var(--ok-strong);
+  background: var(--lv-jingtong);
   color: var(--on-brand);
 }
 
@@ -236,6 +236,11 @@
 .row-pct.untouched {
   color: var(--ink-3);
 }
+
+.row-pct.rumen { color: var(--lv-rumen); }
+.row-pct.gonggu { color: var(--lv-gonggu); }
+.row-pct.shulian { color: var(--lv-shulian); }
+.row-pct.jingtong { color: var(--lv-jingtong); }
 
 /* 吸底操作条 */
 .sheet-l {

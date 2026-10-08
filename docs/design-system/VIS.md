@@ -58,16 +58,32 @@
 | 模块 | 色 | soft | 深色 soft | 图标 |
 |---|---|---|---|---|
 | 资料分析 | `#0d9488` | `#e6f5f3` | `#0e332f` | chart-pie |
-| 数量关系 | `#2e5bff` | `#e8effe` | `#1c2742` | calculator |
+| 数量关系 | `#0891b2` | `#ecfeff` | `#0e2f38` | calculator |
 | 言语理解 | `#e11d48` | `#fce8ec` | `#3b1520` | message-square |
 | 判断推理 | `#7c3aed` | `#f1eafd` | `#291f45` | puzzle |
 | 常识判断 | `#d97706` | `#fbf1e0` | `#3a2b0e` | lightbulb |
 
-生成 `module-meta.js/.ts`，四端（home/practice/discuss/favorites）共用，禁写死色值。
+生成 `module-meta.js/.ts`，四端（home/practice/discuss/favorites）共用，禁写死色值。数量用青蓝 `#0891b2` 不用品牌蓝——品牌色在全产品内唯一专属，不做模块色。
+
+### 2.4.1 掌握度色轨（lv-*，与 backend `MASTERY_LEVELS` 键同名）
+
+错题/考点掌握状态专用色轨，五阶单向递进，复用成熟教育产品（Khan）的灰→蓝→紫→绿语义：
+
+| level 键 | 名称 | 色 | soft 底 | 语义 |
+|---|---|---|---|---|
+| `untouched` | 未接触 | `ink.300` 灰 | `ink.100` | 还没练 |
+| `rumen` | 入门 <55% | `amber.600` | `amber.50` | 要补（暖色警示，不用红——红只表答错） |
+| `gonggu` | 巩固 <70% | `brand.500` | `brand.50` | 在练 |
+| `shulian` | 熟练 <85% | `violet.600` | `violet.50` | 临近掌握 |
+| `jingtong` | 精通 ≥85% | `green.600` | 实底+白字 | 已掌握（色轨顶点用实色奖励） |
+
+使用点：掌握地图（mastery-map）网格格/列表百分比/图例 chips。深色映射全部走 `lv-*-soft`/`lv-*` token，不手写。
 
 ### 2.5 皮肤槽（用户可换，accent.json 三选）
 
 `default` 品牌蓝 / `forest` 森林绿 `#16a34a` / `sunset` 暖橙 `#ea580c`，每套覆盖 brand/press/grad/text/soft/soft2 及深色映射。存 `kg_theme_accent` → `theme_pref` 多端同步。
+
+**深色补齐**：`--brand-press` 深色映射为 `brand.400`（`#5c82ff`，深色下按压应更亮而非更深）；`--brand-grad` 深色为 `brand.300→400` 渐变。
 
 ### 2.6 深色模式
 

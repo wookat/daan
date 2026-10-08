@@ -35,6 +35,16 @@ page {
   --card-fade-2: rgba(255,255,255,.25);
   --hl-bg: #fef08a;
   --hl-ink: inherit;
+  --lv-untouched: #b0b4c0;
+  --lv-rumen: #d97706;
+  --lv-gonggu: #2e5bff;
+  --lv-shulian: #7c3aed;
+  --lv-jingtong: #16a34a;
+  --lv-untouched-soft: #f2f3f7;
+  --lv-rumen-soft: #fffbeb;
+  --lv-gonggu-soft: #eef3ff;
+  --lv-shulian-soft: #f1eafd;
+  --lv-jingtong-soft: #ecfdf5;
   --sh-1: 0 2px 8px rgba(23,24,28,.06);
   --sh-2: 0 8px 24px rgba(23,24,28,.12);
   --sh-3: 0 12px 32px rgba(23,24,28,.18);
@@ -112,8 +122,8 @@ page {
   /* module */
   --mod-ziliao: #0d9488;
   --mod-ziliao-soft: #e6f5f3;
-  --mod-shuliang: #2e5bff;
-  --mod-shuliang-soft: #e8effe;
+  --mod-shuliang: #0891b2;
+  --mod-shuliang-soft: #ecfeff;
   --mod-yanyu: #e11d48;
   --mod-yanyu-soft: #fce8ec;
   --mod-panduan: #7c3aed;
@@ -159,6 +169,16 @@ page {
   --card-fade-2: rgba(255,255,255,.25);
   --hl-bg: #fef08a;
   --hl-ink: inherit;
+  --lv-untouched: #b0b4c0;
+  --lv-rumen: #d97706;
+  --lv-gonggu: #2e5bff;
+  --lv-shulian: #7c3aed;
+  --lv-jingtong: #16a34a;
+  --lv-untouched-soft: #f2f3f7;
+  --lv-rumen-soft: #fffbeb;
+  --lv-gonggu-soft: #eef3ff;
+  --lv-shulian-soft: #f1eafd;
+  --lv-jingtong-soft: #ecfdf5;
   --sh-1: 0 2px 8px rgba(23,24,28,.06);
   --sh-2: 0 8px 24px rgba(23,24,28,.12);
   --sh-3: 0 12px 32px rgba(23,24,28,.18);
@@ -236,8 +256,8 @@ page {
   /* module */
   --mod-ziliao: #0d9488;
   --mod-ziliao-soft: #e6f5f3;
-  --mod-shuliang: #2e5bff;
-  --mod-shuliang-soft: #e8effe;
+  --mod-shuliang: #0891b2;
+  --mod-shuliang-soft: #ecfeff;
   --mod-yanyu: #e11d48;
   --mod-yanyu-soft: #fce8ec;
   --mod-panduan: #7c3aed;
@@ -246,9 +266,11 @@ page {
   --mod-changshi-soft: #fbf1e0;
 }
 .theme-dark uni-page-body, html.theme-dark {
+  --brand-press: #5c82ff;
   --brand-text: #8fa8ff;
   --brand-soft: #1e2a4a;
   --brand-soft-2: #24345c;
+  --brand-grad: linear-gradient(135deg, #8aa9ff, #5c82ff);
   --ok-strong: #4ade80;
   --ok-soft: #0e2b1e;
   --bad-strong: #f87171;
@@ -271,13 +293,23 @@ page {
   --card-fade-2: rgba(29,31,40,.25);
   --hl-bg: rgba(250,204,21,.22);
   --hl-ink: #fde047;
+  --lv-untouched: #5c6070;
+  --lv-rumen: #fbbf24;
+  --lv-gonggu: #8aa9ff;
+  --lv-shulian: #a78bfa;
+  --lv-jingtong: #4ade80;
+  --lv-untouched-soft: #23252f;
+  --lv-rumen-soft: #33260e;
+  --lv-gonggu-soft: #1e2a4a;
+  --lv-shulian-soft: #291f45;
+  --lv-jingtong-soft: #0e2b1e;
   --sh-1: none;
   --sh-2: none;
   --sh-3: none;
   --prog-track: #2b2e3a;
   --streak-soft: #3a2418;
   --mod-ziliao-soft: #0e332f;
-  --mod-shuliang-soft: #1c2742;
+  --mod-shuliang-soft: #0e2f38;
   --mod-yanyu-soft: #3b1520;
   --mod-panduan-soft: #291f45;
   --mod-changshi-soft: #3a2b0e;

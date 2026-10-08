@@ -268,12 +268,12 @@ export default {
 .legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
 .lg { font-size: var(--fs-caption); line-height: var(--lh-caption); padding: 0 var(--sp-8); border-radius: var(--r-xs); }
 
-/* 掌握度 4 级色阶：语义 soft/strong 对（深色模式随 token 反转）；无接触=中性 */
-.untouched { background: var(--fill); color: var(--ink-3); }
-.rumen { background: var(--bad-soft); color: var(--bad-strong); }
-.gonggu { background: var(--warn-soft); color: var(--warn-strong); }
-.shulian { background: var(--ok-soft); color: var(--ok-strong); }
-.jingtong { background: var(--ok-strong); color: var(--on-brand); }
+/* 掌握度 5 级色轨：lv-* 专属语义 token（未接触灰→入门琥珀→巩固蓝→熟练紫→精通绿，Khan 式进阶） */
+.untouched { background: var(--lv-untouched-soft); color: var(--ink-3); }
+.rumen { background: var(--lv-rumen-soft); color: var(--lv-rumen); }
+.gonggu { background: var(--lv-gonggu-soft); color: var(--lv-gonggu); }
+.shulian { background: var(--lv-shulian-soft); color: var(--lv-shulian); }
+.jingtong { background: var(--lv-jingtong); color: var(--on-brand); }
 
 .side-nav { display: none; }
 .tabs { margin-bottom: var(--sp-12); }
@@ -301,6 +301,10 @@ export default {
 .row-name { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-pct { flex-shrink: 0; width: 44px; text-align: right; font-size: var(--fs-sub); font-weight: 600; background: none; }
 .row-pct.untouched { color: var(--ink-3); }
+.row-pct.rumen { color: var(--lv-rumen); }
+.row-pct.gonggu { color: var(--lv-gonggu); }
+.row-pct.shulian { color: var(--lv-shulian); }
+.row-pct.jingtong { color: var(--lv-jingtong); }
 
 .sheet-l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sheet-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
