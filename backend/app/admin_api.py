@@ -178,6 +178,12 @@ def api_admin_dashboard(response: Response, x_admin_token: str | None = Header(N
     return data
 
 
+@router.get("/api/admin/real_users")
+def api_admin_real_users(days: int = 60, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return db.real_user_report(max(1, min(days, 365)))
+
+
 @router.get("/api/admin/ops_status")
 def api_admin_ops_status(x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
