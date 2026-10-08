@@ -153,15 +153,7 @@
         <!-- 近 7 日 -->
         <kg-card v-if="trendHas" class="sec">
           <kg-section-header title="近 7 日正确率" />
-          <view class="trend7">
-            <view v-for="t in trend" :key="t.key" class="tcol">
-              <text class="tpct num">{{ t.done ? t.pct + '%' : '' }}</text>
-              <view class="tbar">
-                <view class="tfill" :class="{ 'is-lo': t.done && t.pct < 60 }" :style="{ height: (t.done ? Math.max(t.pct, 6) : 0) + '%' }" />
-              </view>
-              <text class="tday">{{ t.label }}</text>
-            </view>
-          </view>
+          <kg-echart :option="trend7Option" :height="170" />
         </kg-card>
 
         <!-- 成长轨迹 -->
@@ -209,23 +201,7 @@
         <!-- 模考趋势 -->
         <kg-card v-if="examTrendD" class="sec">
           <kg-section-header :title="'模考成绩趋势（近 ' + examTrendD.points.length + ' 次）'" />
-          <view class="trend et-wrap">
-            <view v-if="examTrendD.targetPct != null" class="et-target" :style="{ bottom: examTrendD.targetPct + '%' }">
-              <text class="et-target-t">目标 {{ examTrendD.target }} 分</text>
-            </view>
-            <view
-              v-for="p in examTrendD.points"
-              :key="p.id"
-              class="trend-col"
-              role="button"
-              :aria-label="'查看这次模考报告，得分 ' + p.score + ' 分'"
-              :tabindex="0"
-              @click="goExamReport(p.id)"
-              @keydown.enter="goExamReport(p.id)"
-            >
-              <view class="trend-bar" :class="{ 'is-bad': p.score < examTrendD.scaleMax * 0.6, 'is-warn': p.score >= examTrendD.scaleMax * 0.6 && p.score < examTrendD.scaleMax * 0.8 }" :style="{ height: Math.max((p.score / examTrendD.scaleMax) * 100, 4) + '%' }" />
-            </view>
-          </view>
+          <kg-echart :option="examOption" :height="200" @select="onExamBar" />
           <view class="trend-x">
             <text>旧</text>
             <text>最好 {{ examTrendD.best }} 分 · 最近 {{ examTrendD.latest }} 分</text>
@@ -237,11 +213,7 @@
         <!-- 正确率趋势 -->
         <kg-card v-if="history.length >= 3" class="sec">
           <kg-section-header :title="'正确率趋势（近 ' + trendData.length + ' 次）'" />
-          <view class="trend">
-            <view v-for="(p, i) in trendData" :key="i" class="trend-col">
-              <view class="trend-bar" :class="{ 'is-bad': p < 60, 'is-warn': p >= 60 && p < 80 }" :style="{ height: Math.max(p, 4) + '%' }" />
-            </view>
-          </view>
+          <kg-echart :option="accOption" :height="170" />
           <view class="trend-x">
             <text>旧</text>
             <text>近 {{ trendData.length }} 次平均 {{ trendAvg }}%</text>
@@ -252,11 +224,7 @@
         <!-- 速度趋势 -->
         <kg-card v-if="speedData.length >= 3" class="sec">
           <kg-section-header title="做题速度趋势（平均每题用时）" />
-          <view class="trend">
-            <view v-for="(s, i) in speedData" :key="i" class="trend-col">
-              <view class="trend-bar" :class="{ 'is-bad': s > 90, 'is-warn': s > 60 && s <= 90 }" :style="{ height: Math.min(Math.max((s / 120) * 100, 6), 100) + '%' }" />
-            </view>
-          </view>
+          <kg-echart :option="speedOption" :height="170" />
           <view class="trend-x">
             <text>旧</text>
             <text>近 {{ speedData.length }} 次平均 {{ speedAvg }}s/题（越短越好）</text>
@@ -362,6 +330,45 @@ import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEven
 import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
 import { examTrend } from '../../exam-trend.js';
 import { snapshotViewMixin } from '../../snapshot-view.js';
+import { visColors } from '../../components/kg-echart/kg-echart.vue';
+
+// 统一柱状图底座：隐藏轴、柱距自适应、点按有反馈
+function barOption(c, data, { yMax = 100, labels = null, markY = null, markLabel = '' } = {}) {
+  return {
+    animationDuration: 400,
+    grid: { left: 4, right: 4, top: markY != null ? 20 : 8, bottom: labels ? 2 : 4, containLabel: !!labels },
+    xAxis: {
+      type: 'category',
+      data: labels || data.map((d, i) => i + 1),
+      axisLine: { show: false },
+      axisTick: { show: false },
+      axisLabel: labels ? { color: c.ink3, fontSize: 11 } : { show: false },
+    },
+    yAxis: { type: 'value', max: yMax, show: false },
+    series: [{
+      type: 'bar',
+      data,
+      barCategoryGap: '35%',
+      itemStyle: { borderRadius: [4, 4, 0, 0] },
+      emphasis: { itemStyle: { opacity: 0.75 } },
+      ...(markY != null
+        ? {
+            markLine: {
+              symbol: 'none',
+              silent: true,
+              lineStyle: { color: c.warn, type: 'dashed', width: 1 },
+              label: { position: 'insideEndTop', color: c.warn, fontSize: 11, formatter: markLabel },
+              data: [{ yAxis: markY }],
+            },
+          }
+        : {}),
+    }],
+  };
+}
+
+function pctColor(c, pct) {
+  return pct < 60 ? c.bad : pct < 80 ? c.warn : c.brand;
+}
 
 const MODS = [
   { key: 'ziliao', name: '资料' },
@@ -596,6 +603,49 @@ export default {
     trendHas() {
       return this.trend.some((t) => t.done > 0);
     },
+    trend7Option() {
+      const c = visColors();
+      return barOption(
+        c,
+        this.trend.map((t) => ({
+          value: t.done ? Math.max(t.pct, 6) : 0,
+          itemStyle: { color: !t.done ? c.fill : t.pct < 60 ? c.warn : c.brand },
+        })),
+        { labels: this.trend.map((t) => t.label) }
+      );
+    },
+    examOption() {
+      const c = visColors();
+      const d = this.examTrendD;
+      if (!d) return {};
+      const max = d.scaleMax || 100;
+      return barOption(
+        c,
+        d.points.map((p) => ({
+          value: p.score,
+          itemStyle: { color: p.score < max * 0.6 ? c.bad : p.score < max * 0.8 ? c.warn : c.brand },
+        })),
+        { yMax: max, markY: d.target != null ? d.target : null, markLabel: '目标 ' + d.target + ' 分' }
+      );
+    },
+    accOption() {
+      const c = visColors();
+      return barOption(
+        c,
+        this.trendData.map((p) => ({ value: p, itemStyle: { color: pctColor(c, p) } }))
+      );
+    },
+    speedOption() {
+      const c = visColors();
+      return barOption(
+        c,
+        this.speedData.map((s) => ({
+          value: s,
+          itemStyle: { color: s > 90 ? c.bad : s > 60 ? c.warn : c.brand },
+        })),
+        { yMax: 120 }
+      );
+    },
     reasonTotal() {
       return this.byReason.reduce((s, r) => s + r.n, 0) || 1;
     },
@@ -726,6 +776,10 @@ export default {
     },
     goExamReport(id) {
       uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + id });
+    },
+    onExamBar(p) {
+      const pt = this.examTrendD && this.examTrendD.points[p.dataIndex];
+      if (pt) this.goExamReport(pt.id);
     },
     async loadHeatmap() {
       try {

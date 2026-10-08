@@ -68,7 +68,9 @@
     "qrcode-generator": "^2.0.4",
     "vue": "^3.4.21",
     "vue-i18n": "^9.1.9",
-    "wot-design-uni": "1.14.0"
+    "wot-design-uni": "1.14.0",
+    "echarts": "^5.6.0",
+    "zrender": "^5.6.1"
   },
   "devDependencies": {
     "@capacitor/android": "8.4.2",
