@@ -13,9 +13,9 @@
 
 ## 1. 标志系统
 
-**图形标「对勾旗上岸」**：岸上插旗、旗杆即「对勾」——答对 → 上岸，一笔双关。扁平单色（品牌蓝底白形 / 单色白底 / 透明蓝标）。当前以 AI 生图 PNG 为母版：`brand/mark-blue.png`、`mark-white.png`、`lockup-src.png`（SVG 为嵌 PNG 过渡壳，待矢量化）。
+**图形标「对勾旗上岸」**：岸上插旗、旗杆即「对勾」——答对 → 上岸，一笔双关。扁平单色（品牌蓝 / 全白）。矢量母版：`brand/mark.svg`（vtracer 自 AI 生图 PNG 矢量化，2 path）；变体 `mark-white.svg` / `lockup.svg`（竖排标+字）/ `lockup-mono.svg`（全白）/ `lockup-h.svg`+`lockup-h-white.svg`（横排，footer/og 用）；`logo.svg`=`glyph.svg`=mark。PNG 母版（`mark-blue.png` 等）仅作导出栅格物料的源。
 
-**字标**：「答岸」三字，字重 700；英文标 `DAAN` 全大写、+0.08em 字距、12px 级。
+**字标**：「答岸」两字，字重 700；英文标 `DAAN` 全大写、+0.08em 字距、12px 级。
 
 **吉祥物「岸仔」**：白色圆角小人 + 品牌蓝学士帽，仅用于营销/空状态/分享物料，不进界面组件层。文件：`brand/mascot-*.png`。
 
