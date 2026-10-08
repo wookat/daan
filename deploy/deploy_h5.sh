@@ -219,6 +219,15 @@ PAGES_DIR=$(mktemp -d)
 mkdir -p "$PAGES_DIR/dist/app" "$PAGES_DIR/functions"
 cp -r "$REPO_DIR/landing/." "$PAGES_DIR/dist/"
 cp -r "$DIST/." "$PAGES_DIR/dist/app/"
+# assets 增量叠加：跨部署保留旧 hash 文件。Pages 部署非原子——index.html 已切而
+# 新 chunk 未传播时，对旧 hash 的请求命中 Pages HTML 回退，且被 _headers 里
+# /app/assets/* 的 immutable(1y) 规则在边缘/浏览器缓存成 text/html（2026-10-08 踩坑：
+# Origin 变体下整站模块加载全灭）。保留旧资产即可让任何时点的 index 都能解析。
+ASSETS_KEEP="$REPO_DIR/deploy/.pages-assets-keep"
+mkdir -p "$ASSETS_KEEP"
+cp -rn "$ASSETS_KEEP/." "$PAGES_DIR/dist/app/assets/" 2>/dev/null || true
+cp -rn "$PAGES_DIR/dist/app/assets/." "$ASSETS_KEEP/" 2>/dev/null || true
+find "$ASSETS_KEEP" -type f -mtime +90 -delete 2>/dev/null || true
 cp -r "$REPO_DIR/deploy/cf-pages/functions/." "$PAGES_DIR/functions/"
 cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
 (cd "$PAGES_DIR" && npx -y wrangler@3 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true)
