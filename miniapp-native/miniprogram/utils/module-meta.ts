@@ -32,9 +32,9 @@ export const MODULES: Record<string, ModuleMeta> = {
     "icon": "calculator",
     "color": "var(--mod-shuliang)",
     "soft": "var(--mod-shuliang-soft)",
-    "hex": "#2e5bff",
-    "softHex": "#e8effe",
-    "softHexDark": "#1c2742"
+    "hex": "#0891b2",
+    "softHex": "#ecfeff",
+    "softHexDark": "#0e2f38"
   },
   "yanyu": {
     "key": "yanyu",
