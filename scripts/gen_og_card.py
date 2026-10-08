@@ -26,22 +26,28 @@ def _seg(d: ImageDraw.ImageDraw, x0: float, y0: float, x1: float, y1: float, w: 
 
 
 def draw_mark(d: ImageDraw.ImageDraw, x: float, y: float, size: float, color) -> None:
-    """答岸「海岸日出」标，PIL 直绘（96 视窗坐标等比缩放）。"""
+    """答岸「对话泡×日出岸线」标，PIL 直绘（96 视窗坐标等比缩放）。"""
     s = size / 96.0
-    w = 6 * s
+    w = max(1, round(6 * s))
 
     def P(px: float, py: float) -> tuple[float, float]:
         return (x + px * s, y + py * s)
 
-    _seg(d, *P(48, 30), *P(48, 37), w, color)          # 顶光
-    _seg(d, *P(28, 38), *P(37, 47), w, color)          # 左光
-    _seg(d, *P(59, 47), *P(68, 38), w, color)          # 右光
-    ax0, ay0 = P(33, 58 - 15)
-    ax1, ay1 = P(63, 58 + 15)
-    d.arc((ax0, ay0, ax1, ay1), start=180, end=360, fill=color, width=round(w))  # 日弧
-    _seg(d, *P(26, 66), *P(70, 66), w, color)          # 岸线
-    _seg(d, *P(32, 76), *P(48, 76), w, color)          # 水纹
-    _seg(d, *P(56, 76), *P(66, 76), w, color)
+    # 对话泡外廓：圆角矩形 + 左下指向尾
+    bx0, by0 = P(23, 27)
+    bx1, by1 = P(73, 62)
+    rad = 11 * s
+    d.rounded_rectangle((bx0, by0, bx1, by1), radius=rad, outline=color, width=w)
+    t0, t1, t2 = P(49, 62), P(38, 73), P(38, 62)
+    d.line([t0, t1, t2], fill=color, width=w, joint="curve")
+    # 泡内日出：三道光 + 日弧 + 岸线
+    _seg(d, *P(48, 32), *P(48, 36), w, color)
+    _seg(d, *P(34.5, 40.5), *P(38, 44), w, color)
+    _seg(d, *P(58, 44), *P(61.5, 40.5), w, color)
+    ax0, ay0 = P(40, 50 - 8)
+    ax1, ay1 = P(56, 50 + 8)
+    d.arc((ax0, ay0, ax1, ay1), start=180, end=360, fill=color, width=w)
+    _seg(d, *P(39, 58), *P(57, 58), w, color)
 
 
 def main() -> None:

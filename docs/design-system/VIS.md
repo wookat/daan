@@ -13,7 +13,7 @@
 
 ## 1. 标志系统
 
-**图形标「海岸日出」**：半升旭日 + 岸线水纹，扁平单色几何（品牌蓝底白形 / 单色白底两种）。寓意「上岸的一刻」。文件：`brand/daan.svg`、`brand/glyph.svg`、`brand/lockup.svg`、`brand/icon-*.png`。
+**图形标「对话泡×日出岸线」**：对话泡外廓（「答」=拍题即答）包裹半升旭日 + 岸线（「岸」=上岸），扁平单色几何（品牌蓝底白形 / 单色白底两种）。文件：`brand/logo.svg`、`brand/glyph.svg`、`brand/lockup.svg`、`brand/icon-*.png`。
 
 **字标**：「答岸」三字，字重 700；英文标 `DAAN` 全大写、+0.08em 字距、12px 级。
 
@@ -152,7 +152,7 @@
 
 ## 9. 物料规范
 
-- **favicon/app icon**：`brand/icon-*.png`（144–1024），日出标白形蓝底，无文字。
+- **favicon/app icon**：`brand/icon-*.png`（144–1024），泡形日出标白形蓝底，无文字。
 - **截图壳**：白底 + hairline + 8px padding，r.lg 比例圆角——禁黑色手机壳 mockup。
 - **OG/分享卡**：`scripts/gen_og_card.py` 生成，纯色底+白砖蓝标+标题，1200×630。
 - **PDF 导出**：页眉 logo+卷名，水印「答岸」，答案区用 ok/bad 色。
