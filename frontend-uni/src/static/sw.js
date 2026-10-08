@@ -71,7 +71,7 @@ self.addEventListener('push', (e) => {
     d = {};
   }
   e.waitUntil(
-    self.registration.showNotification(d.title || '岸上见', {
+    self.registration.showNotification(d.title || '答岸', {
       body: d.body || '',
       icon: '/app/static/logo.png',
       badge: '/app/static/logo.png',

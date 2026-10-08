@@ -141,7 +141,7 @@ Page({
     const mod = (q && (q.submodule || modName(q.module || ''))) || '行测';
     trackEvent('share_copy', 'share_q', this.data.sid);
     wx.setClipboardData({
-      data: `【${mod}】我刚在岸上见做了一道题，你能做对吗？答完就能看到大家选了啥：${SITE}/s/${this.data.sid}`,
+      data: `【${mod}】我刚在答岸做了一道题，你能做对吗？答完就能看到大家选了啥：${SITE}/s/${this.data.sid}`,
       success: () => wx.showToast({ title: '分享链接已复制', icon: 'none' }),
     });
   },

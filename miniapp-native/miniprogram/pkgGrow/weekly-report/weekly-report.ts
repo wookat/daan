@@ -69,7 +69,7 @@ function drawShare(ctx: Ctx2D, r: WeeklyReportResp): void {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText('岸上见 · 周学习报告', pad, 52);
+  ctx.fillText('答岸 · 周学习报告', pad, 52);
   ctx.fillStyle = '#fff';
   ctx.font = '800 52px sans-serif';
   ctx.fillText(r.range, pad, 100);
@@ -288,7 +288,7 @@ Page({
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
     const r = this.data.r;
     return {
-      title: r ? `我的周学习报告：${r.range} 刷题 ${r.summary ? r.summary.n : 0} 题` : '岸上见 · 周学习报告',
+      title: r ? `我的周学习报告：${r.range} 刷题 ${r.summary ? r.summary.n : 0} 题` : '答岸 · 周学习报告',
       path: '/pages/home/home',
     };
   },

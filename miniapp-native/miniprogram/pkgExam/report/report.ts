@@ -181,7 +181,7 @@ Page({
 
   onShareAppMessage() {
     const r = this.data.report;
-    if (!r || !r.paper || r.paper.kind !== 'zhenti') return { title: '岸上见 · 全真模考' };
+    if (!r || !r.paper || r.paper.kind !== 'zhenti') return { title: '答岸 · 全真模考' };
     return {
       title: `我在《${r.paper.title}》答对 ${r.correct}/${r.total} 题，敢来挑战吗？`,
       path: '/pkgExam/list/list?pid=' + r.paper.id,

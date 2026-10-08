@@ -107,7 +107,7 @@ def tiku_index():
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
     return _page(
-        "公务员考试题库_行测真题在线刷题_岸上见",
+        "公务员考试题库_行测真题在线刷题_答岸",
         f"免费公务员考试题库，收录 {total} 道行测题目与历年真题，覆盖资料分析、数量关系、言语理解、判断推理、常识判断，附答案解析。",
         "/tiku/",
         body,
@@ -121,7 +121,7 @@ def tiku_index():
             {
                 "@context": "https://schema.org",
                 "@type": "WebSite",
-                "name": "岸上见",
+                "name": "答岸",
                 "url": SITE_BASE,
                 "potentialAction": {
                     "@type": "SearchAction",
@@ -214,7 +214,7 @@ def _render_daily(day: str, archived: bool):
         + archive_html
     )
     return _page(
-        f"每日一练{day}_公务员考试{title_tag}_岸上见",
+        f"每日一练{day}_公务员考试{title_tag}_答岸",
         f"{day} 公务员考试每日一练：全站同题 10 道行测真题（五大模块各 2 题），在线作答查看解析，完成后可比较全站排名。",
         path,
         body,
@@ -292,7 +292,7 @@ def tiku_discuss():
         + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/social/plaza">进入讨论广场参与互动（免费）→</a>'
     )
     return _page(
-        "考友热议题目_公务员考试题目讨论区_岸上见",
+        "考友热议题目_公务员考试题目讨论区_答岸",
         "公务员考试题库热议题目聚合：考友们正在讨论的行测题目与解法交流，可在线查看解析并参与讨论。",
         "/tiku/discuss/",
         body,
@@ -341,7 +341,7 @@ def tiku_papers():
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站全真模考 →</a>'
     )
     return _page(
-        "历年公务员考试真题卷_国考省考真题在线模考_岸上见",
+        "历年公务员考试真题卷_国考省考真题在线模考_答岸",
         f"{len(papers)} 套历年国考/省考行测真题卷，在线全真模考并生成成绩报告，附逐题答案解析。",
         "/tiku/papers/",
         body,
@@ -438,7 +438,7 @@ def tiku_paper_detail(pid: int):
         "name": title,
         "description": f"{title}，共 {len(rows)} 题{social_text}，在线全真模考并查看逐题答案解析。",
         "url": _url(f"/tiku/papers/{pid}"),
-        "isPartOf": {"@type": "WebSite", "name": "岸上见", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
@@ -449,7 +449,7 @@ def tiku_paper_detail(pid: int):
         },
     }
     return _page(
-        f"{title}_真题卷在线模考_岸上见",
+        f"{title}_真题卷在线模考_答岸",
         f"{title}，共 {len(rows)} 题（{dist_text}），在线全真模考并生成成绩报告，附逐题答案解析。" if dist_text
         else f"{title}，共 {len(rows)} 题，在线全真模考并查看逐题答案解析。",
         f"/tiku/papers/{pid}",
@@ -583,7 +583,7 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
         "name": f"{year}年{mod_name}真题题库",
         "description": f"{year}年公务员考试{mod_name}模块真题 {total} 题，附答案解析。",
         "url": _url(_year_path(year, module)),
-        "isPartOf": {"@type": "WebSite", "name": "岸上见", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
@@ -594,7 +594,7 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
         },
     }
     return _page(
-        f"{year}年{mod_name}真题题库{suffix}_{year}年公务员考试{mod_name}真题及答案解析_岸上见",
+        f"{year}年{mod_name}真题题库{suffix}_{year}年公务员考试{mod_name}真题及答案解析_答岸",
         f"{year}年公务员考试{mod_name}模块真题共 {total} 题，附答案与花生十三方法讲解，可在线按年份刷真题。{suffix}",
         _year_path(year, module) + (f"?page={page}" if page > 1 else ""),
         body,
@@ -682,7 +682,7 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
         "name": f"{name}考点题库",
         "description": (topic["desc"] or f"{mod_name}{name}考点真题练习")[:200],
         "url": _url(_topic_path(code)),
-        "isPartOf": {"@type": "WebSite", "name": "岸上见", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
             "itemListElement": [
@@ -693,7 +693,7 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
         },
     }
     return _page(
-        f"{name}考点题库{suffix}_{mod_name}{name}真题及解题方法_岸上见",
+        f"{name}考点题库{suffix}_{mod_name}{name}真题及解题方法_答岸",
         f"{name}考点专项题库共 {total} 题：{(topic['desc'] or '')[:60]}附答案解析与花生十三方法讲解，可在线按考点刷题。{suffix}",
         _topic_path(code) + (f"?page={page}" if page > 1 else ""),
         body,
@@ -887,7 +887,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
         "learningResourceType": "真题" if r["is_real"] else "练习题",
         "educationalLevel": "公务员考试",
         "about": {"@type": "Thing", "name": topic["name"] if topic else mod_name},
-        "isPartOf": {"@type": "WebSite", "name": "岸上见", "url": SITE_BASE},
+        "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "hasPart": {
             "@type": "Question",
             "eduQuestionType": "Multiple choice",
@@ -904,7 +904,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
         },
     }
     return _page(
-        f"{title_head}_{mod_name}题库_岸上见",
+        f"{title_head}_{mod_name}题库_答岸",
         _question_description(r, mod_name, topic["name"] if topic else None),
         f"/tiku/q/{qid}",
         body,

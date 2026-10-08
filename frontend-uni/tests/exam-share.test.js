@@ -12,7 +12,7 @@ describe('buildExamReportShareText', () => {
   it('zhenti 卷输出文案 + SSR 落地页链接', () => {
     const t = buildExamReportShareText(rep(), 'https://kaogong.zalize.com');
     expect(t).toBe(
-      '我在岸上见模考《2023年国考行测真题卷》答对 55/130 题，敢来挑战吗？同卷在线模考：https://kaogong.zalize.com/tiku/papers/42'
+      '我在答岸模考《2023年国考行测真题卷》答对 55/130 题，敢来挑战吗？同卷在线模考：https://kaogong.zalize.com/tiku/papers/42'
     );
   });
 

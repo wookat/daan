@@ -1,6 +1,6 @@
 ---
 name: testing-kaogong-assistant
-description: How to run and test the 岸上见 app (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
+description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
 ## R572 经验：tabBar KeepAlive 页的「暖轮」必测 + `stale_fallback` 埋点按调用方计数
@@ -86,7 +86,7 @@ description: How to run and test the 岸上见 app (FastAPI + uni-app H5 fronten
 - For wrong-only retry recovery, compare qid order and cleared selections in `pendingSession`. After answering but before pressing Next, F5 may legitimately restore the answered item and its feedback. Verify both the user-facing fix-report count and independent SRS rows across reloads.
 - Untimed paper practice is a paper's “更多操作 → 按卷练习（不计时）” action; clicking the paper title can start a timed exam instead. Capture completion CTA screenshots after scrolling to the buttons, not only the score header.
 
-# Testing 岸上见
+# Testing 答岸
 
 ## R558 补充（testing agent）— 错答反馈层级几何 / 自动推进时序 / 看解析埋点 / due 资格
 
@@ -573,8 +573,8 @@ description: How to run and test the 岸上见 app (FastAPI + uni-app H5 fronten
 
 ## R389 `manifest.h5.title` 覆写 index.html `<title>`（SEO 首页标题）生产复验 走查新经验（testing agent）
 
-- **原始 HTML 与挂载后标题是两个不同断言，必须分开取证**：原始 `<title>`/`og:title` 用不执行 JS 的方式读（`curl -s /` 或页面上下文 `fetch('/',{headers:{'X-Kg-Probe':'1'},cache:'no-store'}).text()` 后正则 `<title>([^<]*)</title>`）；挂载后用 `document.title`，uni-app 会在路由渲染时用 `pages.json` 的 `navigationBarTitleText` 覆盖（首页 `刷题`、`pkgA/exam/list` `真题卷库`、`pages/book/book` `错题本`），浏览器标签条上也能看到，截图时让标签文字入镜作为可视证据。坏形态：挂载后 `document.title` 仍等于 SEO 长标题（uni 标题覆盖丢失）或原始 `<title>` 只剩 `岸上见`（构建没吃到 `manifest.h5.title`）。
-- `/tiku/*` 是后端 SSR，不受 uni 构建影响：`/tiku/` 应为 `公务员考试题库_行测真题在线刷题_岸上见`，`/tiku/q/<id>` 为 `<题干截断>_<模块>题库_岸上见`；在同一标签原生输入 URL 打开即可，`document.title` 就是 SSR 标题（无 JS 改写）。`/tiku/q/234080` 是稳定可用的在线 qid。
+- **原始 HTML 与挂载后标题是两个不同断言，必须分开取证**：原始 `<title>`/`og:title` 用不执行 JS 的方式读（`curl -s /` 或页面上下文 `fetch('/',{headers:{'X-Kg-Probe':'1'},cache:'no-store'}).text()` 后正则 `<title>([^<]*)</title>`）；挂载后用 `document.title`，uni-app 会在路由渲染时用 `pages.json` 的 `navigationBarTitleText` 覆盖（首页 `刷题`、`pkgA/exam/list` `真题卷库`、`pages/book/book` `错题本`），浏览器标签条上也能看到，截图时让标签文字入镜作为可视证据。坏形态：挂载后 `document.title` 仍等于 SEO 长标题（uni 标题覆盖丢失）或原始 `<title>` 只剩 `答岸`（构建没吃到 `manifest.h5.title`）。
+- `/tiku/*` 是后端 SSR，不受 uni 构建影响：`/tiku/` 应为 `公务员考试题库_行测真题在线刷题_答岸`，`/tiku/q/<id>` 为 `<题干截断>_<模块>题库_答岸`；在同一标签原生输入 URL 打开即可，`document.title` 就是 SSR 标题（无 JS 改写）。`/tiku/q/234080` 是稳定可用的在线 qid。
 - App.vue 无障碍 `h1`（`offscreen` 属性）文本 == 当前路由标题（首页 `刷题`、错题本 `错题本`），练习页也是 `刷题`；用 `document.querySelector('h1').textContent` 读。
 - 卷库对账：钩子只记状态码/耗时时，`items.length` 需在页面上下文再 `fetch` 一次页面自己用过的同一 URL（`/api/exam/papers?kind=zhenti&uid=<uid>`，带 `X-Kg-Probe: 1`），与 `.card.paper` 数比较（本轮两视口 120 == 120）。
 - 每轮流程里同一个 `test-<round>-` 前缀双 uid（1440 `a…` / 375 `b…`）做完 3 题→保留→结束本组 + 错题本，DB 审计固定形态是 12 行：`answer_log 6（probe 全 1）+ mistakes 2 + growth_events 4（practice_quit_keep/practice_quit_end ×2）`，`practice_progress 0`（结束本组会删）。偏离这个数就说明有多余操作，先解释再清理。

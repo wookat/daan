@@ -54,7 +54,7 @@
       </kg-card>
 
       <view class="reg-tip">
-        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册岸上见，10万+ 题库免费刷</kg-button>
+        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册答岸，10万+ 题库免费刷</kg-button>
       </view>
 
       <kg-action-bar layout="actions" primary-text="发起我的 PK 对局" @primary="goChallenge" />
@@ -111,7 +111,7 @@ export default {
         const d = await pkResult(this.rid);
         this.d = d;
         uni.setNavigationBarTitle({
-          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 岸上见`,
+          title: `${this.creatorName} vs ${this.opponentName} 的答题 PK 战绩，不服来战！- 答岸`,
         });
       } catch (e) {
         this.errMsg = e.message || '战绩不存在或对局未结束';

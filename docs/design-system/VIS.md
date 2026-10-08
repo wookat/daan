@@ -1,7 +1,7 @@
-# 岸上见 · 视觉识别系统（VIS）v1
+# 答岸 · 视觉识别系统（VIS）v1
 
 > 唯一事实源：`tools/design-tokens/tokens.json`（编译产物 `frontend-uni/src/static/tokens.css`、`miniapp-native/miniprogram/styles/tokens.wxss` 等 6 个文件，`node tools/design-tokens/build.mjs --check` 校验）。
-> 本文回答「看起来像岸上见」的全部规则；组件清单见 [COMPONENTS.md](COMPONENTS.md)，页面结构见 [PAGES.md](PAGES.md)，落地页补充口径见 `landing/DESIGN.md`。
+> 本文回答「看起来像答岸」的全部规则；组件清单见 [COMPONENTS.md](COMPONENTS.md)，页面结构见 [PAGES.md](PAGES.md)，落地页补充口径见 `landing/DESIGN.md`。
 
 ## 0. 设计哲学
 
@@ -13,9 +13,9 @@
 
 ## 1. 标志系统
 
-**图形标「海岸日出」**：半升旭日 + 岸线水纹，扁平单色几何（品牌蓝底白形 / 单色白底两种）。寓意「上岸的一刻」。文件：`brand/anshangjian.svg`、`brand/glyph.svg`、`brand/lockup.svg`、`brand/icon-*.png`。
+**图形标「海岸日出」**：半升旭日 + 岸线水纹，扁平单色几何（品牌蓝底白形 / 单色白底两种）。寓意「上岸的一刻」。文件：`brand/daan.svg`、`brand/glyph.svg`、`brand/lockup.svg`、`brand/icon-*.png`。
 
-**字标**：「岸上见」三字，字重 700；英文标 `ANSHANGJIAN` 全大写、+0.08em 字距、12px 级。
+**字标**：「答岸」三字，字重 700；英文标 `DAAN` 全大写、+0.08em 字距、12px 级。
 
 **吉祥物「岸仔」**：白色圆角小人 + 品牌蓝学士帽，仅用于营销/空状态/分享物料，不进界面组件层。文件：`brand/mascot-*.png`。
 
@@ -155,7 +155,7 @@
 - **favicon/app icon**：`brand/icon-*.png`（144–1024），日出标白形蓝底，无文字。
 - **截图壳**：白底 + hairline + 8px padding，r.lg 比例圆角——禁黑色手机壳 mockup。
 - **OG/分享卡**：`scripts/gen_og_card.py` 生成，纯色底+白砖蓝标+标题，1200×630。
-- **PDF 导出**：页眉 logo+卷名，水印「岸上见」，答案区用 ok/bad 色。
+- **PDF 导出**：页眉 logo+卷名，水印「答岸」，答案区用 ok/bad 色。
 
 ## 10. 视觉溯源（2026-10 研究，8 站逐字拆解）
 
