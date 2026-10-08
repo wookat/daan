@@ -86,14 +86,7 @@
           <kg-empty-state v-if="!hasRadar" compact icon="chart-column" title="还没有能力数据" desc="刷几题就能生成你的五模块能力画像" cta-text="去刷题" @cta="goPractice('')" />
           <view v-else class="radar-flex">
             <view class="radar-box">
-              <view class="radar">
-                <view v-for="i in 4" :key="'g' + i" class="ring" :style="ringStyle(i)" />
-                <view class="poly" :style="polyStyle" />
-                <view v-for="(a, i) in axes" :key="a.key" class="axis-label" :style="labelStyle(i)">
-                  <text class="al-name">{{ a.name }}</text>
-                  <text class="al-val num" :class="{ none: !a.n }">{{ a.n ? a.pct + '%' : '未练' }}</text>
-                </view>
-              </view>
+              <kg-echart :option="statsRadarOption" :height="200" />
             </view>
             <view class="radar-side">
               <text v-if="weakAxes.length" class="rs-t">{{ weakTitle }}</text>
@@ -625,7 +618,7 @@ export default {
           value: p.score,
           itemStyle: { color: p.score < max * 0.6 ? c.bad : p.score < max * 0.8 ? c.warn : c.brand },
         })),
-        { yMax: max, markY: d.target != null ? d.target : null, markLabel: '目标 ' + d.target + ' 分' }
+        { yMax: max }
       );
     },
     accOption() {
@@ -687,13 +680,31 @@ export default {
         subs: subs.sort((a, b) => a.pct - b.pct),
       }));
     },
-    polyStyle() {
-      const pts = this.axes.map((a, i) => {
-        const ang = (Math.PI * 2 * i) / 5 - Math.PI / 2;
-        const r = (a.pct / 100) * 50;
-        return `${50 + r * Math.cos(ang)}% ${50 + r * Math.sin(ang)}%`;
-      });
-      return { clipPath: `polygon(${pts.join(',')})` };
+    statsRadarOption() {
+      const c = visColors();
+      return {
+        animationDuration: 400,
+        radar: {
+          indicator: this.axes.map((a) => ({ name: `${a.name} ${a.n ? a.pct + '%' : '未练'}`, max: 100 })),
+          radius: '60%',
+          center: ['50%', '52%'],
+          splitNumber: 2,
+          axisName: { color: c.ink2, fontSize: 11 },
+          splitArea: { areaStyle: { color: [c.fill, c.card] } },
+          splitLine: { lineStyle: { color: c.line } },
+          axisLine: { lineStyle: { color: c.line } },
+        },
+        series: [{
+          type: 'radar',
+          symbolSize: 4,
+          data: [{
+            value: this.axes.map((a) => a.pct),
+            lineStyle: { color: c.brand, width: 2 },
+            itemStyle: { color: c.brand },
+            areaStyle: { color: c.brand, opacity: 0.25 },
+          }],
+        }],
+      };
     },
   },
   onLoad() {
@@ -825,17 +836,6 @@ export default {
       if (k) uni.setStorageSync('practiceLaunch', { kind: 'start', module: k, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
-    ringStyle(i) {
-      const size = i * 25;
-      return { width: size + '%', height: size + '%', left: (100 - size) / 2 + '%', top: (100 - size) / 2 + '%' };
-    },
-    labelStyle(i) {
-      const ang = (Math.PI * 2 * i) / 5 - Math.PI / 2;
-      return {
-        left: 50 + 58 * Math.cos(ang) + '%',
-        top: 50 + 58 * Math.sin(ang) + '%',
-      };
-    },
     medalRingStyle(md) {
       const color = md.got ? 'var(--warn)' : 'var(--ink-4)';
       const pct = md.got ? 100 : md.pct;
@@ -847,11 +847,11 @@ export default {
     async loadMastery() {
       const p = '/api/mastery/map?uid=' + encodeURIComponent(anonUid());
       const snap = snapPeek(p);
-      if (snap) this.kmCov = snap.cold ? null : snap.coverage.pct;
+      if (snap) this.kmCov = snap.cold ? null : (snap.coverage && snap.coverage.pct) || null;
       try {
         const d = await request(p);
         this.noteSnapshot(d);
-        this.kmCov = d.cold ? null : d.coverage.pct;
+        this.kmCov = d.cold ? null : (d.coverage && d.coverage.pct) || null;
       } catch (e) { /* 非关键路径 */ }
     },
     goMasteryMap() {
@@ -985,8 +985,7 @@ export default {
 
 /* 雷达 */
 .radar-flex { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-16) 0 var(--sp-8); }
-.radar-box { flex: 1; display: flex; justify-content: center; }
-.radar { position: relative; width: 160px; height: 160px; }
+.radar-box { flex: 1; display: flex; justify-content: center; min-width: 0; }
 .radar-side { width: 110px; flex-shrink: 0; }
 /* #ifdef H5 */
 @media (max-width: 413px) {
@@ -1000,13 +999,6 @@ export default {
 .rs-name { min-width: 4em; white-space: nowrap; font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
 .rs-pct { flex-shrink: 0; white-space: nowrap; font-size: var(--fs-sub); color: var(--bad-strong); font-weight: 600; }
 .radar-side :deep(.kg-btn) { margin-top: var(--sp-8); }
-.ring { position: absolute; border: 1px solid var(--line-strong); border-radius: var(--r-full); box-sizing: border-box; }
-.poly { position: absolute; inset: 0; background: var(--brand); opacity: 0.35; border-radius: 1px; }
-.axis-label { position: absolute; transform: translate(-50%, -50%); min-width: 3em; text-align: center; white-space: nowrap; }
-/* H5 全局 uni-text{white-space:pre-line} 优先级高于父级继承，须落在 text 本身；否则贴边轴标「数量」逐字竖排 */
-.al-name { display: block; white-space: nowrap; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
-.al-val { display: block; white-space: nowrap; font-size: var(--fs-caption); color: var(--brand-text); }
-.al-val.none { color: var(--ink-3); }
 
 /* 分布条 */
 .mrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 56px; border-bottom: 1px solid var(--line); }
@@ -1027,14 +1019,6 @@ export default {
 .tc-n { font-size: var(--fs-caption); color: var(--ink-3); }
 .top-chip.is-more { background: var(--fill); color: var(--ink-2); font-size: var(--fs-sub); font-weight: 600; }
 
-/* 近 7 日 */
-.trend7 { display: flex; align-items: flex-end; gap: var(--sp-8); height: 110px; padding-top: var(--sp-4); }
-.tcol { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.tpct { font-size: var(--fs-caption); color: var(--brand-text); height: 14px; line-height: 14px; }
-.tbar { flex: 1; width: 18px; background: var(--prog-track); border-radius: var(--r-full); display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
-.tfill { width: 100%; background: var(--brand); border-radius: var(--r-full); }
-.tfill.is-lo { background: var(--warn); }
-.tday { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
 
 /* 勋章 */
 .medals { display: flex; flex-wrap: wrap; }
@@ -1105,7 +1089,6 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 1024px) {
   .wrap.stats { max-width: 1064px; }
-  .radar { width: 200px; height: 200px; }
 }
 /* #endif */
 </style>
