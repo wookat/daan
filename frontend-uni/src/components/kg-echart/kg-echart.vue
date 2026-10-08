@@ -65,18 +65,25 @@ export default {
     option: {
       deep: true,
       handler(v) {
-        if (this.chart && v) this.chart.setOption(v, { notMerge: true });
+        this._apply(v);
       },
     },
   },
   mounted() {
     const el = this.$refs.el && this.$refs.el.$el ? this.$refs.el.$el : this.$refs.el;
     if (!el) return;
-    this.chart = echarts.init(el);
-    this.chart.on('click', (p) => this.$emit('select', p));
-    if (this.option) this.chart.setOption(this.option);
+    try {
+      this.chart = echarts.init(el);
+      this.chart.on('click', (p) => this.$emit('select', p));
+    } catch (e) {
+      this.chart = null;
+      return;
+    }
+    this._apply(this.option);
     this._ro = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(() => this.chart && this.chart.resize())
+      ? new ResizeObserver(() => {
+          try { if (this.chart) this.chart.resize(); } catch (e) { /* noop */ }
+        })
       : null;
     if (this._ro) this._ro.observe(el);
   },
@@ -91,8 +98,15 @@ export default {
     px(h) {
       return typeof h === 'number' ? h + 'px' : h;
     },
+    _apply(v) {
+      // 空 option / 瞬时渲染异常只静默跳过——单张图失败不许拖垮整卡
+      if (!this.chart || !v || !v.series || !v.series.length) return;
+      try {
+        this.chart.setOption(v, { notMerge: true });
+      } catch (e) { /* noop */ }
+    },
     resize() {
-      if (this.chart) this.chart.resize();
+      try { if (this.chart) this.chart.resize(); } catch (e) { /* noop */ }
     },
   },
 };
