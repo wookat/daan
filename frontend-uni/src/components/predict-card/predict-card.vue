@@ -33,13 +33,7 @@
         </view>
       </view>
       <!-- 进步曲线（周） -->
-      <view v-if="data.history && data.history.length > 1" class="p-chart">
-        <view v-for="(h, i) in data.history" :key="h.week_end" class="p-col">
-          <text class="p-col-v" :class="{ hot: i === data.history.length - 1 }">{{ Math.round(h.score) }}</text>
-          <view class="p-bar-w"><view class="p-bar" :class="{ hot: i === data.history.length - 1 }" :style="{ height: barH(h.score) + '%' }" /></view>
-          <text class="p-col-l">{{ h.label }}</text>
-        </view>
-      </view>
+      <kg-echart v-if="data.history && data.history.length > 1" :option="historyOption" :height="130" />
       <!-- 五模块分项 -->
       <view class="p-mods">
         <view v-for="m in data.modules" :key="m.module" class="p-mod">
@@ -55,11 +49,47 @@
 
 <script>
 import { request, anonUid } from '../../api.js';
+import { visColors } from '../kg-echart/kg-echart.vue';
 
 export default {
   name: 'PredictCard',
   data() {
     return { data: null, loading: true };
+  },
+  computed: {
+    historyOption() {
+      const c = visColors();
+      const h = this.data && this.data.history;
+      if (!h || h.length < 2) return {};
+      const scores = h.map((x) => Math.round(x.score));
+      const min = Math.min(...scores);
+      const max = Math.max(...scores);
+      const pad = Math.max((max - min) * 0.3, 5);
+      return {
+        animationDuration: 400,
+        grid: { left: 8, right: 8, top: 22, bottom: 2, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: h.map((x) => x.label),
+          axisLine: { show: false },
+          axisTick: { show: false },
+          axisLabel: { color: c.ink3, fontSize: 11 },
+        },
+        yAxis: { type: 'value', min: Math.max(min - pad, 0), max: max + pad, show: false },
+        series: [{
+          type: 'line',
+          data: scores.map((s, i) => ({
+            value: s,
+            label: { show: true, position: 'top', color: i === scores.length - 1 ? c.brand : c.ink3, fontSize: 11, fontWeight: i === scores.length - 1 ? 600 : 400 },
+            itemStyle: { color: i === scores.length - 1 ? c.brand : c.brandSoft2, borderColor: c.brand, borderWidth: i === scores.length - 1 ? 0 : 1 },
+          })),
+          smooth: true,
+          symbolSize: 7,
+          lineStyle: { color: c.brand, width: 2 },
+          areaStyle: { color: c.brandSoft2, opacity: 0.35 },
+        }],
+      };
+    },
   },
   mounted() {
     this.load();
@@ -76,13 +106,6 @@ export default {
       }
       this.loading = false;
     },
-    barH(score) {
-      const arr = this.data.history.map((h) => h.score);
-      const min = Math.min(...arr);
-      const max = Math.max(...arr);
-      if (max === min) return 60;
-      return 25 + ((score - min) / (max - min)) * 70;
-    }
   }
 };
 </script>
@@ -100,14 +123,6 @@ export default {
 .p-delta { font-size: var(--fs-caption); color: var(--ok-strong); font-weight: 600; }
 .p-delta.down { color: var(--bad-strong); }
 .p-n { font-size: var(--fs-caption); color: var(--ink-3); }
-.p-chart { display: flex; align-items: flex-end; gap: var(--sp-4); height: 100px; margin: var(--sp-8) 0 var(--sp-4); }
-.p-col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; }
-.p-col-v { font-size: var(--fs-caption); color: var(--ink-3); }
-.p-col-v.hot { color: var(--brand-text); font-weight: 600; }
-.p-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.p-bar { width: 40%; max-width: var(--sp-12); min-height: var(--sp-4); background: var(--brand-soft-2); border-radius: 3px 3px 0 0; }
-.p-bar.hot { background: var(--brand); }
-.p-col-l { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
 .p-mods { margin-top: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-8); }
 .p-mod { display: flex; align-items: center; gap: var(--sp-8); }
 .p-mod-n { width: 60px; font-size: var(--fs-caption); color: var(--ink-2); }

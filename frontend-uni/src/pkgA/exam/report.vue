@@ -44,14 +44,7 @@
 
         <kg-card v-if="modules.length" variant="flat" class="sec">
           <text class="h">模块得分</text>
-          <view v-if="radar" class="radar-wrap" aria-label="模块正确率雷达">
-            <view class="radar">
-              <view class="radar-grid" :style="{ clipPath: radar.grid }"></view>
-              <view class="radar-grid inner" :style="{ clipPath: radar.grid }"></view>
-              <view class="radar-data" :style="{ clipPath: radar.data }"></view>
-              <text v-for="l in radar.labels" :key="l.key" class="radar-l" :style="{ left: l.x + '%', top: l.y + '%' }">{{ l.name }} <text class="num">{{ l.pct }}%</text></text>
-            </view>
-          </view>
+          <kg-echart v-if="radarOption" :option="radarOption" :height="230" />
           <view v-for="m in modules" :key="m.key" class="mrow">
             <text class="mrow-name">{{ m.name }}</text>
             <kg-progress :value="m.pct" :module="m.key" class="mrow-bar" />
@@ -299,6 +292,7 @@ import { markedNos, nextNavMode } from '../../exam-marks.js';
 import { isFaved, toggleFav, markFavLocalOnly } from '../../exam-fav.js';
 import { qStatLine } from '../../q-stat.js';
 import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
+import { visColors } from '../../components/kg-echart/kg-echart.vue';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
 import { goalGap, prevScoreDelta } from '../../exam-goal.js';
@@ -407,20 +401,33 @@ export default {
       return items;
     },
     /** 模块雷达：≥3 个模块时按 per_module 正确率画多边形（clip-path，深色安全） */
-    radar() {
+    radarOption() {
       const ms = this.modules;
       if (ms.length < 3) return null;
-      const n = ms.length;
-      const pt = (i, r) => {
-        const a = -Math.PI / 2 + (2 * Math.PI * i) / n;
-        return [50 + 50 * r * Math.cos(a), 50 + 50 * r * Math.sin(a)];
+      const c = visColors();
+      return {
+        animationDuration: 400,
+        radar: {
+          indicator: ms.map((m) => ({ name: m.name + ' ' + m.pct + '%', max: 100 })),
+          radius: '62%',
+          center: ['50%', '52%'],
+          splitNumber: 2,
+          axisName: { color: c.ink2, fontSize: 11 },
+          splitArea: { areaStyle: { color: [c.fill, c.card] } },
+          splitLine: { lineStyle: { color: c.line } },
+          axisLine: { lineStyle: { color: c.line } },
+        },
+        series: [{
+          type: 'radar',
+          symbolSize: 4,
+          data: [{
+            value: ms.map((m) => m.pct),
+            lineStyle: { color: c.brand, width: 2 },
+            itemStyle: { color: c.brand },
+            areaStyle: { color: c.brand, opacity: 0.25 },
+          }],
+        }],
       };
-      const poly = (rs) => 'polygon(' + rs.map((r, i) => pt(i, r).map((v) => v.toFixed(1) + '%').join(' ')).join(', ') + ')';
-      const labels = ms.map((m, i) => {
-        const [x, y] = pt(i, 1.42);
-        return { key: m.key, name: m.name, pct: m.pct, x: 25 + x / 2, y: 15 + (y * 120) / 200 };
-      });
-      return { grid: poly(ms.map(() => 1)), data: poly(ms.map((m) => Math.max(0.06, m.pct / 100))), labels };
     },
     detailAskSeen() {
       void this.askSeenTick;
@@ -763,11 +770,7 @@ export default {
 .gap-k { font-size: var(--fs-body); color: var(--ink); }
 .gap-v { font-size: var(--fs-body); font-weight: 600; color: var(--warn-strong); }
 .gap-v.ok { color: var(--ok-strong); }
-.radar-wrap { display: flex; justify-content: center; padding: var(--sp-12) 0 var(--sp-24); }
-.radar { position: relative; width: 240px; height: 200px; }
-.radar-grid { position: absolute; left: 60px; top: 30px; width: 120px; height: 120px; background: var(--fill); }
-.radar-grid.inner { left: 90px; top: 60px; width: 60px; height: 60px; background: var(--card); }
-.radar-data { position: absolute; left: 60px; top: 30px; width: 120px; height: 120px; background: var(--brand); opacity: 0.55; }
+
 .radar-l { position: absolute; transform: translate(-50%, -50%); font-size: var(--fs-caption); color: var(--ink-2); white-space: nowrap; }
 .mrow { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); }
 .mrow-name { flex-shrink: 0; width: 64px; font-size: var(--fs-sub); color: var(--ink-2); }
