@@ -97,7 +97,7 @@
         </view>
       </block>
       <view wx:if="{{!logged}}" class="actions">
-        <kg-button variant="text" size="md" block bind:click="onLogin">登录 / 注册岸上见，10万+ 题库免费刷</kg-button>
+        <kg-button variant="text" size="md" block bind:click="onLogin">登录 / 注册答岸，10万+ 题库免费刷</kg-button>
       </view>
     </block>
   </view>

@@ -45,7 +45,7 @@ def share_landing(sid: str):
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(summary)}">'
         f'<meta property="og:type" content="website">'
-        f'<meta property="og:site_name" content="岸上见">'
+        f'<meta property="og:site_name" content="答岸">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(summary)}">'
         f'<meta property="og:url" content="{_e(page_url)}">'
@@ -85,7 +85,7 @@ def pk_landing(rid: str):
     opponent = (m["opponent_name"] or "匿名考友").strip()[:20]
     mod = _module_name(m["module"]) or "行测"
     title = f"{creator} {m['creator_score']} : {m['opponent_score']} {opponent}｜答题PK战绩，不服来战！"
-    summary = f"岸上见答题 PK（{mod}）实时对局战绩，免注册打开即可应战。"
+    summary = f"答岸答题 PK（{mod}）实时对局战绩，免注册打开即可应战。"
     spa = f"/app/#/pkgA/share/pk-result?rid={quote(code)}"
     page_url = _url(f"/p/{quote(code)}")
     return HTMLResponse(
@@ -95,7 +95,7 @@ def pk_landing(rid: str):
         f"<title>{_e(title)}</title>"
         f'<meta name="description" content="{_e(summary)}">'
         f'<meta property="og:type" content="website">'
-        f'<meta property="og:site_name" content="岸上见">'
+        f'<meta property="og:site_name" content="答岸">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(summary)}">'
         f'<meta property="og:url" content="{_e(page_url)}">'

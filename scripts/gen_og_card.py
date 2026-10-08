@@ -26,7 +26,7 @@ def _seg(d: ImageDraw.ImageDraw, x0: float, y0: float, x1: float, y1: float, w: 
 
 
 def draw_mark(d: ImageDraw.ImageDraw, x: float, y: float, size: float, color) -> None:
-    """岸上见「海岸日出」标，PIL 直绘（96 视窗坐标等比缩放）。"""
+    """答岸「海岸日出」标，PIL 直绘（96 视窗坐标等比缩放）。"""
     s = size / 96.0
     w = 6 * s
 
@@ -58,7 +58,7 @@ def main() -> None:
     f_sub = ImageFont.truetype(str(FONT), 46)
     f_chip = ImageFont.truetype(str(FONT), 32)
 
-    d.text((330, 152), "岸上见", font=f_site, fill=WHITE)
+    d.text((330, 152), "答岸", font=f_site, fill=WHITE)
     d.text((90, 356), "10万+ 行测题 · 1.5万+ 历年真题免费在线刷", font=f_sub, fill=WHITE)
 
     chips = ["AI 拍题讲解", "智能错题本", "每日一练", "迷你模考"]

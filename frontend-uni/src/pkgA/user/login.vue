@@ -2,8 +2,8 @@
   <view class="page">
     <view class="form">
       <view class="hero">
-        <image class="hero-logo" src="/static/brand/anshangjian.svg" mode="aspectFit" aria-hidden="true" />
-        <text class="hero-t">岸上见</text>
+        <image class="hero-logo" src="/static/brand/daan.svg" mode="aspectFit" aria-hidden="true" />
+        <text class="hero-t">答岸</text>
         <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
       </view>
 

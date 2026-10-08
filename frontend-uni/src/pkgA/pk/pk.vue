@@ -489,7 +489,7 @@ export default {
       // #ifdef H5
       const url = `${window.location.origin}${window.location.pathname}#/pkgA/pk/pk?code=${this.match.code}`;
       uni.setClipboardData({
-        data: `我在岸上见向你发起答题 PK（挑战码 ${this.match.code}），敢来应战吗？${url}`,
+        data: `我在答岸向你发起答题 PK（挑战码 ${this.match.code}），敢来应战吗？${url}`,
         success: () => uni.showToast({ title: '挑战链接已复制，发给考友吧', icon: 'none' }),
       });
       // #endif

@@ -77,7 +77,7 @@
       </template>
 
       <view class="reg-tip">
-        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册岸上见，10万+ 题库免费刷</kg-button>
+        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册答岸，10万+ 题库免费刷</kg-button>
       </view>
     </template>
   </view>
@@ -165,7 +165,7 @@ export default {
         if (d.q_stats) this.qStats = d.q_stats;
         this.teamInvite = d.team_invite || null;
         this.startTs = Date.now();
-        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 岸上见` });
+        uni.setNavigationBarTitle({ title: `${d.from_name} 考了你一道${d.question.submodule || modName(d.question.module)}题，你能做对吗？- 答岸` });
       } catch (e) {
         this.errMsg = e.message || '分享不存在或已过期';
       }

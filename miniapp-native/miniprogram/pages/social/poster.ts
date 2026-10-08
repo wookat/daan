@@ -86,7 +86,7 @@ function drawPoster(ctx: Ctx2D, d: PosterData): void {
   ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText(d.badge ? '岸上见 · 里程碑徽章' : '岸上见 · 学习打卡', pad, 52);
+  ctx.fillText(d.badge ? '答岸 · 里程碑徽章' : '答岸 · 学习打卡', pad, 52);
 
   ctx.fillStyle = '#ffffff';
   if (d.badge) {
@@ -153,7 +153,7 @@ function drawPoster(ctx: Ctx2D, d: PosterData): void {
   // 底部：引导 + 站点
   ctx.fillStyle = 'rgba(255,255,255,0.9)';
   ctx.font = '24px sans-serif';
-  ctx.fillText('搜一搜「岸上见」', pad, H - 190);
+  ctx.fillText('搜一搜「答岸」', pad, H - 190);
   ctx.fillText('AI 刷题上岸 →', pad, H - 152);
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
   ctx.font = '20px sans-serif';
@@ -240,6 +240,6 @@ Page({
   },
 
   onShareAppMessage(): WechatMiniprogram.Page.ICustomShareContent {
-    return { title: '我在岸上见打卡刷题，一起上岸！', path: '/pages/home/home' };
+    return { title: '我在答岸打卡刷题，一起上岸！', path: '/pages/home/home' };
   },
 });

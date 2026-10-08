@@ -1,5 +1,5 @@
 // R389：uni H5 构建用 manifest.json 的 h5.title（缺省 name）覆写 index.html 的 <title>，
-// 首页此前线上 <title> 只有品牌名「岸上见」（Google 已收录的 2 页之一）——index.html 里写的 SEO 标题从未上线。
+// 首页此前线上 <title> 只有品牌名「答岸」（Google 已收录的 2 页之一）——index.html 里写的 SEO 标题从未上线。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

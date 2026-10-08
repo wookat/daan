@@ -74,7 +74,7 @@ def tiku_module(module: str, page: int = 1):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"{name}题库{suffix}_行测{name}真题及答案解析_岸上见",
+        f"{name}题库{suffix}_行测{name}真题及答案解析_答岸",
         f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
         f"/tiku/{module}/" + (f"?page={page}" if page > 1 else ""),
         body,
@@ -115,7 +115,7 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     return _page(
-        f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_岸上见",
+        f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_答岸",
         f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
         _sub_path(module, submodule) + (f"?page={page}" if page > 1 else ""),
         body,
