@@ -13,7 +13,7 @@
 
 ## 1. 标志系统
 
-**图形标「对话泡×日出岸线」**：对话泡外廓（「答」=拍题即答）包裹半升旭日 + 岸线（「岸」=上岸），扁平单色几何（品牌蓝底白形 / 单色白底两种）。文件：`brand/logo.svg`、`brand/glyph.svg`、`brand/lockup.svg`、`brand/icon-*.png`。
+**图形标「对勾旗上岸」**：岸上插旗、旗杆即「对勾」——答对 → 上岸，一笔双关。扁平单色（品牌蓝底白形 / 单色白底 / 透明蓝标）。当前以 AI 生图 PNG 为母版：`brand/mark-blue.png`、`mark-white.png`、`lockup-src.png`（SVG 为嵌 PNG 过渡壳，待矢量化）。
 
 **字标**：「答岸」三字，字重 700；英文标 `DAAN` 全大写、+0.08em 字距、12px 级。
 
@@ -152,7 +152,7 @@
 
 ## 9. 物料规范
 
-- **favicon/app icon**：`brand/icon-*.png`（144–1024），泡形日出标白形蓝底，无文字。
+- **favicon/app icon**：`brand/icon-*.png`（144–1024），对勾旗标白形蓝底，无文字。
 - **截图壳**：白底 + hairline + 8px padding，r.lg 比例圆角——禁黑色手机壳 mockup。
 - **OG/分享卡**：`scripts/gen_og_card.py` 生成，纯色底+白砖蓝标+标题，1200×630。
 - **PDF 导出**：页眉 logo+卷名，水印「答岸」，答案区用 ok/bad 色。
