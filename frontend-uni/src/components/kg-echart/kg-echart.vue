@@ -10,13 +10,15 @@ import { BarChart, LineChart, RadarChart, HeatmapChart } from 'echarts/charts';
 import {
   GridComponent, TooltipComponent, LegendComponent,
   VisualMapComponent, DataZoomComponent,
+  MarkLineComponent, MarkPointComponent,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 
 echarts.use([
   BarChart, LineChart, RadarChart, HeatmapChart,
   GridComponent, TooltipComponent, LegendComponent,
-  VisualMapComponent, DataZoomComponent, CanvasRenderer,
+  VisualMapComponent, DataZoomComponent,
+  MarkLineComponent, MarkPointComponent, CanvasRenderer,
 ]);
 
 function cssVar(name, fallback) {
