@@ -985,7 +985,7 @@ export default {
 
 /* 雷达 */
 .radar-flex { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-16) 0 var(--sp-8); }
-.radar-box { flex: 1; display: flex; justify-content: center; min-width: 0; }
+.radar-box { flex: 1; display: flex; justify-content: center; min-width: 0; width: 100%; }
 .radar-side { width: 110px; flex-shrink: 0; }
 /* #ifdef H5 */
 @media (max-width: 413px) {
