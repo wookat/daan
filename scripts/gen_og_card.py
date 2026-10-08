@@ -25,40 +25,26 @@ def _seg(d: ImageDraw.ImageDraw, x0: float, y0: float, x1: float, y1: float, w: 
         d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=color)
 
 
-def draw_mark(d: ImageDraw.ImageDraw, x: float, y: float, size: float, color) -> None:
-    """答岸「对话泡×日出岸线」标，PIL 直绘（96 视窗坐标等比缩放）。"""
-    s = size / 96.0
-    w = max(1, round(6 * s))
+MARK_PNG = Path(__file__).resolve().parent.parent / "brand" / "mark-blue.png"
 
-    def P(px: float, py: float) -> tuple[float, float]:
-        return (x + px * s, y + py * s)
 
-    # 对话泡外廓：圆角矩形 + 左下指向尾
-    bx0, by0 = P(23, 27)
-    bx1, by1 = P(73, 62)
-    rad = 11 * s
-    d.rounded_rectangle((bx0, by0, bx1, by1), radius=rad, outline=color, width=w)
-    t0, t1, t2 = P(49, 62), P(38, 73), P(38, 62)
-    d.line([t0, t1, t2], fill=color, width=w, joint="curve")
-    # 泡内日出：三道光 + 日弧 + 岸线
-    _seg(d, *P(48, 32), *P(48, 36), w, color)
-    _seg(d, *P(34.5, 40.5), *P(38, 44), w, color)
-    _seg(d, *P(58, 44), *P(61.5, 40.5), w, color)
-    ax0, ay0 = P(40, 50 - 8)
-    ax1, ay1 = P(56, 50 + 8)
-    d.arc((ax0, ay0, ax1, ay1), start=180, end=360, fill=color, width=w)
-    _seg(d, *P(39, 58), *P(57, 58), w, color)
+def draw_mark(im: Image.Image, x: float, y: float, size: float) -> None:
+    """答岸「对勾旗上岸」标，直接贴 brand/mark-blue.png。"""
+    mark = Image.open(MARK_PNG)
+    scale = size / mark.width
+    mark = mark.resize((round(mark.width * scale), round(mark.height * scale)), Image.LANCZOS)
+    im.paste(mark, (round(x), round(y)), mark)
 
 
 def main() -> None:
     im = Image.new("RGB", (W, H), BRAND)
     d = ImageDraw.Draw(im)
 
-    # 白块标：圆角白砖 + 品牌蓝线稿
+    # 白块标：圆角白砖 + 品牌蓝「对勾旗上岸」标
     tx, ty, ts = 90, 110, 200
     d.rounded_rectangle((tx, ty, tx + ts, ty + ts), radius=46, fill=WHITE)
-    pad = 26
-    draw_mark(d, tx + pad, ty + pad - 6, ts - pad * 2, BRAND)
+    pad = 30
+    draw_mark(im, tx + pad, ty + pad + 10, ts - pad * 2)
 
     f_site = ImageFont.truetype(str(FONT), 96)
     f_sub = ImageFont.truetype(str(FONT), 46)
