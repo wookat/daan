@@ -26,11 +26,12 @@ def _seg(d: ImageDraw.ImageDraw, x0: float, y0: float, x1: float, y1: float, w: 
 
 
 MARK_PNG = Path(__file__).resolve().parent.parent / "brand" / "mark-blue.png"
+MARK_PNG_WHITE = MARK_PNG.with_name("mark-white.png")
 
 
-def draw_mark(im: Image.Image, x: float, y: float, size: float) -> None:
-    """答岸「对勾旗上岸」标，直接贴 brand/mark-blue.png。"""
-    mark = Image.open(MARK_PNG)
+def draw_mark(im: Image.Image, x: float, y: float, size: float, white: bool = False) -> None:
+    """答岸「对勾旗上岸」标，直接贴 brand/mark-*.png。"""
+    mark = Image.open(MARK_PNG_WHITE if white else MARK_PNG)
     scale = size / mark.width
     mark = mark.resize((round(mark.width * scale), round(mark.height * scale)), Image.LANCZOS)
     im.paste(mark, (round(x), round(y)), mark)
@@ -40,11 +41,8 @@ def main() -> None:
     im = Image.new("RGB", (W, H), BRAND)
     d = ImageDraw.Draw(im)
 
-    # 白块标：圆角白砖 + 品牌蓝「对勾旗上岸」标
-    tx, ty, ts = 90, 110, 200
-    d.rounded_rectangle((tx, ty, tx + ts, ty + ts), radius=46, fill=WHITE)
-    pad = 30
-    draw_mark(im, tx + pad, ty + pad + 10, ts - pad * 2)
+    # 白标直贴蓝底（无衬底）
+    draw_mark(im, 90, 118, 190, white=True)
 
     f_site = ImageFont.truetype(str(FONT), 96)
     f_sub = ImageFont.truetype(str(FONT), 46)
