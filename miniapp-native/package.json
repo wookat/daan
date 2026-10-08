@@ -2,7 +2,7 @@
   "name": "kaogong-miniapp-native",
   "version": "0.1.0",
   "private": true,
-  "description": "答岸（原答岸）微信原生小程序（TypeScript + TDesign）",
+  "description": "答岸（原岸上见）微信原生小程序（TypeScript + TDesign）",
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "node ../tools/design-tokens/build.mjs --check && node ../tools/design-tokens/lint-pages.mjs --quiet && ESLINT_USE_FLAT_CONFIG=false eslint miniprogram --ext .ts"
