@@ -331,7 +331,7 @@
               <view class="entry-ico"><l-icon name="bot-message-square" :size="20" tone="brand" /></view>
               <view class="grow">
                 <text class="entry-t">AI 错题分析</text>
-                <text class="entry-s">基于你的错题分布与近期作答生成诊断与复习建议</text>
+                <text class="entry-s">按错题分布生成诊断与复习建议</text>
               </view>
             </view>
           </kg-card>
@@ -2229,6 +2229,8 @@ export default {
 
 /* 分段 + 筛选/批量 */
 .segrow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+/* 筛选/批量按钮补齐到 48px——kg-btn md 仅 32px，与 48px 分段栏同排会显得偏矮 */
+.segrow .kg-btn { min-height: 48px; }
 .seg { flex: 1; min-width: 0; display: flex; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-4); }
 .seg-i { flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; padding: 0 var(--sp-4); }
 .seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1); }
@@ -2236,7 +2238,7 @@ export default {
 
 /* 入口卡（重练 / 收藏夹 / AI 分析） */
 .entry { margin-bottom: var(--card-gap); }
-.entry-in { display: flex; align-items: center; gap: var(--sp-12); }
+.entry-in { display: flex; align-items: center; gap: var(--sp-12); padding-right: var(--sp-20); }
 .entry-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .entry-ico.is-warn { background: var(--warn-soft); }
 .entry-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
@@ -2314,6 +2316,7 @@ export default {
 .recap-name.is-link { color: var(--brand-text); }
 .recap-n { flex: 0 0 24px; text-align: right; font-size: var(--fs-caption); color: var(--ink-3); }
 .mg-blk { border-top: 1px solid var(--line); }
+.mg-blk:first-of-type { border-top: none; }
 .mg-row { display: flex; align-items: center; gap: var(--sp-8); min-height: 52px; }
 .mg-arrow { transition: transform var(--dur-instant) var(--ease-standard); flex-shrink: 0; }
 .mg-arrow.is-open { transform: rotate(180deg); }
@@ -2379,6 +2382,14 @@ export default {
 /* 动作组容不下时整体折到第二行右对齐，不让单个按钮被挤窄 */
 .bb-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-8); margin-left: auto; }
 .fabmenu { position: fixed; right: var(--sp-16); bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-8); }
+/* 菜单项统一宽度——三个按钮文字长短不一，右对齐时左缘参差 */
+.fabmenu .kg-btn { width: 176px; }
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  /* 桌面端左栏 tabbar、无底部栏，不再需要 50px 避让——贴着右下角即可，否则悬浮压内容 */
+  .fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
+}
+/* #endif */
 /* #ifndef H5 */
 .fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
 /* #endif */
