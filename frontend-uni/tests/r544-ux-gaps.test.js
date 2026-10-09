@@ -41,8 +41,8 @@ describe('R544-3 错题卡「点开看答案与详解」对比度（生产实测
 });
 
 describe('R544-4 统计五维：未练模块显「未练」而非 0%；仅 1 模块有样本不判「最薄弱」', () => {
-  it('模板：雷达轴标签按 a.n 判「未练」，最薄弱标题走 weakTitle，按钮文案随样本数', () => {
-    expect(stats).toMatch(/<text class="al-val num" :class="\{ none: !a\.n \}">\{\{ a\.n \? a\.pct \+ '%' : '未练' \}\}<\/text>/);
+  it('模板：echarts 雷达 indicator 按 a.n 判「未练」，最薄弱标题走 weakTitle，按钮文案随样本数', () => {
+    expect(stats).toMatch(/name: `\$\{a\.name\} \$\{a\.n \? a\.pct \+ '%' : '未练'\}`/);
     expect(stats).toMatch(/<text v-if="weakAxes\.length" class="rs-t">\{\{ weakTitle \}\}<\/text>/);
     expect(stats).toMatch(/\{\{ weakAxes\.length >= 2 \? '去补弱' : '继续练' \}\}<\/kg-button>/);
   });
