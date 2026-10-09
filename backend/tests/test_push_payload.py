@@ -10,7 +10,7 @@ def test_daily_only():
     assert p is not None
     assert p["title"] == "每日一练已更新"
     assert DAY in p["body"]
-    assert p["url"] == "/#/pages/practice/practice?daily=1&src=push"
+    assert p["url"] == "/app/#/pages/practice/practice?daily=1&src=push"
 
 
 def test_daily_plus_due():
@@ -18,7 +18,7 @@ def test_daily_plus_due():
     assert p is not None
     assert p["title"] == "今日学习提醒"
     assert "3 道错题" in p["body"] and DAY in p["body"]
-    assert p["url"] == "/#/pages/practice/practice?daily=1&src=push"
+    assert p["url"] == "/app/#/pages/practice/practice?daily=1&src=push"
 
 
 def test_review_only():
@@ -26,7 +26,7 @@ def test_review_only():
     assert p is not None
     assert p["title"] == "错题复习提醒"
     assert "7 道错题" in p["body"]
-    assert p["url"] == "/#/pages/book/book?review=1&src=push"
+    assert p["url"] == "/app/#/pages/book/book?review=1&src=push"
 
 
 def test_done_and_no_due_skips():

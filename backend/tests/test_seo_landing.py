@@ -113,7 +113,7 @@ def test_pk_landing_finished(client):
     assert "测试甲 120 : 90 测试乙" in html
     assert 'property="og:title"' in html
     assert 'name="robots" content="noindex"' in html
-    assert "/#/pkgA/share/pk-result?rid=TSTPK1" in html
+    assert "/app/#/pkgA/share/pk-result?rid=TSTPK1" in html
 
 
 def test_pk_landing_lowercase_code_normalized(client):

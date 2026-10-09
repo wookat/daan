@@ -119,17 +119,17 @@ def test_shenlun_year_pages(client):
         assert r.status_code == 200
         assert "2023年申论真题（3 题）" in r.text
         assert "测试申论题干 0" in r.text
-        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
+        assert re.search(r'href="/app/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
         assert 'rel="canonical"' in r.text and "/tiku/y/2023/shenlun/" in r.text
         # 无斜杠 301
         r301 = client.get("/tiku/y/2023/shenlun", follow_redirects=False)
         assert r301.status_code == 301 and r301.headers["location"].endswith("/tiku/y/2023/shenlun/")
         # 年份页 CTA 带 ?year 深链（R252）
-        assert 'href="/#/pkgA/shenlun/shenlun?year=2023"' in r.text
+        assert 'href="/app/#/pkgA/shenlun/shenlun?year=2023"' in r.text
         # hub 年份 chips 为链接、地区 chips 为 ?region 深链（R252）
         hub = client.get("/tiku/shenlun/")
         assert 'href="/tiku/y/2023/shenlun/"' in hub.text
-        assert f'href="/#/pkgA/shenlun/shenlun?region={quote("国考")}"' in hub.text
+        assert f'href="/app/#/pkgA/shenlun/shenlun?region={quote("国考")}"' in hub.text
         # sitemap-years 收录
         sm = client.get("/sitemap-years.xml")
         assert "/tiku/y/2023/shenlun/" in sm.text
@@ -152,10 +152,10 @@ def test_shenlun_qtype_pages(client):
         assert r.status_code == 200
         assert "申论·概括归纳真题（3 题）" in r.text
         assert "测试申论题干 0" in r.text
-        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
+        assert re.search(r'href="/app/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
         assert 'rel="canonical"' in r.text and path in r.text
         # App CTA 带类型深链
-        assert f'href="/#/pkgA/shenlun/shenlun?qtype={quote("概括归纳")}"' in r.text
+        assert f'href="/app/#/pkgA/shenlun/shenlun?qtype={quote("概括归纳")}"' in r.text
         # 无斜杠 301
         r301 = client.get(path.rstrip("/"), follow_redirects=False)
         assert r301.status_code == 301 and r301.headers["location"].endswith(path)
@@ -186,8 +186,8 @@ def test_shenlun_paper_pages(client):
         assert "2023年国考申论（副省级）申论真题（3 题）" in r.text
         assert "给定资料" in r.text and "给定资料测试 0" in r.text
         assert "参考解析" in r.text and "参考解析：略。" in r.text
-        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答本题', r.text)
-        assert 'class="cta" href="/#/pkgA/shenlun/shenlun?paper=' in r.text
+        assert re.search(r'href="/app/#/pkgA/shenlun/shenlun\?id=\d+">去作答本题', r.text)
+        assert 'class="cta" href="/app/#/pkgA/shenlun/shenlun?paper=' in r.text
         assert 'rel="canonical"' in r.text and path in r.text
         # 无斜杠 301（未知套卷无斜杠直接 404，不产生 301→404 链）
         r301 = client.get(path.rstrip("/"), follow_redirects=False)
@@ -232,8 +232,8 @@ def test_shenlun_sucai_pages(client):
         assert "出处：测试出处文献" in r.text
         assert 'rel="canonical"' in r.text and path in r.text
         # 逐条 App 深链（mid+mtype）与 CTA
-        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?tab=m&amp;mid=\d+&amp;mtype=', r.text)
-        assert f'class="cta" href="/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote("金句")}"' in r.text
+        assert re.search(r'href="/app/#/pkgA/shenlun/shenlun\?tab=m&amp;mid=\d+&amp;mtype=', r.text)
+        assert f'class="cta" href="/app/#/pkgA/shenlun/shenlun?tab=m&amp;mtype={quote("金句")}"' in r.text
         # 无斜杠 301；未知类型无斜杠直接 404（不产生 301→404 链）
         r301 = client.get(path.rstrip("/"), follow_redirects=False)
         assert r301.status_code == 301 and r301.headers["location"].endswith(path)
@@ -266,9 +266,9 @@ def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
         assert "noindex" not in r.text
         assert "申论真题库（3 题）" in r.text
         assert "测试申论题干 0" in r.text
-        assert 'href="/#/pkgA/shenlun/shenlun"' in r.text
+        assert 'href="/app/#/pkgA/shenlun/shenlun"' in r.text
         # 逐题深链直达 App 详情（R242）
-        assert re.search(r'href="/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
+        assert re.search(r'href="/app/#/pkgA/shenlun/shenlun\?id=\d+">去作答', r.text)
         # 首页与 sitemap 出现入口
         home = client.get("/tiku/")
         assert 'href="/tiku/shenlun/"' in home.text
@@ -281,7 +281,7 @@ def test_shenlun_hub_renders_with_corpus_and_falls_back_when_empty(client):
     # 语料清空后守卫回落：品牌 404 + 专区 CTA，入口消失
     r404 = client.get("/tiku/shenlun/")
     assert r404.status_code == 404
-    assert 'href="/#/pkgA/shenlun/shenlun"' in r404.text
+    assert 'href="/app/#/pkgA/shenlun/shenlun"' in r404.text
     assert 'href="/tiku/shenlun/"' not in client.get("/tiku/").text
     assert "/tiku/shenlun/" not in client.get("/sitemap-pages.xml").text
 
