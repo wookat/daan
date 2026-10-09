@@ -236,6 +236,7 @@
 </template>
 
 <script>
+import { fmtSlashMD } from '../../fmt.js';
 import { md } from '../../md.js';
 import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
 import { failBannerText } from '../../api-policy.js';
@@ -433,9 +434,7 @@ export default {
       uni.setStorageSync('recentExplains', this.recent);
     },
     fmtRec(ts) {
-      const d = new Date(ts);
-      const p = (x) => (x < 10 ? '0' + x : x);
-      return `${d.getMonth() + 1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      return fmtSlashMD(ts);
     },
     async loadDue() {
       try {

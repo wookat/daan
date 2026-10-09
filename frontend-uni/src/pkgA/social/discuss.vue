@@ -118,6 +118,7 @@
 </template>
 
 <script>
+import { fmtAgo } from '../../fmt.js';
 import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
 import { segResizeMixin } from '../../seg-resize.js';
@@ -204,12 +205,7 @@ export default {
       if (o) this.switchSort(o.value);
     },
     fmtTime(ts) {
-      const diff = Date.now() / 1000 - ts;
-      if (diff < 3600) return Math.max(1, Math.floor(diff / 60)) + ' 分钟前';
-      if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前';
-      if (diff < 30 * 86400) return Math.floor(diff / 86400) + ' 天前';
-      const d = new Date(ts * 1000);
-      return `${d.getMonth() + 1}-${d.getDate()}`;
+      return fmtAgo(ts);
     },
     async loadQuestion() {
       try {

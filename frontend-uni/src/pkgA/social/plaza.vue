@@ -45,6 +45,7 @@
 </template>
 
 <script>
+import { fmtMDHM } from '../../fmt.js';
 import { fetchCommentsPlaza } from '../../api.js';
 import { MODULES, moduleLabel } from '../../module-meta.js';
 
@@ -76,9 +77,7 @@ export default {
       return MODULES[m] ? moduleLabel(m) : '综合';
     },
     fmtTime(ts) {
-      const d = new Date(ts * 1000);
-      const p = (n) => String(n).padStart(2, '0');
-      return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      return fmtMDHM(ts);
     },
     openDiscuss(it) {
       uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + it.question_id });

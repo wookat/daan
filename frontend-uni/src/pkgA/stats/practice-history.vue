@@ -64,6 +64,7 @@
 </template>
 
 <script>
+import { fmtMDHM, fmtDayLabel, fmtDurShort } from '../../fmt.js';
 import { request, snapPeek, anonUid, trackEvent } from '../../api.js';
 import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
@@ -112,14 +113,7 @@ export default {
       return EXTRA_NAMES[m] || m || '混合';
     },
     fmtDay(ts) {
-      const d = new Date(ts * 1000);
-      const now = new Date();
-      const same = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-      if (same(d, now)) return '今天';
-      const y = new Date(now);
-      y.setDate(now.getDate() - 1);
-      if (same(d, y)) return '昨天';
-      return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+      return fmtDayLabel(ts);
     },
     async load() {
       this.loadErr = '';
@@ -195,14 +189,10 @@ export default {
       return p >= 80 ? 'hi' : p < 60 ? 'lo' : '';
     },
     fmtTime(ts) {
-      const d = new Date(ts * 1000);
-      const p = (n) => String(n).padStart(2, '0');
-      return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      return fmtMDHM(ts);
     },
     fmtDur(s) {
-      if (!s) return '0"';
-      const m = Math.floor(s / 60);
-      return m ? m + "'" + String(s % 60).padStart(2, '0') + '"' : s + '"';
+      return fmtDurShort(s);
     },
     redoWrong() {
       uni.setStorageSync('redoSet', this.wrongQs);

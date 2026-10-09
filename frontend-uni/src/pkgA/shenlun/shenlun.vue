@@ -285,6 +285,7 @@
 </template>
 
 <script>
+import { fmtYMDHM } from '../../fmt.js';
 import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
 import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun-qfav.js';
@@ -883,9 +884,7 @@ export default {
       }
     },
     fmtTime(ts) {
-      const d = new Date((ts || 0) * 1000);
-      const p = (n) => (n < 10 ? '0' + n : n);
-      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+      return fmtYMDHM(ts);
     },
     async grade() {
       if (this.grading || !this.myAnswer.trim()) return;
