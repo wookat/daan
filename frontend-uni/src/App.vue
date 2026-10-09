@@ -133,27 +133,13 @@ uni-actionsheet .uni-mask,
 uni-actionsheet .uni-actionsheet {
   z-index: var(--z-toast) !important;
 }
-/* 自定义细滚动条：替换系统默认粗滚动条，覆盖 document 与全部 scroll-view/overflow 容器 */
+/* 隐藏浏览器默认滚动条：滚动功能保留、条体不渲染，对齐小程序无滚动条体感 */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-*::-webkit-scrollbar-thumb {
-  background: var(--line);
-  border-radius: 999px;
-}
-*::-webkit-scrollbar-thumb:hover {
-  background: var(--ink-4);
-}
-*::-webkit-scrollbar-corner {
-  background: transparent;
+  display: none;
 }
 body {
   background: var(--bg);
@@ -354,32 +340,33 @@ html.theme-dark body {
   }
 }
 
-/* 超宽桌面（≥1366px）：壳体拓至 1280px，内容区 1072px，
-   使页面级 1044px 工作台声明真实生效 */
+/* 超宽桌面（≥1366px）：壳体弹性拓宽至 1400px，两侧保底 40px 呼吸边距，
+   侧栏与各固定元素跟随壳体边缘而非视口边缘 */
 @media (min-width: 1366px) {
   uni-app {
-    max-width: 1280px;
+    max-width: 1400px;
+    width: calc(100vw - 80px);
   }
   .uni-tabbar {
-    left: calc((100vw - 1280px) / 2) !important;
+    left: max(40px, calc((100vw - 1400px) / 2)) !important;
   }
   uni-page-body .banner,
   uni-page-body .mask,
   uni-page-body .inputbar,
   uni-page-body .batchbar,
   uni-page-body .navrow {
-    left: calc((100vw - 1280px) / 2) !important;
-    right: calc((100vw - 1280px) / 2) !important;
+    left: max(40px, calc((100vw - 1400px) / 2)) !important;
+    right: max(40px, calc((100vw - 1400px) / 2)) !important;
   }
   uni-page[type="tabBar"] uni-page-body .banner,
   uni-page[type="tabBar"] uni-page-body .mask,
   uni-page[type="tabBar"] uni-page-body .inputbar,
   uni-page[type="tabBar"] uni-page-body .batchbar,
   uni-page[type="tabBar"] uni-page-body .navrow {
-    left: calc((100vw - 1280px) / 2 + 208px) !important;
+    left: max(248px, calc((100vw - 1400px) / 2 + 208px)) !important;
   }
   uni-page-body .fabmenu {
-    right: calc((100vw - 1280px) / 2 + 24px) !important;
+    right: max(64px, calc((100vw - 1400px) / 2 + 24px)) !important;
   }
 }
 /* #endif */
