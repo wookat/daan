@@ -1,7 +1,8 @@
 // R561：错题本「收藏」tab / 刷题页星星 / 我的·收藏数 读侧只看本机 favQuestions，小程序或其他设备（云 question_favs）收藏在 H5 不可见（R560 F1 的镜像面）。
 // 修法：syncCloudFavs 拉 /api/favs 与本机对账（reconcileFavs），题库题以云端为准、无 id 条目保留、刚收藏 60s 内保留；云写失败降级本机独有；恢复码恢复的条目整体降级。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { favFromCloud, reconcileFavs, markFavLocalOnly, favsLocalOnly, FAV_GRACE_MS } from '../src/exam-fav.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
@@ -170,7 +171,7 @@ describe('syncCloudFavs', () => {
 });
 
 describe('R561-fix 对账不吃 apiSnap 快照（生产 E3：POST 后阻断 GET，旧空快照被当云列表把刚收藏的题清掉）', () => {
-  const API = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+  const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
   it('fetchFavsLive 显式 timeout 走 request 直连分支：不进 getCache、网络错误不回退 snapLoad', () => {
     expect(API).toContain("export function fetchFavsLive() {\n  return request(`/api/favs?uid=${encodeURIComponent(anonUid())}`, { timeout: 12000 });\n}");
     const req = API.slice(API.indexOf('export function request('), API.indexOf('export function anonUid('));

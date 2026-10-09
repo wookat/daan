@@ -4,7 +4,8 @@
 // 修法：api.js 以对象身份给兜底返回值打标（staleAt），book.vue 据此保持到期数未同步、横幅按 navigator.onLine 区分
 // 「当前离线 / 网络不稳定」并给出快照时刻 + 「重试」，H5 监听 online 一次自动重拉。
 import { describe, it, expect, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { snapshotNotice, snapshotAgeText } from '../src/snapshot-notice.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
@@ -42,7 +43,7 @@ describe('snapshot-notice 纯函数', () => {
 
 describe('api.js 旧快照兜底返回值可被 staleAt 识别', () => {
   // api.js 含 #ifdef 双定义导出不能整模块导入，抓打标工具片段求值
-  const src = read('../src/api.js');
+  const src = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
   const seg = src.slice(src.indexOf('const staleMarks = new WeakMap();'), src.indexOf('// 快照即显（客户端 stale-while-revalidate）'));
   const { markStale, staleAt } = new Function(seg.replace(/^export /gm, '') + '\nreturn { markStale, staleAt };')();
 

@@ -3,10 +3,11 @@
 // 生产 e0b9c919 点「确认导出」被拦下后 toast 即「导出失败：Failed to fetch」。现在四处 fetch 与三处 reader.read() 统一经
 // fetchNet / readNet 落到 netFailMessage('') = NET_FAIL_TEXT；HTTP 非 2xx / SSE error 事件 / 访问码分支不受影响。
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isNetMsg, failBannerText } from '../src/api-policy';
 
-const API = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 const ASK = readFileSync(new URL('../src/pages/ask/ask.vue', import.meta.url), 'utf8');
 
 // 生产 36ed9af1 复采命中：问答页失败横幅原判据 error.includes('再试')，网络文案以「重试」结尾 →

@@ -2,11 +2,12 @@
 // 此前原样进 Error.message，全站 toast「提交失败：request:fail」直接给真人看；现在在网络层统一成中文，
 // 且产出必须仍被 isTimeoutMsg / isNetMsg / trackRetryable / submitFailPlan 判为超时/网络错误——分类与重试口径不变。
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isTimeoutMsg, isNetMsg, trackRetryable } from '../src/api-policy';
 import { submitFailPlan } from '../src/exam-policy';
 
-const API = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 
 describe('netFailMessage', () => {
   it('平台 :fail 原文 → 中文；timeout 单列', () => {
