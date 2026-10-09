@@ -134,8 +134,18 @@ uni-actionsheet .uni-actionsheet {
   z-index: var(--z-toast) !important;
 }
 html {
-  /* 恒预留滚动条槽位：内容变长出现滚动条时居中壳不再横移（CLS） */
-  scrollbar-gutter: stable;
+  /* 隐藏滚动条后无需预留槽位（滚动功能保留，仅去视觉），对齐小程序无滚动条体感 */
+  scrollbar-width: none;
+}
+*,
+*::-webkit-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 body {
   background: var(--bg);
