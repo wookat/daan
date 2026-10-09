@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { snapshotNotice, snapshotAgeText } from '../src/snapshot-notice.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const tpl = book.slice(0, book.indexOf('<script'));
 const script = book.slice(book.indexOf('<script'), book.indexOf('</script>'));
 const method = (name) => {

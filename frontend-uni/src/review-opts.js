@@ -19,3 +19,9 @@ export function reviewOptions(cur) {
 export function reviewOptionsFull(opts) {
   return Array.isArray(opts) && opts.some((x) => x && x.t);
 }
+
+// 正确答案归一化：从字段文本提取 A–D 字母集（多选排序去重），无字母返回 null
+export function extractLetter(s) {
+  const m = /[A-D]+/.exec(String(s || '').toUpperCase());
+  return m ? [...new Set(m[0])].sort().join('') : null;
+}

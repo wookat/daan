@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
-const src = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const src = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 describe('R513 exitReview 回页顶', () => {
   it('exitReview() 退出复习后 pageScrollTo(0)', () => {

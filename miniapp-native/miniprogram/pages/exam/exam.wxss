@@ -37,6 +37,14 @@
   margin-top: var(--sp-12);
 }
 
+.focus-hint {
+  display: block;
+  margin-top: var(--sp-8);
+  font-size: var(--fs-caption);
+  line-height: 1.5;
+  color: var(--brand);
+}
+
 .ph {
   padding: var(--sp-12) var(--sp-16);
 }

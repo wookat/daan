@@ -7,7 +7,7 @@ import { exportNote, exportNotesMap } from '../src/book-export.js';
 import { nextReviewText } from '../src/review-summary.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const BOOK = read('../src/pages/book/book.vue');
+const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const CONFIRM = read('../src/components/export-confirm/export-confirm.vue');
 
 function evalComputed(name, ctx) {
@@ -124,7 +124,8 @@ describe('nextReviewText', () => {
 
 describe('复习清零小结接入', () => {
   it('每题 POST /api/review 回的 next_review_days 落 cur._nextDays；清零时算 nextText；CTA 改「回错题本」', () => {
-    expect(BOOK).toContain("import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../review-summary.js';");
+    expect(BOOK).toContain("import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review-summary.js';");
+    expect(BOOK).toContain("import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review-summary.js';");
     expect(BOOK).toContain('this.cur._nextDays = res.next_review_days;\n        this.cur._streak = res.streak;');
     expect(BOOK).toContain('this.rSummary = reviewSummary(this.rItems);\n        this.nextText = nextReviewText(this.rItems);');
     expect(BOOK).toContain('<text v-if="nextText" class="cb-s cb-next">{{ nextText }}</text>');

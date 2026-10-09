@@ -8,8 +8,8 @@ import { fileURLToPath } from 'node:url';
 import { normalizeTabPageFullPath } from '../src/book-url.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
-const script = book.slice(book.indexOf('<script'), book.indexOf('</script>'));
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
+const script = book.slice(book.indexOf('<script'), book.length);
 const uniH5 = read('../node_modules/@dcloudio/uni-h5/dist/uni-h5.es.js');
 
 // 与 uni-h5 同口径的复用判定（源码 isSamePage/getTabBarPageId 摘录），用于验证归一后能命中

@@ -206,7 +206,7 @@
           <kg-card clickable class="more-c" @click="goExamList">
             <view class="more-ico"><l-icon name="timer" :size="24" tone="brand" /></view>
             <text class="more-t">模考</text>
-            <text class="more-s">迷你 / 全真 · 成绩报告</text>
+            <text class="more-s">迷你 / 全真 / 组卷 · 成绩报告</text>
           </kg-card>
           <kg-card clickable class="more-c" @click="goShenlun">
             <view class="more-ico"><l-icon name="pen-line" :size="24" tone="brand" /></view>

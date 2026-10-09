@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { assertHitLayer } from './_w5-hit.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const practice = read('../src/pages/practice/practice.vue');
 const style = book.slice(book.indexOf('<style'));
 const rule = (src, cls) => (src.match(new RegExp(`\\n\\.${cls} \\{([^}]*)\\}`)) || [])[1] || '';

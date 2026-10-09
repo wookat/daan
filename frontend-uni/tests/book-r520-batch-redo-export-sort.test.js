@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { buildBookUrl, parseBookOpts, BOOK_PATH } from '../src/book-url.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 function methodBody(name) {
   const re = new RegExp(`\\n {4}(?:async )?${name}\\([^)]*\\) \\{\\n([\\s\\S]*?)\\n {4}\\},`);

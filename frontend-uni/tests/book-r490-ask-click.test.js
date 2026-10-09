@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SRC = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const SRC = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 describe('book.vue 列表「AI 详解」深链打点', () => {
   it('redo(m) 在 switchTab 前打 book_ask_click（source=module, ref=qid）', () => {

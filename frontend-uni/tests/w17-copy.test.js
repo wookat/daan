@@ -129,7 +129,7 @@ describe('W17-C1 源锁：H5 模板与小程序同源字符串', () => {
     poster: read('../src/pkgA/social/poster.vue'),
     shareQ: read('../src/pkgA/share/share-q.vue'),
     api: readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n'),
-    book: read('../src/pages/book/book.vue'),
+    book: read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js'),
     practice: read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js'),
   };
   const MP = {

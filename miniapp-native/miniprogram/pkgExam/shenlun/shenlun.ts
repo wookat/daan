@@ -4,7 +4,6 @@ import {
   fetchShenlunDraft,
   fetchShenlunFilters,
   fetchShenlunHistory,
-  fetchShenlunHotspots,
   fetchShenlunMatFavs,
   fetchShenlunMaterials,
   fetchShenlunNotes,
@@ -18,6 +17,8 @@ import {
   shenlunGrade,
 } from '../../api/exam';
 import type { ShenlunHistoryItem, ShenlunHotspot, ShenlunMaterial, ShenlunNote, ShenlunQuestion, ShenlunQuestionDetail } from '../../api/exam-types';
+import * as hotsMod from './shenlun-hots';
+import type { HotVM } from './shenlun-hots';
 import {
   MFAV_IDS_KEY,
   MFAV_SNAPS_KEY,
@@ -58,19 +59,6 @@ interface QVM extends ShenlunQuestion {
 interface MVM extends ShenlunMaterial {
   faved: boolean;
   hit: boolean;
-  expanded: boolean;
-}
-
-interface HotSegVM {
-  name: string;
-  items: Array<ShenlunHotspot['others'][number] & { faved: boolean }>;
-}
-
-interface HotVM {
-  topic: string;
-  segRows: HotSegVM[];
-  others: Array<ShenlunHotspot['others'][number] & { faved: boolean }>;
-  othersOpen: boolean;
   expanded: boolean;
 }
 
@@ -589,71 +577,24 @@ Page({
     this.loadMats();
   },
 
-  // ---------- 热点三段式 ----------
+  // ---------- 热点三段式（实现见 shenlun-hots.ts，p 委托） ----------
   hotvm(g: ShenlunHotspot): HotVM {
-    const fav = (m: ShenlunHotspot['others'][number]) => ({ ...m, faved: this._mFavIds.includes(m.id) });
-    const segRows = (['内涵', '角度', '金句'] as const)
-      .map((name) => ({ name, items: ((g.segs || {})[name] || []).map(fav) }))
-      .filter((r) => r.items.length);
-    return {
-      topic: g.topic,
-      segRows,
-      others: (g.others || []).map(fav),
-      othersOpen: this._expanded === 'h' + g.topic,
-      expanded: this._expanded === 'h' + g.topic,
-    };
+    return hotsMod.hotvm(this, g);
   },
   renderHots() {
-    this.setData({ hots: this._hotsRaw.map((g) => this.hotvm(g)), mFavCount: this._mFavIds.length });
+    hotsMod.renderHots(this);
   },
   async loadHots(append = false) {
-    this.setData({ loading: !append, mErr: '' });
-    try {
-      const d = await fetchShenlunHotspots({ offset: this._hOffset, limit: PAGE });
-      const items = d.items || [];
-      this._hotsRaw = append ? this._hotsRaw.concat(items) : items;
-      this.setData({ hotEnd: items.length < PAGE });
-      this.renderHots();
-    } catch (e) {
-      const msg = (e as Error).message || '网络异常';
-      this.setData({ mErr: msg });
-      wx.showToast({ title: '加载失败：' + msg, icon: 'none' });
-    }
-    this.setData({ loading: false });
+    return hotsMod.loadHots(this, append);
   },
   onHotExpand(e: WechatMiniprogram.TouchEvent) {
-    const topic = String(e.currentTarget.dataset.topic || '');
-    this._expanded = this._expanded === 'h' + topic ? 0 : 'h' + topic;
-    this.renderHots();
+    hotsMod.onHotExpand(this, e);
   },
   toggleHotOthers(e: WechatMiniprogram.TouchEvent) {
-    const topic = String(e.currentTarget.dataset.topic || '');
-    const g = this._hotsRaw.find((x) => x.topic === topic);
-    if (!g) return;
-    this._expanded = this._expanded === 'o' + topic ? 'h' + topic : 'o' + topic;
-    const hots = this.data.hots.map((h) =>
-      h.topic === topic ? { ...h, othersOpen: this._expanded === 'o' + topic } : h);
-    this.setData({ hots });
+    hotsMod.toggleHotOthers(this, e);
   },
   onHotFav(e: WechatMiniprogram.TouchEvent) {
-    const id = Number(e.currentTarget.dataset.id);
-    const all = this._hotsRaw.flatMap((g) =>
-      (['内涵', '角度', '金句'] as const).flatMap((k) => g.segs[k] || []).concat(g.others));
-    const m = all.find((x) => x.id === id);
-    if (!m) return;
-    const i = this._mFavIds.indexOf(m.id);
-    const on = i < 0;
-    if (on) {
-      this._mFavIds.push(m.id);
-      this._mFavs.unshift(m as ShenlunMaterial);
-    } else {
-      this._mFavIds.splice(i, 1);
-      this._mFavs = this._mFavs.filter((x) => x.id !== m.id);
-    }
-    wx.setStorageSync(MFAV_IDS_KEY, this._mFavIds);
-    wx.setStorageSync(MFAV_SNAPS_KEY, this._mFavs);
-    setShenlunMatFav(m.id, on).catch(() => {});
-    this.renderHots();
+    hotsMod.onHotFav(this, e);
   },
 
   // ---------- 我的笔记 ----------

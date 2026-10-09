@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { scanPageLabel, scanPagesNote } from '../src/paper-scan-pages.js';
 import { inlineSkipNote } from '../src/paper-inline-note.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 const p1 = { page: 1, pages: 2, total: 50, items: [{ no: 1 }, { no: 50 }] };
 const p2 = { page: 2, pages: 2, total: 10, items: [{ no: 51 }, { no: 60 }] };

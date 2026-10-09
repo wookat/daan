@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const src = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8');
+const src = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/pages/book/review-ops.js', import.meta.url)), 'utf8');
 const style = src.slice(src.indexOf('<style'));
 
 describe('book.vue 弹层与 TabBar 关系（源文件锁）', () => {

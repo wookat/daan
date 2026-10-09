@@ -38,7 +38,9 @@
       </view>
       <view class="medals">
         <view wx:for="{{medals}}" wx:key="name" class="medal {{item.got ? 'is-got' : ''}}">
-          <l-icon name="{{item.icon}}" size="24" tone="{{item.got ? 'warn' : 'faint'}}" />
+          <view class="m-ring" style="background: conic-gradient({{item.got ? 'var(--warn)' : 'var(--ink-4)'}} 0% {{item.got ? 100 : item.pct}}%, var(--fill) 0)">
+            <view class="m-ring-in"><l-icon name="{{item.icon}}" size="22" tone="{{item.got ? 'warn' : 'faint'}}" /></view>
+          </view>
           <text class="m-name">{{item.name}}</text>
           <text class="m-sub">{{item.progress}}</text>
         </view>

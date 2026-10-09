@@ -1,0 +1,198 @@
+{
+ "_doc": "kg-* dual-end component contract: events are semantic names with the actual per-side event name under mp/h5; props are the common attributes both ends MUST expose. If you change one end, sync the other or record the drift here. Asserted by tools/check_kg_spec.py and the frontend-uni vitest spec.",
+ "pairs": {
+  "kg-action-bar": {
+   "h5": "kg-action-bar",
+   "props": [
+    "disabled",
+    "index",
+    "layout",
+    "loading",
+    "primaryText",
+    "secondaryText",
+    "total"
+   ],
+   "events": {
+    "primary": {
+     "mp": "primary",
+     "h5": "primary"
+    },
+    "secondary": {
+     "mp": "secondary",
+     "h5": "secondary"
+    }
+   }
+  },
+  "kg-banner": {
+   "h5": "kg-banner",
+   "props": [
+    "actionText",
+    "closable",
+    "icon",
+    "text",
+    "tone"
+   ],
+   "events": {
+    "action": {
+     "mp": "action",
+     "h5": "action"
+    },
+    "close": {
+     "mp": "close",
+     "h5": "close"
+    }
+   }
+  },
+  "kg-button": {
+   "h5": "kg-button",
+   "props": [
+    "block",
+    "disabled",
+    "icon",
+    "loading",
+    "size",
+    "tone",
+    "variant"
+   ],
+   "events": {
+    "click": {
+     "mp": "click",
+     "h5": "click"
+    }
+   }
+  },
+  "kg-card": {
+   "h5": "kg-card",
+   "props": [
+    "chevron",
+    "clickable",
+    "padding",
+    "selected",
+    "variant"
+   ],
+   "events": {
+    "click": {
+     "mp": "click",
+     "h5": "click"
+    }
+   }
+  },
+  "kg-chip-row": {
+   "h5": "kg-chip-row",
+   "props": [
+    "options",
+    "scrollToSelected",
+    "size",
+    "toggle"
+   ],
+   "events": {
+    "update": {
+     "mp": "change",
+     "h5": "update"
+    }
+   }
+  },
+  "kg-empty": {
+   "h5": "kg-empty-state",
+   "props": [
+    "compact",
+    "ctaText",
+    "ctaTo",
+    "desc",
+    "icon",
+    "secondaryText",
+    "title"
+   ],
+   "events": {
+    "cta": {
+     "mp": "cta",
+     "h5": "cta"
+    },
+    "secondary": {
+     "mp": "secondary",
+     "h5": "secondary"
+    }
+   }
+  },
+  "kg-option-group": {
+   "h5": "kg-option-group",
+   "props": [
+    "answer",
+    "options",
+    "revealed"
+   ],
+   "events": {
+    "select": {
+     "mp": "pick",
+     "h5": "select"
+    },
+    "exclude": {
+     "mp": "excl",
+     "h5": "exclude"
+    }
+   }
+  },
+  "kg-progress": {
+   "h5": "kg-progress",
+   "props": [
+    "ariaLabel",
+    "inverse",
+    "max",
+    "module",
+    "shape",
+    "size",
+    "thickness",
+    "value"
+   ],
+   "events": {}
+  },
+  "kg-question-card": {
+   "h5": "kg-question-card",
+   "props": [
+    "index",
+    "total"
+   ],
+   "events": {
+    "tag": {
+     "mp": "mark",
+     "h5": "tag"
+    }
+   }
+  },
+  "kg-section-header": {
+   "h5": "kg-section-header",
+   "props": [
+    "more",
+    "title",
+    "to"
+   ],
+   "events": {
+    "more": {
+     "mp": "more",
+     "h5": "more"
+    }
+   }
+  },
+  "kg-sheet": {
+   "h5": "kg-sheet",
+   "props": [
+    "title"
+   ],
+   "events": {
+    "close": {
+     "mp": "close",
+     "h5": "close"
+    }
+   }
+  },
+  "kg-tag": {
+   "h5": "kg-tag",
+   "props": [
+    "icon",
+    "module",
+    "tone"
+   ],
+   "events": {}
+  }
+ }
+}

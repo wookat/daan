@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fineTypeLabel, qtypeName } from '../src/type-label.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const STATS = readFileSync(new URL('../src/pages/stats/stats.vue', import.meta.url), 'utf8');
 
 // 从 book.vue 抠出 moreTitle 方法体，用与页面同口径的 groupKey/fineType/fineLabel/tagName 上下文求值

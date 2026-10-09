@@ -289,7 +289,8 @@ export default {
       return (p.exam_type || '') + (p.exam_date ? ' · ' + p.exam_date : '');
     },
   },
-  onLoad() {
+  onLoad(opts) {
+    if (opts && opts.coach) this.coachOpen = true;
     this._onAuth = () => {
       const u = getAuthUser();
       if ((u ? u.uid : null) === (this.user ? this.user.uid : null)) return;
@@ -312,6 +313,10 @@ export default {
   },
   onShow() {
     this.user = getAuthUser();
+    if (uni.getStorageSync('profileCoachOpen')) {
+      uni.removeStorageSync('profileCoachOpen');
+      this.coachOpen = true;
+    }
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
     this.favN = (uni.getStorageSync('favQuestions') || []).length;

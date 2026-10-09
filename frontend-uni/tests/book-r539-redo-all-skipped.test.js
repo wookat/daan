@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { redoSkippedNote } from '../src/book-redo-skipped.js';
 import { redoSkippedNote as mpRedoSkippedNote } from '../../miniapp-native/miniprogram/utils/redo-note.ts';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const mp = (p) => readFileSync(fileURLToPath(new URL('../../miniapp-native/miniprogram/' + p, import.meta.url)), 'utf8');
 
 function redoAllBody() {

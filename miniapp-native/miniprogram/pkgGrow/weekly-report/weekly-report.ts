@@ -123,6 +123,7 @@ Page({
     cmp: [] as CmpRow[],
     mastery: [] as MasteryRow[],
     reasons: [] as ReasonRow[],
+    reasonNote: '',
     mockSub: '',
     nextEvent: null as NextEvent | null,
     nextEventText: '',
@@ -204,6 +205,12 @@ Page({
       ],
       mastery,
       reasons: reasons.map((x) => ({ ...x, pct: Math.max(6, (x.n / max) * 100) })),
+      reasonNote: (() => {
+        const total = reasons.reduce((s, x) => s + x.n, 0);
+        if (!total) return '';
+        const un = (reasons.find((x) => x.reason === '未标注') || { n: 0 }).n;
+        return `错因标注覆盖 ${Math.round(((total - un) / total) * 100)}%（${total} 道错题中 ${total - un} 道已标注）`;
+      })(),
       mockSub,
     });
     this.markRead(d);

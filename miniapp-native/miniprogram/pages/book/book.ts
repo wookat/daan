@@ -336,6 +336,7 @@ Page({
   _reviewIntent: false,
   _autoScan: false,
   _autoCode: '',
+  _aiIntent: false,
   _qStart: 0,
   // 分片渲染的全量过滤结果（不进 data，避免整表进 setData 通道）
   _shownAll: [] as MRow[],
@@ -355,6 +356,10 @@ Page({
     if (wx.getStorageSync('bookAutoScan')) {
       wx.removeStorageSync('bookAutoScan');
       this._autoScan = true;
+    }
+    if (wx.getStorageSync('bookAiOpen')) {
+      wx.removeStorageSync('bookAiOpen');
+      this._aiIntent = true;
     }
     this.load();
   },
@@ -427,6 +432,9 @@ Page({
         this.onManualOpen();
         this.setData({ manualCode: code });
         this.onManualLookup();
+      } else if (this._aiIntent) {
+        this._aiIntent = false;
+        this.onAiAnalysis();
       }
     } catch (e) {
       wx.showToast({ title: '加载失败：' + (e as Error).message, icon: 'none' });

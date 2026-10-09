@@ -85,9 +85,10 @@ describe('R541 快照恢复带回 _streak/_mastered（条目字段透传，快�
 });
 
 describe('R541 源锁', () => {
-  const vue = read('../src/pages/book/book.vue');
+  const vue = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
   it('H5 复习卡 verdict 走 reviewVerdict（record 写回 _streak/_mastered、恢复态回填 streak、庆祝态含达成掌握行）', () => {
-    expect(vue).toContain("import { nextReviewText, reviewSummary, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../review-summary.js'");
+    expect(vue).toContain("import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review-summary.js';");
+    expect(vue).toContain("import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review-summary.js';");
     expect(vue).toContain('>{{ verdictText }}</view>');
     expect(vue).toContain('this.cur._streak = res.streak;');
     expect(vue).toContain('this.cur._mastered = res.mastered === true;');

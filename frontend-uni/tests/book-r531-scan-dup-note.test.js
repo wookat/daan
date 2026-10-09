@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { scanDupNote } from '../src/paper-scan-pages.js';
 import { scanRowJumpable, scanRowKey } from '../src/paper-scan-jump.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const wrong = { no: 2, question_id: 112, status: 'ok', correct: false, picked: 'A', answer: 'C' };
 
 describe('scanDupNote', () => {

@@ -334,6 +334,13 @@ Page({
   goBook() {
     wx.switchTab({ url: '/pages/book/book' });
   },
+  goBookAi() {
+    wx.setStorageSync('bookAiOpen', 1);
+    wx.switchTab({ url: '/pages/book/book' });
+  },
+  goInterview() {
+    wx.navigateTo({ url: '/pkgSocial/interview/interview' });
+  },
 
   chooseImage(source: 'camera' | 'album') {
     wx.chooseMedia({

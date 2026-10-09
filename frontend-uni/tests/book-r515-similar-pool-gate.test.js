@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { hasSimilarPool } from '../src/review-similar.js';
 import { MODULE_KEYS } from '../src/module-meta.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 describe('hasSimilarPool', () => {
   it('行测五模块（题库 module 键）有池', () => {

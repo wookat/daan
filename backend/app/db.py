@@ -2343,6 +2343,11 @@ def _ensure_answer_log(conn):
     # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段，运营看板剔除）；旧行 NULL=未知
     add_column_if_missing(conn, "answer_log", "probe", "INTEGER")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
+    # uid+question_id 过滤热路径（alembic 0002 同款，幂等兜底：被守卫跳过的库也能拿到）
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_al_uid_qid ON answer_log(uid, question_id) "
+        "WHERE question_id IS NOT NULL"
+    )
 
 
 def foreign_module_qid(module, qid):
