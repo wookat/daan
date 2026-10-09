@@ -42,7 +42,7 @@ def test_empty_module_hub_html_404(client):
     seed_questions()
     r = client.get("/tiku/shenlun/")
     _assert_html_404(r)
-    assert 'href="/#/pkgA/shenlun/shenlun"' in r.text
+    assert 'href="/app/#/pkgA/shenlun/shenlun"' in r.text
     assert '申论专区' in r.text
     assert client.get("/tiku/changshi/").status_code == 200
 
