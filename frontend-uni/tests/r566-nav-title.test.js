@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { practiceNavTitle, practicePageOnTop, PRACTICE_TITLE_DEFAULT } from '../src/practice-title.js';
 
-const PRACTICE = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
+const PRACTICE = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/practice/daily-ops.js', import.meta.url), 'utf8')+readFileSync(new URL('../src/practice/session-ops.js', import.meta.url), 'utf8');
 const PAGES = JSON.parse(readFileSync(new URL('../src/pages.json', import.meta.url), 'utf8'));
 const mod = (m) => ({ yanyu: '言语理解', shuliang: '数量关系' })[m] || m;
 

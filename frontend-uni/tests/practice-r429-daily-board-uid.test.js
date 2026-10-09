@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-const SRC = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
+const SRC = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/practice/daily-ops.js', import.meta.url), 'utf8')+readFileSync(new URL('../src/practice/session-ops.js', import.meta.url), 'utf8');
 
 describe('practice.vue daily board', () => {
   it('/api/daily_set/board 带 encodeURIComponent(anonUid())', () => {

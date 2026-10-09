@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resumeAsk, resumeDismissAction } from '../src/resume-ask.js';
 
-const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8');
+const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/daily-ops.js', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/session-ops.js', import.meta.url)), 'utf8');
 const EXAM = readFileSync(fileURLToPath(new URL('../src/pkgA/exam/exam.vue', import.meta.url)), 'utf8');
 
 function slice(src, startMarker, endMarker) {
@@ -54,7 +54,7 @@ describe('practice.vue 继续上次练习层', () => {
   });
 
   it('tryResume：done>0 → askResume(local)，cont=adoptLocalPending，drop=removeStorage+clearServerProgress+start', () => {
-    const body = slice(PRACTICE, '    tryResume() {', '    async rateHs(');
+    const body = slice(PRACTICE, '    tryResume() {', '    stayHere() {');
     expect(body).not.toContain('showModal');
     expect(body).toContain("this.askResume(\n        'local'");
     expect(body).toContain('() => this.adoptLocalPending(s)');

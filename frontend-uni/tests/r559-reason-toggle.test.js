@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const chip = read('../src/components/kg-chip-row/kg-chip-row.vue');
-const practice = read('../src/pages/practice/practice.vue');
+const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
 const book = read('../src/pages/book/book.vue');
 const report = read('../src/pkgA/exam/report.vue');
 const api = read('../../backend/app/study_api.py');
