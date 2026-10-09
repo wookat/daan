@@ -295,55 +295,8 @@
       @confirm="exportPaper"
     />
 
-    <!-- 制定学习计划 sheet -->
-    <kg-sheet v-model="setupOpen" :title="'制定学习计划 · ' + ['考试信息', '目标', '每日时长'][setupStep - 1] + '（' + setupStep + '/3）'">
-      <template v-if="setupStep === 1">
-        <view class="setrow">
-          <text class="set-k">考试类型</text>
-          <kg-chip-row size="sm" :options="['国考', '省考', '事业单位', '其他'].map((t) => ({ label: t, value: t }))" :model-value="pf.exam_type" :scroll-to-selected="false" @update:model-value="(v) => (pf.exam_type = v)" />
-        </view>
-        <view class="setrow">
-          <text class="set-k">目标地区</text>
-          <input v-model="pf.target_region" class="pf-input" placeholder="如 广东 / 全国（选填）" :maxlength="20" />
-        </view>
-        <view class="setrow">
-          <text class="set-k">考试日期</text>
-          <wd-datetime-picker
-            v-model="pfDateTs"
-            type="date"
-            :min-date="dateStartTs"
-            :max-date="dateEndTs"
-            :before-confirm="beforeExamDate"
-            @confirm="onExamDate"
-          >
-            <view class="pf-date" :class="{ empty: !pf.exam_date, past: pfDatePast }">{{ pfDateText }}</view>
-          </wd-datetime-picker>
-        </view>
-      </template>
-      <template v-else-if="setupStep === 2">
-        <view class="setrow">
-          <text class="set-k">目标分</text>
-          <kg-chip-row size="sm" :options="[60, 65, 70, 75, 80].map((s) => ({ label: s + '+', value: s }))" :model-value="pf.target_score" :scroll-to-selected="false" @update:model-value="(v) => (pf.target_score = v)" />
-        </view>
-        <view class="setrow">
-          <text class="set-k">基础自评</text>
-          <kg-chip-row size="sm" :options="['零基础', '有基础', '二战'].map((b) => ({ label: b, value: b }))" :model-value="pf.base_level" :scroll-to-selected="false" @update:model-value="(v) => (pf.base_level = v)" />
-        </view>
-      </template>
-      <template v-else>
-        <view class="setrow">
-          <view class="set-kwrap"><text class="set-k">每日可用时长</text><text class="set-sub">决定每日任务量</text></view>
-          <kg-chip-row size="sm" :options="[30, 60, 90, 120].map((m) => ({ label: m + ' 分钟', value: m }))" :model-value="pf.daily_minutes" :scroll-to-selected="false" @update:model-value="(v) => (pf.daily_minutes = v)" />
-        </view>
-        <text class="pf-summary">{{ pf.exam_type }}{{ pf.target_region ? ' · ' + pf.target_region : '' }} · {{ pf.exam_date }} · 目标 {{ pf.target_score }}+ · {{ pf.base_level }} · 每天 {{ pf.daily_minutes }} 分钟</text>
-      </template>
-      <template #footer>
-        <view class="sheet-acts">
-          <kg-button variant="primary" size="lg" block :loading="setupBusy" @click="setupNext">{{ setupStep < 3 ? '下一步' : setupBusy ? '生成中…' : '生成我的学习计划' }}</kg-button>
-          <kg-button v-if="setupStep > 1" variant="text" size="md" block @click="setupStep--">上一步</kg-button>
-        </view>
-      </template>
-    </kg-sheet>
+    <!-- 制定学习计划 wizard：抽成 PlanSetupSheet 组件，saved 后刷新计划卡 -->
+    <plan-setup-sheet v-model="setupOpen" :profile="profile" @saved="onPlanSaved" />
 
     <!-- 选二级题型 sheet -->
     <kg-sheet :model-value="!!subSelect" :title="modName(subSelect) + ' · 选择题型'" @update:model-value="(v) => { if (!v) subSelect = null; }">
@@ -379,7 +332,7 @@ import { parsePendingPractice, parseRemotePractice, markRemoteResume, dailyPendi
 import { parseReviewSnap } from '../../review-snap.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { planDaysLabel, isExamDatePast, examDateFieldText, cnTodayStr, planCardMark } from '../../plan-days-label.js';
+import { planDaysLabel, planCardMark } from '../../plan-days-label.js';
 import { MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 import { todayShown } from '../../home-today.js';
 
@@ -405,9 +358,6 @@ export default {
       guideHide: uni.getStorageSync('planGuideHide') ? true : false,
       landingHide: uni.getStorageSync('landingHide') ? true : false,
       setupOpen: false,
-      setupStep: 1,
-      setupBusy: false,
-      pf: { exam_type: '国考', target_region: '', exam_date: '', target_score: 70, daily_minutes: 60, base_level: '零基础' },
       subProg: {},
       submodules: [],
       pstats: { byModule: {}, days: {} },
@@ -433,11 +383,6 @@ export default {
       reviewResume: null,
       dsMeta: null,
       dsDone: null,
-      dateStart: new Date().toISOString().slice(0, 10),
-      dateEnd: new Date(Date.now() + 3 * 366 * 86400000).toISOString().slice(0, 10),
-      dateStartTs: Date.now(),
-      dateEndTs: Date.now() + 3 * 366 * 86400000,
-      pfDateTs: Date.now(),
     };
   },
   computed: {
@@ -449,12 +394,6 @@ export default {
     },
     planDaysText() {
       return this.planToday ? planDaysLabel(this.planToday.days_left, this.planToday.phase_name) : '';
-    },
-    pfDatePast() {
-      return isExamDatePast(this.pf.exam_date, cnTodayStr());
-    },
-    pfDateText() {
-      return examDateFieldText(this.pf.exam_date, cnTodayStr());
     },
     goalOptions() {
       return [20, 50, 100].map((g) => ({ label: g + ' 题', value: g }));
@@ -637,24 +576,6 @@ export default {
       // #ifdef H5
       window.location.href = '/tiku/';
       // #endif
-    },
-    beforeExamDate(value, resolve) {
-      // confirm 前拦截越界日期：钳回边界并提示，弹层保持打开
-      if (value < this.dateStartTs || value > this.dateEndTs) {
-        this.pfDateTs = value < this.dateStartTs ? this.dateStartTs : this.dateEndTs;
-        uni.showToast({ title: `请选择 ${this.dateStart} 至 ${this.dateEnd} 之间的日期`, icon: 'none', duration: 2500 });
-        resolve(false);
-        return;
-      }
-      resolve(true);
-    },
-    onExamDate({ value }) {
-      this.pf.exam_date = this.fmtDateStr(value);
-    },
-    fmtDateStr(ts) {
-      const d = new Date(ts);
-      const p = (n) => (n < 10 ? '0' + n : '' + n);
-      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
     },
     loadDailySet() {
       // 全站同题题组：首页外显参与数 + 预取题组供 startDaily 秒开（边缘缓存 60s）
@@ -1131,51 +1052,16 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     openSetup() {
-      const p = this.profile || {};
-      this.pf = {
-        exam_type: p.exam_type || '国考',
-        target_region: p.target_region || '',
-        exam_date: p.exam_date || '',
-        target_score: p.target_score || 70,
-        daily_minutes: p.daily_minutes || 60,
-        base_level: p.base_level || '零基础',
-      };
-      const ts = this.pf.exam_date ? new Date(this.pf.exam_date + 'T12:00:00').getTime() : Date.now();
-      this.pfDateTs = Math.min(Math.max(ts, this.dateStartTs), this.dateEndTs);
-      this.setupStep = 1;
       this.setupOpen = true;
+    },
+    async onPlanSaved(profile) {
+      this.profile = profile;
+      await this.loadPlanToday();
     },
     skipGuide() {
       this.guideHide = true;
       uni.setStorageSync('planGuideHide', '1');
       uni.showToast({ title: '已跳过，可在「我的」随时制定', icon: 'none', duration: 1500 });
-    },
-    async setupNext() {
-      if (this.setupStep === 1 && !this.pf.exam_date) {
-        uni.showToast({ title: '请先选择考试日期', icon: 'none' });
-        return;
-      }
-      if (this.setupStep === 1 && this.pfDatePast) {
-        uni.showToast({ title: '考试日期已过，请重新选择', icon: 'none' });
-        return;
-      }
-      if (this.setupStep < 3) {
-        this.setupStep++;
-        return;
-      }
-      if (this.setupBusy) return;
-      this.setupBusy = true;
-      try {
-        const d = await request('/api/profile', { method: 'POST', data: { uid: anonUid(), ...this.pf } });
-        this.profile = d.profile;
-        await this.loadPlanToday();
-        this.setupOpen = false;
-        uni.showToast({ title: '学习计划已生成', icon: 'none' });
-      } catch (e) {
-        uni.showToast({ title: '保存失败：' + e.message, icon: 'none' });
-      } finally {
-        this.setupBusy = false;
-      }
     },
     goTask(t) {
       if (t.done) return;
@@ -1333,11 +1219,6 @@ export default {
 .set-sub { font-size: var(--fs-caption); color: var(--ink-4); }
 .custom-note { display: block; font-size: var(--fs-caption); color: var(--ink-4); padding: var(--sp-12) 0 0; line-height: var(--lh-caption); }
 .sheet-acts { display: grid; gap: var(--sp-8); }
-.pf-input { height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--fill); color: var(--ink); font-size: var(--fs-body); }
-.pf-date { display: flex; align-items: center; height: var(--hit-min); padding: 0 var(--sp-12); border-radius: var(--r-sm); background: var(--fill); color: var(--ink); font-size: var(--fs-body); }
-.pf-date.empty { color: var(--ink-4); }
-.pf-date.past { color: var(--bad-strong); border: 1px solid var(--bad-strong); }
-.pf-summary { display: block; font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-sub); padding: var(--sp-12) 0 0; }
 
 /* 题型 sheet */
 .sub-list { display: flex; flex-direction: column; gap: var(--sp-8); }

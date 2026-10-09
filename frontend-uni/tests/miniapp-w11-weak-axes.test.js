@@ -8,8 +8,10 @@ const ts = readFileSync(fileURLToPath(new URL('../../miniapp-native/miniprogram/
 
 describe('W11-C stats.ts 雷达轴口径（源文件锁）', () => {
   it('轴类型在 RadarAxis 上补 n（已答题数），axes/weakAxes 均按该类型声明', () => {
-    expect(ts).toMatch(/interface StatAxis extends RadarAxis \{\s*n: number;\s*\}/);
-    expect(ts).toMatch(/axes: \[\] as StatAxis\[\],\s*hasRadar: false,\s*weakAxes: \[\] as StatAxis\[\],/);
+    // echarts 迁移后（PR #805）StatAxis 不再 extends RadarAxis，仅要求含 n: number 字段
+    expect(ts).toMatch(/interface StatAxis \{\s*key: string;\s*name: string;\s*pct: number;\s*n: number;\s*\}/);
+    expect(ts).toMatch(/axes: \[\] as StatAxis\[\],/);
+    expect(ts).toMatch(/weakAxes: \[\] as StatAxis\[\],/);
     expect(ts).toMatch(/const axes: StatAxis\[\] = MODS\.map/);
   });
   it('两条数据源都写入 n：服务端 growth 用 s.n，本机 pstats 用 s.done', () => {
@@ -18,7 +20,7 @@ describe('W11-C stats.ts 雷达轴口径（源文件锁）', () => {
   });
   it('weakAxes 过滤与 hasRadar 判有数据都用 a.n > 0，不再有 a.pct > 0', () => {
     expect(ts).toMatch(/const weakAxes = axes\.filter\(\(a\) => a\.n > 0\)\.sort\(\(a, b\) => a\.pct - b\.pct\)\.slice\(0, 2\);/);
-    expect(ts).toMatch(/hasRadar: axes\.some\(\(a\) => a\.n > 0\),/);
+    expect(ts).toMatch(/const hasRadar = axes\.some\(\(a\) => a\.n > 0\);/);
     expect(ts).not.toMatch(/a\.pct > 0/);
   });
   it('口径演算：数量 n=3 c=0 → 进「最薄弱」显示 0%，且 hasRadar 为真不出空态', () => {

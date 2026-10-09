@@ -45,8 +45,8 @@ describe('examDateFieldText', () => {
   });
 });
 
-describe('home.vue 计划表单接线（源锁）', () => {
-  const src = read('../src/pages/home/home.vue');
+describe('PlanSetupSheet 计划表单接线（源锁，P2 起由 home.vue 抽成独立组件）', () => {
+  const src = read('../src/components/plan-setup-sheet/plan-setup-sheet.vue');
 
   it('日期框走 pfDateText / past class，不再直接渲染 pf.exam_date', () => {
     expect(src).toMatch(/class="pf-date" :class="\{ empty: !pf\.exam_date, past: pfDatePast \}">\{\{ pfDateText \}\}/);

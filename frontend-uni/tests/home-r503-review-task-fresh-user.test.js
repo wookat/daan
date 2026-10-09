@@ -13,7 +13,9 @@ describe('R503 首页「错题复习」：从未有过错题的新用户不得�
   it('首页不再有「今日已清零」/ 任务计数式复习 ✓；复习行只在 due_mistakes>0 时渲染', () => {
     expect(template).not.toMatch(/今日已清零/);
     expect(template).not.toMatch(/planFetched && !dueReview/);
-    expect(template).toMatch(/<kg-card v-if="dueReview" variant="soft" clickable chevron class="due"/);
+    // P1 改版：独立「到期复习」卡并入「今日待办」智能卡 todoRows——复习行只在 dueReview>0 时入列，语义等价
+    expect(script).toMatch(/if \(this\.dueReview\) \{\s*rows\.push\(\{ k: 'review'/);
+    expect(template).toMatch(/v-for="t in todoRows" :key="t\.k" class="todo-row"/);
     expect(template).toMatch(/<view v-if="plan\.due_mistakes" class="task" role="button" hover-class="task--hover" @click="goBook">/);
     expect(script).toMatch(/dueReview\(\) \{\s*return \(this\.plan && this\.plan\.due_mistakes\) \|\| 0;/);
     expect(script).not.toMatch(/reviewTaskDone|taskDoneN/);

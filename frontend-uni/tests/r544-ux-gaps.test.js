@@ -67,14 +67,13 @@ describe('R544-5 历次作答合并复习记录（/api/attempts source=practice|
 });
 
 describe('R544 小程序同口径', () => {
-  const radarTs = read('../../miniapp-native/miniprogram/components/kg-chart-radar/index.ts');
-  const radarWxml = read('../../miniapp-native/miniprogram/components/kg-chart-radar/index.wxml');
+  // PR #805 起雷达图由 kg-chart-radar 自绘组件迁到 stats.ts 内 optRadar（echarts option），「未练」标签在 indicator.name 上
+  const statsTs = read('../../miniapp-native/miniprogram/pages/stats/stats.ts');
   const statsWxml = read('../../miniapp-native/miniprogram/pages/stats/stats.wxml');
   const bookTs = read('../../miniapp-native/miniprogram/pages/book/book.ts');
   const apiTs = read('../../miniapp-native/miniprogram/api/index.ts');
   it('雷达标签 n===0 → 未练；最薄弱/去补弱文案按 weakAxes.length>=2', () => {
-    expect(radarTs).toMatch(/val: a\.n === 0 \? '未练' : `\$\{a\.pct\}%`/);
-    expect(radarWxml).toMatch(/\{\{item\.val\}\}<\/text>/);
+    expect(statsTs).toMatch(/`\$\{a\.name\} \$\{a\.n \? a\.pct \+ '%' : '未练'\}`/);
     expect(statsWxml).toMatch(/\{\{weakAxes\.length >= 2 \? '最薄弱' : '已练模块'\}\}/);
     expect(statsWxml).toMatch(/\{\{weakAxes\.length >= 2 \? '去补弱' : '继续练'\}\} ›/);
   });
