@@ -925,13 +925,26 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
 
 
 
+_DIM_CACHE_TTL = 60  # 题库维度聚合（读多写少，仅随导入变化）：60s 进程内缓存
+_QCOUNTS_CACHE: list = [0.0, None]
+_SUBMOD_COUNTS_CACHE: dict = {}
+_REAL_FILTERS_CACHE: list = [0.0, None]
+
+
 def question_counts() -> list[dict]:
+    """各模块在架题量（/api/questions 每个响应都附带），进程内 60s 缓存。"""
+    now = time.time()
+    if _QCOUNTS_CACHE[1] is not None and now - _QCOUNTS_CACHE[0] < _DIM_CACHE_TTL:
+        return _QCOUNTS_CACHE[1]
     conn = get_conn()
     rows = conn.execute(
         "SELECT module, COUNT(*) n FROM questions WHERE disabled=0 GROUP BY module ORDER BY n DESC"
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    out = [dict(r) for r in rows]
+    _QCOUNTS_CACHE[0] = now
+    _QCOUNTS_CACHE[1] = out
+    return out
 
 
 _DAILY_SET_MODULES = ["yanyu", "panduan", "shuliang", "ziliao", "changshi"]
@@ -1129,6 +1142,11 @@ def daily_set_board(day: str, limit: int = 20, uid: str | None = None) -> list[d
 
 
 def submodule_counts(module: str) -> list[dict]:
+    """模块下题型组题量（/api/submodules），进程内 60s 缓存（按 module 分桶）。"""
+    now = time.time()
+    ent = _SUBMOD_COUNTS_CACHE.get(module)
+    if ent is not None and now - ent[0] < _DIM_CACHE_TTL:
+        return ent[1]
     conn = get_conn()
     rows = conn.execute(
         "SELECT submodule, COUNT(*) n FROM questions WHERE module=? AND disabled=0 AND submodule IS NOT NULL AND submodule!='' "
@@ -1136,7 +1154,11 @@ def submodule_counts(module: str) -> list[dict]:
         (module,),
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    out = [dict(r) for r in rows]
+    if len(_SUBMOD_COUNTS_CACHE) >= 16:
+        _SUBMOD_COUNTS_CACHE.clear()
+    _SUBMOD_COUNTS_CACHE[module] = (now, out)
+    return out
 
 
 _TAG3_COUNTS_CACHE: list = [0.0, None]
@@ -1265,7 +1287,10 @@ def tag3_review_close(question_id: int):
 
 
 def real_filters() -> dict:
-    """真题可用的年份/地区筛选项及题量。"""
+    """真题可用的年份/地区筛选项及题量（/api/real_filters），进程内 60s 缓存。"""
+    now = time.time()
+    if _REAL_FILTERS_CACHE[1] is not None and now - _REAL_FILTERS_CACHE[0] < _DIM_CACHE_TTL:
+        return _REAL_FILTERS_CACHE[1]
     conn = get_conn()
     years = [
         dict(r)
@@ -1282,7 +1307,10 @@ def real_filters() -> dict:
         )
     ]
     conn.close()
-    return {"years": years, "regions": regions}
+    out = {"years": years, "regions": regions}
+    _REAL_FILTERS_CACHE[0] = now
+    _REAL_FILTERS_CACHE[1] = out
+    return out
 
 
 # 「击败 X% 的刷题记录」池只算 probe=0：该表无 uid 从未随测试账号清理，历史 NULL 行不能视为真人（与 REAL_TRAFFIC 兼容口径不同）
