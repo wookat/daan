@@ -5,8 +5,6 @@ import { fetchExamAttempts, fetchShenlunStats } from '../../api/exam';
 import type { ShenlunStats } from '../../api/exam-types';
 import { fetchMasteryMap, fetchStats, type StatsResp } from '../../api/grow';
 import { examTrend, type ExamTrend } from '../../utils/kg-exam-report';
-import type { BarItem } from '../../components/kg-chart-bars/index';
-import type { RadarAxis } from '../../components/kg-chart-radar/index';
 import { buildHeatmap, dayCountMap, fmtTs, streakFromDays, weekLabel, type HeatCell } from '../../utils/cn-date';
 import { dayKey, loadPStats, modName, type PStats } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
@@ -60,11 +58,70 @@ interface SubGroup {
   subs: SubChip[];
 }
 /** 雷达轴带已答题数：薄弱/有数据按 n>0 判，0% 全错模块不再被当未答隐藏 */
-interface StatAxis extends RadarAxis {
+interface StatAxis {
+  key: string;
+  name: string;
+  pct: number;
   n: number;
+}
+/** 柱图条目（原 kg-chart-bars BarItem 形状，迁 ECharts 后仅作 option 构建的中间态） */
+interface ChartBar {
+  key?: string | number;
+  label?: string;
+  text?: string;
+  pct: number;
+  tone?: string;
 }
 function pctTone(pct: number): string {
   return pct < 60 ? 'bad' : pct < 80 ? 'warn' : 'ok';
+}
+
+// ---------- ECharts option（kg-ec 容器，JSON 对象即可跨分包传递）----------
+const EC_INK3 = '#6b7280';
+const EC_LINE = '#e7e9f0';
+const EC_TONE: Record<string, string> = { '': '#2e5bff', ok: '#16a34a', warn: '#d97706', bad: '#dc2626' };
+
+function optRadar(axes: StatAxis[]) {
+  return {
+    radar: {
+      indicator: axes.map((a) => ({ name: `${a.name} ${a.n ? a.pct + '%' : '未练'}`, max: 100 })),
+      radius: '64%',
+      axisName: { color: EC_INK3, fontSize: 11 },
+      splitLine: { lineStyle: { color: EC_LINE } },
+      splitArea: { areaStyle: { color: ['transparent'] } },
+      axisLine: { lineStyle: { color: EC_LINE } },
+    },
+    series: [{ type: 'radar', symbol: 'none', data: [{ value: axes.map((a) => a.pct) }], lineStyle: { color: '#2e5bff', width: 2 }, areaStyle: { color: 'rgba(46,91,255,.18)' } }],
+  };
+}
+
+function optBars(bars: ChartBar[], target?: { pct: number; text: string } | null) {
+  return {
+    grid: { left: 4, right: 4, top: 16, bottom: 0, containLabel: true },
+    xAxis: { type: 'category', data: bars.map((b) => b.label || ''), axisTick: { show: false }, axisLine: { lineStyle: { color: EC_LINE } }, axisLabel: { color: EC_INK3, fontSize: 10 } },
+    yAxis: { show: false },
+    series: [{
+      type: 'bar', barWidth: '60%',
+      data: bars.map((b) => ({
+        value: b.pct,
+        label: { show: !!b.text, position: 'top', formatter: b.text || '', fontSize: 10, color: EC_INK3 },
+        itemStyle: { color: EC_TONE[b.tone || ''] || '#2e5bff', borderRadius: [4, 4, 0, 0] },
+      })),
+      markLine: target ? { silent: true, symbol: 'none', lineStyle: { color: '#d97706', type: 'dashed' }, label: { formatter: target.text, fontSize: 10, color: EC_INK3 }, data: [{ yAxis: target.pct }] } : undefined,
+    }],
+  };
+}
+
+function optHeatmap(cols: HeatCell[][]) {
+  const data: [number, number, number][] = [];
+  cols.forEach((col, w) => col.forEach((c, r) => { if (!c.future) data.push([w, r, c.lv]); }));
+  return {
+    grid: { left: 4, right: 4, top: 4, bottom: 4, containLabel: false },
+    xAxis: { type: 'category', data: Array.from({ length: 12 }, () => ''), show: false },
+    yAxis: { type: 'category', data: ['一', '二', '三', '四', '五', '六', '日'], show: false },
+    visualMap: { show: false, min: 0, max: 4, inRange: { color: ['#f2f3f7', '#dbe6ff', '#8fa8ff', '#2e5bff', '#1e44d9'] } },
+    series: [{ type: 'heatmap', data, itemStyle: { borderColor: '#ffffff', borderWidth: 2 } }],
+  };
 }
 
 function typeName(t: string | null): string {
@@ -102,7 +159,7 @@ Page({
     topOpen: false,
     byReason: [] as ReasonRow[],
     // 近 7 日
-    trendBars: [] as BarItem[],
+    trendBars: [] as ChartBar[],
     trendHas: false,
     // 成长轨迹
     gwMod: '',
@@ -117,7 +174,7 @@ Page({
     slIssuesOpen: false,
     // 模考趋势
     exam: null as ExamTrend | null,
-    examBars: [] as BarItem[],
+    examBars: [] as ChartBar[],
     examTitle: '',
     examMid: '',
     // 掌握度地图
@@ -171,7 +228,7 @@ Page({
 
     // 近 7 日正确率（本机 pstats，H5 同源）
     const dc = ps.daysCorrect || {};
-    const trendBars: BarItem[] = [];
+    const trendBars: ChartBar[] = [];
     let trendHas = false;
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -204,6 +261,7 @@ Page({
     }));
 
     const hasData = totalDone > 0 || this.data.byModule.length > 0 || hmTotal > 0;
+    const hasRadar = axes.some((a) => a.n > 0);
     this.setData({
       totalDone,
       accPct,
@@ -211,7 +269,7 @@ Page({
       hmTotal,
       hmCols: cols,
       axes,
-      hasRadar: axes.some((a) => a.n > 0),
+      hasRadar,
       weakAxes,
       trendBars,
       trendHas,
@@ -219,6 +277,9 @@ Page({
       hasData,
       unlockLeft: Math.max(UNLOCK_N - totalDone, 1),
       unlockPct: Math.min(100, Math.round((totalDone / UNLOCK_N) * 100)),
+      optRadar: hasRadar ? optRadar(axes) : null,
+      optTrend: trendHas ? optBars(trendBars) : null,
+      optHm: optHeatmap(cols),
     });
     this.buildGrowthRows();
   },
@@ -308,11 +369,13 @@ Page({
       const [att, prof] = await Promise.all([fetchExamAttempts(null, 20), fetchProfile()]);
       const target = prof.profile && prof.profile.target_score != null ? prof.profile.target_score : null;
       const t = examTrend(att.items || [], target);
+      const bars = t ? t.points.map((pt) => ({ key: pt.id, pct: pt.heightPct, tone: pt.level === 'ok' ? '' : pt.level })) : [];
       this.setData({
         exam: t,
-        examBars: t ? t.points.map((pt) => ({ key: pt.id, pct: pt.heightPct, tone: pt.level === 'ok' ? '' : pt.level })) : [],
+        examBars: bars,
         examTitle: t ? '模考成绩趋势（近 ' + t.points.length + ' 次）' : '',
         examMid: t ? '最好 ' + t.best + ' 分 · 最近 ' + t.latest + ' 分' : '',
+        optExam: t ? optBars(bars, t.targetPct ? { pct: t.targetPct, text: '目标 ' + t.target + ' 分' } : null) : null,
       });
     } catch (e) {
       /* 非关键路径：失败不渲染 */
@@ -394,10 +457,11 @@ Page({
     if (ds.source) url += '&source=' + String(ds.source);
     wx.navigateTo({ url });
   },
-  onExamBar(e: WechatMiniprogram.CustomEvent<{ index: number }>) {
+  onExamBar(e: WechatMiniprogram.CustomEvent<{ index?: number; dataIndex?: number }>) {
     const t = this.data.exam;
     if (!t) return;
-    const pt = t.points[e.detail.index];
+    const idx = e.detail.dataIndex != null ? e.detail.dataIndex : e.detail.index;
+    const pt = idx != null ? t.points[idx] : null;
     if (pt) wx.navigateTo({ url: '/pkgExam/report/report?attempt_id=' + pt.id });
   },
   onGoCalendar() {

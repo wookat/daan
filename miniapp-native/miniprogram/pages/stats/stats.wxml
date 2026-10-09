@@ -38,7 +38,7 @@
       <kg-group title="能力">
         <kg-empty wx:if="{{!hasRadar}}" compact icon="chart-column" title="还没有能力数据" desc="刷几题就能生成你的五模块能力画像" cta-text="去刷题" bind:cta="onGoPractice" />
         <view wx:else class="blk radar-flex">
-          <kg-chart-radar axes="{{axes}}" size="{{184}}" />
+          <kg-ec option="{{optRadar}}" height="{{184}}" cid="radar" />
           <view class="radar-side">
             <text wx:if="{{weakAxes.length}}" class="rs-t">{{weakAxes.length >= 2 ? '最薄弱' : '已练模块'}}</text>
             <view wx:for="{{weakAxes}}" wx:key="key" class="rs-row">
@@ -50,7 +50,7 @@
         </view>
         <view wx:if="{{trendHas}}" class="blk">
           <text class="blk-t">近 7 日正确率</text>
-          <kg-chart-bars bars="{{trendBars}}" height="{{96}}" labels left-text="" right-text="" />
+          <kg-ec option="{{optTrend}}" height="{{130}}" cid="trend" />
         </view>
         <view wx:if="{{showGrowth}}" class="blk">
           <text class="blk-t">周正确率</text>
@@ -102,7 +102,7 @@
       <kg-group wx:if="{{exam}}" title="模考">
         <view class="blk">
           <text class="blk-t">{{examTitle}}</text>
-          <kg-chart-bars bars="{{examBars}}" height="{{96}}" target-pct="{{exam.targetPct}}" target-text="{{exam.target ? '目标 ' + exam.target + ' 分' : ''}}" mid-text="{{examMid}}" bind:bar="onExamBar" />
+          <kg-ec option="{{optExam}}" height="{{130}}" cid="exam" bind:pointclick="onExamBar" />
           <text class="note">点柱查看单次报告 · 不同卷难度不同，仅供参考</text>
         </view>
       </kg-group>
@@ -133,7 +133,7 @@
       </kg-group>
 
       <kg-group title="学习热力图" more="{{hmTotal ? '近 12 周 ' + hmTotal + ' 次' : ''}}" padded>
-        <kg-chart-heatmap cols="{{hmCols}}" total="{{hmTotal}}" />
+        <kg-ec option="{{optHm}}" height="{{150}}" cid="hm" />
       </kg-group>
 
       <kg-group wx:if="{{subMap.length}}" title="考点地图" more="{{kmCovText ? kmCovText + '　全部' : '全部'}}" bind:more="onGoMasteryMap">
