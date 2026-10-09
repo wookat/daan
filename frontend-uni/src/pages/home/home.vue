@@ -226,19 +226,34 @@
             <text class="more-t">拍题讲解</text>
             <text class="more-s">花生十三方法体系</text>
           </kg-card>
-          <kg-card clickable class="more-c" @click="goWeeklyReport">
-            <view v-if="weeklyDot" class="dot more-dot" />
-            <view class="more-ico"><l-icon name="calendar-check" :size="24" tone="brand" /></view>
-            <text class="more-t">周学习报告</text>
-            <text class="more-s">每周一 · 回顾上周 · 规划下周</text>
-          </kg-card>
-          <kg-card clickable class="more-c" @click="goCalendar">
-            <view class="more-ico"><l-icon name="flame" :size="24" tone="brand" /></view>
-            <text class="more-t">连续打卡</text>
-            <text v-if="nextMilestone" class="more-s">连续 {{ streakShown }} 天 · 冲 {{ nextMilestone.days }} 天徽章</text>
-            <text v-else class="more-s">连续 {{ streakShown }} 天 · 徽章已全部解锁</text>
-          </kg-card>
         </view>
+
+        <!-- 周学习报告 -->
+        <kg-card clickable chevron class="weekly" @click="goWeeklyReport">
+          <view class="modrow-in">
+            <view class="modrow-ico"><l-icon name="calendar-check" :size="24" tone="brand" /></view>
+            <view class="grow">
+              <view class="modrow-tr">
+                <text class="modrow-t">周学习报告</text>
+                <view v-if="weeklyDot" class="dot" />
+              </view>
+              <text class="modrow-s">每周一生成 · 回顾上周 · 规划下周</text>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 连签摘要（≥1024 辅栏，窄屏在流末） -->
+        <kg-card clickable chevron class="streak" @click="goCalendar">
+          <view class="modrow-in">
+            <kg-streak-badges :days="streakShown" />
+            <view class="grow">
+              <text class="modrow-t">连续打卡</text>
+              <text v-if="nextMilestone" class="modrow-s">再打卡 {{ nextMilestone.left }} 天解锁「{{ nextMilestone.days }} 天」徽章</text>
+              <text v-else class="modrow-s">已解锁全部打卡徽章，太强了！</text>
+            </view>
+          </view>
+          <kg-progress v-if="nextMilestone" :value="nextMilestone.pct" :thickness="4" class="streak-bar" aria-label="距下一个徽章" />
+        </kg-card>
       </template>
     </kg-two-col>
 
@@ -1289,13 +1304,14 @@ export default {
 .dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--bad); }
 
 /* 更多练习 4 格 */
-.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: var(--card-gap); margin-top: var(--sp-12); }
-.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; height: 100%; }
+.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap); margin-top: var(--sp-12); }
+.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; }
 .more-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-4); }
-.more-c { position: relative; }
-.more-dot { position: absolute; top: 14px; right: 14px; }
 .more-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.more-grid .more-c { margin-top: 0; }
+.weekly, .streak { margin-top: var(--card-gap); }
+.streak-bar { margin-top: var(--sp-12); }
 
 /* sheet 内表单 */
 .setrow { display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--sp-12) 0; border-bottom: 1px solid var(--line); }
