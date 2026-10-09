@@ -53,7 +53,7 @@
     <!-- 复习清零庆祝态 -->
     <kg-sheet :model-value="celebrate" :title="doneCopy.title" @update:model-value="(v) => { if (!v) closeCelebrate(); }">
       <view class="cb">
-        <l-icon name="party-popper" :size="48" tone="ok" />
+        <kg-lottie :size="96" />
         <template v-if="rSummary">
           <text class="cb-s">{{ doneCopy.cleared ? '到期 ' + celebrateN + ' 道全部复习完成' : '本组 ' + celebrateN + ' 道复习完成' }}<template v-if="rSummary.pct !== null"> · 首答对 {{ rSummary.dueRight }} 道（{{ rSummary.pct }}%）</template></text>
           <text v-if="!doneCopy.cleared" class="cb-s cb-left">还有 {{ dueLeft }} 道到期待复习</text>
