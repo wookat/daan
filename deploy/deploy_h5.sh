@@ -219,6 +219,7 @@ PAGES_DIR=$(mktemp -d)
 mkdir -p "$PAGES_DIR/dist/app" "$PAGES_DIR/functions"
 cp -r "$REPO_DIR/landing/." "$PAGES_DIR/dist/"
 cp -r "$DIST/." "$PAGES_DIR/dist/app/"
+cp "$REPO_DIR/deploy/cf-pages/app-404.html" "$PAGES_DIR/dist/app/404.html"  # /app/* miss → 真 404，不再回退 index.html
 # assets 增量叠加：跨部署保留旧 hash 文件。Pages 部署非原子——index.html 已切而
 # 新 chunk 未传播时，对旧 hash 的请求命中 Pages HTML 回退，且被 _headers 里
 # /app/assets/* 的 immutable(1y) 规则在边缘/浏览器缓存成 text/html（2026-10-08 踩坑：
@@ -231,6 +232,12 @@ find "$ASSETS_KEEP" -type f -mtime +90 -delete 2>/dev/null || true
 cp -r "$REPO_DIR/deploy/cf-pages/functions/." "$PAGES_DIR/functions/"
 cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers" "$PAGES_DIR/dist/"
 (cd "$PAGES_DIR" && npx -y wrangler@3 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true)
+rm -rf "$PAGES_DIR"
+
+# 部署窗口内（alias 已切、资产未传播完）对缺失 hash 的请求会把 404/HTML 回退
+# 以 immutable 一年期写进边缘缓存；部署完成后立即按前缀清一次，窗口残留归零。
+ZONE_ID="${KG_CF_ZONE_ID:-d510abee5fa2986b76c8bb181477afb3}"
+curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache"   -H "X-Auth-Email: $CLOUDFLARE_EMAIL" -H "X-Auth-Key: $CLOUDFLARE_API_KEY"   -H "Content-Type: application/json"   -d '{"prefixes":["kaogong.zalize.com/app/"]}' >/dev/null   && echo 'edge purge: kaogong.zalize.com/app/ ok' || echo 'WARN: edge purge 失败（非阻塞）'
 rm -rf "$PAGES_DIR"
 
 # Pages 新部署发布后别名域切换存在数秒~数十秒传播窗口，校验采用窗口内轮询而非单次探测
