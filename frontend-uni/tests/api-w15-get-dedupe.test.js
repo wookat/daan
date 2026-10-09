@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createGetCache, getTtl, isTrackPath, GET_TTL_DEFAULT } from '../src/api-get-cache.js';
 
-const api = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+const api = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 const reqBody = api.slice(api.indexOf('export function request('), api.indexOf('export function anonUid('));
 
 function deferred() {
@@ -174,6 +175,6 @@ describe('api.js request() 接线源锁', () => {
 
   it('快照回退仍在合并层之外、仅网络错误触发', () => {
     expect(reqBody).toMatch(/\.catch\(\(e\) => \{\s*\/\/[^\n]*\n\s*if \(!isNetErr\(e\) \|\| !snapCacheable\(path\)\) throw e;\s*const snap = snapLoad\(path\);/);
-    expect(api).toMatch(/import \{ createGetCache, getTtl, isTrackPath \} from '\.\/api-get-cache'/);
+    expect(api).toMatch(/import \{ createGetCache, getTtl, isTrackPath \} from '\.\.?\/api-get-cache'/);
   });
 });

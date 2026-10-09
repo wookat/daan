@@ -5,12 +5,13 @@
 // 再被 pushCurSession() 以匿名 uid 回推到远端）。生产 bundle CDP 运行时已复现（r499_race.py）。
 // 修法：request() 层统一比对「发出时 path 里的 uid」与「回包时 storage anonUid」，不等即作废并以
 // staleUid 标记 reject；tab 页 catch 对该标记静默（不 toast、不置 loadErr、不走兜底重拉）。
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { pathUid, isStaleUidResponse, isStaleUidErr } from '../src/api-policy';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-const api = read('../src/api.js');
+const api = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 const home = read('../src/pages/home/home.vue');
 const book = read('../src/pages/book/book.vue');
 const stats = read('../src/pages/stats/stats.vue');

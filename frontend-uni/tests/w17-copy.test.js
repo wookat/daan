@@ -3,7 +3,7 @@
  * 现文（before）作为禁词回归；再锁 H5 模板与小程序同源字符串。来源 prod = 生产 test-w17-copy-* 实测，local = 本地 uvicorn 补样。
  */
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   RANK_MIN_SAMPLE,
@@ -128,7 +128,7 @@ describe('W17-C1 源锁：H5 模板与小程序同源字符串', () => {
     rank: read('../src/components/rank-card/rank-card.vue'),
     poster: read('../src/pkgA/social/poster.vue'),
     shareQ: read('../src/pkgA/share/share-q.vue'),
-    api: read('../src/api.js'),
+    api: readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n'),
     book: read('../src/pages/book/book.vue'),
     practice: read('../src/pages/practice/practice.vue'),
   };

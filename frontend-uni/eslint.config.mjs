@@ -11,6 +11,7 @@ export default [
       // uni-app 条件编译在同一源文件内保留多平台分支（#ifdef H5 / #ifndef H5 各声明一份），
       // 构建时只保留一个分支；eslint 解析原始源码会报重复声明，且解析错误无法 disable，整文件豁免
       'src/api.js',
+      'src/api/',
       'src/native.js',
       'src/pkgA/social/poster.vue',
       'src/pkgA/stats/weekly-report.vue',
@@ -20,6 +21,7 @@ export default [
       'frontend-uni/android/**',
       'frontend-uni/src/static/**',
       'frontend-uni/src/api.js',
+      'frontend-uni/src/api/',
       'frontend-uni/src/native.js',
       'frontend-uni/src/pkgA/social/poster.vue',
       'frontend-uni/src/pkgA/stats/weekly-report.vue',

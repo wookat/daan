@@ -1,10 +1,11 @@
 // R423：面试点评流 thinking 心跳 → 报告页「考官正在撰写点评…」占位换成推理计时（首次点评与「重新生成点评」两条流同款）
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { reviewThinkingLabel } from '../src/ask-link.js';
 
 const VUE = readFileSync(new URL('../src/pkgA/interview/interview.vue', import.meta.url), 'utf8');
-const API = readFileSync(new URL('../src/api.js', import.meta.url), 'utf8');
+const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 
 describe('reviewThinkingLabel', () => {
   it('未收到心跳保持原文案', () => {
