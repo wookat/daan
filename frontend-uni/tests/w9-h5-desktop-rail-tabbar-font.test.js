@@ -29,13 +29,15 @@ describe('W9-B 桌面非 tab 页 208px 让位 / tabbar 字阶 / 焦点环 token'
     expect(app).not.toMatch(/\.uni-tabbar-page/);
   });
 
-  it('≥1280 / ≥1366：固定元素先随壳体（左右壳边），tab 页再 +208px；侧栏 .uni-tabbar 规则不变', () => {
-    for (const w of [1140, 1280]) {
-      const esc = String(w);
-      expect(app).toMatch(new RegExp(`uni-page-body \\.mask[^{]*\\{\\s*left: calc\\(\\(100vw - ${esc}px\\) / 2\\) !important;\\s*right: calc\\(\\(100vw - ${esc}px\\) / 2\\) !important;`));
-      expect(app).toMatch(new RegExp(`uni-page\\[type="tabBar"\\] uni-page-body \\.mask[^{]*\\{\\s*left: calc\\(\\(100vw - ${esc}px\\) / 2 \\+ 208px\\) !important;\\s*\\}`));
-      expect(app).toMatch(new RegExp(`\\.uni-tabbar \\{\\s*left: calc\\(\\(100vw - ${esc}px\\) / 2\\) !important;`));
-    }
+  it('≥1280 固定壳 1140 / ≥1366 弹性壳 1400：固定元素随壳体，tab 页再 +208px；侧栏 .uni-tabbar 规则不变', () => {
+    // ≥1280：1140px 固定壳
+    expect(app).toMatch(/uni-page-body \.mask[^{]*\{\s*left: calc\(\(100vw - 1140px\) \/ 2\) !important;\s*right: calc\(\(100vw - 1140px\) \/ 2\) !important;/);
+    expect(app).toMatch(/uni-page\[type="tabBar"\] uni-page-body \.mask[^{]*\{\s*left: calc\(\(100vw - 1140px\) \/ 2 \+ 208px\) !important;/);
+    expect(app).toMatch(/\.uni-tabbar \{\s*left: calc\(\(100vw - 1140px\) \/ 2\) !important;/);
+    // ≥1366：1400px 弹性壳，max() 保底边距
+    expect(app).toMatch(/uni-page-body \.mask[^{]*\{\s*left: max\(40px, calc\(\(100vw - 1400px\) \/ 2\)\) !important;\s*right: max\(40px, calc\(\(100vw - 1400px\) \/ 2\)\) !important;/);
+    expect(app).toMatch(/uni-page\[type="tabBar"\] uni-page-body \.mask[^{]*\{\s*left: max\(248px, calc\(\(100vw - 1400px\) \/ 2 \+ 208px\)\) !important;/);
+    expect(app).toMatch(/\.uni-tabbar \{\s*left: max\(40px, calc\(\(100vw - 1400px\) \/ 2\)\) !important;/);
     expect(app).toMatch(/\.uni-tabbar \{\s*top: 0 !important;[\s\S]*?width: 208px !important;/);
   });
 

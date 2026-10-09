@@ -2402,7 +2402,6 @@ export default {
 .more-act { min-height: 48px; display: flex; align-items: center; justify-content: center; font-size: var(--fs-body); color: var(--ink); border-top: 1px solid var(--line); }
 .more-act.danger { color: var(--bad); }
 .more-act.cancel { color: var(--ink-3); margin-top: var(--sp-12); border-top: none; background: var(--fill); border-radius: var(--r-full); }
-.ai-regen { margin-top: var(--sp-12); }
 
 /* 复习模式 */
 .review { display: flex; flex-direction: column; gap: var(--sp-8); }

@@ -58,6 +58,7 @@ export default [
         FileReader: 'readonly',
         FormData: 'readonly',
         Image: 'readonly',
+        getComputedStyle: 'readonly',
         atob: 'readonly',
         btoa: 'readonly',
         performance: 'readonly',
