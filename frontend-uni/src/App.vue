@@ -133,19 +133,27 @@ uni-actionsheet .uni-mask,
 uni-actionsheet .uni-actionsheet {
   z-index: var(--z-toast) !important;
 }
-html {
-  /* 隐藏滚动条后无需预留槽位（滚动功能保留，仅去视觉），对齐小程序无滚动条体感 */
-  scrollbar-width: none;
-}
-*,
-*::-webkit-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+/* 自定义细滚动条：替换系统默认粗滚动条，覆盖 document 与全部 scroll-view/overflow 容器 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
 }
 *::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-4);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 body {
   background: var(--bg);
