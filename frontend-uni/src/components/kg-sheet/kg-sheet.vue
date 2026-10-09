@@ -44,6 +44,7 @@ export default {
   props: {
     modelValue: Boolean,
     title: { type: String, default: '' },
+    size: { type: String, default: 'md' },  // md=480px 表单类；lg=640px 长文阅读型（仅桌面 center 生效）
   },
   emits: ['update:modelValue', 'close'],
   data() { return { wide: false, zIndex: readZOverlay() }; },
@@ -52,7 +53,9 @@ export default {
     /** wd-popup 把 #fff 写死在 .wd-popup-wrapper[scoped] .wd-popup 上、深色只认 .wot-theme-dark，且 custom-class 挂在非根节点拿不到本组件 scope 属性；用内联 custom-style 让面板底色跟 --card */
     sheetStyle() {
       const base = 'background:var(--card);';
-      return this.position === 'center' ? base + 'width:480px;border-radius:var(--r-lg)' : base + 'border-radius:var(--r-lg) var(--r-lg) 0 0';
+      if (this.position !== 'center') return base + 'border-radius:var(--r-lg) var(--r-lg) 0 0';
+      const w = this.size === 'lg' ? 640 : 480;
+      return base + `width:min(${w}px,92vw);border-radius:var(--r-lg)`;
     },
   },
   watch: {
