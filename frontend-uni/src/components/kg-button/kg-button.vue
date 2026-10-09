@@ -79,7 +79,10 @@ export default {
 .kg-btn.kg-btn--tone-inverse.kg-btn--primary { background: var(--on-brand) !important; color: var(--brand) !important; }
 .kg-btn.kg-btn--tone-inverse.kg-btn--ghost { background: rgba(255, 255, 255, 0.16) !important; color: var(--on-brand) !important; border-color: transparent !important; }
 .kg-btn.is-disabled, .kg-btn[disabled] { opacity: 0.4 !important; pointer-events: none; }
-.kg-btn__in { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); }
+.kg-btn__in { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); height: 100%; }
+/* wd-button__text 是块级容器，纯图标按钮的内容只有图标高会贴顶、与并排文字按钮中线不齐；
+   scoped 样式触不到子组件内部，须 :deep；改 flex 后图标与文字垂直居中同线 */
+.kg-btn :deep(.wd-button__text) { display: flex; align-items: center; justify-content: center; }
 /* sm(30)/md(32)/lg(40) 视觉高度不变，命中区纵向扩到 --hit-min（并排间距 ≥ sp-8 不会互相吞）。
    uni-h5 给 button 默认 overflow:hidden 会把伸出的 ::after 裁掉，须放开 */
 .kg-btn.kg-btn--sm, .kg-btn.kg-btn--md, .kg-btn.kg-btn--lg { position: relative; overflow: visible !important; }
