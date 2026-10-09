@@ -1,6 +1,7 @@
 node_modules/
 miniprogram/miniprogram_npm/
 miniprogram/**/*.js
+!miniprogram/pkgGrow/ec-canvas/*.js
 !miniprogram/**/*.config.js
 .DS_Store
 project.private.config.json

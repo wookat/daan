@@ -1,8 +1,0 @@
-.kg-radar { position: relative; margin: 0 auto; flex-shrink: 0; }
-.kg-radar__plot { position: absolute; }
-.kg-radar__ring { position: absolute; border: 1px solid var(--line-strong); border-radius: var(--r-full); box-sizing: border-box; }
-.kg-radar__poly { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: var(--brand); opacity: 0.3; border-radius: 1px; }
-.kg-radar__lab { position: absolute; transform: translate(-50%, -50%); text-align: center; white-space: nowrap; line-height: 1.2; }
-.kg-radar__name { display: block; font-size: var(--fs-caption); color: var(--ink-2); font-weight: 500; }
-.kg-radar__val { display: block; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
-.kg-radar__val.is-none { color: var(--ink-3); font-weight: 400; }

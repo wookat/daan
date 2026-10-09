@@ -1,0 +1,1 @@
+<ec-canvas class="ec-wrap" force-use-old-canvas id="kgec{{cid}}" canvas-id="kgec{{cid}}" ec="{{ec}}" style="width:100%;height:{{height}}px"></ec-canvas>
