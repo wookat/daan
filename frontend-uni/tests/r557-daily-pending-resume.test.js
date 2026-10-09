@@ -17,8 +17,8 @@ import {
 } from '../src/practice-progress.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const practice = read('../src/pages/practice/practice.vue');
-const script = practice.slice(practice.indexOf('<script'), practice.indexOf('</script>'));
+const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
+const script = practice.slice(practice.indexOf('<script'));
 const tpl = practice.slice(0, practice.indexOf('<script'));
 const home = read('../src/pages/home/home.vue');
 

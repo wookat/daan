@@ -16,8 +16,8 @@ import {
 } from '../src/practice-progress.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const practice = read('../src/pages/practice/practice.vue');
-const script = practice.slice(practice.indexOf('<script'), practice.indexOf('</script>'));
+const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
+const script = practice.slice(practice.indexOf('<script'));
 const home = read('../src/pages/home/home.vue');
 
 const redoItem = { id: 11, mistake_id: 7, module: 'shuliang', answer: 'B', options: { A: '1', B: '2' } };
@@ -94,11 +94,13 @@ describe('R548 practice.vue 接线', () => {
     const ap = script.slice(script.indexOf('adoptLocalPending(s) {'), script.indexOf('adoptRemoteSnap(snap) {'));
     expect(ap).toContain('this._redoItems = redoItemsFromPending(s);');
     expect(ap).toContain("if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });");
-    const tr = script.slice(script.indexOf('tryResume() {'), script.indexOf('async rateHs('));
+    const tr = script.slice(script.indexOf('tryResume() {'), script.indexOf('stayHere() {'));
     expect(tr).toContain('const title = pendingTitle(s);');
     // R564：续练确认改 KgSheet（askResume），标题仍由 pendingTitle 供给
     expect(tr).toContain('{ title, done, total: s.items.length }');
-    expect(script).toMatch(/import \{ collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE[^}]*\} from '\.\.\/\.\.\/practice-progress\.js';/);
+    for (const n of ['collectPracticeProgress', 'adoptPracticeResume', 'pendingTitle', 'redoItemsFromPending', 'dailyFromPending', 'dailyPendingFor', 'cnDayOf', 'REDO_PENDING_TITLE'])
+      expect(script).toContain(n);
+    expect(script).toMatch(/import \{ [^}]*\} from '\.?\.\.?\/\.?\.\.?\/practice-progress\.js';/);
   });
 
   it('完成页 redoReport 与「再来一组」仍按 _redoItems && !lastModule 判重练（恢复后语义不丢）', () => {

@@ -8,9 +8,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const practice = read('../src/pages/practice/practice.vue');
+const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
 const tpl = practice.slice(0, practice.indexOf('<script'));
-const script = practice.slice(practice.indexOf('<script'), practice.indexOf('</script>'));
+const script = practice.slice(practice.indexOf('<script'));
 const team = read('../../backend/app/team.py');
 
 const after = tpl.slice(tpl.indexOf('class="after"'), tpl.indexOf('<kg-action-bar'));
@@ -46,7 +46,7 @@ describe('R558 错答反馈信息层级', () => {
     expect(script).toMatch(/if \(this\.autoNext\) \{\s*this\.autoTimer = setTimeout\(\(\) => \{\s*this\.autoTimer = null;\s*if \(this\.picked === k\) this\.next\(\);\s*\}, 1200\);/);
     expect(after).toContain(':action-text="!beiMode && picked === cur.answer && autoTimer ? \'看解析\' : \'\'"');
     expect(after).toContain('@action="stayHere"');
-    const stay = script.slice(script.indexOf('stayHere() {'), script.indexOf('toggleAutoNext() {'));
+    const stay = script.slice(script.indexOf('stayHere() {'), script.indexOf('askResume(kind, info, cont, drop) {'));
     expect(stay).toContain('clearTimeout(this.autoTimer)');
     expect(stay).toContain("trackEvent('practice_stay_here', this._source || 'practice')");
     expect(team).toContain('"practice_stay_here"');

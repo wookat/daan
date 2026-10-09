@@ -130,7 +130,7 @@ describe('W17-C1 源锁：H5 模板与小程序同源字符串', () => {
     shareQ: read('../src/pkgA/share/share-q.vue'),
     api: readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n'),
     book: read('../src/pages/book/book.vue'),
-    practice: read('../src/pages/practice/practice.vue'),
+    practice: read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js'),
   };
   const MP = {
     reportTs: read('../../miniapp-native/miniprogram/pkgExam/report/report.ts'),
@@ -165,7 +165,7 @@ describe('W17-C1 源锁：H5 模板与小程序同源字符串', () => {
     // 模板直接调用的纯函数必须挂到 methods（否则运行时 "t.xxx is not a function"，本地 dist 截图曾复现）
     expect(H5.weekly).toMatch(/methods: \{\s*weeklyMockLine,\s*weeklyEmptyDesc,\s*weeklyPendingDesc,/);
     expect(H5.contest).toMatch(/\n {4}rankLine,\n {4}contestHeroLine,\n/);
-    expect(H5.practice).toMatch(/methods: \{\s*percentileLine,/);
+    expect(H5.practice).toMatch(/methods: \{\s*(\.\.\.\w+Ops,\s*)*percentileLine,/);
     expect(H5.poster).toContain("'超过的考友'");
     expect(H5.shareQ).toContain('shareBeatLine(this.qStats, this.myResult)');
     expect(H5.api).toContain('return qShareCopy(mod, url, correct);');

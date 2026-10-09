@@ -410,11 +410,11 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, pkNickname, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent, submitDailySet } from '../../api.js';
+import { request, BASE_URL, anonUid, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent } from '../../api.js';
 import { markFavLocalOnly } from '../../exam-fav.js';
 import { syncCloudFavs } from '../../fav-sync.js';
-import { drawOffline, enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../offline.js';
-import { dayKey, loadSzDaily, saveSzDaily } from '../../checkin.js';
+import { enqueueAnswers, enqueueMistake, drawOffline, flushOfflineQueue } from '../../offline.js';
+import { dayKey, loadSzDaily } from '../../checkin.js';
 import { dailySetLine, dailySetShareTail, percentileLine, percentileShareTail } from '../../exam-copy.js';
 import { splitMaterial, sameMaterial } from '../../material.js';
 import { normFontLv } from '../../font-size.js';
@@ -425,19 +425,21 @@ import { askQid, findAskSid } from '../../ask-link.js';
 import { requestNotificationPermission } from '../../reminder.js';
 import { announce } from '../../a11y-live.js';
 import { pickAnnounceText } from '../../live-policy.js';
+import { dailyOps } from '../../practice/daily-ops.js';
+import { sessionOps } from '../../practice/session-ops.js';
 // #endif
 import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan, doneBarPlan } from '../../paper-continue.js';
 import { adoptServerDailyGoal } from '../../daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice-prefs.js';
 import { qStatLine, qDifficulty } from '../../q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
-import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, dailyPendingFor, cnDayOf, REDO_PENDING_TITLE, unlinkedWrongItems, relinkMistakeIds, patchPendingMistake } from '../../practice-progress.js';
+import { dailyPendingFor, cnDayOf, patchPendingMistake, unlinkedWrongItems, relinkMistakeIds } from '../../practice-progress.js';
 import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
 import { isExplanationCovered } from '../../exp-dup.js';
-import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';
+import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
 import { quitSummary } from '../../quit-summary.js';
-import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
+import { resumeDismissAction } from '../../resume-ask.js';
 import { backLabel } from '../../back-label.js';
 import { practiceNavTitle, practicePageOnTop } from '../../practice-title.js';
 
@@ -953,6 +955,8 @@ export default {
     },
   },
   methods: {
+    ...dailyOps,
+    ...sessionOps,
     percentileLine,
     exclVisible,
     isExplanationCovered,
@@ -1394,58 +1398,6 @@ export default {
       }
       if (fallback) this.start(this.dailyModule);
     },
-    markDailyDone() {
-      if (!this._daily) return;
-      this._daily = false;
-      const past = this._dailyPast;
-      this._dailyPast = false;
-      if (past) {
-        // 往期补练：成绩/榜单/streak 均为当日语义，不提交不打卡，完成页走普通成绩展示
-        this._dailyDate = '';
-        uni.showToast({ title: '往期补练完成', icon: 'none' });
-        return;
-      }
-      this.daily.days[dayKey()] = true;
-      uni.setStorageSync('dailyPlan', this.daily);
-      uni.showToast({ title: '今日一练完成，打卡成功！', icon: 'none' });
-      const date = this._dailyDate;
-      this._dailyDate = '';
-      if (!date) return;
-      this._dailyDoneDate = date;
-      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs });
-    },
-    // 成绩上报：成功挂全站成绩 + 榜；提交失败置 dailyErr 供完成页重试（payload 已在 dailyPendingSubmit，首页 onShow 也会补传）；榜失败不算失败
-    sendDailyResult(payload) {
-      this.dailyErr = false;
-      return submitDailySet(payload)
-        .then((d) => {
-          this.dailyStats = d;
-          // #ifdef H5
-          this.initPushNudge();
-          // #endif
-          return request('/api/daily_set/board?uid=' + encodeURIComponent(anonUid())).then((b) => { this.dailyBoard = (b && b.items) || []; });
-        })
-        .catch(() => {
-          if (!this.dailyStats) this.dailyErr = true;
-        });
-    },
-    retryDailySubmit() {
-      const p = uni.getStorageSync('dailyPendingSubmit');
-      if (!p || !p.date || p.date !== this._dailyDoneDate) {
-        this.dailyErr = false;
-        return;
-      }
-      uni.showToast({ title: '重新上传成绩…', icon: 'none', duration: 1000 });
-      this.sendDailyResult(p);
-    },
-    _mapShizheng(q) {
-      return {
-        ...q,
-        explanation: (q.explanation || '') + (q.source_note ? '\n【出处】' + q.source_note : ''),
-        _sz: true,
-        _saved: false,
-      };
-    },
     async startShizheng(archiveDate) {
       if (this._starting) return;
       this._starting = true;
@@ -1516,19 +1468,6 @@ export default {
         uni.hideLoading();
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
-    },
-    markShizhengDone() {
-      if (!this._shizheng) return;
-      this._shizheng = false;
-      if (this._szPast) {
-        this._szPast = false;
-        uni.showToast({ title: '往期时政补练完成', icon: 'none' });
-        return;
-      }
-      const day = dayKey();
-      this.szDaily.days[day] = { right: this.right, best: this.bestStreak, picks: this.items.map((q) => q._picked || ''), secs: this.items.map((q) => q._secs || 0) };
-      saveSzDaily(anonUid(), this.szDaily);
-      uni.showToast({ title: '时政每日一练完成！', icon: 'none' });
     },
     async startReinforce(launch) {
       if (this._starting) return;
@@ -1704,44 +1643,6 @@ export default {
       } else {
         this.loadState = '';
       }
-    },
-    retryStart() {
-      if (this._lastStartArgs) this.start(...this._lastStartArgs);
-      else this.start(uni.getStorageSync('lastModule') || null);
-    },
-    // 练习中场静默预取下一组，「再来一组」命中 prefetchPack 零等待
-    prefetchNextGroup() {
-      if (!this._plainStart || this._prefetched || this.beiMode || this._daily || this._shizheng) return;
-      this._prefetched = true;
-      const module = this.lastModule || '';
-      const limit = this.groupSize || 10;
-      const uid = uni.getStorageSync('anonUid') || '';
-      const pk = uni.getStorageSync('prefetchPack');
-      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
-      const seenIds = this.items.map((q) => q.id).filter((id) => Number.isInteger(id));
-      const seen = new Set(seenIds);
-      // 当组未答完的到期题尚无 answer_log，服务端要靠 exclude 才不会再次混入下一组
-      request(
-        '/api/questions?limit=' + limit +
-          (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1&exclude=' + seenIds.join(',') : '') +
-          (module ? '&module=' + module : ''),
-        { timeout: 45000 }
-      )
-        .then((d) => {
-          const items = ((d && d.items) || []).filter((q) => !seen.has(q.id));
-          // 不足一组不缓存（否则「再来一组」只出 N-1 题），交给启动时实时拉取
-          if (items.length >= limit) uni.setStorageSync('prefetchPack', { module, limit, uid, items, ts: Date.now() });
-        })
-        .catch(() => {});
-    },
-    takePrefetch(module, limit, uid, submodule, adaptive, forceReal, tag3) {
-      if (submodule || adaptive || forceReal || tag3 || this.realMode) return null;
-      const pk = uni.getStorageSync('prefetchPack');
-      if (!pk || !pk.items || !pk.items.length) return null;
-      if (pk.module !== (module || '') || pk.limit !== limit || pk.uid !== (uid || '')) return null;
-      if (Date.now() - pk.ts > 10 * 60 * 1000) return null;
-      uni.removeStorageSync('prefetchPack');
-      return pk.items;
     },
     async start(module, submodule, count, adaptive, forceReal, tag3, source, year) {
       this._redoItems = null;
@@ -2134,79 +2035,10 @@ export default {
         /* 不支持则不滚 */
       }
     },
-    saveSession() {
-      if (this.examMode || this.beiMode || this._shizheng || !this.session || !this.items.length) return;
-      if (this.items.every((q) => q._picked)) {
-        uni.removeStorageSync('pendingSession');
-        this.clearServerProgress();
-        return;
-      }
-      uni.setStorageSync('pendingSession', {
-        t: Date.now(),
-        items: this.items,
-        idx: this.idx,
-        right: this.right,
-        streak: this.streak,
-        bestStreak: this.bestStreak,
-        lastModule: this.lastModule,
-        lastSubmodule: this.lastSubmodule,
-        source: this._source || '',
-        ptitle: this._ptitle || '',
-        redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,
-        reviewed: this._reviewed || [],
-        daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,
-      });
-      clearTimeout(this._ppTimer);
-      this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
-    },
-    pushPracticeProgress() {
-      const payload = collectPracticeProgress(
-        this.items, this.idx, this.right, this.streak, this.bestStreak,
-        this.lastModule || '', this.lastSubmodule || '',
-        this._source || '', this._ptitle || '',
-        this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null
-      );
-      if (!payload) return;
-      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
-    },
-    clearServerProgress() {
-      clearTimeout(this._ppTimer);
-      uni.setStorageSync('ppClearedAt', Date.now());
-      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
-    },
     startDefault() {
       if (this.session) return;
       this.start(uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
     },
-    adoptLocalPending(s) {
-      s.items.forEach((q) => { if (q._picked) q._logged = true; });
-      this.items = s.items;
-      this.idx = Math.min(s.idx, s.items.length - 1);
-      this.picked = this.items[this.idx]._picked || '';
-      this.right = s.right;
-      this.streak = s.streak;
-      this.bestStreak = s.bestStreak;
-      this.lastModule = s.lastModule;
-      this.lastSubmodule = s.lastSubmodule;
-      this._source = (typeof s.source === 'string' && s.source) || null;
-      this._ptitle = (typeof s.ptitle === 'string' && s.ptitle) || null;
-      this._reinforce = null;
-      this._redoItems = redoItemsFromPending(s);
-      this._reviewed = reviewedFromPending(s);
-      const daily = dailyFromPending(s, Date.now());
-      this._daily = !!daily;
-      this._dailyDate = daily ? daily.date : '';
-      this._dailyPast = daily ? daily.past : false;
-      this.autoSaved = false;
-      this.resultSent = false;
-      this.percentile = null;
-      this.session = true;
-      this.startQTimer();
-      this.relinkWrongMids();
-      if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
-      else if (daily) uni.showToast({ title: '继续' + (daily.past ? '往期每日一练' : '今日一练') + ' · 第 ' + (this.idx + 1) + '/' + this.items.length + ' 题', icon: 'none' });
-    },
-    // 恢复的错题若快照缺 _mid（POST 回包前就退出/刷新），按本人错题本回填，错因自评才有 mid 可 PATCH
     async relinkWrongMids() {
       const lost = unlinkedWrongItems(this.items);
       if (!lost.length) return;
@@ -2224,136 +2056,12 @@ export default {
       this.$forceUpdate();
       if (this.session && items.some((x) => !x._picked)) this.saveSession();
     },
-    adoptRemoteSnap(snap) {
-      this.items = snap.items;
-      this.idx = snap.idx;
-      this.picked = this.items[this.idx]._picked || '';
-      this.right = snap.right;
-      this.streak = snap.streak;
-      this.bestStreak = snap.bestStreak;
-      this.lastModule = snap.module || null;
-      this.lastSubmodule = snap.submodule || null;
-      this._source = snap.source || null;
-      this._ptitle = snap.ptitle || null;
-      this._reinforce = null;
-      this._redoItems = snap.redoItems;
-      this._reviewed = [];
-      this._daily = !!snap.daily;
-      this._dailyDate = snap.daily ? snap.daily.date : '';
-      this._dailyPast = snap.daily ? snap.daily.past : false;
-      this.autoSaved = false;
-      this.resultSent = false;
-      this.percentile = null;
-      this.session = true;
-      this.startQTimer();
-      if (this._redoItems) uni.showToast({ title: '继续' + REDO_PENDING_TITLE, icon: 'none' });
-      else if (snap.daily) uni.showToast({ title: '继续' + (snap.daily.past ? '往期每日一练' : '今日一练') + ' · 第 ' + (this.idx + 1) + '/' + this.items.length + ' 题', icon: 'none' });
-      this.saveSession();
-      this.relinkWrongMids();
-    },
-    resumeNow() {
-      const s = uni.getStorageSync('pendingSession');
-      if (s && s.items && s.items.length && Date.now() - s.t <= 24 * 3600 * 1000) {
-        this.adoptLocalPending(s);
-        return;
-      }
-      if (this._srvResuming) return;
-      this._srvResuming = true;
-      request('/api/practice/resume?uid=' + anonUid())
-        .then((d) => {
-          this._srvResuming = false;
-          if (this.session) return;
-          const snap = adoptPracticeResume(d);
-          if (!snap) {
-            this.startDefault();
-            return;
-          }
-          this.adoptRemoteSnap(snap);
-        })
-        .catch(() => {
-          this._srvResuming = false;
-          this.startDefault();
-        });
-    },
-    tryServerResume() {
-      if (this._srvResuming) return;
-      const clearedAt = uni.getStorageSync('ppClearedAt');
-      if (clearedAt && Date.now() - clearedAt < 30 * 1000) {
-        this.startDefault();
-        return;
-      }
-      this._srvResuming = true;
-      request('/api/practice/resume?uid=' + anonUid())
-        .then((d) => {
-          this._srvResuming = false;
-          if (this.session) return;
-          const snap = adoptPracticeResume(d);
-          if (!snap) {
-            this.startDefault();
-            return;
-          }
-          const done = snap.items.filter((q) => q._picked).length;
-          if (done === 0) {
-            this.adoptRemoteSnap(snap);
-            return;
-          }
-          this.askResume(
-            'remote',
-            { title: snap.ptitle, done, total: snap.items.length },
-            () => this.adoptRemoteSnap(snap),
-            () => {
-              this.clearServerProgress();
-              this.startDefault();
-            }
-          );
-        })
-        .catch(() => {
-          this._srvResuming = false;
-          this.startDefault();
-        });
-    },
-    tryResume() {
-      const s = uni.getStorageSync('pendingSession');
-      if (!s || !s.items || !s.items.length) {
-        this.tryServerResume();
-        return true;
-      }
-      if (Date.now() - s.t > 24 * 3600 * 1000) {
-        uni.removeStorageSync('pendingSession');
-        this.tryServerResume();
-        return true;
-      }
-      const done = s.items.filter((q) => q._picked).length;
-      if (done === 0) {
-        this.adoptLocalPending(s);
-        return true;
-      }
-      const title = pendingTitle(s);
-      this.askResume(
-        'local',
-        { title, done, total: s.items.length },
-        () => this.adoptLocalPending(s),
-        () => {
-          uni.removeStorageSync('pendingSession');
-          this.clearServerProgress();
-          this.start(s.lastModule || uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
-        }
-      );
-      return true;
-    },
     async rateHs(q, up) {
       this.hsRated[q.id] = up ? 'up' : 'down';
       try {
         await request('/api/rate', { method: 'POST', data: { question_id: q.id, up } });
       } catch (e) { /* 静默失败 */ }
       uni.showToast({ title: up ? '感谢反馈' : '已记录，我们会核查这条解析', icon: 'none' });
-    },
-    stayHere() {
-      if (this.autoTimer) {
-        clearTimeout(this.autoTimer);
-        this.autoTimer = null;
-      }
-      trackEvent('practice_stay_here', this._source || 'practice');
     },
     toggleAutoNext() {
       this.autoNext = !this.autoNext;
@@ -2650,24 +2358,6 @@ export default {
       }
       this.quitSum = sum;
       this.quitOpen = true;
-    },
-    askResume(kind, info, cont, drop) {
-      this._resumeAct = { cont, drop, picked: false };
-      this.resumeAsk = resumeAsk(kind, info);
-      this.resumeOpen = true;
-    },
-    resumePick(cont) {
-      const act = this._resumeAct;
-      if (!act || act.picked) return;
-      act.picked = true;
-      this.resumeOpen = false;
-      trackEvent(cont ? 'practice_resume_cont' : 'practice_resume_drop', this._source || 'practice');
-      (cont ? act.cont : act.drop)();
-    },
-    quitPick(keep) {
-      this.quitOpen = false;
-      trackEvent(keep ? 'practice_quit_keep' : 'practice_quit_end', this._source || 'practice');
-      this.leave(keep);
     },
     leave(keep) {
       if (!this.beiMode && this.items.length) this.logAttempts(this.items);

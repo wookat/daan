@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8');
+const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/daily-ops.js', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/session-ops.js', import.meta.url)), 'utf8');
 
 function fnBody(startMarker, endMarker) {
   const s = PRACTICE.indexOf(startMarker);
@@ -25,7 +25,7 @@ describe('R563-fix 练习退出确认层', () => {
   });
 
   it('quitPick(keep)：关层 + 埋点 practice_quit_keep/end + leave(keep)，与原 success 回调同口径', () => {
-    const pick = fnBody('    quitPick(keep) {', '    leave(keep) {');
+    const pick = fnBody('    quitPick(keep) {', '\n};');
     expect(pick).toContain('this.quitOpen = false');
     expect(pick).toContain("trackEvent(keep ? 'practice_quit_keep' : 'practice_quit_end'");
     expect(pick).toContain('this.leave(keep)');

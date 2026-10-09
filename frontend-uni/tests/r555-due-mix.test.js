@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 const SRC = fileURLToPath(new URL('../src/', import.meta.url));
-const PRACTICE = readFileSync(join(SRC, 'pages/practice/practice.vue'), 'utf8');
+const PRACTICE = readFileSync(join(SRC, 'pages/practice/practice.vue'), 'utf8')+readFileSync(join(SRC, 'practice/daily-ops.js'), 'utf8')+readFileSync(join(SRC, 'practice/session-ops.js'), 'utf8');
 const CARD = readFileSync(join(SRC, 'components/kg-question-card/kg-question-card.vue'), 'utf8');
 const HOME = readFileSync(join(SRC, 'pages/home/home.vue'), 'utf8');
 

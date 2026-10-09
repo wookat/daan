@@ -11,7 +11,7 @@ import { snapshotProgressNote, netOnlineNow } from '../src/snapshot-notice.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const home = read('../src/pages/home/home.vue');
-const practice = read('../src/pages/practice/practice.vue');
+const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
 const method = (src, name) => {
   const m = src.match(new RegExp(`\\n {4}(?:async )?${name}\\([^)]*\\) \\{([\\s\\S]*?)\\n {4}\\},`));
   expect(m, name).toBeTruthy();

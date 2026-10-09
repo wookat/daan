@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { reviewedFromPending, reviewedMasteredCount } from '../src/review-advance.js';
 
-const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8');
+const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/daily-ops.js', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/session-ops.js', import.meta.url)), 'utf8');
 
 function fnBody(startMarker, endMarker) {
   const i = PRACTICE.indexOf(startMarker);
@@ -24,7 +24,7 @@ describe('R553-fix ① practice.vue 五处启动器 loading 与交互配对', ()
   const cases = [
     ['async startPaper(p, untimed = false, wantWrong = false) {', '    confirmFinishExam() {', "const d = await request('/api/paper_questions?' + paperQuery(p, untimed, anonUid()));\n        uni.hideLoading();", '加载失败：'],
     ['async startShizheng(archiveDate) {', '    async reviewShizheng() {', "'/api/shizheng/daily');\n        uni.hideLoading();", '加载失败：'],
-    ['async reviewShizheng() {', '    markShizhengDone() {', "const d = await request('/api/shizheng/daily');\n        uni.hideLoading();", '加载失败：'],
+    ['async reviewShizheng() {', '    async startReinforce(launch) {', "const d = await request('/api/shizheng/daily');\n        uni.hideLoading();", '加载失败：'],
   ];
   for (const [start, end, hideAfterRequest, failText] of cases) {
     it(start + ' 回包后先 hideLoading 再交互；catch 先 hide 再 toast；finally 不 hideLoading', () => {
@@ -44,7 +44,7 @@ describe('R553-fix ① practice.vue 五处启动器 loading 与交互配对', ()
   }
 
   it('startDaily：回包后 hideLoading；catch 只置 fallback，finally 复位 _starting 后再 start() 回退（互斥不再挡死）', () => {
-    const fn = fnBody('async startDaily(archiveDate, src) {', '    markDailyDone() {');
+    const fn = fnBody('async startDaily(archiveDate, src) {', '    async startShizheng(archiveDate) {');
     expect(fn).toContain('let fallback = false;');
     const hide = fn.indexOf("await request('/api/daily_set');\n        uni.hideLoading();");
     expect(hide).toBeGreaterThan(0);
@@ -91,7 +91,9 @@ describe('R553-fix ② reviewedFromPending 纯函数', () => {
 
 describe('R553-fix ② practice.vue reviewed 随 pendingSession 持久', () => {
   it('saveSession 快照带 reviewed；adoptLocalPending 经 reviewedFromPending 还原', () => {
-    expect(PRACTICE).toContain("import { reviewedMasteredCount, fixReportText, reviewedFromPending } from '../../review-advance.js';");
+    for (const n of ['reviewedMasteredCount', 'fixReportText', 'reviewedFromPending'])
+      expect(PRACTICE).toContain(n);
+    expect(PRACTICE).toContain("from '../review-advance.js'");
     const save = fnBody('    saveSession() {', '    pushPracticeProgress() {');
     expect(save).toContain("redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,\n        reviewed: this._reviewed || [],\n        daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,\n      });");
     const adopt = fnBody('    adoptLocalPending(s) {', '    adoptRemoteSnap(snap) {');
