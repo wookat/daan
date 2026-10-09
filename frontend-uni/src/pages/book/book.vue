@@ -379,7 +379,7 @@
       </kg-two-col>
 
       <!-- AI 错题分析 -->
-      <kg-sheet v-model="aiOpen" title="AI 错题分析">
+      <kg-sheet v-model="aiOpen" title="AI 错题分析" size="lg">
         <view v-if="aiLoading" class="ai-loading"><kg-skeleton preset="lines" /><text class="side-s">正在分析你的错题与作答数据，约需 30-60 秒…</text></view>
         <view v-else-if="aiErr" class="ai-err">
           <text class="side-s">分析失败：{{ aiErr }}</text>
@@ -387,8 +387,10 @@
         </view>
         <view v-else>
           <rich-text :nodes="aiHtml" />
-          <kg-button variant="secondary" size="md" block class="ai-regen" @click="aiAnalysis(true)">按当前错题重新生成</kg-button>
         </view>
+        <template #footer>
+          <kg-button v-if="aiHtml && !aiLoading" variant="secondary" size="md" block @click="aiAnalysis(true)">按当前错题重新生成</kg-button>
+        </template>
       </kg-sheet>
 
       <!-- 手动录入答案（扫描答题卡/手动录入收在右下角「＋」） -->
