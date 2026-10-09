@@ -45,6 +45,7 @@
 </template>
 
 <script>
+import { fmtMDHM, fmtDur as fmtDurShared } from '../../fmt.js';
 import { interviewHistory } from '../../api.js';
 
 export default {
@@ -82,13 +83,10 @@ export default {
       this.loaded = true;
     },
     fmtTime(ts) {
-      const d = new Date(ts * 1000);
-      const p = (n) => String(n).padStart(2, '0');
-      return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      return fmtMDHM(ts);
     },
     fmtDur(s) {
-      const m = Math.floor(s / 60);
-      return m + "'" + String(s % 60).padStart(2, '0') + '"';
+      return fmtDurShared(s);
     },
     openSession(id) {
       uni.navigateTo({ url: '/pkgA/interview/interview?session_id=' + id });

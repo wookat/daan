@@ -130,6 +130,7 @@
 </template>
 
 <script>
+import { fmtDur as fmtDurShared } from '../../fmt.js';
 import { interviewCategories, interviewDraw, interviewSession, streamInterview } from '../../api.js';
 // #ifdef H5
 import { streamInterviewReviewRegen } from '../../api.js';
@@ -180,8 +181,7 @@ export default {
   },
   methods: {
     fmtDur(s) {
-      const m = Math.floor(s / 60);
-      return m + "'" + String(s % 60).padStart(2, '0') + '"';
+      return fmtDurShared(s);
     },
     async loadCategories() {
       this.catLoading = true;

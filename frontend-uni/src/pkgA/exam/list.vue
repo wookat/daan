@@ -182,6 +182,7 @@
 </template>
 
 <script>
+import { fmtCnDHM } from '../../fmt.js';
 import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
 import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
@@ -470,8 +471,7 @@ export default {
       uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + a.id });
     },
     fmtTime(t) {
-      const d = new Date(t * 1000);
-      return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      return fmtCnDHM(t);
     },
     askExport(p) {
       if (this.exportingId) return;

@@ -60,6 +60,7 @@
 </template>
 
 <script>
+import { fmtMDHM } from '../../fmt.js';
 import { fetchCommentInbox, readCommentInbox, getToken } from '../../api.js';
 
 export default {
@@ -93,9 +94,7 @@ export default {
       uni.navigateTo({ url: '/pkgA/user/login' });
     },
     fmtTime(ts) {
-      const d = new Date(ts * 1000);
-      const p = (n) => String(n).padStart(2, '0');
-      return `${d.getMonth() + 1}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+      return fmtMDHM(ts);
     },
     openDiscuss(it) {
       uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + it.question_id });
