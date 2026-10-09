@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { reviewElapsedSecs, REVIEW_SECS_MAX } from '../src/review-snap.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
-const script = book.slice(book.indexOf('<script'), book.indexOf('</script>'));
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
+const script = book.slice(book.indexOf('<script'), book.length);
 const method = (name) => {
   const m = script.match(new RegExp(`\\n {4}(?:async )?${name}\\([^)]*\\) \\{([\\s\\S]*?)\\n {4}\\},`));
   expect(m, name).toBeTruthy();

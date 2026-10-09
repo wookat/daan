@@ -24,6 +24,7 @@ from . import (
     exam_api,
     insights,
     interview,
+    migrate,
     mock_event,
     monitor,
     pk,
@@ -318,6 +319,7 @@ auth.init_auth_db()
 social.init_social_db()
 interview.init_interview_db()
 pk.init_pk_db()
+migrate.run_migrations()
 mock_event.init_mock_event_db()
 report.init_report_db()
 team.init_team_db()

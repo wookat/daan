@@ -88,6 +88,7 @@
               <view class="rs-bar"><view class="rs-fill" :style="{ width: reasonPct(x.n) + '%' }" /></view>
               <text class="rs-v num">{{ x.n }}<text class="rs-p">（上周 {{ x.prev_n }}）</text></text>
             </view>
+            <text v-if="reasonNote" class="rs-note">{{ reasonNote }}</text>
           </kg-card>
 
           <!-- 6. 典型错题 -->
@@ -422,6 +423,14 @@ export default {
         { label: '较上周', value: this.trendIcon, tone: t === 'up' ? 'ok' : t === 'down' ? 'bad' : undefined },
       ];
     },
+    reasonNote() {
+      const rs = this.r && this.r.reasons;
+      if (!rs || !rs.length) return '';
+      const total = rs.reduce((s, x) => s + x.n, 0);
+      if (!total) return '';
+      const un = (rs.find((x) => x.reason === '未标注') || { n: 0 }).n;
+      return `错因标注覆盖 ${Math.round(((total - un) / total) * 100)}%（${total} 道错题中 ${total - un} 道已标注）`;
+    },
   },
 };
 </script>
@@ -456,6 +465,7 @@ export default {
 .rs-fill { height: 100%; background: var(--bad); border-radius: var(--r-full); }
 .rs-v { flex-shrink: 0; font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
 .rs-p { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
+.rs-note { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-4); line-height: 1.5; }
 .mk-line { display: block; font-size: var(--fs-body); color: var(--ink); margin-bottom: var(--sp-8); }
 .mk-line.sub { font-size: var(--fs-sub); color: var(--ink-2); }
 .mk-n { font-size: var(--fs-h2); font-weight: 600; color: var(--brand-text); }

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const head = book.slice(book.indexOf('<view class="mhead">'), book.indexOf('<view class="q" :class="{ clamp: !m.open }">'));
 
 describe('R551 列表卡错因标签', () => {

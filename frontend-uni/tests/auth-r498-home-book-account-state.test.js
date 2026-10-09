@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const home = readFileSync(new URL('../src/pages/home/home.vue', import.meta.url), 'utf8');
-const book = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const book = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 function block(src, name, indent) {
   const m = src.match(new RegExp(`\\n {${indent}}(?:async )?${name}\\([^)]*\\) \\{[\\s\\S]*?\\n {${indent}}\\},`));

@@ -15,6 +15,7 @@
       <text class="focus-t">迷你模考</text>
       <text class="focus-s">30 题混合五大模块，限时 30 分钟，交卷即出成绩报告与薄弱考点</text>
       <view class="focus-acts"><kg-button variant="primary" size="lg" block bind:click="onMini">开始迷你模考</kg-button></view>
+      <text class="focus-hint" bind:tap="onAllPapers">想按省份卷型或薄弱考点出题？去卷库「组卷」 ›</text>
     </view>
 
     <kg-group wx:if="{{recent.length}}" title="最近成绩" more="全部" bind:more="onAllAttempts">

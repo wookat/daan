@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { qtypeName } from '../src/type-label.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 function tagNameFrom(src) {
   const names = /const NAMES = (\{[^\n]*\});/.exec(src)[1];

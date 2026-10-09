@@ -5,7 +5,7 @@ import { similarSubmodule, similarItemFromQuestion } from '../src/review-similar
 import { reviewOptions, reviewOptionsFull } from '../src/review-opts.js';
 import { askPrefill } from '../src/ask-prefill.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 describe('similarSubmodule（题库联查 submodule，不再从 question_type 反推）', () => {
   it('有联查 submodule 用之', () => {

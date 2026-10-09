@@ -64,6 +64,7 @@
           <view class="rs-bar"><view class="rs-fill" style="width:{{item.pct}}%" /></view>
           <text class="rs-v num">{{item.n}}<text class="rs-p">（上周 {{item.prev_n}}）</text></text>
         </view>
+        <text wx:if="{{reasonNote}}" class="rs-note">{{reasonNote}}</text>
       </kg-card>
 
       <!-- 6. 典型错题 -->

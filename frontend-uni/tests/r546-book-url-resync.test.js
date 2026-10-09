@@ -6,8 +6,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
-const script = book.slice(book.indexOf('<script'), book.indexOf('</script>'));
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
+const script = book.slice(book.indexOf('<script'), book.length);
 const block = (name) => {
   const m = script.match(new RegExp(`\\n {2}${name}\\([^)]*\\) \\{([\\s\\S]*?)\\n {2}\\},`));
   expect(m, name).toBeTruthy();

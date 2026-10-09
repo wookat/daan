@@ -248,6 +248,14 @@
   font-weight: 400;
 }
 
+.rs-note {
+  display: block;
+  margin-top: var(--sp-8);
+  font-size: var(--fs-caption);
+  color: var(--ink-4);
+  line-height: 1.5;
+}
+
 /* 模考回顾 */
 .mk-line {
   display: block;

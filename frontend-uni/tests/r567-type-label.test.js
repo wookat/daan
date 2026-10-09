@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fineTypeLabel, qtypeName } from '../src/type-label.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const MP_BOOK = readFileSync(new URL('../../miniapp-native/miniprogram/pages/book/book.ts', import.meta.url), 'utf8');
 
 // R567 生产复验 FAIL（P1，R545 起既有）：库内 question_type 已被后端 norm_qtype 去过「常识判断-」成「法律-个税」，

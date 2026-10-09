@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const stats = read('../src/pages/stats/stats.vue');
 const script = stats.slice(stats.indexOf('<script'), stats.indexOf('</script>'));
 const fn = (name) => {

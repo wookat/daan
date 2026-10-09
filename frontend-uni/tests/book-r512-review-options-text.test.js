@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { reviewOptions, reviewOptionsFull } from '../src/review-opts.js';
 import { askPrefill } from '../src/ask-prefill.js';
 
-const src = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const src = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 describe('R512 reviewOptions', () => {
   it('结构化 options → 按字母排序铺出文本', () => {

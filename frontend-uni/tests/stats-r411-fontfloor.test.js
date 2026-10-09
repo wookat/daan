@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const stats = read('../src/pages/stats/stats.vue');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const predict = read('../src/components/predict-card/predict-card.vue');
 
 describe('R411 stats 字号下限 / 待掌握清零空态（源文件锁）', () => {

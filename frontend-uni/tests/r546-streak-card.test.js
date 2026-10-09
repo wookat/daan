@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { MASTER_STREAK, streakProgressText } from '../src/review-summary.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 
 describe('R546 streakProgressText', () => {
   it('1..5 → 连对 n/6；0 / 达阈值（已掌握另有标签）/ 非数 → 空', () => {

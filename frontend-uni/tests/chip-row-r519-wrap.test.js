@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const CHIP = readFileSync(new URL('../src/components/kg-chip-row/kg-chip-row.vue', import.meta.url), 'utf8');
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
 describe('KgChipRow wrap', () => {
   it('prop 默认 false；wrap 时关横滚 / 关 scroll-into-view / 去渐隐 / 行 flex-wrap', () => {

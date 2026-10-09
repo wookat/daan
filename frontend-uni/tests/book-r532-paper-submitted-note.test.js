@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { paperSubmittedNote, scanWhen, scanDupNote } from '../src/paper-scan-pages.js';
 
-const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8');
+const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const now = new Date(2026, 8, 8, 16, 30).getTime();
 const t = (M, D, h, m) => new Date(2026, M - 1, D, h, m).getTime() / 1000;
 

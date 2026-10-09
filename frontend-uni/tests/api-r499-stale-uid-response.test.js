@@ -13,7 +13,7 @@ import { pathUid, isStaleUidResponse, isStaleUidErr } from '../src/api-policy';
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const api = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 const home = read('../src/pages/home/home.vue');
-const book = read('../src/pages/book/book.vue');
+const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const stats = read('../src/pages/stats/stats.vue');
 
 describe('api-policy 旧身份回包判定（纯函数）', () => {

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { favFromCloud, reconcileFavs, markFavLocalOnly, favsLocalOnly, FAV_GRACE_MS } from '../src/exam-fav.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
-const BOOK = read('../src/pages/book/book.vue');
+const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const PRACTICE = read('../src/pages/practice/practice.vue');
 const PROFILE = read('../src/pages/profile/profile.vue');
 const REPORT = read('../src/pkgA/exam/report.vue');

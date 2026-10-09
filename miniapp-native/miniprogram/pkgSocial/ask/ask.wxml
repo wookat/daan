@@ -43,6 +43,27 @@
           </view>
         </kg-card>
       </block>
+
+      <!-- AI 能力总入口：聚合其余 AI 场景 -->
+      <kg-section-header title="更多 AI 能力" />
+      <kg-card variant="raised">
+        <view class="hub-row" bind:tap="goBookAi">
+          <l-icon name="sparkles" size="20" tone="brand" />
+          <view class="hub-main">
+            <text class="hub-t">错题 AI 分析</text>
+            <text class="hub-s">按你的错题分布生成诊断与复习建议</text>
+          </view>
+          <l-icon name="chevron-right" size="18" tone="faint" />
+        </view>
+        <view class="hub-row" bind:tap="goInterview">
+          <l-icon name="mic" size="20" tone="brand" />
+          <view class="hub-main">
+            <text class="hub-t">AI 面试陪练</text>
+            <text class="hub-s">随机抽题限时作答，AI 点评思路与表达</text>
+          </view>
+          <l-icon name="chevron-right" size="18" tone="faint" />
+        </view>
+      </kg-card>
     </block>
 
     <!-- 对话流：按时间正序 -->

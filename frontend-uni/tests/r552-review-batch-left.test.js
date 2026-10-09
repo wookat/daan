@@ -9,7 +9,7 @@ import { REVIEW_BATCH, REVIEW_EXTRA_MAX, similarRoom, reviewDueLeft, reviewDoneC
 import * as mp from '../../miniapp-native/miniprogram/utils/review-verdict.ts';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const BOOK = read('../src/pages/book/book.vue');
+const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const MP_TS = read('../../miniapp-native/miniprogram/pages/book/book.ts');
 const MP_WXML = read('../../miniapp-native/miniprogram/pages/book/book.wxml');
 

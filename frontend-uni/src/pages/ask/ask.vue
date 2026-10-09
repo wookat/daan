@@ -49,6 +49,26 @@
           </view>
           <!-- #endif -->
 
+          <kg-card class="hubcard">
+            <kg-section-header title="更多 AI 能力" />
+            <view class="hub-row" role="button" @click="goBookAi">
+              <l-icon name="sparkles" :size="20" tone="brand" />
+              <view class="hub-main">
+                <text class="hub-t">错题 AI 分析</text>
+                <text class="hub-s">按你的错题分布生成诊断与复习建议</text>
+              </view>
+              <l-icon name="chevron-right" :size="18" tone="faint" />
+            </view>
+            <view class="hub-row" role="button" @click="goCoach">
+              <l-icon name="compass" :size="20" tone="brand" />
+              <view class="hub-main">
+                <text class="hub-t">AI 学习教练</text>
+                <text class="hub-s">读取做题数据，生成个性化备考建议</text>
+              </view>
+              <l-icon name="chevron-right" :size="18" tone="faint" />
+            </view>
+          </kg-card>
+
           <kg-card v-if="recent.length" class="reccard">
             <kg-section-header title="最近讲解" />
             <view v-for="r in recent" :key="r.ts" class="rec-row">
@@ -448,6 +468,14 @@ export default {
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
+    },
+    goBookAi() {
+      uni.setStorageSync('bookAiOpen', 1);
+      uni.switchTab({ url: '/pages/book/book' });
+    },
+    goCoach() {
+      uni.setStorageSync('profileCoachOpen', 1);
+      uni.switchTab({ url: '/pages/profile/profile' });
     },
     pickImage() {
       // #ifdef H5
@@ -973,6 +1001,12 @@ export default {
 .mob-acts { display: flex; justify-content: center; gap: var(--sp-8); }
 .deskstart { display: none; }
 .reccard { margin-bottom: var(--card-gap); }
+.hubcard { margin-bottom: var(--card-gap); }
+.hub-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) 0; min-height: var(--hit-min); cursor: pointer; }
+.hub-row + .hub-row { border-top: 1px solid var(--line); }
+.hub-main { flex: 1; display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.hub-t { font-size: var(--fs-body); color: var(--ink-1); font-weight: var(--fw-semibold); }
+.hub-s { font-size: var(--fs-caption); color: var(--ink-4); line-height: 1.5; }
 .rec-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 56px; border-bottom: 1px solid var(--line); }
 .rec-row:last-of-type { border-bottom: none; }
 .rec-row.on .rec-brief { color: var(--brand-text); font-weight: 600; }

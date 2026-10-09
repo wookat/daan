@@ -50,3 +50,10 @@
 .mic-btn { display: flex; align-items: center; gap: var(--sp-4); min-width: var(--hit-min); min-height: var(--hit-min); justify-content: center; }
 .mic-lab { font-size: var(--fs-caption); color: var(--ink-3); }
 .mic-btn.is-on .mic-lab { color: var(--warn); font-weight: var(--fw-semibold); }
+
+/* AI 能力总入口 */
+.hub-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) 0; min-height: var(--hit-min); }
+.hub-row + .hub-row { border-top: 1px solid var(--line); }
+.hub-main { flex: 1; display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
+.hub-t { font-size: var(--fs-body); color: var(--ink-1); font-weight: var(--fw-semibold); }
+.hub-s { font-size: var(--fs-caption); color: var(--ink-4); line-height: 1.5; }

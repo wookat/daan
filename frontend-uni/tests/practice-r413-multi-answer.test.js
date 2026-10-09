@@ -25,7 +25,7 @@ describe('R413 多选题（answer 多字母）可作答（源文件锁）', () =
 });
 
 describe('R413 复习页作答后「下一题/确认答案」吸底（源文件锁）', () => {
-  const book = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8');
+  const book = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/pages/book/review-ops.js', import.meta.url)), 'utf8');
   it('next-btn sticky 且让出 H5 TabBar 50px', () => {
     const rule = (book.match(/\n\.next-btn \{([^}]*)\}/) || [])[1] || '';
     expect(rule).toMatch(/position:\s*sticky/);

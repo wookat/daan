@@ -1,0 +1,548 @@
+{
+ "mp": {
+  "kg-action-bar": {
+   "props": [
+    "disabled",
+    "index",
+    "layout",
+    "loading",
+    "primaryText",
+    "secondaryText",
+    "total"
+   ],
+   "events": [
+    "primary",
+    "secondary"
+   ]
+  },
+  "kg-answer-card": {
+   "props": [
+    "cells",
+    "current",
+    "footText",
+    "graded",
+    "grouped",
+    "inline",
+    "loading",
+    "primaryText",
+    "secondaryText",
+    "title",
+    "visible"
+   ],
+   "events": [
+    "close",
+    "jump",
+    "primary",
+    "secondary"
+   ]
+  },
+  "kg-banner": {
+   "props": [
+    "actionText",
+    "closable",
+    "icon",
+    "text",
+    "tone"
+   ],
+   "events": [
+    "action",
+    "close"
+   ]
+  },
+  "kg-button": {
+   "props": [
+    "block",
+    "disabled",
+    "icon",
+    "loading",
+    "openType",
+    "size",
+    "tone",
+    "variant"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-card": {
+   "props": [
+    "chevron",
+    "clickable",
+    "footer",
+    "header",
+    "padding",
+    "selected",
+    "variant"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-chip-row": {
+   "props": [
+    "options",
+    "scrollToSelected",
+    "size",
+    "toggle",
+    "value"
+   ],
+   "events": [
+    "change"
+   ]
+  },
+  "kg-dots": {
+   "props": [
+    "ariaLabel",
+    "max",
+    "value"
+   ],
+   "events": []
+  },
+  "kg-empty": {
+   "props": [
+    "compact",
+    "ctaText",
+    "ctaTo",
+    "desc",
+    "icon",
+    "secondaryText",
+    "title"
+   ],
+   "events": [
+    "cta",
+    "secondary"
+   ]
+  },
+  "kg-entry-row": {
+   "props": [
+    "chevron",
+    "desc",
+    "icon",
+    "title",
+    "to",
+    "tone"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-export-sheet": {
+   "props": [
+    "busy",
+    "count",
+    "scope",
+    "visible"
+   ],
+   "events": [
+    "close",
+    "confirm"
+   ]
+  },
+  "kg-grid4": {
+   "props": [
+    "items"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-group": {
+   "props": [
+    "more",
+    "padded",
+    "title",
+    "to"
+   ],
+   "events": [
+    "more"
+   ]
+  },
+  "kg-option-group": {
+   "props": [
+    "answer",
+    "disabled",
+    "excl",
+    "exclusive",
+    "fontSize",
+    "options",
+    "picked",
+    "revealed"
+   ],
+   "events": [
+    "excl",
+    "pick"
+   ]
+  },
+  "kg-predict-card": {
+   "props": [],
+   "events": []
+  },
+  "kg-progress": {
+   "props": [
+    "ariaLabel",
+    "inverse",
+    "label",
+    "max",
+    "module",
+    "shape",
+    "size",
+    "thickness",
+    "value"
+   ],
+   "events": []
+  },
+  "kg-question-card": {
+   "props": [
+    "fontSize",
+    "image",
+    "imageCredit",
+    "index",
+    "markable",
+    "marked",
+    "meta",
+    "module",
+    "question",
+    "submodule",
+    "total",
+    "variant"
+   ],
+   "events": [
+    "mark"
+   ]
+  },
+  "kg-question-view": {
+   "props": [
+    "answer",
+    "dense",
+    "explanation",
+    "hsExplanation",
+    "options",
+    "picked",
+    "question",
+    "showExplanation",
+    "value"
+   ],
+   "events": []
+  },
+  "kg-row": {
+   "props": [
+    "chevron",
+    "desc",
+    "disabled",
+    "icon",
+    "last",
+    "title",
+    "to",
+    "tone",
+    "value",
+    "valueTone"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-section-header": {
+   "props": [
+    "more",
+    "title",
+    "to"
+   ],
+   "events": [
+    "more"
+   ]
+  },
+  "kg-segmented": {
+   "props": [
+    "options",
+    "size",
+    "value"
+   ],
+   "events": [
+    "change"
+   ]
+  },
+  "kg-sheet": {
+   "props": [
+    "closable",
+    "title",
+    "visible"
+   ],
+   "events": [
+    "close"
+   ]
+  },
+  "kg-tag": {
+   "props": [
+    "icon",
+    "module",
+    "tone"
+   ],
+   "events": []
+  }
+ },
+ "h5": {
+  "kg-action-bar": {
+   "props": [
+    "disabled",
+    "index",
+    "layout",
+    "loading",
+    "primaryText",
+    "secondaryText",
+    "total"
+   ],
+   "events": [
+    "primary",
+    "secondary"
+   ]
+  },
+  "kg-analysis-card": {
+   "props": [
+    "analysis",
+    "answer",
+    "collapsed",
+    "picked",
+    "source",
+    "stats",
+    "tags"
+   ],
+   "events": []
+  },
+  "kg-banner": {
+   "props": [
+    "actionText",
+    "closable",
+    "icon",
+    "text",
+    "tone"
+   ],
+   "events": [
+    "action",
+    "close"
+   ]
+  },
+  "kg-button": {
+   "props": [
+    "block",
+    "disabled",
+    "icon",
+    "loading",
+    "size",
+    "tone",
+    "variant"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-card": {
+   "props": [
+    "chevron",
+    "clickable",
+    "padding",
+    "selected",
+    "variant"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-chip-row": {
+   "props": [
+    "modelValue",
+    "options",
+    "scrollToSelected",
+    "size",
+    "toggle",
+    "wrap"
+   ],
+   "events": [
+    "update"
+   ]
+  },
+  "kg-echart": {
+   "props": [
+    "height",
+    "option"
+   ],
+   "events": [
+    "select"
+   ]
+  },
+  "kg-empty-state": {
+   "props": [
+    "compact",
+    "ctaText",
+    "ctaTo",
+    "desc",
+    "icon",
+    "secondaryText",
+    "title"
+   ],
+   "events": [
+    "cta",
+    "secondary"
+   ]
+  },
+  "kg-hero-card": {
+   "props": [
+    "label",
+    "primary",
+    "progress",
+    "secondary",
+    "streak",
+    "total",
+    "unit",
+    "value",
+    "variant"
+   ],
+   "events": []
+  },
+  "kg-invite-input": {
+   "props": [
+    "buttonText",
+    "error",
+    "loading",
+    "maxlength",
+    "minlength",
+    "modelValue",
+    "placeholder"
+   ],
+   "events": [
+    "submit",
+    "update"
+   ]
+  },
+  "kg-lottie": {
+   "props": [
+    "fallback",
+    "iconSize",
+    "loop",
+    "size",
+    "src",
+    "tone"
+   ],
+   "events": []
+  },
+  "kg-module-card": {
+   "props": [
+    "badge",
+    "layout",
+    "module",
+    "progress",
+    "sub"
+   ],
+   "events": [
+    "click"
+   ]
+  },
+  "kg-option-group": {
+   "props": [
+    "answer",
+    "excluded",
+    "fontLevel",
+    "modelValue",
+    "multiple",
+    "options",
+    "readonly",
+    "revealed"
+   ],
+   "events": [
+    "exclude",
+    "select",
+    "update"
+   ]
+  },
+  "kg-progress": {
+   "props": [
+    "ariaLabel",
+    "inverse",
+    "max",
+    "module",
+    "shape",
+    "size",
+    "thickness",
+    "value"
+   ],
+   "events": []
+  },
+  "kg-question-card": {
+   "props": [
+    "fontLevel",
+    "index",
+    "q",
+    "showMeta",
+    "total"
+   ],
+   "events": [
+    "tag"
+   ]
+  },
+  "kg-section-header": {
+   "props": [
+    "more",
+    "title",
+    "to"
+   ],
+   "events": [
+    "more"
+   ]
+  },
+  "kg-sheet": {
+   "props": [
+    "modelValue",
+    "size",
+    "title"
+   ],
+   "events": [
+    "close",
+    "update"
+   ]
+  },
+  "kg-skeleton": {
+   "props": [
+    "loading",
+    "preset",
+    "rows"
+   ],
+   "events": []
+  },
+  "kg-stat-card": {
+   "props": [
+    "label",
+    "ring",
+    "unit",
+    "value"
+   ],
+   "events": []
+  },
+  "kg-stat-row": {
+   "props": [
+    "inverse",
+    "items"
+   ],
+   "events": []
+  },
+  "kg-streak-badges": {
+   "props": [
+    "days",
+    "inverse"
+   ],
+   "events": []
+  },
+  "kg-tag": {
+   "props": [
+    "icon",
+    "module",
+    "tone"
+   ],
+   "events": []
+  },
+  "kg-two-col": {
+   "props": [
+    "asideFirst"
+   ],
+   "events": []
+  }
+ }
+}

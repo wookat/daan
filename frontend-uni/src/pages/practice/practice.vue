@@ -360,6 +360,10 @@
         <text class="tool-name">答题音效</text>
         <text class="tool-val" :class="{ on: sfxOn }">{{ sfxOn ? '已开启' : '已关闭' }}</text>
       </view>
+      <view class="tool-row" role="switch" :aria-checked="vibrateOn ? 'true' : 'false'" @click="toggleVibrate">
+        <text class="tool-name">答题震动反馈</text>
+        <text class="tool-val" :class="{ on: vibrateOn }">{{ vibrateOn ? '已开启' : '已关闭' }}</text>
+      </view>
     </kg-sheet>
 
     <!-- 中途退出：关层（X / Esc / Back / 遮罩）= 继续做题；两种离开都要显式点按，键盘 Esc 不再等于「结束本组」 -->
@@ -511,6 +515,7 @@ export default {
       qTimer: null,
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
       sfxOn: uni.getStorageSync('sfxOff') ? false : true,
+      vibrateOn: uni.getStorageSync('vibrateOff') ? false : true,
       beiMode: false,
       timedMode: uni.getStorageSync('timedMode') ? true : false,
       favs: uni.getStorageSync('favQuestions') || [],
@@ -1857,6 +1862,11 @@ export default {
       uni.setStorageSync('sfxOff', this.sfxOn ? '' : '1');
       uni.showToast({ title: this.sfxOn ? '音效已开启' : '音效已关闭', icon: 'none', duration: 800 });
     },
+    toggleVibrate() {
+      this.vibrateOn = !this.vibrateOn;
+      uni.setStorageSync('vibrateOff', this.vibrateOn ? '' : '1');
+      uni.showToast({ title: this.vibrateOn ? '震动已开启' : '震动已关闭', icon: 'none', duration: 800 });
+    },
     playSfx(correct) {
       if (!this.sfxOn) return;
       // #ifdef H5
@@ -1992,7 +2002,9 @@ export default {
       if (!this.beiMode) this.logAttempts([this.cur]);
       this.recordStat(this.cur.module, correct, this.cur.submodule);
       this.playSfx(correct);
-      try { uni.vibrateShort({ type: correct ? 'light' : 'medium', fail: () => {} }); } catch (e) { /* 不支持则忽略 */ }
+      if (this.vibrateOn) {
+        try { uni.vibrateShort({ type: correct ? 'light' : 'medium', fail: () => {} }); } catch (e) { /* 不支持则忽略 */ }
+      }
       if (correct) {
         this.right++;
         this.streak++;

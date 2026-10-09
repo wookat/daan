@@ -9,7 +9,7 @@ import {
 } from '../src/book-manual-entry.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const BOOK = read('../src/pages/book/book.vue');
+const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 
 describe('book-manual-entry 纯函数', () => {
   it('模块六选一（行测五模块 + 时政），字母 A-D', () => {

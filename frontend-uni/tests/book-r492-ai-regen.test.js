@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const src = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8');
+const src = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/pages/book/review-ops.js', import.meta.url)), 'utf8');
 
 describe('book.vue AI 错题分析结果态（源文件锁）', () => {
   it('成功结果态带「重新生成」入口，走 aiAnalysis(true) 绕过 aiHtml 缓存', () => {
