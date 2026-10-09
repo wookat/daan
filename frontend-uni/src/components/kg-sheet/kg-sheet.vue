@@ -103,5 +103,6 @@ export default {
 /* H5 的 uni-scroll-view 内层 height:100% 在 max-height 弹性容器里解析为 auto，需在外层自己滚，否则长内容顶掉 footer */
 .kg-sheet__body { flex: 1; min-height: 0; overflow-y: auto; }
 .kg-sheet__ft { padding-top: var(--sp-12); }
-.kg-sheet__in.is-dialog { padding-top: var(--sp-8); }
+/* 桌面居中对话框：四周内边距加大（左右 24 / 上 12+标题行 12≈24 / 下 20），不再贴边；移动端底部抽屉仍是 16 */
+.kg-sheet__in.is-dialog { padding: var(--sp-12) var(--sp-24) var(--sp-20); }
 </style>
