@@ -1304,8 +1304,8 @@ export default {
 .dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--bad); }
 
 /* 更多练习 4 格 */
-.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap); margin-top: var(--sp-12); }
-.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; }
+.more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; gap: var(--card-gap); margin-top: var(--sp-12); }
+.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; height: 100%; }
 .more-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-4); }
 .more-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
