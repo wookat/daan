@@ -4,7 +4,7 @@
     <view class="toprow">
       <view class="examsw" role="button" hover-class="examsw--hover" @click="openSetup">
         <text class="examsw-t">{{ examLabel }}</text>
-        <l-icon name="chevron-down" :size="16" tone="brand-text" />
+        <l-icon :name="profile && profile.exam_type ? 'pencil-line' : 'chevron-down'" :size="16" tone="brand-text" />
       </view>
       <view class="searchbar" role="button" hover-class="searchbar--hover" @click="goSearch">
         <l-icon name="search" :size="16" tone="muted" />
@@ -85,26 +85,23 @@
         <view v-if="comeback" class="strip">
           <kg-banner tone="ok" icon="sprout" :text="'欢迎回来！你已累计练 ' + comeback.total + ' 题，上次练习是 ' + comeback.gap + ' 天前'" action-text="看周报" @action="cbWeekly" @close="comeback = null" />
         </view>
-        <view v-if="reminderBanner" class="strip">
-          <kg-banner tone="warn" icon="flame" text="今天还没打卡：练 1 题即可保住连续打卡" action-text="去刷题" @action="rmGo" @close="reminderBanner = false" />
-        </view>
-        <view v-if="streakRisk" class="strip">
-          <kg-banner tone="warn" icon="flame" :text="streakRisk.title + '。' + streakRisk.sub" action-text="去刷题" :closable="false" @action="startDaily" />
-        </view>
         <view v-if="announce === undefined" class="strip"><kg-skeleton preset="banner" /></view>
         <view v-else-if="announce" class="strip">
           <kg-banner tone="info" icon="megaphone" :text="announce.title" :action-text="announce.body && !annOpen ? '详情' : ''" @action="annOpen = true" @close="dismissAnn" />
           <text v-if="annOpen && announce.body" class="ann-body">{{ announce.body }}</text>
         </view>
 
-        <!-- 今日到期复习 -->
-        <kg-card v-if="dueReview" variant="soft" clickable chevron class="due" @click="goReview('home_card')">
-          <view class="due-row">
-            <view class="due-ico"><l-icon name="calendar-check" :size="20" tone="warn" /></view>
+        <!-- 今日待办：到期复习 / 未打卡 / 断卡风险聚合成一张卡，不再多张促练横幅叠罗汉 -->
+        <kg-card v-if="todoRows.length" class="sec todo" variant="soft">
+          <kg-section-header title="今日待办" />
+          <view v-for="t in todoRows" :key="t.k" class="todo-row" role="button" @click="t.go()">
+            <view class="todo-ico"><l-icon :name="t.icon" :size="18" :tone="t.tone" /></view>
             <view class="grow">
-              <text class="due-t">今日到期复习 <text class="num">{{ dueReview }}</text> 题</text>
-              <text class="due-s">按遗忘曲线安排 · 越拖越容易忘</text>
+              <text class="todo-t">{{ t.t }}</text>
+              <text v-if="t.s" class="todo-s">{{ t.s }}</text>
             </view>
+            <view v-if="t.dismiss" class="todo-x" role="button" :aria-label="'忽略' + t.t" @click.stop="t.dismiss()"><l-icon name="x" :size="14" tone="faint" /></view>
+            <l-icon v-else name="chevron-right" :size="16" tone="faint" />
           </view>
         </kg-card>
 
@@ -541,6 +538,20 @@ export default {
         return { title: `昨天只练了 ${yN}/${this.dailyGoal} 题，未达标`, sub: '今天补上进度，守住你的连续打卡' };
       }
       return null;
+    },
+    // 今日待办聚合：到期复习 > 断卡风险 > 未打卡提醒，单行可点直达；未打卡可单独忽略
+    todoRows() {
+      const rows = [];
+      if (this.dueReview) {
+        rows.push({ k: 'review', icon: 'calendar-check', tone: 'warn', t: '到期复习 ' + this.dueReview + ' 题', s: '按遗忘曲线安排 · 越拖越容易忘', go: () => this.goReview('home_card') });
+      }
+      if (this.streakRisk) {
+        rows.push({ k: 'risk', icon: 'flame', tone: 'warn', t: this.streakRisk.title, s: this.streakRisk.sub, go: () => this.startDaily() });
+      }
+      if (this.reminderBanner) {
+        rows.push({ k: 'checkin', icon: 'flame', tone: 'warn', t: '今天还没打卡', s: '练 1 题即可保住连续打卡', go: () => this.rmGo(), dismiss: () => { this.reminderBanner = false; } });
+      }
+      return rows;
     },
     dailyStreak() {
       return checkinStreak(this.pstats);
@@ -1265,11 +1276,13 @@ export default {
 .ann-body { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); padding: var(--sp-8) var(--sp-12) 0; }
 
 /* 到期复习 */
-.due { margin-top: var(--sp-12); }
-.due-row { display: flex; align-items: center; gap: var(--sp-12); }
-.due-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--warn-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.due-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
-.due-s { font-size: var(--fs-sub); color: var(--ink-3); }
+.todo { margin-top: var(--sp-12); }
+.todo-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
+.todo-row:first-of-type { border-top: 0; }
+.todo-ico { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--warn-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.todo-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.todo-s { font-size: var(--fs-sub); color: var(--ink-3); }
+.todo-x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
 /* 学习计划 */
 .sec { margin-top: var(--sp-16); }
