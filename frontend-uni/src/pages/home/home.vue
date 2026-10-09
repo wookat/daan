@@ -230,12 +230,12 @@
             <view v-if="weeklyDot" class="dot more-dot" />
             <view class="more-ico"><l-icon name="calendar-check" :size="24" tone="brand" /></view>
             <text class="more-t">周学习报告</text>
-            <text class="more-s">每周一生成 · 回顾上周 · 规划下周</text>
+            <text class="more-s">每周一 · 回顾上周 · 规划下周</text>
           </kg-card>
           <kg-card clickable class="more-c" @click="goCalendar">
             <view class="more-ico"><l-icon name="flame" :size="24" tone="brand" /></view>
             <text class="more-t">连续打卡</text>
-            <text v-if="nextMilestone" class="more-s">连续 {{ streakShown }} 天 · 再打卡 {{ nextMilestone.left }} 天解锁徽章</text>
+            <text v-if="nextMilestone" class="more-s">连续 {{ streakShown }} 天 · 冲 {{ nextMilestone.days }} 天徽章</text>
             <text v-else class="more-s">连续 {{ streakShown }} 天 · 徽章已全部解锁</text>
           </kg-card>
         </view>
@@ -1295,7 +1295,7 @@ export default {
 .more-c { position: relative; }
 .more-dot { position: absolute; top: 14px; right: 14px; }
 .more-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
-.more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
+.more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* sheet 内表单 */
 .setrow { display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--sp-12) 0; border-bottom: 1px solid var(--line); }
