@@ -2228,7 +2228,7 @@ export default {
 .rs-s { font-size: var(--fs-sub); color: var(--ink-3); }
 
 /* 分段 + 筛选/批量 */
-.segrow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+.segrow { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-12); }
 /* 筛选/批量按钮补齐到 48px——kg-btn md 仅 32px，与 48px 分段栏同排会显得偏矮 */
 .segrow .kg-btn { min-height: 48px; }
 .seg { flex: 1; min-width: 0; display: flex; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-4); }
@@ -2317,12 +2317,13 @@ export default {
 .recap-n { flex: 0 0 24px; text-align: right; font-size: var(--fs-caption); color: var(--ink-3); }
 .mg-blk { border-top: 1px solid var(--line); }
 .mg-blk:first-of-type { border-top: none; }
+.modgroup .side-t { margin-bottom: var(--sp-8); }
 .mg-row { display: flex; align-items: center; gap: var(--sp-8); min-height: 52px; }
 .mg-arrow { transition: transform var(--dur-instant) var(--ease-standard); flex-shrink: 0; }
 .mg-arrow.is-open { transform: rotate(180deg); }
 .mg-name { font-size: var(--fs-body); font-weight: 600; color: var(--ink); flex: 1; min-width: 0; }
 .mg-mst { font-size: var(--fs-caption); color: var(--ink-4); white-space: nowrap; }
-.mg-sub { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); min-height: var(--hit-min); padding-left: var(--sp-24); border-top: 1px dashed var(--line); }
+.mg-sub { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); min-height: 48px; padding-left: var(--sp-24); border-top: 1px dashed var(--line); }
 .mg-sub-name { font-size: var(--fs-sub); color: var(--ink); flex: 1; min-width: 0; }
 .mg-sub3 { padding-left: var(--sp-48); }
 .mg-sub3 .mg-sub-name { color: var(--ink-3); }
@@ -2381,7 +2382,7 @@ export default {
 .bb-n { font-size: var(--fs-sub); color: var(--ink-3); flex: 1; }
 /* 动作组容不下时整体折到第二行右对齐，不让单个按钮被挤窄 */
 .bb-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-8); margin-left: auto; }
-.fabmenu { position: fixed; right: var(--sp-16); bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-8); }
+.fabmenu { position: fixed; right: var(--sp-16); bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-12); }
 /* 菜单项统一宽度——三个按钮文字长短不一，右对齐时左缘参差 */
 .fabmenu .kg-btn { width: 176px; }
 /* #ifdef H5 */
