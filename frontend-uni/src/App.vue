@@ -312,7 +312,8 @@ html.theme-dark body {
   uni-app {
     max-width: 1140px;
     margin: 0 auto;
-    box-shadow: 0 0 0 1px var(--line);
+    /* 只描左右两条竖边作壳体分界；0 0 0 1px 整圈会在页面上下两端露出灰色横线 */
+    box-shadow: 1px 0 0 var(--line), -1px 0 0 var(--line);
   }
   body {
     overflow-x: hidden;
