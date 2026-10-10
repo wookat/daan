@@ -170,8 +170,9 @@
     <kg-sheet v-model="aboutOpen" title="关于">
       <view class="sheet-body">
         <text class="about-name">答岸</text>
-        <text class="about-desc">行测刷题 · 错题本 · AI 讲解 · 全真模考</text>
-        <text class="about-site">kaogong.zalize.com</text>
+        <text class="about-desc">考公行测刷题 · 错题本 · AI 讲解 · 真题模考</text>
+        <text class="about-site">kaogong.zalize.com（网页版）</text>
+        <text class="about-site">微信小程序 · 内测中</text>
         <text class="about-sec">更多产品</text>
         <view class="about-list">
           <view v-for="p in zlProducts" :key="p.url" class="about-item" role="button" @click="zlOpen(p.url)">
@@ -183,9 +184,10 @@
         <view class="about-list">
           <view class="about-item" role="button" @click="zlOpen('https://career.zalize.com/privacy/')"><text class="about-item-t">隐私政策</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
           <view class="about-item" role="button" @click="zlOpen('https://career.zalize.com/terms/')"><text class="about-item-t">服务条款</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
+          <view class="about-item" role="button" @click="zlOpen('https://kaogong.zalize.com/#feedback')"><text class="about-item-t">意见反馈</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
           <view class="about-item" role="button" @click="zlOpen('mailto:support@zalize.com')"><text class="about-item-t">联系我们</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
         </view>
-        <text class="about-copy">© 2026 Zalize · 答岸</text>
+        <text class="about-copy">© 2026 答岸 版权所有 · 运营团队：Zalize</text>
       </view>
     </kg-sheet>
   </view>
