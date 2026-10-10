@@ -2,7 +2,9 @@
   <view class="page">
     <view class="form">
       <view class="hero">
-        <image class="hero-logo" src="/static/brand/daan.svg" mode="aspectFit" aria-hidden="true" />
+        <view class="hero-logo">
+          <image class="hero-logo-g" src="/static/brand/daan.svg" mode="aspectFit" aria-hidden="true" />
+        </view>
         <text class="hero-t">答岸</text>
         <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
       </view>
@@ -166,10 +168,12 @@ export default {
 /* T5 工具模板：单列居中 max 480，不双栏，页面底 --bg */
 .page { min-height: 100vh; background: var(--bg); padding: var(--sp-16) var(--page-x) var(--sp-48); box-sizing: border-box; }
 .form { max-width: 480px; margin: 0 auto; }
-.hero { padding: var(--sp-32) var(--sp-8) var(--sp-24); text-align: center; display: flex; flex-direction: column; align-items: center; }
-.hero-logo { width: 72px; height: 72px; border-radius: var(--r-lg); margin-bottom: var(--sp-16); box-shadow: var(--sh-2); }
+.hero { padding: var(--sp-32) var(--sp-8) var(--sp-32); text-align: center; display: flex; flex-direction: column; align-items: center; }
+/* logo 砖：字形原始 SVG 无内边距，直接 aspectFit 进 72px 会顶满砖沿；砖内留 12px 呼吸位 */
+.hero-logo { width: 72px; height: 72px; border-radius: var(--r-lg); margin-bottom: var(--sp-16); box-shadow: var(--sh-2); background: var(--card); display: flex; align-items: center; justify-content: center; }
+.hero-logo-g { width: 48px; height: 48px; }
 .hero-t { font-size: var(--fs-h1); line-height: var(--lh-h1); font-weight: 600; color: var(--ink); }
-.hero-s { margin-top: var(--sp-4); font-size: var(--fs-sub); color: var(--ink-2); }
+.hero-s { margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-2); }
 .seg { margin-bottom: var(--sp-16); }
 .field { margin-bottom: var(--sp-12); }
 .ferr { display: block; margin-top: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); }
