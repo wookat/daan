@@ -99,14 +99,15 @@ def test_list_pages_still_cached_when_nothing_changed(client):
 def test_lastmod_not_masked_by_legacy_iso_text_updated_at(client):
     """生产 50 个在架考点存在 ISO 文本 updated_at，MAX 取到文本后 sitemap lastmod 一直停在 2026-08-09。"""
     conn = db.get_conn()
-    _seed(conn, "文本时间戳题：早期导入", updated_at=TEXT_TS, tag3="SL-JH-01", year=2015)
-    _seed(conn, "数值时间戳题：后来隔离", updated_at=time.time(), tag3="SL-JH-01", year=2015)
+    # 哨兵年份 1899：共享测试库含真实题库导入数据，常规年份行数不可断言
+    _seed(conn, "文本时间戳题：早期导入", updated_at=TEXT_TS, tag3="SL-JH-01", year=1899)
+    _seed(conn, "数值时间戳题：后来隔离", updated_at=time.time(), tag3="SL-JH-01", year=1899)
     conn.close()
     _reset_ttl_caches()
     today = time.strftime("%Y-%m-%d", time.gmtime())
     lastmod = db.tag3_lastmod()["SL-JH-01"]
     assert isinstance(lastmod, float) and time.strftime("%Y-%m-%d", time.gmtime(lastmod)) == today
-    n, mu = db.year_module_counts()[(2015, "shuliang")]
+    n, mu = db.year_module_counts()[(1899, "shuliang")]
     assert n == 2 and isinstance(mu, float) and time.strftime("%Y-%m-%d", time.gmtime(mu)) == today
     sm = client.get("/sitemap-topics.xml").text
     assert f"/tiku/t/SL-JH-01/</loc><lastmod>{today}</lastmod>" in sm

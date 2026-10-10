@@ -320,7 +320,7 @@ def test_dryrun_script_read_only(tmp_path):
     n0 = ro.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
     proc = subprocess.run(
         [sys.executable, _TOOL, "--db", db_path, "--out", str(out), "--module", "ziliao", "--limit", "500"],
-        capture_output=True, text=True, timeout=120, check=False,
+        capture_output=True, text=True, encoding="utf-8", timeout=120, check=False,
     )
     assert proc.returncode == 0, proc.stderr
     assert ro.execute("PRAGMA data_version").fetchone()[0] == dv0

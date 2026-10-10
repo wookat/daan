@@ -661,6 +661,9 @@ def random_questions(
     adaptive: bool = False,
     tag3: str | None = None,
 ) -> list[dict]:
+    # limit<=0 是「不抽题」语义：混真题分层的 max(1, round(limit*0.6)) 地板在 limit=0 时会漏出 1 题
+    if limit <= 0:
+        return []
     conn = get_conn()
     where = []
     args: list = []
