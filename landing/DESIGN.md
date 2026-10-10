@@ -61,3 +61,16 @@
 
 - FAQ 用 `<details>/<summary>` 原生折叠，与开源模板一致的无 JS 方案
 - 截图资产为 1170×2532 物理像素实拍（390×844 视口 ×3 DSF）
+
+## 动效层（2026-10-10 应要求新增）
+
+用户要求落地页不再朴素、要有优秀产品的表现力 → 新增一层克制的 vanilla 动效（无依赖，~40 行 JS）：
+
+- hero：品牌色 radial 光晕氛围（glowDrift 14s 漂移）+ 逐层 fadeUp 入场（05/15/28/40s 阶梯）+ 手机 floatY 缓浮动
+- 全局：`.reveal` 滚动渐显（IntersectionObserver threshold .12，一次性触发）
+- hero-stats：easeOutCubic 数字滚动计数（1.4s，tabular-nums 防抖）
+- chipstrip：双轨无限 marquee 36s，hover 暂停，两端 mask 渐隐
+- 卡片（feat/pain/step/pcard）：hover 上浮 4px + 软投影（rgba(23,53,171,.18)，以品牌色为影源，不违反无灰色投影原则）
+- 截图卡：hover 3D 倾斜（perspective 800px rotateX3/rotateY-4 + 投影）
+- CTA：顶部 radial 高光 + 5.5s 循环 sheen 扫光 + 吉祥物 floatY
+- 降级：`prefers-reduced-motion` 下全部动画/过渡关闭、计数直写终值（与 VIS 规范一致）
