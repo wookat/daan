@@ -128,7 +128,7 @@ describe('stats.vue 接线', () => {
     const reco = method('loadReco');
     expect(reco).toContain("if (vSnap) this.dueN = vSnap.total || 0;");
     // 同一 Document 内切 tab 回来（onShow → refreshAccountData）review 回退旧快照：上一轮 dueSynced=true 不能沿用（生产 F FAIL）
-    expect(reco).toContain('if (!this.noteSnapshot(d)) {\n          this.dueN = d.total || 0;\n          this.dueSynced = true;\n        } else {\n          this.dueSynced = false;\n        }');
+    expect(reco).toContain('if (!this.noteSnapshot(d)) {\n              this.dueN = d.total || 0;\n              this.dueSynced = true;\n            } else {\n              this.dueSynced = false;\n            }');
     // 错题本同形：load() 暖轮 review 旧快照同样清 dueSynced（due 列表保留，headStats 显 —）
     const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
     expect(book).toContain('if (this.due.length && !this.reviewing) this.startReview();\n          }\n        }\n        if (staleR) this.dueSynced = false;\n        this.setSnapshotView(staleD, staleR);');
@@ -143,7 +143,7 @@ describe('stats.vue 接线', () => {
     for (const name of ['loadGrowth', 'loadSlStats', 'loadMastery', 'loadHeatmap']) {
       expect(method(name), name).toContain('this.noteSnapshot(d);');
     }
-    expect(method('loadReco')).toContain('this.noteSnapshot(d);\n        this.reco = d;');
+    expect(method('loadReco')).toContain('this.noteSnapshot(d);\n            this.reco = d;');
     expect(method('loadExamTrend')).toContain('this.noteSnapshot(att);\n        this.noteSnapshot(prof);');
   });
 });

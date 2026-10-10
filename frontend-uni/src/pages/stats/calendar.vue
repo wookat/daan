@@ -9,9 +9,11 @@
               <text class="cal-ym num">{{ ym.y }} 年 {{ ym.m + 1 }} 月</text>
               <view class="cal-btn" :class="{ dis: isCurMonth }" role="button" aria-label="下个月" :aria-disabled="String(isCurMonth)" hover-class="cal-btn--hover" @click="shiftMonth(1)"><l-icon name="chevron-right" :size="20" :tone="isCurMonth ? 'faint' : 'brand-text'" /></view>
             </view>
+          </view>
+          <view class="cal-sub">
+            <text class="cal-sub-t">本月共练 {{ monthCount }} 题</text>
             <kg-tag tone="ok">本月打卡 {{ monthDays }} 天</kg-tag>
           </view>
-          <text class="cal-sub">本月共练 {{ monthCount }} 题</text>
           <view class="cal-week">
             <text v-for="w in ['一', '二', '三', '四', '五', '六', '日']" :key="w" class="cal-w">{{ w }}</text>
           </view>
@@ -169,13 +171,14 @@ export default {
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); }
 
 /* 月历 */
-.cal-head { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-4); }
+.cal-head { display: flex; align-items: center; margin-bottom: var(--sp-4); }
 .cal-title { display: flex; align-items: center; gap: var(--sp-4); }
-.cal-ym { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); line-height: var(--lh-h3); }
-.cal-btn { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
+.cal-ym { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); line-height: var(--lh-h3); white-space: nowrap; }
+.cal-btn { width: var(--hit-min); height: var(--hit-min); flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
 .cal-btn--hover { background: var(--fill); }
 .cal-btn.dis { pointer-events: none; }
-.cal-sub { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-bottom: var(--sp-16); }
+.cal-sub { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-16); }
+.cal-sub-t { font-size: var(--fs-sub); color: var(--ink-3); }
 .cal-week { display: flex; margin-bottom: var(--sp-8); }
 .cal-w { flex: 1; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 .cal-grid { display: flex; flex-wrap: wrap; }

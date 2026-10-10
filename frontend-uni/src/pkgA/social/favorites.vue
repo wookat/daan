@@ -406,11 +406,15 @@ export default {
             // 云条目也清本机同题：题页/错题本对账（syncCloudFavs）会把云收藏写进 favQuestions，只删云端的话 load() 合并时它会以本机条目复活
             const locals = (uni.getStorageSync('favQuestions') || []).filter((x) => x.question !== it.question && !(it.id != null && x.id === it.id));
             uni.setStorageSync('favQuestions', locals);
+<<<<<<< HEAD
             // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
             const next = dropFavItem(this.items, this.folders, it);
             this.items = next.items;
             this.folders = next.folders;
             this.load({ known: true });
+=======
+            this.load();
+>>>>>>> 09e72974 (R574-fix: 收藏页取消云收藏同时清本机同题（题页/对账写进 favQuestions 的条目不再在 load() 合并时复活）+ syncUrl 保留 history.state / onShow 回写地址栏（R546 同型）；小程序 onUnfav 同口径（生产复验 F 两条既有 FAIL）)
           } catch (e) {
             uni.showToast({ title: e.message, icon: 'none' });
           }

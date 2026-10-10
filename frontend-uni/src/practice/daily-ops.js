@@ -4,7 +4,7 @@ import { request, anonUid, pkNickname, submitDailySet } from '../api.js';
 import { dayKey, saveSzDaily } from '../checkin.js';
 
 export const dailyOps = {
-    markDailyDone() {
+    markDailyDone(silent = false) {
       if (!this._daily) return;
       this._daily = false;
       const past = this._dailyPast;
@@ -22,15 +22,16 @@ export const dailyOps = {
       this._dailyDate = '';
       if (!date) return;
       this._dailyDoneDate = date;
-      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs });
+      this.sendDailyResult({ uid: anonUid(), nickname: pkNickname(), date, right: this.right, total: this.items.length, secs: this.totalSecs }, silent);
     },
-    // 成绩上报：成功挂全站成绩 + 榜；提交失败置 dailyErr 供完成页重试（payload 已在 dailyPendingSubmit，首页 onShow 也会补传）；榜失败不算失败,
-
-    sendDailyResult(payload) {
+    // 成绩上报：成功挂全站成绩 + 榜；提交失败置 dailyErr 供完成页重试（payload 已在 dailyPendingSubmit，首页 onShow 也会补传）；榜失败不算失败
+    // silent：离页视同完成，只落数据，不拉榜/不起推送提示
+    sendDailyResult(payload, silent = false) {
       this.dailyErr = false;
       return submitDailySet(payload)
         .then((d) => {
           this.dailyStats = d;
+          if (silent) return d;
           // #ifdef H5
           this.initPushNudge();
           // #endif

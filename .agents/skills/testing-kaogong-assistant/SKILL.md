@@ -3,6 +3,81 @@ name: testing-kaogong-assistant
 description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+=======
+=======
+=======
+## R586 经验：窄屏折行先量 flex 链再改 + 清理脚本「空回执」= timeout 杀在 commit 后 print 前
+
+- 窄屏文字折行不要只看截图：同 bundle 下用 `getBoundingClientRect` 量 `.cal-head → .cal-title → .cal-ym` 每层宽 + canvas `measureText` 同字体量文案宽，行数 = `height / lineHeight`；四档 360/375/390/1440 一起量才能说清「哪档折、差多少」（R586：可用 92.5/100.6 vs 文案 104.4）。同一 flex 行里不可压的 `kg-tag` 会先抢宽，热区 `.cal-btn` 没 `flex-shrink:0` 会被压到 <44 也要顺手量。
+- 生产日历路由是 `/pages/stats/calendar`（`pages.json`），复验要点「上个月」再点「下个月」看往期月份文案同样单行、`isCurMonth` 时下个月 `dis`。
+- 清理脚本 stdout 为空的一手原因：宿主 `state()` 单趟 27–84s（10 张保护表全表 digest），clean 两趟 >170s 被 `sudo timeout 170` SIGTERM 杀在 `commit()` 之后、末尾唯一 `print` 之前 → exit 124、stdout 空、**数据已删**。launcher 必须落 `EXIT`（124=timeout）和 stderr；脚本 commit 后要先单独吐一行 `{"deleted":…}` 再算 after 态。模板 `~/r586/clean586.py` + `run_clean586.sh`（`KG_CLEAN_TIMEOUT=400`）。stdout 空 ≠ 已清/未清，仍必须独立 `ro` 复核（目标 `{}` + 共享 42 + digest）。
+- 底栏切 tab 时 `static/tab/home-on.png / book.png` `requestfailed ERR_ABORTED` 是 uni-h5 换图标 src 取消在途请求，归「框架/非 API」一类，不计入自然失败。
+
+>>>>>>> a002bdb4 (docs: R586 取证（日历标题折行量测/论证/复验 + R585-2 究因）+ handoff/状态.md + 测试 SKILL)
+## R585 经验：tabBar 选择器按文案定位 + `uni` 不是 window 全局 + 旧快照隔离复验用「改本机 apiSnap + 阻断请求」
+
+- 生产 H5 底栏 `.uni-tabbar__item` 用 `nth-child(n)` 会错位（R585 第一版 `nth-child(3)` 点到的是错题本不是统计，B/C 结果整批无效）；一律用 `.uni-tabbar__item:has-text("统计")`，并在结果里带上 `pg.url` 断言落在目标页。角标读 `t[1].querySelector('.uni-tabbar__badge')`（错题本 index 1）。
+- 页面 `evaluate` 里 `uni.setTabBarBadge` 不可用（`uni` 是模块内引用，不挂 window）。要验「旧快照不刷角标」：先让首页真实回包把角标定在 8，`localStorage` 里把 `apiSnap:/api/review?uid=…` 的 `"total"` 改成另一个值，再 `route.abort` 该 GET，切到目标页 —— 角标仍 8 且到期行「需网络恢复后同步」即隔离成立。注意 `route.fulfill` 的假回包会被 `snapSave` 写进本机快照（下一场景要先覆盖）。
+- placeholder 截断直接量 `.ib-inp .uni-input-placeholder`（uni-h5 把 placeholder 渲染成独立 div）：`scrollWidth > clientWidth` 即截断；`getAttribute('placeholder')` 在 `uni-input` 外层拿不到。可用宽取 `.uni-input-input` 盒宽减 padding。
+- 清理脚本 clean 模式 stdout 可能为空（R585 一次，原因未明）：不把「有回执」当已清，也不把「无回执」当未清 —— 必须再独立跑一次 `ro` 看目标 uid 命中 `{}` + 共享 42 + 保护表 digest。
+
+>>>>>>> fc53d276 (docs(R585): 生产复验回填（tCexIcFM 375/1440 A–D 全 PASS）+ R584-1 37 uid 清账取证 + handoff + 状态.md + SKILL)
+## R584 经验：复习页是错题本页内模式 + 串行链枚举要连 `api.js` 包装一起搜 + 清账要盘全表 `test-%` 不只本轮前缀
+
+- 生产**没有** `/pages/review/review`（`pages.json` 无此页）：复习 = `pages/book/book` 页内 `reviewing` 模式，脚本入口是先写 storage `autoStartReview=1` 再冷加载 `#/pages/book/book`（首页「开始复习」CTA 同路径）。走查前先 `grep -n '"path"' src/pages.json` 核路由，别照页面名猜。
+- 枚举串行链只 grep `await request(` 会漏掉 `fetchFavs / removeFav / fetchCheckinBadges / fetchCheckinSummary` 这类 `api.js` 导出包装：先 `grep -n '^export function' src/api.js` 拿包装名，再搜 `await (request|<包装名>)(`；归类时按「后一请求是否需要前一回包/副作用」「是否条件回退」「调用点是否只在失败回退分支」三问定，不按方法名。
+- 每轮清账除了本轮前缀，追加一次 `ro 'test-%'` 全景盘点（`~/r584/clean584.py ro 'test-%'`）：R584 借此发现别轮 `test-r567-shots-375` 11 行残留（含 `review_cur`，该表按 `_ensure_review_cur` 惰性建表，早期枚举可能没这张表）。走查脚本 `add_init_script` 只覆盖本次 context，浏览器持久 profile 里旧 `anonUid` 可能被之后的走查再写回——收尾多盘一次。
+- 「进度已保留」类续卡的走查顺序会污染下一张截图：进入复习模式再离开会写零进度 `reviewSnap`（本机 2h TTL）+ `POST /api/review/cur`，同 uid 后续错题本截图会多出续卡；要么换 uid，要么先清 storage 与 `review_cur`。
+
+>>>>>>> 78f51f0e (docs(R584): 研究/设计轮不立项——全站加载器串行链只读枚举（R582/R583 后无剩余互不依赖串行）+ 375/1440 错题本·复习模式走查无 P0/P1 + 自然 practice_result 非 2xx 0 + 测试残留清账（R584-1 登记）+ handoff + 状态.md + SKILL)
+## R583 经验：串行链要按「加载器内部」逐个找 + 到期行类文案用轮询序列取证 + 宿主慢先三段分账再下判
+
+- 页面顶层 `Promise.all` 齐了不等于没有串行：`stats.vue` 顶层 8 个加载器并发，但 `loadReco()` 内部 recommend → review 仍串行。排查口径：对每个 `async load*()` 方法体 grep 相邻两处 `await request(`，再核两端点是否真依赖（`loadProfile → plan/today` 那种是真依赖，不改）。
+- 「正在同步到期数…」类过渡文案的复验不用单张截图，用 `verify583.py` 的 250ms 轮询记 `(t, innerText)` 变化序列（`DUE_SEQ`），并排 `request/response` 时刻表，才能说「到期行在 review 回包后 X ms 落地」。有数据态要先用首页 CTA 真答 10 题（`seed` 参数）解锁统计页，空 uid 只能证同 tick 不能证到期行。
+- 宿主慢三段分账：客户端 `time_starttransfer` − Caddy `duration` 拆成 pre（进 Caddy 前）/ dur / post；同时对比探针前后 `/proc/net/netstat` `ListenDrops/ListenOverflows`——不涨则不是 accept 队列丢包，别把「慢」直接写成「丢包」。Caddy `duration` 从读完请求起算，dur 小 ≠ 用户等得少。
+- Caddy POST 端点名要对后端路由（`grep -rn '@router.post' backend/app`），进度端点是 `/api/practice/progress` 不是 `/api/practice_progress`（表名），写错会得到 0 条并误判「无流量」。
+- 8 并发探针的报告文件要按 run 编号落盘（`burst-run1-*.txt`），第二次运行覆盖第一次会丢慢窗证据（R583 只抢救出 tail）。
+
+>>>>>>> 200c5384 (docs(R583): 生产复验回填（DEX103Q0 375/1440 同 tick、到期行 0.63s 落地）+ handoff + 状态.md + SKILL)
+## R582 经验：页面「慢」先分「发出时刻」与「往返时长」+ 复验要覆盖宿主快窗与慢窗
+
+- 宿主慢不是全部原因：用 CDP `page.on('request'/'response')` 打相对时刻表（`~/r582/timing.py <route> <base> <width>`，`about:blank` 冷加载 + `X-Kg-Probe`），把每条 `/api/*` 的**发出时刻**和**回包时刻**并排列出——「发出被前一条回包卡住」（串行 `await`）是本产品代码可控的部分，「单次往返 5s」才是宿主。我的页 `loadRemote` 三个 `try { await request() }` 串行让 growth 白等 5.4s，同页 `favs`/`badges` 早就同 tick 发出可对照。
+- 改编排类修复的生产复验口径：断言「五请求同 tick 发出」（结构事实），不要拿「总耗时变短」当证据——修后那次宿主恰好快（2.3s）不能归功于改动；必须再取一次慢窗（1440 窗 profile 4.55s）看串行叠加是否消失。
+- 单测装载 Vue 方法体做运行时断言：`methodBody(src, 'async loadRemote\\(\\)')` 切出方法体 → `new Function('request', …, 'return async function(){' + body + '}')` 注入 fake `request`（返回手控 Promise）→ 断言发出顺序数组 + 先 resolve 慢请求以外的那条看字段先落地；比只做正则源锁更能锁「不再串行」。
+- `walk580b.py` 场景参数化（`abc` / `cd` / `e`）后补测 1440 C/D 只需 `walk580b.py <prefix> 1440 cd`，清理前缀跟着轮次改（`clean582.py` 由 `clean580.py` 只改 `PREFIX` + `digest` 的 `startswith`）。
+
+## R581 经验：「同秒双行」类结论先并排打印时间戳 + Caddy 客户端归属 + 小程序离页路径只能源锁
+
+- 只读 DB 邻近对（`~/r581/q581a.sh`）必须把两行 `created_at` 并排打印再下判：R580 记的「09-07 同秒 NULL/有 uid 双行」实为 `19:57:57` vs `20:00:28`（151s），是读串。窄窗 Caddy（`q581b.sh`，`ts` ±600s 过滤 `practice_result`）用 UA + Referer 归属客户端：`Referer https://servicewechat.com/…` + UA 含 `wv` = **微信小程序**请求，不是 H5；`Referer https://kaogong.zalize.com/` = H5。Caddy access log 无 body，payload 只能靠 DB 行的 `n/correct/secs` 侧证。
+- 小程序上送字段的「有/无」要对源码时间线（`git log -S"uid: anonUid()" -- miniapp-native/...`）：设备上跑的是旧开发包时 NULL uid 是版本差，不是缺陷。
+- 30 天写路径分账（`q581c.sh`）按 `X-Kg-Probe` / UA(`X11; Linux x86_64` harness) / Referer 三分 natural / wx-mp / harness；非 2xx 归 harness 的不能拿来证明「自然会丢」。
+- 小程序 `pages/practice/practice.ts` 全答完离页：`onPick` 末题只 `saveSession()`、`finish()` 只挂 `onNext`/`autoNext(仅答对 1.2s)`，直接返回走 `onUnload → flushProgress` 把 N/N 写快照；R581 加 `finalizeIfAnswered()`（`_resultSent` 先置位 → 清 `_progressTimer` → 删快照 + `clearServerProgress` → `logAttempts` → `postPracticeResult`）+ `flushProgress` `_resultSent` 闸。无运行时通道（R536-1）→ 只有 `frontend-uni/tests/r581-miniapp-finalize-on-leave.test.js` 源锁 + `tsc`；`scripts/reason-toggle.test.ts` 的 `onUnload` 正则要随结构改。
+
+## R580 经验：离页类断言的入口/出口分账 + 「请求已发 ≠ 服务端已落 ≠ 客户端拿到回包」+ 清理脚本必须在宿主上跑
+
+- 练习页三条离页入口不是同一路径：runtime 顶栏返回 `onPageHeadBackButton → navigateBack/reLaunch → removePage → onUnload`；浏览器 Back `history.listen(direction==='back') → removeCurrentPages → onUnload`；页内退出图标 `quit() → quitSummary → (全答完 null 不弹层) → leave()`。**只有页内出口经过 `quit()`**，断言「离页副作用」时三条都要跑，且顶栏/Back 只能靠 `onUnload` 兜住。
+- 全答完停末题反馈态离页要求 `POST /api/practice_result` 恰 1、当前日每日一练 `POST /api/daily_set/submit` 恰 1、`answer_log` 恰 N 条无重复（`resultSent` 与 `_logged` 在**首个 `await` 前**置位，`leave → onUnload` 二次触发不重复）；往期补练 `daily_set/submit` 必须 0 次。断言按 `(uid, 表) 计数` 取服务端一手，不看 toast。
+- 生产请求结果分五档分别记录：sent / response HTTP 状态 / `requestfailed`（含 harness 硬 reload 造成的 `net::ERR_ABORTED`）/ console·pageerror / harness 断言。fin11 一手：宿主 ≈60s 不回 + 4×503，客户端 abort 但服务端 `answer_log 10 / daily_set_entries 1 / practice_results 1` 已落——**客户端 abort 不等于服务端未处理**，判 FAIL 前先 SSH 只读对账；`wait_posts` 慢宿主用 ≥75s。
+- 同一 Document 只改 hash 不触发 uni 路由 Back（`history.state` null/unknown 方向识别失败）——离页类复验必须 `about:blank` 冷加载 → 首页 CTA 真 `navigateTo` 进练习页；探针 `trace` 里见 `hook:onUnload` 才算真卸载。UID 必须在 `add_init_script` 里 app bootstrap 前写入。
+- 清理脚本 `~/r5xx/clean5xx.py` 的库路径是宿主 Docker volume，**必须经 SSH stdin 在宿主上跑**：`ssh … 'sudo -n timeout 170 python3 -u - ro|clean' < clean5xx.py`；本机直跑 `sqlite3.OperationalError: unable to open database file` 不是「已清理」。ro → clean → ro 三次独立 SSH，回执逐表相等 + 保护表 digest 前后一致才算完。
+- `practice_results.uid` 历史 287/288 空（列后加），自然对账不能按 uid；`practice_result` 接口无幂等键，任何「客户端重投」设计前要先加服务端幂等键（R580-1）。
+
+>>>>>>> 7ae34902 (docs(R582): 取证 + handoff + 状态.md + SKILL（我的页并发 / 1440 C/D 17/17 / 自然样本 / 清理 75 行）)
+## R579 经验：续练「四个数」分账 + `merge_anon` 一手取证 + 退出层不是必经路径
+
+- 续练类断言必须分四个数：`done`（已答数）、`idx`（快照保存的下标，可能指向**已答**题——答完第 3 题停在反馈态即 `idx=2`）、落地下标（`resumeIndex`：当前题已答则其后第一道未答）、首页题号文案 `next`（= 落地下标 + 1）。R579 前 hero 用 `done+1`、落点用 `idx` → 「第 4/10」却落 3/10；修后 hero/落点同源。复验固定「答 k 题停在第 k 题反馈态 → 退出 → 首页 hero 第 k+1 / 续练卡已做 k → 落点 k+1 且无反馈、选项可点」，本机与远端（删 `pendingSession`+`practiceLaunch` 后 F5，远端用服务端 `picks` 判已答）各跑一遍。小程序首页只显「已做 n/N」，不要拿题号断言它。
+- `merge_anon` 取证口径：合并**前后**直接 `SELECT COUNT(*)`/qid 列表 分别数匿名 uid 与目标 uid 的 `answer_log`（及 `practice_progress`/`growth_events`/`mistakes`/`merged_anon`），不要拿 `/api/growth total.n` 与本机进度对比当证据（`total.n` 计 `answer_log` 含强化、「错题本」计 `mistakes`，口径本就不同）。`merge_uid_rows` keyed 表走 `UPDATE OR IGNORE` + `DELETE` 匿名行——目标账号已有同题行时匿名行被丢，该分支需专门 fixture（目标先答同 qid）才触发，R579 未测。
+- 练习页**顶栏返回**不经 R563 退出层直接离页（`quit()` 只挂页内「退出」按钮；每答一题 `saveSession()` 已落盘，返回不清）——脚本不要死等「保留进度并退出」，按落地状态断言。清理：注册账号除 uid `uN` 行外还有 `users`、`auth_tokens.user_id`、`merged_anon.user_id`（整数列）三处；模板 `~/r579/clean579.py ro|clean`（41 表 + 前缀 + 8 张保护表 digest）。页面原文「15 / 累计做题 / 10 / 错题本」按相邻数字-标签配对读，勿把后一个数当前一个标签。
+
 ## R578 经验：完整 H5 链路黑盒脚本 + 第三级 `module` 回退的触发条件 + 「同页开下一场」类断言
 
 - 端到端脚本模板 `~/r578/journey.py <uid> <w> <qid> <tag3>`：`/home/ubuntu/venv-kg/bin/python`（系统 python 无 playwright）连既有 Chrome CDP `:29229`，`extra_http_headers={'X-Kg-Probe':'1'}`；深链 `#/pages/practice/practice?qid=&tag3=&module=`；题包用 `question` 字段（不是 `stem`）与 `.kg-q__stem` 对齐，按 `answer` 反选造全错；抓 `weak` 卡文本/按钮、点「练同考点」、录 reinforce 回包 `id/module/submodule/question_type/tag3` 与 `NAV TITLE`；产物 `q1/done/done-full/reinforce-q1 .png/.txt + journey.json + reqs.json`。别在末尾接 `| tail`（会被环境判成后台）。
@@ -10,6 +85,8 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 - 「同页开下一场」（练同考点 / 只重练本组错题 / 再来一组 / 每日一练）时 `session` 不翻转：断言首题**无**上一场领跑横幅、顶栏按当前来源（练同考点 `… · 强化练习`、错题本 redo `错题重练`、每日一练 `每日一练`）。R578 前生产两处都残留（375/1440 实拍）；修后 375/1440 复验 PASS。**注**：完成页「只重练本组错题」是 `retryWrong()` 就地重开，源码不改 `_source/_reinforce`，顶栏沿用本场来源（强化场重练仍「… · 强化练习」）——不要拿「错题重练」当断言（R578 复验指令初版错在这），是否应改显归 R578-1 论证。
 - `practice_progress` 的来源列叫 `psource`（无 `source`）。清理脚本 `q578c.sh <uid> ro|clean` 通用列扫描 41 表，`clean` 后打印 `after {} TOTAL 0` + `reinforce_log` 总数差。
 
+=======
+>>>>>>> b28d35fc (docs: R577 研究/设计轮（不立项）——后端 module+submodule 强化回退生产一手验证（ZL-JQ-04 2+3 题全 ziliao/比重）+ ec8206e5 后自然样本窗内 0 + 375 登录态我的/统计走查无 P0/P1 + 生产 SQLite 索引探测教训入 SKILL + handoff/状态.md)
 ## R577 经验：生产 SQLite 只读探测必须走已有索引 + 强化回退分支的一手验证法
 
 - `questions` 10.9 万行，`group by tag3 ... having` 套子查询在生产宿主（load 15–20）跑 ≈200s 被 `timeout` 杀；先 `select name, sql from sqlite_master where type='index'` 拿到 `idx_q_reinforce(tag3, disabled, correct_ratio, id)` / `idx_q_pick(module, submodule, is_real, disabled, …)`，用 `indexed by idx_q_reinforce` 只分组出 `n<10` 的 tag3（17 个）再逐 tag3 点查原字段 → 1.3s。原则：窄列、先分组后点查、每步单独计时打印，不写一条大 SQL。
@@ -23,6 +100,8 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 - 骨架计数选择器是 **`.kg-skel`**（`kg-skeleton` 组件根类），不是 `.kg-skeleton`——R575 复验第一版用错选择器得到全 0 假阴性，重验才有效；删到最后一张（0 卡）会有 ≈175ms 一帧骨架（`loading = !items.length`），断言「无骨架」只对「仍有剩余卡」成立。
 - 研究脚本截图路由**先核 `pages.json`**：每日一练没有独立页（`#/pkgA/daily/daily` 不存在，空白页是脚本错），入口是首页 `startDaily()` 进练习页；guest 截图只覆盖首页/我的，登录态路径交生产复验。
 
+=======
+>>>>>>> cd7d8926 (docs: R574 两轮生产复验回填（C1NhelQ3 A–E PASS + F 两条既有 FAIL → 热修 BmUQ_r2w F1–F5 PASS，时序纠正）+ handoff + 测试 SKILL)
 ## R574 经验：收藏页「本机 + 云」双写形态的取消复验 + 派生式 chips 的深链断言
 - 收藏在生产不是单源：题页 `toggleFav` 与 R561 `syncCloudFavs`（进练习页时触发）都会把**云收藏写进本机 `favQuestions`**，`favorites.vue load()` 再按 `question` 去重合并。凡「取消收藏」类复验必须先走一次真实「重练全部收藏 → 返回」把本机副本造出来，再取消云条目并断言：`DELETE /api/favs` 恰 1 条、`uni.getStorageSync('favQuestions')` 无该题、F5 后仍收缩；否则只测纯云用户会漏掉「复活要第二次取消」（R574 生产 F）。反向也要测：阻断 own DELETE → toast 且本机数组不动（清本机必须在 removeFav 成功之后）。
 - 取消后是 `load()` 全量重拉再收缩（既有设计），宿主慢时先见重载骨架数秒（375 DELETE 9.4s + GET 4.0s）——**截图时间戳必须与 DELETE 响应时刻对齐**再下「响应后仍 N 卡」结论；R574 复验一就是把响应前截图误报成复活证据。指令里不要写「立即 1 卡」，写「DELETE 200 + 后续 GET 完成后 1 卡」。

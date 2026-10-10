@@ -211,7 +211,7 @@
       <input
         v-model="fuText"
         class="ib-inp"
-        :placeholder="results.length ? '对讲解有疑问？追问 AI…' : '先拍题或粘贴题目开始'"
+        :placeholder="results.length ? '有疑问？追问 AI' : '拍题或粘贴题目'"
         confirm-type="send"
         :disabled="!results.length"
         @confirm="sendFollowup"

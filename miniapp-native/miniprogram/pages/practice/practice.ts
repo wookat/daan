@@ -36,8 +36,10 @@ import { enqueueAnswers, enqueueMistake, flushOfflineQueue } from '../../utils/o
 import { drawOffline } from '../../utils/offline-pack';
 import {
   adoptPracticeResume,
+  allAnswered,
   collectPracticeProgress,
   patchPendingMistake,
+  resumeIndex,
   PENDING_KEY,
   PP_CLEARED_KEY,
   readPendingSession,
@@ -263,10 +265,29 @@ Page({
   onUnload() {
     this.stopTimer();
     this.clearAutoTimer();
-    this.flushProgress();
-    // 中途退出：把已答未上报的作答补报（与 practice.vue quit 对齐）
-    this.logAttempts(this.data.items);
+    if (!this.finalizeIfAnswered()) {
+      this.flushProgress();
+      // 中途退出：把已答未上报的作答补报（与 practice.vue quit 对齐）
+      this.logAttempts(this.data.items);
+    }
     this._unloaded = true;
+  },
+  // 全部答完停在末题反馈态直接离页视同完成（与 practice.vue finalizeIfAnswered 对齐）：
+  // 落 practice_result + 补报作答 + 清本机/远端快照，不再把 N/N 当未做完存进快照；结算态展示（redoReport/percentile）不在离页路径上。
+  finalizeIfAnswered(): boolean {
+    const { items, right, finished, beiMode } = this.data;
+    if (finished || beiMode || this._resultSent || !allAnswered(items)) return false;
+    this._resultSent = true;
+    if (this._progressTimer) {
+      clearTimeout(this._progressTimer as ReturnType<typeof setTimeout>);
+      this._progressTimer = 0;
+    }
+    wx.removeStorageSync(PENDING_KEY);
+    this.clearServerProgress();
+    this.logAttempts(items);
+    const totalSecs = items.reduce((s, q) => s + (q._secs || 0), 0);
+    postPracticeResult(this._module || '', items.length, right, totalSecs).catch(() => {});
+    return true;
   },
 
   // ---------- 启动 / 续做 ----------
@@ -464,7 +485,7 @@ Page({
     this._source = s.source || null;
     this._ptitle = s.ptitle || '';
     this.setData({ moduleName: modName(s.lastModule || ''), navTitle: s.ptitle || modName(s.lastModule || '') + ' · 续做' });
-    this.adopt(s.items.map(toPQ), s.idx, s.right, s.streak, s.bestStreak);
+    this.adopt(s.items.map(toPQ), resumeIndex(s.items, s.idx), s.right, s.streak, s.bestStreak);
   },
   startFallback(module: string) {
     const a = this._args as LaunchArgs;
@@ -501,7 +522,7 @@ Page({
       clearTimeout(this._progressTimer as ReturnType<typeof setTimeout>);
       this._progressTimer = 0;
     }
-    if (this.data.finished || this.data.offline || !this.data.items.length) return;
+    if (this.data.finished || this._resultSent || this.data.offline || !this.data.items.length) return;
     const p = collectPracticeProgress(
       this.data.items,
       this.data.idx,

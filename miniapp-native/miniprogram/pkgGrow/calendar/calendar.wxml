@@ -8,9 +8,11 @@
           <text class="cal-ym num">{{ymText}}</text>
           <view class="cal-btn {{isCurMonth ? 'dis' : ''}}" aria-role="button" aria-label="下个月" aria-disabled="{{isCurMonth}}" hover-class="cal-btn--hover" bind:tap="onNext"><l-icon name="chevron-right" size="20" tone="{{isCurMonth ? 'faint' : 'brand-text'}}" /></view>
         </view>
+      </view>
+      <view class="cal-sub">
+        <text class="cal-sub-t">本月共练 {{monthCount}} 题</text>
         <kg-tag tone="ok">本月打卡 {{monthDays}} 天</kg-tag>
       </view>
-      <text class="cal-sub">本月共练 {{monthCount}} 题</text>
       <view class="cal-week">
         <text wx:for="{{week}}" wx:key="*this" class="cal-w">{{item}}</text>
       </view>

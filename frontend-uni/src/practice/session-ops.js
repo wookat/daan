@@ -1,7 +1,7 @@
 // 练习会话：预取/持久化/服务器续练/本地恢复与续练弹窗（practice.vue 抽离，方法 this 仍指组件实例）
 
 import { request, anonUid, trackEvent } from '../api.js';
-import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, REDO_PENDING_TITLE } from '../practice-progress.js';
+import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, resumeIndex, REDO_PENDING_TITLE } from '../practice-progress.js';
 import { reviewedFromPending } from '../review-advance.js';
 import { resumeAsk } from '../resume-ask.js';
 
@@ -93,7 +93,7 @@ export const sessionOps = {
     adoptLocalPending(s) {
       s.items.forEach((q) => { if (q._picked) q._logged = true; });
       this.items = s.items;
-      this.idx = Math.min(s.idx, s.items.length - 1);
+      this.idx = resumeIndex(s.items, s.idx);
       this.picked = this.items[this.idx]._picked || '';
       this.right = s.right;
       this.streak = s.streak;

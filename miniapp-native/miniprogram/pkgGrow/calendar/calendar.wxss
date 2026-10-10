@@ -10,9 +10,7 @@
 /* 月历 */
 .cal-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: var(--sp-8);
   margin-bottom: var(--sp-4);
 }
 
@@ -27,11 +25,13 @@
   font-weight: 600;
   color: var(--ink);
   line-height: var(--lh-h3);
+  white-space: nowrap;
 }
 
 .cal-btn {
   width: var(--hit-min);
   height: var(--hit-min);
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -47,10 +47,16 @@
 }
 
 .cal-sub {
-  display: block;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-bottom: var(--sp-16);
+}
+
+.cal-sub-t {
   font-size: var(--fs-sub);
   color: var(--ink-3);
-  margin-bottom: var(--sp-16);
 }
 
 .cal-week {
