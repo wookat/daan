@@ -8,7 +8,8 @@ import { adoptPracticeResume, parsePendingPractice, parseRemotePractice, resumeI
 import { adoptPracticeResume as mpAdopt, resumeIndex as mpResumeIndex } from '../../miniapp-native/miniprogram/utils/practice-progress.ts';
 
 const q = (id, picked = '') => ({ id, stem: 's' + id, options: { A: 'a', B: 'b' }, answer: 'A', _picked: picked });
-const practice = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
+const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
+const practice = read('../src/pages/practice/practice.vue') + read('../src/practice/daily-ops.js') + read('../src/practice/session-ops.js');
 const home = readFileSync(new URL('../src/pages/home/home.vue', import.meta.url), 'utf8');
 
 describe('resumeIndex', () => {
@@ -63,7 +64,7 @@ describe('调用方接线（源锁）', () => {
     const body = practice.slice(practice.indexOf('adoptLocalPending(s) {'), practice.indexOf('adoptRemoteSnap(snap) {'));
     expect(body).toContain('this.idx = resumeIndex(s.items, s.idx);');
     expect(body).not.toContain('Math.min(s.idx, s.items.length - 1)');
-    expect(practice).toMatch(/import \{[^}]*resumeIndex[^}]*\} from '\.\.\/\.\.\/practice-progress\.js';/);
+    expect(practice).toMatch(/import \{[^}]*resumeIndex[^}]*\} from '[^']*practice-progress\.js';/);
   });
 
   it('home.vue hero「第 k/N 题」取 next（与落地题号、恢复 toast 同源）', () => {

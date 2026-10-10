@@ -7,7 +7,8 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { allAnswered, quitSummary } from '../src/quit-summary.js';
 
-const practice = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
+const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
+const practice = read('../src/pages/practice/practice.vue') + read('../src/practice/daily-ops.js') + read('../src/practice/session-ops.js');
 
 function fnBody(startMarker, endMarker) {
   const i = practice.indexOf(startMarker);
