@@ -14,18 +14,18 @@
 
         <view class="field">
           <wd-input
-            v-model="phone"
-            label="手机号"
-            type="number"
-            maxlength="11"
-            placeholder="请输入 11 位手机号"
+            v-model="email"
+            label="邮箱"
+            type="text"
+            maxlength="128"
+            placeholder="请输入邮箱"
             clearable
-            :error="!!fieldErr.phone"
+            :error="!!fieldErr.email"
             custom-input-class="num"
-            @blur="checkPhone"
-            @input="fieldErr.phone = ''"
+            @blur="checkEmail"
+            @input="fieldErr.email = ''"
           />
-          <text v-if="fieldErr.phone" class="ferr" role="alert">{{ fieldErr.phone }}</text>
+          <text v-if="fieldErr.email" class="ferr" role="alert">{{ fieldErr.email }}</text>
         </view>
         <view class="field">
           <wd-input
@@ -41,8 +41,21 @@
           <text v-if="fieldErr.password" class="ferr" role="alert">{{ fieldErr.password }}</text>
         </view>
         <view v-if="mode === 'register'" class="field">
+          <wd-input
+            v-model="password2"
+            label="确认密码"
+            show-password
+            maxlength="64"
+            placeholder="再次输入密码"
+            :error="!!fieldErr.password2"
+            @blur="checkPassword2"
+            @input="fieldErr.password2 = ''"
+          />
+          <text v-if="fieldErr.password2" class="ferr" role="alert">{{ fieldErr.password2 }}</text>
+        </view>
+        <view v-if="mode === 'register'" class="field">
           <wd-input v-model="nickname" label="昵称" maxlength="20" placeholder="选填，给自己起个名字" clearable />
-          <text class="fnote">短信验证码功能即将上线，当前注册无需验证码</text>
+          <text class="fnote">邮箱验证码功能即将上线，当前注册无需验证码</text>
         </view>
 
         <kg-button variant="primary" size="lg" block :disabled="busy" :loading="busy" class="primary" @click="submit">
@@ -71,7 +84,16 @@ const MODE_OPTS = [
 export default {
   mixins: [segResizeMixin],
   data() {
-    return { mode: 'login', phone: '', password: '', nickname: '', busy: false, err: '', fieldErr: { phone: '', password: '' } };
+    return {
+      mode: 'login',
+      email: '',
+      password: '',
+      password2: '',
+      nickname: '',
+      busy: false,
+      err: '',
+      fieldErr: { email: '', password: '', password2: '' },
+    };
   },
   computed: {
     modeOpts() {
@@ -80,6 +102,10 @@ export default {
     modeLabel() {
       return (MODE_OPTS.find((o) => o.value === this.mode) || MODE_OPTS[0]).label;
     },
+  },
+  onLoad(opts) {
+    // 统一账号回流：ssoLogin 未登录时跳 account.zalize.com?redirect=回本页带 sso=1，回来后自动重试一次
+    if (opts && opts.sso === '1') this.ssoLogin();
   },
   methods: {
     leave() {
@@ -91,13 +117,17 @@ export default {
       const o = MODE_OPTS.find((x) => x.label === (opt && opt.value));
       if (o) this.mode = o.value;
     },
-    checkPhone() {
-      this.fieldErr.phone = /^1\d{10}$/.test(this.phone) ? '' : '请输入 11 位手机号';
-      return !this.fieldErr.phone;
+    checkEmail() {
+      this.fieldErr.email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.email) ? '' : '请输入正确的邮箱地址';
+      return !this.fieldErr.email;
     },
     checkPassword() {
       this.fieldErr.password = this.password.length < 6 ? '密码至少 6 位' : '';
       return !this.fieldErr.password;
+    },
+    checkPassword2() {
+      this.fieldErr.password2 = this.password2 === this.password ? '' : '两次输入的密码不一致';
+      return !this.fieldErr.password2;
     },
     async ssoLogin() {
       this.err = '';
@@ -118,23 +148,32 @@ export default {
         }
         setTimeout(() => this.leave(), 1200);
       } catch (e) {
-        this.err = e.message === '未登录 Zalize 统一账号' ? '请先在 account.zalize.com 登录后再试' : e.message || '登录失败';
+        if (e.message === '未登录 Zalize 统一账号') {
+          // #ifdef H5
+          // 中心站 ?redirect= 登录后回跳（中心站校验 *.zalize.com）；回本页带 sso=1 自动重试 SSO
+          const back = location.origin + location.pathname + '#/pkgA/user/login?sso=1';
+          location.href = 'https://account.zalize.com/?redirect=' + encodeURIComponent(back);
+          return;
+          // #endif
+        }
+        this.err = e.message || '登录失败';
       } finally {
         this.busy = false;
       }
     },
     async submit() {
       this.err = '';
-      const okPhone = this.checkPhone();
+      const okMail = this.checkEmail();
       const okPwd = this.checkPassword();
-      if (!okPhone || !okPwd) return;
+      const okPwd2 = this.mode !== 'register' || this.checkPassword2();
+      if (!okMail || !okPwd || !okPwd2) return;
       this.busy = true;
       try {
         const anon = uni.getStorageSync('anonUid') || '';
         const r =
           this.mode === 'login'
-            ? await authLogin(this.phone, this.password)
-            : await authRegister(this.phone, this.password, '', this.nickname.trim());
+            ? await authLogin(this.email, this.password)
+            : await authRegister(this.email, this.password, '', this.nickname.trim());
         setAuth(r.token, r.user);
         if (this.mode === 'register') {
           const src = uni.getStorageSync('regSource');

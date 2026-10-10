@@ -57,7 +57,10 @@ export function clearAuth(): void {
 export function pkNickname(): string {
   const u = getAuthUser();
   if (u && u.nickname) return u.nickname;
-  if (u && u.phone) return '考友' + String(u.phone).slice(-4);
+  if (u && u.phone) {
+    const p = String(u.phone);
+    return '考友' + (p.includes('@') ? p.split('@')[0].slice(0, 4) : p.slice(-4));
+  }
   let n = wx.getStorageSync<string>('pkNickname');
   if (!n) {
     n = '考友' + Math.random().toString(36).slice(2, 6).toUpperCase();

@@ -657,7 +657,9 @@ async function main() {
     for (const [file, content] of Object.entries(files)) {
       const rel = path.relative(ROOT, file);
       if (!fs.existsSync(file)) errors.push(`${rel} 不存在，先运行 node tools/design-tokens/build.mjs`);
-      else if (fs.readFileSync(file, 'utf8') !== content) errors.push(`${rel} 与 tokens.json 不一致，运行 node tools/design-tokens/build.mjs 并提交`);
+      // CRLF 归一：Windows 上 git autocrlf 会把工作区转成 CRLF，与生成器的 LF 纯字节比对误报
+      else if (fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n') !== content)
+        errors.push(`${rel} 与 tokens.json 不一致，运行 node tools/design-tokens/build.mjs 并提交`);
     }
   }
   if (errors.length) {
