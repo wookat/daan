@@ -42,8 +42,9 @@ nav{position:sticky;top:0;z-index:50;background:rgba(247,248,252,.72);backdrop-f
 .nav-in{display:flex;align-items:center;gap:10px;height:56px}
 .logo{width:30px;height:30px;display:grid;place-items:center}
 .logo svg,.logo img{width:28px;height:28px;display:block;object-fit:contain}
-.brand-name{font-weight:700;font-size:17px;letter-spacing:.5px}
+.brand-mark{height:18px;width:auto;display:block;margin-top:2px}
 .nav-links{margin-left:auto;display:flex;gap:26px;font-size:13.5px;color:var(--ink-3)}
+.nav-cta{margin-left:18px}
 .nav-links a:hover{color:var(--brand)}
 /* 按钮与 App kg-button 同口径：pill(r-full) 实色扁平、无阴影无位移，
    hover 换底色、:active 再压深一档；字重 lg 600 / md 500 */
@@ -224,6 +225,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
   .hero-visual{order:-1}
   .feat-grid,.plat,.pain-grid,.steps{grid-template-columns:1fr 1fr}
   .nav-links{display:none}
+  .nav-cta{margin-left:auto}
 }
 @media(max-width:640px){
   section{padding:60px 0}
@@ -248,7 +250,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <nav>
   <div class="wrap nav-in">
     <div class="logo"><img src="lp-assets/logo.svg" alt="" aria-hidden="true"></div>
-    <div class="brand-name">答岸</div>
+    <img class="brand-mark" src="lp-assets/daan-wordmark.svg" alt="答岸">
     <div class="nav-links">
       <a href="#features">功能</a>
       <a href="#screens">界面</a>
@@ -256,7 +258,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <a href="#faq">FAQ</a>
       <a href="#get">开始使用</a>
     </div>
-    <a class="btn btn-brand btn-sm" href="/app/" style="margin-left:18px">打开 H5</a>
+    <a class="btn btn-brand btn-sm nav-cta" href="/app/">打开 H5</a>
   </div>
 </nav>
 
@@ -446,8 +448,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <img class="cta-mascot" src="lp-assets/logo.svg" alt="答岸标志">
       <h2>今天练的题，明天还记得</h2>
       <p>打开答岸，把第一道错题交给它。</p>
-      <a class="btn btn-brand" href="/app/" style="margin-right:14px">立即体验 →</a>
-      <a class="btn btn-ghost" href="#top">微信搜「答岸」</a>
+      <a class="btn btn-brand" href="/app/">立即体验</a>
     </div>
   </div>
 </section>
