@@ -220,6 +220,9 @@ mkdir -p "$PAGES_DIR/dist/app" "$PAGES_DIR/functions"
 cp -r "$REPO_DIR/landing/." "$PAGES_DIR/dist/"
 cp -r "$DIST/." "$PAGES_DIR/dist/app/"
 cp "$REPO_DIR/deploy/cf-pages/app-404.html" "$PAGES_DIR/dist/app/404.html"  # /app/* miss → 真 404，不再回退 index.html
+# 注册路径 /app/sw.js：main.js register('sw.js') 相对 /app/ 解析；构建产物只在
+# static/ 下，必须显式补拷，否则该 URL 滞留旧部署副本、存量 SW 永不更新（2026-10-10 踩坑）
+cp "$PAGES_DIR/dist/app/static/sw.js" "$PAGES_DIR/dist/app/sw.js"
 # assets 增量叠加：跨部署保留旧 hash 文件。Pages 部署非原子——index.html 已切而
 # 新 chunk 未传播时，对旧 hash 的请求命中 Pages HTML 回退，且被 _headers 里
 # /app/assets/* 的 immutable(1y) 规则在边缘/浏览器缓存成 text/html（2026-10-08 踩坑：
