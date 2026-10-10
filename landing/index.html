@@ -100,6 +100,29 @@ h1 em{font-style:normal;color:var(--brand)}
 .feat p{font-size:13.5px;color:var(--ink-3);line-height:1.75;padding-bottom:14px}
 .feat .k{display:inline-block;align-self:flex-start;margin-top:auto;font-size:12px;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:3px 10px;font-weight:600}
 
+/* ---- pain (PAS) ---- */
+.pain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.pain{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:24px}
+.pain b{display:block;font-size:15.5px;margin-bottom:8px}
+.pain p{font-size:13.5px;color:var(--ink-3);line-height:1.75}
+
+/* ---- steps ---- */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.step{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px}
+.step .n{display:inline-block;font-size:13px;font-weight:800;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:3px 10px;margin-bottom:14px}
+.step b{display:block;font-size:16px;margin-bottom:8px}
+.step p{font-size:13.5px;color:var(--ink-3);line-height:1.75}
+
+/* ---- faq (details/summary，无需 JS) ---- */
+.faq{max-width:760px}
+.faq details{background:var(--card);border:var(--hairline);border-radius:var(--r-md)}
+.faq details+details{margin-top:12px}
+.faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';color:var(--ink-4);font-size:18px;font-weight:400;transition:transform .15s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{padding:0 22px 18px;font-size:13.5px;color:var(--ink-3);line-height:1.75}
+
 /* ---- screens strip ---- */
 .screens{background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .strip{display:flex;gap:22px;overflow-x:auto;padding:8px 4px 20px;scrollbar-width:thin}
@@ -143,18 +166,23 @@ h1 em{font-style:normal;color:var(--brand)}
 @media(max-width:920px){.band{grid-template-columns:repeat(2,1fr)}}
 
 /* ---- footer ---- */
-footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-size:12.5px}
-.foot-in{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);font-size:13px}
+.foot-grid{display:flex;justify-content:space-between;gap:36px;flex-wrap:wrap}
+.fcol{display:flex;flex-direction:column;gap:8px}
+.fcol b{font-size:13.5px;color:var(--ink);margin-bottom:2px}
+.fcol a{color:var(--ink-3)}
+.fcol a:hover{color:var(--brand)}
+.foot-copy{margin-top:28px;padding-top:18px;border-top:var(--hairline);font-size:12px;color:var(--ink-4)}
 
 @media(max-width:920px){
   .hero-in,.method-in{grid-template-columns:1fr}
   .hero-visual{order:-1}
-  .feat-grid,.plat{grid-template-columns:1fr 1fr}
+  .feat-grid,.plat,.pain-grid,.steps{grid-template-columns:1fr 1fr}
   .nav-links{display:none}
 }
 @media(max-width:640px){
   section{padding:60px 0}
-  .feat-grid,.plat{grid-template-columns:1fr}
+  .feat-grid,.plat,.pain-grid,.steps{grid-template-columns:1fr}
   .band{padding:30px 26px}
   .band b{font-size:24px}
 }
@@ -172,6 +200,7 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
       <a href="#features">功能</a>
       <a href="#screens">界面</a>
       <a href="#method">方法体系</a>
+      <a href="#faq">FAQ</a>
       <a href="#get">开始使用</a>
     </div>
     <a class="btn btn-brand btn-sm" href="/app/" style="margin-left:18px">打开 H5</a>
@@ -231,7 +260,36 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
   </div>
 </div>
 
-<section id="features">
+<section id="pain">
+  <div class="wrap">
+    <div class="shead">
+      <div class="tag">WHY</div>
+      <h2>刷了几千题，错题还是一错再错</h2>
+      <p>不是你不努力——是错题从来没被真正「讲透过、记住过、检验过」。</p>
+    </div>
+    <div class="pain-grid">
+      <div class="pain"><b>错了没人讲透</b><p>对完答案只知道选 C：不知道为什么对，更不知道下次怎么做得更快。</p></div>
+      <div class="pain"><b>记住答案没记住方法</b><p>同一道题换个数字又错——背下来的是答案，缺的是可迁移的速解方法。</p></div>
+      <div class="pain"><b>三天热度断档</b><p>错题越攒越多越不敢看，没有复习节奏，笔记记了厚厚一本却从不回看。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="how" style="padding-top:0">
+  <div class="wrap">
+    <div class="shead">
+      <div class="tag">HOW IT WORKS</div>
+      <h2>三步，把错题变成能力</h2>
+    </div>
+    <div class="steps">
+      <div class="step"><span class="n">01</span><b>拍题 · 搜题</b><p>拍照或粘贴题目文字，也可以在 63,992 题题库里按考点检索。</p></div>
+      <div class="step"><span class="n">02</span><b>讲解 · 归集</b><p>AI 按花生十三方法体系六段式讲解；错题自动进错题本，不用手抄。</p></div>
+      <div class="step"><span class="n">03</span><b>复习 · 检验</b><p>SM-2 间隔复习到期推送；全真模考 + 全站排位检验真实水平。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features" style="padding-top:0">
   <div class="wrap">
     <div class="shead">
       <div class="tag">FEATURES</div>
@@ -285,6 +343,22 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
   </div>
 </section>
 
+<section id="faq" style="padding-top:0">
+  <div class="wrap">
+    <div class="shead">
+      <div class="tag">FAQ</div>
+      <h2>常见问题</h2>
+    </div>
+    <div class="faq">
+      <details><summary>答岸收费吗？</summary><p>刷题、错题本、真题卷库、模考等核心功能免费开放，注册即可使用。</p></details>
+      <details><summary>需要注册才能用吗？</summary><p>H5 打开即可匿名练题；注册后错题、学习进度、外观设置在小程序与 H5 之间互通同步，也支持 Zalize 统一账号一键登录。</p></details>
+      <details><summary>题库覆盖什么考试？</summary><p>国考 2012–2026 全链 + 多省省考、选调行测真题，合计 23,205 题、69 套整卷；申论素材与 AI 批改同步覆盖。</p></details>
+      <details><summary>小程序和 H5 有什么区别？</summary><p>同一套数据、同一套功能：小程序适合碎片时间刷题，H5 适合桌面端长时间学习，进度实时互通。</p></details>
+      <details><summary>我的做题数据存在哪？</summary><p>答题记录与错题本保存在你的账号下，仅用于生成复习计划与学习统计，不对外提供。</p></details>
+    </div>
+  </div>
+</section>
+
 <section id="get" style="padding-top:0">
   <div class="wrap">
     <div class="shead">
@@ -312,10 +386,12 @@ footer{border-top:1px solid var(--line);padding:34px 0;color:var(--ink-3);font-s
 </section>
 
 <footer>
-  <div class="wrap foot-in">
-    <div>答岸（原岸上见）· 上岸 Zalize 体系</div>
-    <div>题库数据含公开真题整理 · 部分解析由 AI 生成</div>
+  <div class="wrap foot-grid">
+    <div class="fcol"><b>答岸</b><span>原岸上见 · 上岸 Zalize 体系</span></div>
+    <div class="fcol"><b>产品</b><a href="/app/">H5 网页版</a><span>微信小程序 · 搜「答岸」</span></div>
+    <div class="fcol"><b>说明</b><span>题库数据含公开真题整理</span><span>部分解析由 AI 生成</span></div>
   </div>
+  <div class="wrap foot-copy">© 2026 Zalize · 答岸</div>
 </footer>
 
 </body>

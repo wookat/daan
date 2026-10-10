@@ -52,3 +52,12 @@
 - Khan 掌握四色阶（灰→蓝→紫→绿）→ 记入产品侧 backlog（掌握状态机语义色）
 
 **已拒绝**：IBM 0px 直角（太肃杀）、Brilliant 衬线（中文无栈）、Wise 900 billboard（营销腔）、hover scale 位移（游戏化）、Notion 暖灰（与冷蓝打架）、Vercel shadow-as-border（零收益花哨）。
+
+## 信息架构（2026-10-10 重组）
+
+调研 Linear / Shopify / Notion teardown、通用 app 落地页三区模型、PAS 文案框架与开源模板（AstroWind 等）后的重组——框架不引入，取区块序与叙事结构：
+
+`hero（标题+CTA+数字证明+真截图）→ band → chipstrip → pain（PAS 痛点共鸣）→ how（编号三步：拍搜→讲解归集→复习检验）→ features（6 卡）→ screens（高清实拍带）→ method（方法体系）→ faq（details/summary 无 JS 折叠）→ get（平台）→ cta → footer（分栏）`
+
+- FAQ 用 `<details>/<summary>` 原生折叠，与开源模板一致的无 JS 方案
+- 截图资产为 1170×2532 物理像素实拍（390×844 视口 ×3 DSF）
