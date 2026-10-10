@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/readme/lockup.png" alt="答岸" width="220"></p>
+
 # 行为准则（Code of Conduct）
 
 本项目采用 [Contributor Covenant](https://www.contributor-covenant.org/) 精神，核心要求如下。

@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/readme/lockup.png" alt="答岸" width="260"></p>
+
 # 贡献指南（Contributing）
 
 感谢你愿意为「答岸」贡献代码、文档或反馈。以下是参与方式。

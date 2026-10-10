@@ -1,20 +1,34 @@
-# 答岸 · AI 考公刷题与错题助手
+<p align="center">
+  <img src="docs/readme/lockup.png" alt="答岸" width="420">
+</p>
 
-> AI-powered practice & mistake-book assistant for China's civil service exam (公务员考试 / 行测 / 申论),
-> built around the 花生十三 (Huasheng 13) open method system.
+<h3 align="center">AI 考公刷题与错题助手 · 花生十三方法体系</h3>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Backend](https://img.shields.io/badge/backend-FastAPI%20%2B%20SQLite-009688.svg)](#)
-[![Frontend](https://img.shields.io/badge/frontend-uni--app%20%2F%20Vue3-42b883.svg)](#)
-[![Tests](https://img.shields.io/badge/tests-vitest%201583%20%2B%20pytest-brightgreen.svg)](#)
+<p align="center">
+  AI-powered practice &amp; mistake-book assistant for China's civil service exam (公务员考试 / 行测 / 申论)。
+</p>
 
-**官网**：https://kaogong.zalize.com/ · **网页版（打开即用）**：https://kaogong.zalize.com/app/ · **微信小程序**：内测中
+<p align="center">
+  <a href="https://kaogong.zalize.com/">官网</a> ·
+  <a href="https://kaogong.zalize.com/app/">网页版（打开即用）</a> ·
+  微信小程序（内测中） ·
+  <a href="https://kaogong.zalize.com/#feedback">内测反馈</a>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/backend-FastAPI%20%2B%20SQLite-009688.svg" alt="backend">
+  <img src="https://img.shields.io/badge/frontend-uni--app%20%2F%20Vue3-42b883.svg" alt="frontend">
+  <img src="https://img.shields.io/badge/tests-vitest%201583%20%2B%20pytest-brightgreen.svg" alt="tests">
+</p>
+
+<p align="center">
+  <img src="docs/readme/landing-hero.png" alt="答岸官网落地页" width="880">
+</p>
 
 面向公务员考试备考者的错题讲解与刷题工具：上传错题截图或粘贴题目，AI 按「花生十三」公开教学
 体系的方法（ABRX、截位直除、415 份数、假设分配、翻译推理等）分步讲解、分析错因，存入错题本
 做间隔复习与薄弱点统计；同时提供五大模块题库、真题卷、每周模考大赛与申论批改。
-
-![产品截图](landing/lp-assets/home.png)
 
 ## ✨ 功能特性
 
