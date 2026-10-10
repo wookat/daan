@@ -222,11 +222,52 @@ html.theme-dark body {
 .theme-dark .uni-textarea-placeholder {
   color: var(--ink-4) !important;
 }
-/* 原生 uni.showModal：uni-h5 写死 #fff/#999 且按钮色走 cancelColor/confirmColor 内联 style（#000/#007aff），不随 .theme-dark；全仓无调用传 *Color，故 !important 覆盖 */
-.theme-dark uni-modal .uni-modal {
+/* 原生 uni.showModal 皮肤对齐设计系统：uni-h5 默认 3px 小圆角白盒 + #999 正文 + iOS 分割线按钮，
+   与 KgSheet（--card 面板/--r-lg 圆角/token 字色）是两套语言；同选择器名改成 token 皮肤统一视觉。
+   结构见 uni-h5/style/api/modal.css；按钮色是内联 style 须 !important */
+uni-modal .uni-mask {
+  background: var(--mask);
+}
+uni-modal .uni-modal {
   background: var(--card);
   color: var(--ink);
+  border-radius: var(--r-lg);
+  max-width: 340px;
+  box-shadow: var(--sh-2);
 }
+uni-modal .uni-modal__title {
+  font-weight: 600;
+  font-size: var(--fs-h3);
+  color: var(--ink);
+}
+uni-modal .uni-modal__bd {
+  color: var(--ink-2);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+}
+uni-modal .uni-modal__textarea {
+  background: var(--fill);
+  color: var(--ink);
+  border-radius: var(--r-xs);
+}
+uni-modal .uni-modal__ft {
+  font-size: var(--fs-body);
+}
+uni-modal .uni-modal__ft::after,
+uni-modal .uni-modal__btn::after {
+  border-color: var(--line);
+}
+uni-modal .uni-modal__btn {
+  color: var(--ink) !important;
+}
+uni-modal .uni-modal__btn:active {
+  background: var(--fill);
+}
+uni-modal .uni-modal__btn_primary {
+  color: var(--brand-text) !important;
+  font-weight: 600;
+}
+/* 深色在上述皮肤之上再按 .theme-dark 覆盖（值与 token 一致时仅保留按钮内联色压制） */
 .theme-dark uni-modal .uni-modal__bd {
   color: var(--ink-2);
 }
