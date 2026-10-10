@@ -3,6 +3,12 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R589 经验：复习模式走查要「读完解析」再换题 + 落地断言看 rhead top + 起点回顶别被 scrollIntoView 抵消
+
+- 错题本复习模式（`book?review=1` 冷进即 `startReview`，或列表点「开始复习」）换题同样不回顶（R588 同型，`nextReview()` 只 `rIdx++`）。走查模拟用户要 `scrollTo(0, scrollHeight)` 读完解析再点 sticky `.review .next-btn`（`scroll_into_view_if_needed` 只是把 sticky 按钮滚进来，滚动量不足以暴露）；落地断言除 `scrollY===0` 还要看 `.review .rhead` top（修前 y 被夹到 0–4 看似正常，只有新题比视口高才现形：三场 14 次换题里 1 次 r6 资料分析题 y=122、rhead −49）。每题点 A 会触发加练同类 / 重排，列表 8 → 22，循环上限要放到 60 才能走到小结。
+- 「列表下滑后点开始复习回顶」这项，Playwright `click()` / `scroll_into_view_if_needed()` 会先把按钮滚回视口把 y 归 0，等于没测；要 `window.scrollTo(0,400)` 后 `locator.evaluate('el => el.click()')` 直接派发（R589 1440 y=400 → 首题 y=0）。
+- H5 `exitReview` 的 `uni.pageScrollTo` 字面量被 R513 源锁（`tests/book-r513-exit-review-scroll-top.test.js`）锁住，抽 helper 时保留该处直调，不为通过改测试。
+
 ## R588 经验：链路走查每步量 `scrollY` 不只截图 + 换题回顶 H5/小程序两套机制 + 窄 digest 清理模板转正
 
 - 「答题 → 完成页」这类多步链路，每步落地都记 `{scrollY, scrollHeight, innerHeight, 关键元素 top}`（`~/r588/scroll588.py` 的 `MEAS`），只看截图会把「首屏是头图下半段」当成截图时机差异（R582 就漏了）。残余滚动量会被新页高夹住：短题页高 ≈ 视口时 `scrollY` 被夹到 0/1 看起来正常，长题 / 完成页（页高 1502）才现形 —— 复验要让答错后再 `mouse.wheel` 手动下滑一段，再点「下一题」，断言落地 `scrollY === 0` 且顶栏 `n/10` 元素 `top >= .uni-page-head bottom`。
@@ -2429,3 +2435,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 用 `setsid nohup python3 hold.py … & echo $! > hold.pid` 写 PID 时，若整段包在一条 `bash -c` 里 `$!` 可能是子 bash 包装进程而不是 python；重起后用 `pgrep -f "python3 hold.py" > hold.pid` 校正，杀时同样避免 `pkill -f hold.py`（会杀到自己）。
 - 练习历史路由是 `#/pkgA/stats/practice-history`（`#/pkgA/practice/history` 是空白页）；报告页 `#/pkgA/exam/report?attempt_id=` 只有 ≥2 个已提交 attempt 才有排名卡，能力预测卡需 answer_log 行 ≥ 若干且 `predict.status==ok`；种子脚本写 answer_log 前先 `db._ensure_answer_log(conn)`。
 - 造 `git worktree add /tmp/x <main-sha>` 跑 PR 新 lint-pages 脚本对比 main：PR 脚本扫 main 树多出的 warn 应恰好是 PR 修掉的组件（本次 rank-card/predict-card 各 1 条 no-shadow → 22 vs 20）。
+
+## R590 经验：错题本更多操作层与 AI 问答返回的 375 取证边界
+- 错题本链路至少拆成 FAB 重练、sheet 后 FAB 重练、强化练习、AI 详解返回四类；每个关键态记录 `scrollY`、`scrollHeight`、目标卡片 top、标题、hash、history marker、API 状态和错误集合，不能只看最终页面。
+- 练习入口的 pointer click 可能被页面 CTA 拦截；若产品 UI 已可由真实 DOM 触发，先记录为 harness 交互问题，再用 direct DOM click 重跑验证，不能把 harness timeout 计为产品缺陷。
+- 返回错题本后卡片折叠可能是 `onShow()` reload 的设计结果；要同时判断目标卡片是否仍在可用上下文，不能仅因 `scrollY` 非 0 就立项。
+- 「AI 详解」进入 AI Q&A 不等于 AI 回答生成成功；若未实际等待/核对答案内容，文档必须将完整回答链路标为 `UNTESTED`。
+- 自然与 harness 的 `/api/practice_result` 状态必须分账；只有自然非 2xx/status 0 才能触发 R580-1 讨论，harness 的 400/500/502/503 不可替代自然证据。
