@@ -13,7 +13,9 @@ from alembic import context
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=True（默认值）会把启动前已创建的应用 logger（kg.llm/kg.push 等）
+    # 整体禁用——fileConfig 只应配置 alembic 自己的日志，不动应用 logger
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Same path resolution as the app (DB_PATH env > backend/../data.db)
 from app.db import DB_PATH

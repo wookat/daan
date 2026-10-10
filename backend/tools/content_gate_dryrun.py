@@ -340,6 +340,9 @@ def main(argv=None) -> int:
     ap.add_argument("--seed", type=int, default=None, help="--dist-sample 的随机种子（便于复现）")
     args = ap.parse_args(argv)
 
+    # 报告含中文：Windows cp1252 控制台/管道 print 会 UnicodeEncodeError，stdout 固定 UTF-8
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     conn = open_ro(args.db)
     try:
         dv0 = conn.execute("PRAGMA data_version").fetchone()[0]
