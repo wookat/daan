@@ -196,6 +196,18 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 .pcard b{display:block;font-size:15.5px;margin-bottom:6px}
 .pcard p{font-size:13px;color:var(--ink-3);line-height:1.7}
 .pcard .btn{margin-top:18px}
+.beta{display:inline-block;font-size:11px;font-weight:600;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:2px 9px;vertical-align:1px;margin-left:6px}
+.fb{max-width:560px;margin:34px auto 0;background:rgba(255,255,255,.66);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 24px -14px rgba(23,53,171,.12);border-radius:var(--r-md);padding:26px;text-align:center}
+.fb b{display:block;font-size:15.5px;margin-bottom:6px}
+.fb>p{font-size:13px;color:var(--ink-3);line-height:1.7;margin-bottom:16px}
+.fb textarea{width:100%;box-sizing:border-box;min-height:88px;resize:vertical;border:var(--hairline);border-radius:var(--r-sm);padding:12px 14px;font:inherit;font-size:13.5px;color:var(--ink);background:var(--card)}
+.fb input{border:var(--hairline);border-radius:var(--r-full);padding:10px 16px;font:inherit;font-size:13px;color:var(--ink);background:var(--card)}
+.fb textarea:focus,.fb input:focus{outline:none;border-color:var(--brand)}
+.fb .fb-row{display:flex;gap:10px;margin-top:10px}
+.fb .fb-row input{flex:1;min-width:0}
+.fb .fb-msg{margin-top:12px;font-size:13px;min-height:18px}
+.fb .fb-msg.ok{color:#16a34a}
+.fb .fb-msg.err{color:#dc2626}
 
 /* ---- cta ---- */
 .cta{background:linear-gradient(135deg,#2e5bff 0%,#2450f0 45%,#1a3cd4 100%);border-radius:var(--r-lg);text-align:center;padding:64px 32px;color:#fff;position:relative;overflow:hidden;box-shadow:0 24px 48px -20px rgba(23,53,171,.5)}
@@ -439,6 +451,19 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     </div>
     <div class="plat reveal">
       <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.3 3.8 5.2 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5.2-3.8-8.5s1.3-6.2 3.8-8.5z"/></svg></div><b>网页版</b><p>浏览器打开即用<br>kaogong.zalize.com</p><a class="btn btn-ghost btn-sm" href="/app/">打开 →</a></div>
+      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.8 4C5.2 4 2.5 6.6 2.5 9.8c0 1.9 1 3.5 2.6 4.6l-.7 2.6 3-1.5c.5.1 1 .2 1.4.2"/><path d="M21.5 14.8c0-2.9-2.6-5.2-5.8-5.2s-5.8 2.3-5.8 5.2 2.6 5.2 5.8 5.2c.6 0 1.2-.1 1.7-.2l2.6 1.3-.7-2.3c1.3-.9 2.2-2.3 2.2-4z"/></svg></div><b>微信小程序<span class="beta">内测中</span></b><p>开发内测中，暂未开放<br>上线后与网页版数据互通</p></div>
+    </div>
+    <div class="fb reveal">
+      <b>内测反馈</b>
+      <p>使用中遇到问题或有建议，直接写给我们：</p>
+      <form id="fbForm">
+        <textarea id="fbText" maxlength="500" placeholder="写下你的建议或遇到的问题（500 字以内）"></textarea>
+        <div class="fb-row">
+          <input id="fbContact" maxlength="60" placeholder="联系方式（选填，便于回复）">
+          <button class="btn btn-brand btn-sm" type="submit">提交</button>
+        </div>
+        <div class="fb-msg" id="fbMsg"></div>
+      </form>
     </div>
   </div>
 </section>
@@ -518,6 +543,22 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     }, { threshold: .4 });
     cnts.forEach(function(el){ io2.observe(el); });
   }
+
+  // 内测反馈 → /api/report（后台 reports 页可查看）
+  var fbForm = document.getElementById('fbForm');
+  if (fbForm) fbForm.addEventListener('submit', function(e){
+    e.preventDefault();
+    var msg = document.getElementById('fbMsg');
+    var text = document.getElementById('fbText').value.trim();
+    var contact = document.getElementById('fbContact').value.trim();
+    if (!text) { msg.textContent = '先写点内容再提交'; msg.className = 'fb-msg err'; return; }
+    var detail = contact ? text + '\n\n（联系方式：' + contact + '）' : text;
+    msg.textContent = '提交中…'; msg.className = 'fb-msg';
+    fetch('/api/report', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ reason:'其他', detail: detail }) })
+      .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+      .then(function(){ msg.textContent = '已收到，感谢反馈！'; msg.className = 'fb-msg ok'; fbForm.reset(); })
+      .catch(function(){ msg.textContent = '提交失败，请稍后重试'; msg.className = 'fb-msg err'; });
+  });
 })();
 </script>
 
