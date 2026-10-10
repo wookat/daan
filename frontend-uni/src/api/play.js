@@ -7,7 +7,10 @@ import { qShareCopy } from '../exam-copy.js';
 export function pkNickname() {
   const u = getAuthUser();
   if (u && u.nickname) return u.nickname;
-  if (u && u.phone) return '考友' + String(u.phone).slice(-4);
+  if (u && u.phone) {
+    const p = String(u.phone);
+    return '考友' + (p.includes('@') ? p.split('@')[0].slice(0, 4) : p.slice(-4));
+  }
   // 匿名昵称按 uid 隔离，避免同设备切换身份后串用他人昵称；旧全局键迁移到当前 uid 一次
   const key = 'pkNickname:' + anonUid();
   let n = uni.getStorageSync(key);

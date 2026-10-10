@@ -239,18 +239,18 @@ export function fetchReminders(): Promise<{ items: { channel: string; enabled: n
 // ---------- 账号 ----------
 
 export function authRegister(
-  phone: string,
+  email: string,
   password: string,
   nickname: string
 ): Promise<AuthResp> {
   return request<AuthResp>('/api/auth/register', {
     method: 'POST',
-    data: { phone, password, code: '', nickname: nickname || null },
+    data: { email, password, code: '', nickname: nickname || null },
   });
 }
 
-export function authLogin(phone: string, password: string): Promise<AuthResp> {
-  return request<AuthResp>('/api/auth/login', { method: 'POST', data: { phone, password } });
+export function authLogin(email: string, password: string): Promise<AuthResp> {
+  return request<AuthResp>('/api/auth/login', { method: 'POST', data: { email, password } });
 }
 
 export function authWxLogin(code: string, nickname?: string): Promise<AuthResp> {

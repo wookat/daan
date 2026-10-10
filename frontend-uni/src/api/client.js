@@ -65,12 +65,12 @@ export function authHeader() {
   return t ? { Authorization: 'Bearer ' + t } : {};
 }
 
-export function authRegister(phone, password, code, nickname) {
-  return request('/api/auth/register', { method: 'POST', data: { phone, password, code, nickname: nickname || null } });
+export function authRegister(email, password, code, nickname) {
+  return request('/api/auth/register', { method: 'POST', data: { email, password, code, nickname: nickname || null } });
 }
 
-export function authLogin(phone, password) {
-  return request('/api/auth/login', { method: 'POST', data: { phone, password } });
+export function authLogin(email, password) {
+  return request('/api/auth/login', { method: 'POST', data: { email, password } });
 }
 
 export function authSso() {

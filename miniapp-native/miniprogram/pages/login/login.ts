@@ -16,8 +16,9 @@ async function mergeAnonWithToast(anon: string): Promise<void> {
 Page({
   data: {
     mode: 'login' as 'login' | 'register',
-    phone: '',
+    email: '',
     password: '',
+    password2: '',
     nickname: '',
     busy: false,
     wxBusy: false,
@@ -47,24 +48,31 @@ Page({
   onSwitch() {
     this.setData({ mode: this.data.mode === 'login' ? 'register' : 'login', err: '' });
   },
-  onPhone(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ phone: e.detail.value });
+  onEmail(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ email: e.detail.value });
   },
   onPassword(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ password: e.detail.value });
+  },
+  onPassword2(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ password2: e.detail.value });
   },
   onNickname(e: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ nickname: e.detail.value });
   },
   async onSubmit() {
-    const { mode, phone, password, nickname, busy } = this.data;
+    const { mode, email, password, password2, nickname, busy } = this.data;
     if (busy) return;
-    if (!/^1\d{10}$/.test(phone)) {
-      this.setData({ err: '请输入 11 位手机号' });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      this.setData({ err: '请输入正确的邮箱地址' });
       return;
     }
     if (password.length < 6) {
       this.setData({ err: '密码至少 6 位' });
+      return;
+    }
+    if (mode === 'register' && password2 !== password) {
+      this.setData({ err: '两次输入的密码不一致' });
       return;
     }
     this.setData({ busy: true, err: '' });
@@ -72,8 +80,8 @@ Page({
       const anon = wx.getStorageSync<string>('anonUid') || '';
       const r =
         mode === 'login'
-          ? await authLogin(phone, password)
-          : await authRegister(phone, password, nickname.trim());
+          ? await authLogin(email, password)
+          : await authRegister(email, password, nickname.trim());
       setAuth(r.token, r.user);
       if (mode === 'register') {
         const src = wx.getStorageSync<string>('regSource');

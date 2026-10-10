@@ -97,7 +97,7 @@ def api_sso(cookie: str | None = Header(None)):
 
 @router.post("/bind-zalize")
 def api_bind_zalize(cookie: str | None = Header(None), authorization: str | None = Header(None)):
-    """把 Zalize 统一账号绑定到当前已登录的手机号账号（可选绑定，幂等）。"""
+    """把 Zalize 统一账号绑定到当前已登录的账号（可选绑定，幂等）。"""
     user = require_user(authorization)
     email = _central_email(cookie)
     conn = db.get_conn()

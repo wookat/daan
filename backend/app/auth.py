@@ -1,6 +1,7 @@
-"""账号体系 v1：手机号+密码注册/登录，Bearer token 鉴权，匿名数据归并。
+"""账号体系 v1：邮箱（或手机号）+密码注册/登录，Bearer token 鉴权，匿名数据归并。
 
-短信验证码本期为预留桩（接口带 code 字段但不校验），见 SmsProvider。
+验证码本期为预留桩（接口带 code 字段但不校验），见 SmsProvider。users.phone 是
+凭据标识列：存 11 位手机号、裸邮箱、wx:<openid>、za:<email> 四种形态。
 """
 import hashlib
 import hmac
@@ -21,6 +22,7 @@ TOKEN_TTL = 90 * 86400
 PBKDF2_ITERS = 200_000
 
 _PHONE_RE = re.compile(r"^1\d{10}$")
+_EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,64}\.[^@\s]{2,}$")
 
 
 class SmsProvider:
@@ -196,18 +198,31 @@ def _mask_phone(phone: str) -> str:
     return phone[:3] + "****" + phone[-4:] if len(phone) == 11 else phone
 
 
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    return local[:1] + "***@" + domain
+
+
 def _user_payload(row) -> dict:
     phone = str(row["phone"])
     is_wx = phone.startswith("wx:")
     is_za = phone.startswith("za:")  # Zalize 统一账号占位，不回显邮箱
+    is_mail = not is_wx and not is_za and "@" in phone  # 裸邮箱凭据：脱敏回显
     nick = str(row["nickname"] or "").strip()[:20]
     if nick.lower() in ("null", "undefined"):
         nick = ""
-    default_nick = "微信考友" if is_wx else "Zalize 考友" if is_za else "考友" + phone[-4:]
+    if is_wx:
+        default_nick = "微信考友"
+    elif is_za:
+        default_nick = "Zalize 考友"
+    elif is_mail:
+        default_nick = "考友" + phone.split("@", 1)[0][:8]
+    else:
+        default_nick = "考友" + phone[-4:]
     return {
         "id": row["id"],
         "uid": user_uid(row["id"]),
-        "phone": None if is_wx or is_za else _mask_phone(phone),
+        "phone": None if is_wx or is_za else (_mask_email(phone) if is_mail else _mask_phone(phone)),
         "nickname": nick or default_nick,
         "created_at": row["created_at"],
     }
@@ -311,26 +326,31 @@ def require_user(authorization: str | None):
 
 @router.post("/register")
 def api_register(body: dict, request: Request):
+    email = str(body.get("email") or "").strip().lower()
     phone = str(body.get("phone") or "").strip()
+    identifier = email or phone
     password = str(body.get("password") or "")
-    code = body.get("code")  # 短信验证码：本期预留，不校验
+    code = body.get("code")  # 验证码：本期预留，不校验
     nickname = str(body.get("nickname") or "").strip()[:20] or None
-    if not _PHONE_RE.match(phone):
+    if email:
+        if not _EMAIL_RE.match(email):
+            raise HTTPException(400, "邮箱格式不正确")
+    elif not _PHONE_RE.match(phone):
         raise HTTPException(400, "手机号格式不正确")
     if len(password) < 6 or len(password) > 64:
         raise HTTPException(400, "密码长度需为 6-64 位")
     rate_limit(f"reg:{client_ip(request)}", 10, 3600)
-    if not sms_provider.verify(phone, code):  # TODO: 接入短信后启用真实校验
+    if not sms_provider.verify(identifier, code):  # TODO: 接入验证码后启用真实校验
         raise HTTPException(400, "验证码错误")
     conn = db.get_conn()
     try:
         cur = conn.execute(
             "INSERT INTO users (phone, password_hash, nickname, created_at) VALUES (?,?,?,?)",
-            (phone, hash_password(password), nickname, time.time()),
+            (identifier, hash_password(password), nickname, time.time()),
         )
     except Exception:
         conn.close()
-        raise HTTPException(409, "该手机号已注册，请直接登录") from None
+        raise HTTPException(409, "该邮箱已注册，请直接登录" if email else "该手机号已注册，请直接登录") from None
     uid = cur.lastrowid
     token = _issue_token(conn, uid)
     conn.commit()
@@ -341,14 +361,16 @@ def api_register(body: dict, request: Request):
 
 @router.post("/login")
 def api_login(body: dict, request: Request):
+    email = str(body.get("email") or "").strip().lower()
     phone = str(body.get("phone") or "").strip()
+    identifier = email or phone
     password = str(body.get("password") or "")
-    rate_limit(f"login:{client_ip(request)}:{phone}", 10, 300)
+    rate_limit(f"login:{client_ip(request)}:{identifier}", 10, 300)
     conn = db.get_conn()
-    row = conn.execute("SELECT * FROM users WHERE phone=?", (phone,)).fetchone()
+    row = conn.execute("SELECT * FROM users WHERE phone=?", (identifier,)).fetchone()
     if not row or not verify_password(password, row["password_hash"]):
         conn.close()
-        raise HTTPException(401, "手机号或密码错误")
+        raise HTTPException(401, "账号或密码错误")
     token = _issue_token(conn, row["id"])
     conn.commit()
     conn.close()

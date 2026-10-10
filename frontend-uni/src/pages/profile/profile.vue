@@ -363,7 +363,9 @@ export default {
       this.refreshAccountData();
     },
     maskPhone(p) {
-      return p ? p.slice(0, 3) + '****' + p.slice(-4) : '';
+      // 后端已脱敏（手机 138****1234 / 邮箱 a***@x.com）；邮箱照原样回显，二次截断会毁掉可读性
+      if (!p) return '';
+      return p.includes('@') ? p : p.slice(0, 3) + '****' + p.slice(-4);
     },
     /** 只读小队页留下的快照，不新增请求 */
     peekTeamName() {
