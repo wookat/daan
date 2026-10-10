@@ -205,7 +205,7 @@
     <view class="bottompad" />
 
     <!-- 底部输入栏（结果页持续行动栏：相机=再拍一题 / 文字 / 追问） -->
-    <kg-action-bar layout="input" class="askbar">
+    <kg-action-bar layout="input" class="askbar inputbar">
       <view class="kg-tool ib-tool" role="button" aria-label="拍题" @click="openCamera"><l-icon name="camera" :size="20" tone="ink-2" /></view>
       <view class="kg-tool ib-tool" role="button" aria-label="粘贴题目文字" @click="textOpen = true"><l-icon name="clipboard-list" :size="20" tone="ink-2" /></view>
       <input
@@ -1069,11 +1069,14 @@ export default {
   .askbar { left: 208px; bottom: 0; }
   .bubble { max-width: 72%; }
 }
-/* 桌面（无摄像头）：取景/拍题引导隐藏，改粘贴/上传；输入条随主列 sticky */
+/* 桌面（无摄像头）：取景/拍题引导隐藏，改粘贴/上传；输入条始终固定视口底部 */
 @media (min-width: 1024px) {
   .wrap.ask { max-width: 1064px; padding-top: var(--sp-24); }
   .mob-empty { display: none; }
+  .kg-abar.askbar { position: fixed; }
   .deskstart { display: flex; gap: var(--sp-16); align-items: stretch; margin-bottom: var(--card-gap); }
+  /* 兄弟卡默认 margin-top 是给纵向堆叠用的；横向双卡会吃掉顶部对齐 */
+  .deskstart .ds-col + .ds-col { margin-top: 0; }
   .ds-col { flex: 1; min-width: 0; display: flex; flex-direction: column; }
   .ds-h { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
   .ds-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
@@ -1083,7 +1086,6 @@ export default {
   .ds-drop:hover { border-color: var(--brand); }
   .ds-d1 { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
   .ds-d2 { font-size: var(--fs-caption); color: var(--ink-3); }
-  .bottompad { height: 0; }
 }
 /* #endif */
 </style>
