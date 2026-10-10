@@ -315,7 +315,7 @@ page {
   --mod-changshi-soft: #3a2b0e;
 }
 /* 皮肤槽：.acc-<key> 覆盖 --brand 系（手动/系统深色各有映射） */
-.acc-forest {
+.acc-forest, .acc-forest uni-page-body {
   --brand: #16a34a;
   --brand-press: #15803d;
   --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
@@ -323,7 +323,7 @@ page {
   --brand-soft: #ecfdf5;
   --brand-soft-2: #d1fae5;
 }
-.tc-dark .acc-forest, .tc-dark.acc-forest, .theme-dark .acc-forest, .theme-dark.acc-forest {
+.tc-dark .acc-forest, .tc-dark .acc-forest uni-page-body, .tc-dark.acc-forest, .tc-dark.acc-forest uni-page-body, .theme-dark .acc-forest, .theme-dark .acc-forest uni-page-body, .theme-dark.acc-forest, .theme-dark.acc-forest uni-page-body {
   --brand: #16a34a;
   --brand-press: #15803d;
   --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
@@ -332,7 +332,7 @@ page {
   --brand-soft-2: #14532d;
 }
 @media (prefers-color-scheme: dark) {
-  .acc-forest {
+  .acc-forest, .acc-forest uni-page-body {
   --brand: #16a34a;
   --brand-press: #15803d;
   --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
@@ -340,7 +340,7 @@ page {
   --brand-soft: #0e2b1e;
   --brand-soft-2: #14532d;
   }
-  .tc-light .acc-forest, .tc-light.acc-forest {
+  .tc-light .acc-forest, .tc-light .acc-forest uni-page-body, .tc-light.acc-forest, .tc-light.acc-forest uni-page-body {
   --brand: #16a34a;
   --brand-press: #15803d;
   --brand-grad: linear-gradient(135deg, #4ade80, #16a34a);
@@ -349,7 +349,7 @@ page {
   --brand-soft-2: #d1fae5;
   }
 }
-.acc-sunset {
+.acc-sunset, .acc-sunset uni-page-body {
   --brand: #ea580c;
   --brand-press: #c2410c;
   --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
@@ -357,7 +357,7 @@ page {
   --brand-soft: #fff7ed;
   --brand-soft-2: #ffedd5;
 }
-.tc-dark .acc-sunset, .tc-dark.acc-sunset, .theme-dark .acc-sunset, .theme-dark.acc-sunset {
+.tc-dark .acc-sunset, .tc-dark .acc-sunset uni-page-body, .tc-dark.acc-sunset, .tc-dark.acc-sunset uni-page-body, .theme-dark .acc-sunset, .theme-dark .acc-sunset uni-page-body, .theme-dark.acc-sunset, .theme-dark.acc-sunset uni-page-body {
   --brand: #ea580c;
   --brand-press: #c2410c;
   --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
@@ -366,7 +366,7 @@ page {
   --brand-soft-2: #4a2f1a;
 }
 @media (prefers-color-scheme: dark) {
-  .acc-sunset {
+  .acc-sunset, .acc-sunset uni-page-body {
   --brand: #ea580c;
   --brand-press: #c2410c;
   --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);
@@ -374,7 +374,7 @@ page {
   --brand-soft: #3a2418;
   --brand-soft-2: #4a2f1a;
   }
-  .tc-light .acc-sunset, .tc-light.acc-sunset {
+  .tc-light .acc-sunset, .tc-light .acc-sunset uni-page-body, .tc-light.acc-sunset, .tc-light.acc-sunset uni-page-body {
   --brand: #ea580c;
   --brand-press: #c2410c;
   --brand-grad: linear-gradient(135deg, #fb923c, #ea580c);

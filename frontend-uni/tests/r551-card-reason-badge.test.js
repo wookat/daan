@@ -25,7 +25,7 @@ describe('R551 列表卡错因标签', () => {
     expect(wxml).toContain('<text wx:if="{{item.error_reason}}" class="m-meta-warn">{{item.error_reason}}</text>');
   });
   it('后端：mistakes/review_log 入库侧探针打标，本人列表不外泄 probe 字段', () => {
-    const db = read('../../backend/app/db.py');
+    const db = read('../../backend/app/db_review.py');
     expect(db).toContain('def save_mistake(rec: dict, probe: bool = False) -> int:');
     expect(db).toContain('("probe", "ALTER TABLE review_log ADD COLUMN probe INTEGER")');
     expect(db).toContain('d.pop("probe", None)');

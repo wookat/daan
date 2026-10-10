@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 
 const PRACTICE = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
-const DB = readFileSync(new URL('../../backend/app/db.py', import.meta.url), 'utf8');
+const DB = readFileSync(new URL('../../backend/app/db_review.py', import.meta.url), 'utf8');
 
 describe('错题重练效果「仍错」文案', () => {
   it('服务端语义：重复命中的错题 next_review=time.time()（当天到期，不是明天）', () => {

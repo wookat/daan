@@ -27,8 +27,8 @@ describe('R503 首页「错题复习」：从未有过错题的新用户不得�
     expect(plan).toMatch(/if review_target > 0:\s*tasks\.append\(\{\s*"key": "review"/);
   });
   it('后端 daily_plan 返回 mistakes_total（按 uid 隔离、含已掌握；小程序端/兼容口径保留）', () => {
-    const db = readFileSync(fileURLToPath(new URL('../../backend/app/db.py', import.meta.url)), 'utf8');
-    const fn = db.slice(db.indexOf('def daily_plan('), db.indexOf('def question_attempts('));
+    const db = readFileSync(fileURLToPath(new URL('../../backend/app/db_stats.py', import.meta.url)), 'utf8');
+    const fn = db.slice(db.indexOf('def daily_plan('), db.indexOf('def stats('));
     expect(fn).toMatch(/SELECT COUNT\(\*\) n FROM mistakes WHERE 1=1\{uc\}/);
     expect(fn).toMatch(/"mistakes_total": mtotal\["n"\]/);
   });

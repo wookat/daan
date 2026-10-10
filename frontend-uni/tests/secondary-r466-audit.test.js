@@ -62,14 +62,13 @@ describe('R466 搜索 / 讨论 / 个人 / 面试页字号下限与可点元素�
     }
   });
 
-  it('个人页：底部 Zalize 产品 / 隐私 / 条款文字链 行高 28 + 上下 padding 8 = 44 命中，行间 gap 4 不重叠', () => {
+  it('个人页：Zalize 产品 / 隐私 / 条款链接收进「关于」弹层，about-item 整行 --hit-min 命中', () => {
     const src = srcs.profile;
     const css = styleOf(src);
-    expect(templateOf(src)).toMatch(/<text class="zl-link" v-for="p in zlProducts"/);
-    expect(rule(css, '.zl-link')).toMatch(/display:\s*inline-block/);
-    expect(rule(css, '.zl-link')).toMatch(/line-height:\s*28px/);
-    expect(rule(css, '.zl-link')).toMatch(/padding:\s*var\(--sp-8\) 0/);
-    expect(rule(css, '.zl-links')).toMatch(/gap:\s*var\(--sp-4\) var\(--sp-16\)/);
+    expect(templateOf(src)).toMatch(/v-for="p in zlProducts"[\s\S]*?class="about-item"/);
+    expect(templateOf(src)).toContain('隐私政策');
+    expect(templateOf(src)).toContain('服务条款');
+    expect(rule(css, '.about-item')).toMatch(/min-height:\s*var\(--hit-min\)/);
   });
 
   it('面试页：练习记录 › / 换一题 是 kg-button（md block / sm），旧 .swap 不再挂模板', () => {
