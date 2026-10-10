@@ -5,7 +5,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-wqy-zenhe
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend backend
-COPY frontend frontend
 COPY knowledge knowledge
 COPY frontend-uni/dist/build/h5 frontend-uni/dist/build/h5
 ENV DB_PATH=/data/data.db

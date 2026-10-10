@@ -1,5 +1,5 @@
 """R419：`ensure_weekly_event` 并发首请求各插一行（生产 8 行「第5期」）——存在性检查与 INSERT 同在
-BEGIN IMMEDIATE 内 + (series, open_at, close_at) 唯一索引；scripts/r419_dedupe_mock_events.py 去重可还原。"""
+BEGIN IMMEDIATE 内 + (series, open_at, close_at) 唯一索引；scripts/one-off/r419_dedupe_mock_events.py 去重可还原。"""
 import importlib.util
 import os
 import sqlite3
@@ -8,7 +8,7 @@ import time
 
 from app import db, deps, mock_event
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r419_dedupe_mock_events.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r419_dedupe_mock_events.py")
 _spec = importlib.util.spec_from_file_location("r419_dedupe", SCRIPT)
 assert _spec and _spec.loader
 dd = importlib.util.module_from_spec(_spec)

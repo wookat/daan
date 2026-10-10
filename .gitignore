@@ -4,3 +4,16 @@ __pycache__/
 .env
 deploy/.env
 backend/BUILD_REV
+
+# deps & build
+node_modules/
+frontend-uni/dist/
+miniapp-native/miniprogram_npm/
+.miniapp/
+
+# tooling & OS
+.DS_Store
+*.log
+coverage/
+.idea/
+.vscode/

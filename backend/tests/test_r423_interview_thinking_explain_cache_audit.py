@@ -1,6 +1,6 @@
 """R423：面试点评链路两段串行慢（打分走 rescue 推理模型 8–29 s；点评主通道 reasoning ~25 s 正文前零信号）
 → 打分 think=False 走主通道关推理；两条点评 SSE 补 `event: thinking {secs,chars}` 心跳（不含推理文本）。
-另：explain_cache 记 qid；scripts/r423_explain_cache_answer_audit.py 讲解首行答案 vs 题库 answer 对账，只删 CONFLICT、可还原。"""
+另：explain_cache 记 qid；scripts/one-off/r423_explain_cache_answer_audit.py 讲解首行答案 vs 题库 answer 对账，只删 CONFLICT、可还原。"""
 import asyncio
 import importlib.util
 import json
@@ -10,7 +10,7 @@ from app import db, interview, llm, sse
 
 from .conftest import seed_questions
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r423_explain_cache_answer_audit.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r423_explain_cache_answer_audit.py")
 _spec = importlib.util.spec_from_file_location("r423_audit", SCRIPT)
 assert _spec and _spec.loader
 audit = importlib.util.module_from_spec(_spec)

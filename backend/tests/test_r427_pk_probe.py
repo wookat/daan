@@ -1,5 +1,5 @@
 """R427：PK 对局探针打标（pk_matches.probe）——随机匹配池按同类配对、周榜只算真人（本人对局始终可见）；
-scripts/r427_pk_probe_backfill.py 对内部走查 uid 历史行回填 probe=1 可还原。"""
+scripts/one-off/r427_pk_probe_backfill.py 对内部走查 uid 历史行回填 probe=1 可还原。"""
 import importlib.util
 import json
 import os
@@ -10,7 +10,7 @@ from app import db
 
 from .conftest import seed_questions
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r427_pk_probe_backfill.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r427_pk_probe_backfill.py")
 _spec = importlib.util.spec_from_file_location("r427_backfill", SCRIPT)
 assert _spec and _spec.loader
 rb = importlib.util.module_from_spec(_spec)

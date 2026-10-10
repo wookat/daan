@@ -1,5 +1,5 @@
 """R418：模考场次探针打标（exam_attempts.probe）——同卷人数/均分、排行榜/击败比例/模块均值、比赛分数池只算真人；
-scripts/r418_probe_backfill_test_uids.py 对 test-* 历史行回填 probe=1 可还原。"""
+scripts/one-off/r418_probe_backfill_test_uids.py 对 test-* 历史行回填 probe=1 可还原。"""
 import importlib.util
 import json
 import os
@@ -10,7 +10,7 @@ from app.mock_event import _score_pool
 
 from .conftest import seed_questions
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r418_probe_backfill_test_uids.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r418_probe_backfill_test_uids.py")
 _spec = importlib.util.spec_from_file_location("r418_backfill", SCRIPT)
 assert _spec and _spec.loader
 rb = importlib.util.module_from_spec(_spec)
