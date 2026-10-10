@@ -138,6 +138,13 @@ page {
   align-items: center !important;
 }
 
+/* wd-cell__title 盒高 32px 而行高 24px：块内文字行顶锚，墨迹视觉中心偏上 4px
+   （图标块/ value 各居其位，唯独标题墨迹上浮）；内容在盒内垂直居中修正，
+   用 align-content 保 display:block 不破坏省略号截断 */
+.wd-cell .wd-cell__title {
+  align-content: center;
+}
+
 /* #ifdef H5 */
 /* uni-h5 壳：page-head/tabbar 998、原生 toast/modal 999；遮罩+sheet 走 --z-overlay 压过壳，原生反馈层再抬到 --z-toast */
 uni-toast,
