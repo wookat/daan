@@ -655,7 +655,7 @@ export default {
 :deep(.cellcard .wd-cell__left) { flex: 0 0 auto; max-width: 62%; min-width: 0; }
 :deep(.cellcard .wd-cell__title),
 :deep(.cellcard .wd-cell__title uni-text),
-:deep(.cellcard .wd-cell__title text) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+:deep(.cellcard .wd-cell__title text) { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; align-content: center; }
 :deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 
