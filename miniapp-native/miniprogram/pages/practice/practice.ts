@@ -132,6 +132,7 @@ Page({
     loadHint: '正在出题…',
     items: [] as PQuestion[],
     idx: 0,
+    scrollTop: 0,
     cur: null as PQuestion | null,
     curImg: '',
     curStat: '',
@@ -856,11 +857,16 @@ Page({
       hsRated: '',
       cardOpen: false,
     });
+    this.scrollToTop();
     this.refreshCardCells();
     this.loadSocial(q);
     if (!q._picked) this.startTimer();
     else this.stopTimer();
     this.saveSession();
+  },
+  /** 换题 / 进完成页回到页首；页面主体是 scroll-view，scroll-top 同值不触发，先置 1 再归 0 */
+  scrollToTop() {
+    this.setData({ scrollTop: 1 }, () => this.setData({ scrollTop: 0 }));
   },
   onNext() {
     const { idx, items } = this.data;
@@ -915,6 +921,7 @@ Page({
       cardOpen: false,
       toolsOpen: false,
     });
+    this.scrollToTop();
     wx.removeStorageSync(PENDING_KEY);
     this.clearServerProgress();
     if (beiMode) return;

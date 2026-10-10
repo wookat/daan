@@ -3,6 +3,20 @@ name: testing-kaogong-assistant
 description: How to run and test the 考公错题助手 (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R589 经验：复习模式走查要「读完解析」再换题 + 落地断言看 rhead top + 起点回顶别被 scrollIntoView 抵消
+
+- 错题本复习模式（`book?review=1` 冷进即 `startReview`，或列表点「开始复习」）换题同样不回顶（R588 同型，`nextReview()` 只 `rIdx++`）。走查模拟用户要 `scrollTo(0, scrollHeight)` 读完解析再点 sticky `.review .next-btn`（`scroll_into_view_if_needed` 只是把 sticky 按钮滚进来，滚动量不足以暴露）；落地断言除 `scrollY===0` 还要看 `.review .rhead` top（修前 y 被夹到 0–4 看似正常，只有新题比视口高才现形：三场 14 次换题里 1 次 r6 资料分析题 y=122、rhead −49）。每题点 A 会触发加练同类 / 重排，列表 8 → 22，循环上限要放到 60 才能走到小结。
+- 「列表下滑后点开始复习回顶」这项，Playwright `click()` / `scroll_into_view_if_needed()` 会先把按钮滚回视口把 y 归 0，等于没测；要 `window.scrollTo(0,400)` 后 `locator.evaluate('el => el.click()')` 直接派发（R589 1440 y=400 → 首题 y=0）。
+- H5 `exitReview` 的 `uni.pageScrollTo` 字面量被 R513 源锁（`tests/book-r513-exit-review-scroll-top.test.js`）锁住，抽 helper 时保留该处直调，不为通过改测试。
+
+## R588 经验：链路走查每步量 `scrollY` 不只截图 + 换题回顶 H5/小程序两套机制 + 窄 digest 清理模板转正
+
+- 「答题 → 完成页」这类多步链路，每步落地都记 `{scrollY, scrollHeight, innerHeight, 关键元素 top}`（`~/r588/scroll588.py` 的 `MEAS`），只看截图会把「首屏是头图下半段」当成截图时机差异（R582 就漏了）。残余滚动量会被新页高夹住：短题页高 ≈ 视口时 `scrollY` 被夹到 0/1 看起来正常，长题 / 完成页（页高 1502）才现形 —— 复验要让答错后再 `mouse.wheel` 手动下滑一段，再点「下一题」，断言落地 `scrollY === 0` 且顶栏 `n/10` 元素 `top >= .uni-page-head bottom`。
+- 回顶机制两端不同：H5 页面滚动在 document，`uni.pageScrollTo({scrollTop:0, duration:0})` 在 uni-shared 里 `duration 0` 同步置 `documentElement.scrollTop`（`book.vue` 既有）；小程序练习页主体是 `<scroll-view class="page-scroll">`，`wx.pageScrollTo` 无效（`scripts/page-scroll-lock.test.ts` 锁此规则），要绑 `scroll-top="{{scrollTop}}"` 并 `setData({scrollTop:1}, () => setData({scrollTop:0}))`（同值不触发，shenlun 同法）。H5 挂 `watch.idx` 一处覆盖下一题 / 答题卡跳题 / 完成 / 同页新一场；答错的 `revealAfter` 不改 `idx` 不会被抵消（复验答错反馈态 y>0 仍成立）。
+- 完成页成绩头图是 `kg-hero-card`：标题文字节点 `本组完成`（按卷 `本卷完成`）、大数字 `.kg-hero__num`（R588 第一场用「无子节点且全数字」找大数字失败，因 `20` 与 `%` 是兄弟 text 节点 —— 直接用组件 class）。
+- 首页 CTA「免注册立即开练」→ 练习页切换时刻偶见 `/api/home_bundle` `requestfailed` 紧接 `api.js` 重试 200：归「页面切换取消在途请求」（推断），不计自然失败、不算缺陷。
+- 清理模板转正 `~/r588/clean588.py` + `run_clean588.sh <ro|clean> <out> [uids.json]`（`KG_CLEAN_TIMEOUT=300`）：两批有命中实战 40 + 63 行 ro→clean→ro 回执逐表相等、after/独立 ro `{}`、共享 42、41 表窄聚合 before==after，clean 单趟 0.2s。仍是三步：独立 `ro` → `clean`（看 `receipt {"deleted":…}` 与 before 逐表相等）→ 独立 `ro` `{}`；多轮 uid 最后合并一次 `ro`。
+
 ## R587 经验：走查脚本先 stub `/api/track` + 绝对定位控件与文字的几何要按热区/glyph 两口径量 + 自动几何审计只当线索
 
 - 生产走查脚本导航前一律 `ctx.route('**/api/track', r => r.fulfill(200, '{"ok":true,"stubbed":true}'))`：uni-h5 首页/错题本一进页就发 track，不 stub 则「只看不答」也落 `growth_events`（R586 落 1 行）；R587 stub 后 20 路由 + 4 尺寸复验两 uid 独立 `ro` `{}`，0 清理。stub 命中数也要打出来（验证 route 真生效）。
@@ -2421,3 +2435,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 用 `setsid nohup python3 hold.py … & echo $! > hold.pid` 写 PID 时，若整段包在一条 `bash -c` 里 `$!` 可能是子 bash 包装进程而不是 python；重起后用 `pgrep -f "python3 hold.py" > hold.pid` 校正，杀时同样避免 `pkill -f hold.py`（会杀到自己）。
 - 练习历史路由是 `#/pkgA/stats/practice-history`（`#/pkgA/practice/history` 是空白页）；报告页 `#/pkgA/exam/report?attempt_id=` 只有 ≥2 个已提交 attempt 才有排名卡，能力预测卡需 answer_log 行 ≥ 若干且 `predict.status==ok`；种子脚本写 answer_log 前先 `db._ensure_answer_log(conn)`。
 - 造 `git worktree add /tmp/x <main-sha>` 跑 PR 新 lint-pages 脚本对比 main：PR 脚本扫 main 树多出的 warn 应恰好是 PR 修掉的组件（本次 rank-card/predict-card 各 1 条 no-shadow → 22 vs 20）。
+
+## R590 经验：错题本更多操作层与 AI 问答返回的 375 取证边界
+- 错题本链路至少拆成 FAB 重练、sheet 后 FAB 重练、强化练习、AI 详解返回四类；每个关键态记录 `scrollY`、`scrollHeight`、目标卡片 top、标题、hash、history marker、API 状态和错误集合，不能只看最终页面。
+- 练习入口的 pointer click 可能被页面 CTA 拦截；若产品 UI 已可由真实 DOM 触发，先记录为 harness 交互问题，再用 direct DOM click 重跑验证，不能把 harness timeout 计为产品缺陷。
+- 返回错题本后卡片折叠可能是 `onShow()` reload 的设计结果；要同时判断目标卡片是否仍在可用上下文，不能仅因 `scrollY` 非 0 就立项。
+- 「AI 详解」进入 AI Q&A 不等于 AI 回答生成成功；若未实际等待/核对答案内容，文档必须将完整回答链路标为 `UNTESTED`。
+- 自然与 harness 的 `/api/practice_result` 状态必须分账；只有自然非 2xx/status 0 才能触发 R580-1 讨论，harness 的 400/500/502/503 不可替代自然证据。

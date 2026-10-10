@@ -1,5 +1,5 @@
 <navbar title="{{navTitle}}" back="{{true}}" />
-<scroll-view class="page-scroll" scroll-y type="list">
+<scroll-view class="page-scroll" scroll-y type="list" scroll-top="{{scrollTop}}">
   <view class="wrap">
     <!-- 公告条（/api/announcement，关闭后按 id 记忆） -->
     <view wx:if="{{announce}}" class="ann">

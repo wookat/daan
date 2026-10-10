@@ -954,6 +954,7 @@ export default {
     },
     idx() {
       this.multiSel = [];
+      this.scrollToTop();
     },
     resumeOpen(v) {
       if (!v && resumeDismissAction(this._resumeAct) === 'cont') this.resumePick(true);
@@ -2122,6 +2123,14 @@ export default {
         this.$nextTick(() => this.revealAfter());
       }
       this.saveSession();
+    },
+    // 换题 / 进完成页时回到页首：答错后 revealAfter 与手动下滑留下的滚动量不带进下一题与成绩头图
+    scrollToTop() {
+      try {
+        uni.pageScrollTo({ scrollTop: 0, duration: 0 });
+      } catch (e) {
+        /* 不支持则不滚 */
+      }
     },
     // 答错时把「正确答案 + 解析」卡开头顶到判分横幅之上，否则在小屏上被横幅盖住看不到
     revealAfter() {
