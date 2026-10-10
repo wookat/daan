@@ -1,5 +1,5 @@
 """R429：每日一练成绩探针打标（daily_set_entries.probe）——「N 人完成 / 排行榜 / 击败 X% / 名次」只算真人，
-本人成绩对本人始终可见；scripts/r429_daily_set_probe_backfill.py 按库内证据回填历史行 probe=1 可还原。"""
+本人成绩对本人始终可见；scripts/one-off/r429_daily_set_probe_backfill.py 按库内证据回填历史行 probe=1 可还原。"""
 import importlib.util
 import os
 import sqlite3
@@ -7,7 +7,7 @@ import time
 
 from app import db
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r429_daily_set_probe_backfill.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r429_daily_set_probe_backfill.py")
 _spec = importlib.util.spec_from_file_location("r429_backfill", SCRIPT)
 assert _spec and _spec.loader
 rb = importlib.util.module_from_spec(_spec)

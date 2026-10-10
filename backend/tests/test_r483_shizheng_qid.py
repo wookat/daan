@@ -1,5 +1,5 @@
 """R483：时政题号属于 shizheng_questions，与 questions.id 只是数字撞号——写入侧置空 question_id，
-按题号的统计 / 去重 / 复习推进不再算到同号行测题上；scripts/r483_shizheng_qid_null.py 回填历史行可还原。"""
+按题号的统计 / 去重 / 复习推进不再算到同号行测题上；scripts/one-off/r483_shizheng_qid_null.py 回填历史行可还原。"""
 import importlib.util
 import json
 import os
@@ -10,7 +10,7 @@ from app import db
 
 from .conftest import seed_questions
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r483_shizheng_qid_null.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r483_shizheng_qid_null.py")
 _spec = importlib.util.spec_from_file_location("r483_backfill", SCRIPT)
 assert _spec and _spec.loader
 rb = importlib.util.module_from_spec(_spec)

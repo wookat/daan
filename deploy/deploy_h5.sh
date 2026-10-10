@@ -72,7 +72,7 @@ fi
 
 step "3/6 rsync backend/deploy/dist 到生产"
 (cd "$REPO_DIR" && sshpass -e rsync -azR --delete -e "ssh ${SSH_OPTS[*]}" \
-  backend deploy frontend knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
+  backend deploy knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
   --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 
 # caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（生产 VPS→ICN）的副本：

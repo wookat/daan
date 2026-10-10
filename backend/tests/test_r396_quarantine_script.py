@@ -1,4 +1,4 @@
-"""R396 scripts/r396_explanation_quarantine.py：dry-run 零写入、apply 隔离+快照回落、restore 还原。"""
+"""R396 scripts/one-off/r396_explanation_quarantine.py：dry-run 零写入、apply 隔离+快照回落、restore 还原。"""
 import importlib.util
 import json
 import os
@@ -6,7 +6,7 @@ import sqlite3
 
 from app import quality
 
-SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "r396_explanation_quarantine.py")
+SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r396_explanation_quarantine.py")
 _spec = importlib.util.spec_from_file_location("r396_quarantine", SCRIPT)
 assert _spec and _spec.loader
 rq = importlib.util.module_from_spec(_spec)
