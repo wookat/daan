@@ -7,11 +7,13 @@
 <meta name="description" content="答岸：考公考编错题助手。拍题 AI 讲解（花生十三方法体系）、63,992 题智能题库、69 套国考省考整卷真题、错题本间隔复习、全真模考排位、申论批改。">
 <style>
 :root{
-  --brand:#2e5bff;--brand-press:#1e44d9;--brand-text:#1e44d9;
+  /* 与 frontend-uni/src/styles/tokens.generated.css（light/默认肤）同源手工同步；
+     改色板请先改 tools/design-tokens/tokens.json 再回来对值 */
+  --brand:#2e5bff;--brand-press:#1e44d9;--brand-text:#1e44d9;--on-brand:#fff;
   --brand-soft:#eef3ff;--brand-soft-2:#dbe6ff;
   --ink:#17181c;--ink-2:#40434e;--ink-3:#6b7280;--ink-4:#b0b4c0;
   --line:#e7e9f0;--fill:#f2f3f7;--bg:#f6f7fb;--card:#fff;
-  --r-lg:20px;--r-md:14px;--r-sm:10px;
+  --r-lg:20px;--r-md:14px;--r-sm:10px;--r-full:999px;
   --hairline:1px solid var(--line);
   --font:Inter,-apple-system,BlinkMacSystemFont,'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
 }
@@ -33,12 +35,15 @@ nav{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:var(--ha
 .brand-name{font-weight:700;font-size:17px;letter-spacing:.5px}
 .nav-links{margin-left:auto;display:flex;gap:26px;font-size:13.5px;color:var(--ink-3)}
 .nav-links a:hover{color:var(--brand)}
-.btn{display:inline-flex;align-items:center;gap:8px;border-radius:999px;font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s,transform .1s,box-shadow .1s}
-.btn-brand{background:var(--brand);color:#fff;box-shadow:0 3px 0 var(--brand-press)}
+/* 按钮与 App kg-button 同口径：pill(r-full) 实色扁平、无阴影无位移，
+   hover 换底色、:active 再压深一档；字重 lg 600 / md 500 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--r-full);font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
+.btn-brand{background:var(--brand);color:var(--on-brand)}
 .btn-brand:hover{background:var(--brand-press)}
-.btn-brand:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brand-press)}
-.btn-ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+.btn-brand:active{background:#1735ab}
+.btn-ghost{background:var(--card);color:var(--ink-2);border-color:var(--line);font-weight:500}
 .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+.btn-ghost:active{background:var(--fill)}
 .btn-sm{padding:8px 18px;font-size:13px}
 
 /* ---- hero ---- */
@@ -85,7 +90,8 @@ h1 em{font-style:normal;color:var(--brand)}
 
 /* ---- features ---- */
 .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.feat{background:var(--card);border:var(--hairline);border-radius:var(--r-lg);padding:26px 24px;transition:border-color .15s;display:flex;flex-direction:column}
+/* 内容卡 = App kg-card--flat：卡底 + 1px line + r-md(14)，hover 仅换边色 */
+.feat{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px;transition:border-color .15s;display:flex;flex-direction:column}
 .feat:hover{border-color:var(--brand-soft-2)}
 .feat:hover .ic{background:var(--brand-soft-2)}
 .feat .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:16px;color:var(--brand);transition:background-color .15s}
@@ -106,7 +112,7 @@ h1 em{font-style:normal;color:var(--brand)}
 
 /* ---- method ---- */
 .method-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
-.method-card{background:var(--card);border:var(--hairline);border-radius:var(--r-lg);padding:30px}
+.method-card{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:30px}
 .mrow{display:flex;gap:14px;padding:14px 0;border-bottom:var(--hairline)}
 .mrow:last-child{border-bottom:0}
 .mrow .dot{flex:0 0 34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-weight:800;font-size:14px}
@@ -115,7 +121,7 @@ h1 em{font-style:normal;color:var(--brand)}
 
 /* ---- platforms ---- */
 .plat{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.pcard{background:var(--card);border:var(--hairline);border-radius:var(--r-lg);padding:26px 24px;text-align:center;transition:border-color .15s}
+.pcard{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px;text-align:center;transition:border-color .15s}
 .pcard:hover{border-color:var(--brand-soft-2)}
 .pcard .pi{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;margin:0 auto 14px}
 .pcard .pi svg{width:22px;height:22px}
@@ -127,11 +133,12 @@ h1 em{font-style:normal;color:var(--brand)}
 .cta{background:var(--brand);border-radius:var(--r-lg);text-align:center;padding:64px 32px;color:#fff}
 .cta h2{font-size:30px;font-weight:800;margin-bottom:14px}
 .cta p{opacity:.85;font-size:15px;margin-bottom:30px}
-.cta .btn-brand{background:#fff;color:var(--brand-text);box-shadow:0 3px 0 var(--brand-press)}
+/* 反色与 App kg-btn--tone-inverse 同口径：primary=白底+brand 字；ghost=16% 白底+无边 */
+.cta .btn-brand{background:var(--on-brand);color:var(--brand)}
 .cta .btn-brand:hover{background:var(--brand-soft)}
-.cta .btn-brand:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brand-press)}
-.cta .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
-.cta .btn-ghost:hover{border-color:#fff}
+.cta .btn-brand:active{background:var(--brand-soft-2)}
+.cta .btn-ghost{background:rgba(255,255,255,.16);color:var(--on-brand);border-color:transparent;font-weight:500}
+.cta .btn-ghost:hover{background:rgba(255,255,255,.26)}
 .cta-mascot{width:128px;height:128px;display:block;margin:0 auto 12px;border-radius:26px;background:#fff;border:1px solid rgba(255,255,255,.45)}
 @media(max-width:920px){.band{grid-template-columns:repeat(2,1fr)}}
 

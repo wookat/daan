@@ -22,7 +22,7 @@
 | 圆角 r-lg 20 / r-md 14 / r-sm 10 | 新圆角值 |
 | 分隔线统一 `--hairline` 实线 | 左侧竖线装饰（P-38 禁令） |
 | 按钮/徽章一律 999px pill（教育型血统） | 直角矩形按钮 |
-| 主 CTA 按压阴影 `0 3px 0 --brand-press`、:active 塌落 | 带模糊的 box-shadow |
+| 按钮与 App kg-button 同口径：pill 实色扁平，hover 换底、:active 再压深 | 按压偏移阴影（2026-10-10 起停用——用户要求落地页组件与 App 完全同款）、带模糊的 box-shadow |
 
 ## 组件口径
 - **nav**：56px、纯色 `--bg`、hairline 底边（与页面同底，无毛玻璃）
@@ -34,7 +34,7 @@
 
 ## 状态覆盖
 - hover：border-color → brand-soft-2（或按钮底色 → brand-press）
-- .btn-brand:active：translateY(2px) + 阴影压扁至 0 1px 0（Duolingo 按压式）
+- .btn-brand:active：底色再压深一档（#1735ab），无位移无阴影
 - focus-visible：2px brand outline + 2px offset
 - ::selection：brand-soft-2 底
 - prefers-reduced-motion：关平滑滚动与过渡
@@ -45,7 +45,7 @@
 **命中的八大共识**：单色 accent / 近黑不纯黑 / hairline 负责分隔（5-10% 黑）/ 展示字 -0.02em 压缩 / 三字重纪律 / 白↔浅灰底色分区 / 全页一处对比时刻 / 8px 栅格。
 
 **采纳的招牌手法**：
-- Duolingo 按压阴影按钮（实色偏移零模糊，糖果传奇血统）→ `.btn-brand`
+- ~~Duolingo 按压阴影按钮~~ → 2026-10-10 撤下：落地页按钮改与 App kg-button 同口径（扁平 pill，无阴影无位移）
 - Duolingo 横滚 chips 分隔带 → `.chipstrip` 模块 taxonomy
 - Mintlify/Khan 式 pill CTA → 全部 `.btn`
 - Carbon 列分隔线 → `.band div+div` 白色 hairline
