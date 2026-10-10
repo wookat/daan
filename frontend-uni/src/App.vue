@@ -125,6 +125,12 @@ page {
     linear-gradient(0deg, var(--card-fade), var(--card-fade-2)) bottom / 100% 50% no-repeat !important;
 }
 
+/* 卡内首位区块标题不吃外用上边距：kg-sec 的 margin-top 是给卡片之间的间隔用的，
+   作为 kg-card 首子元素时会渲染成卡内标题上方的异常空白 */
+.kg-card > .kg-sec:first-child {
+  margin-top: 0;
+}
+
 /* #ifdef H5 */
 /* uni-h5 壳：page-head/tabbar 998、原生 toast/modal 999；遮罩+sheet 走 --z-overlay 压过壳，原生反馈层再抬到 --z-toast */
 uni-toast,
