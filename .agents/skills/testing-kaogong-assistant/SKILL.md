@@ -2435,3 +2435,10 @@ Frontend served at http://localhost:8000 — uni-app H5 build (`frontend-uni/dis
 - 用 `setsid nohup python3 hold.py … & echo $! > hold.pid` 写 PID 时，若整段包在一条 `bash -c` 里 `$!` 可能是子 bash 包装进程而不是 python；重起后用 `pgrep -f "python3 hold.py" > hold.pid` 校正，杀时同样避免 `pkill -f hold.py`（会杀到自己）。
 - 练习历史路由是 `#/pkgA/stats/practice-history`（`#/pkgA/practice/history` 是空白页）；报告页 `#/pkgA/exam/report?attempt_id=` 只有 ≥2 个已提交 attempt 才有排名卡，能力预测卡需 answer_log 行 ≥ 若干且 `predict.status==ok`；种子脚本写 answer_log 前先 `db._ensure_answer_log(conn)`。
 - 造 `git worktree add /tmp/x <main-sha>` 跑 PR 新 lint-pages 脚本对比 main：PR 脚本扫 main 树多出的 warn 应恰好是 PR 修掉的组件（本次 rank-card/predict-card 各 1 条 no-shadow → 22 vs 20）。
+
+## R590 经验：错题本更多操作层与 AI 问答返回的 375 取证边界
+- 错题本链路至少拆成 FAB 重练、sheet 后 FAB 重练、强化练习、AI 详解返回四类；每个关键态记录 `scrollY`、`scrollHeight`、目标卡片 top、标题、hash、history marker、API 状态和错误集合，不能只看最终页面。
+- 练习入口的 pointer click 可能被页面 CTA 拦截；若产品 UI 已可由真实 DOM 触发，先记录为 harness 交互问题，再用 direct DOM click 重跑验证，不能把 harness timeout 计为产品缺陷。
+- 返回错题本后卡片折叠可能是 `onShow()` reload 的设计结果；要同时判断目标卡片是否仍在可用上下文，不能仅因 `scrollY` 非 0 就立项。
+- 「AI 详解」进入 AI Q&A 不等于 AI 回答生成成功；若未实际等待/核对答案内容，文档必须将完整回答链路标为 `UNTESTED`。
+- 自然与 harness 的 `/api/practice_result` 状态必须分账；只有自然非 2xx/status 0 才能触发 R580-1 讨论，harness 的 400/500/502/503 不可替代自然证据。

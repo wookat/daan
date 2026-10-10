@@ -3565,3 +3565,9 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 本机门禁（Node 22 / **Py 3.10**）：ruff 通过；pytest **734 passed / 10 failed**（10 例全为 3.10 缺 `datetime.UTC`/`sqlite_errorcode`，与 diff 零交集，实施方 3.12 下 741 全绿，不改测试）；H5 lint / lint:tokens / vitest 171 files 1261 / build:h5 全绿；小程序 tsc / eslint / lint-pages 0 error / vitest 56 全绿。
 - 未验证：生产部署后回归（w17.md §5 清单）；小程序改动未进开发者工具/未上传体验版/未真机；「今天做什么」计划卡无数据未截图；严格 <3 s 写窗口仍仅单测。
 - 遗留：backlog「Deferred（W17 追加）」（同分名次裁定、weekly.mock 缺 total、「击败」残留 7 处、首页首屏多焦点、报告块内小 stat 重复、榜单测试昵称、小程序 raised 71 处、覆盖率缺口、375 快捷键 rejected、#498 建议关闭、Py 3.10 环境失败、零停机部署）；详证 `docs/iter/workflow/w17.md`。
+
+### R590（375 错题本链路研究收尾，不立项）
+- 生产 375px H5 Case A–D：FAB 错题重练、卡片更多操作层后 FAB 重练、练同考点 5 道新题、AI 详解→AI 问答→返回错题本。A/B 进入练习均 `scrollY=0`，返回页首且卡片折叠；C 返回 `scrollY=1395` 但目标卡片 top≈59、仍在原上下文且可用；D 问答进入 `scrollY=0`，返回 `scrollY=973`、目标卡片 top≈60、卡片折叠。API 全 2xx，request failure/console/page error 均空。证据：`docs/iter/round-3/r590-mistake-book-375-evidence.md`，辅助取证 `~/r590/`。
+- 设计判断：以上行为均与现有 `book.vue` 的 sheet history、redo/reinforce 入口、`onShow()` reload（`open:false`）及练习页从页首进入相符；C 的上下文保留不是可感知异常。AI 本轮只验证进入问答与返回，完整回答生成 **UNTESTED**。因此不改产品源码、不实现 R580-1、不部署、不建产品功能 PR。
+- 自然流量分类：观察窗口内自然 `/api/practice_result` 非 2xx/status 0 为 0；harness 的 400/500/502/503 不触发 R580-1。`test-r590-walk` 清理前后 baseline 与删除数逐表相等，独立 post-clean `{}`；共享 `test-r562-modal-%` 42 行及 protected aggregates 不变。
+- UNTESTED：小程序 runtime、真实跨设备状态/滚动恢复、其他浏览器、true offline/service-worker、未执行的 filter/deep-link 变体、完整 AI 回答生成及其他未直接测量变体。
