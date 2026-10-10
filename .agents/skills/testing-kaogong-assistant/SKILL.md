@@ -3,6 +3,32 @@ name: testing-kaogong-assistant
 description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## R578 经验：完整 H5 链路黑盒脚本 + 第三级 `module` 回退的触发条件 + 「同页开下一场」类断言
+
+- 端到端脚本模板 `~/r578/journey.py <uid> <w> <qid> <tag3>`：`/home/ubuntu/venv-kg/bin/python`（系统 python 无 playwright）连既有 Chrome CDP `:29229`，`extra_http_headers={'X-Kg-Probe':'1'}`；深链 `#/pages/practice/practice?qid=&tag3=&module=`；题包用 `question` 字段（不是 `stem`）与 `.kg-q__stem` 对齐，按 `answer` 反选造全错；抓 `weak` 卡文本/按钮、点「练同考点」、录 reinforce 回包 `id/module/submodule/question_type/tag3` 与 `NAV TITLE`；产物 `q1/done/done-full/reinforce-q1 .png/.txt + journey.json + reqs.json`。别在末尾接 `| tail`（会被环境判成后台）。
+- 第三级 `module` 回退**只有**在「精确 tag3 活跃题全被本 uid 答过」且「同 `module+submodule` 活跃池剔本人已答后为 0」时才触发——挑「tag3 活跃题 = 领跑包」且该题 `submodule` 池 ≤ 1 的组（`ZL-JQ-05` / `ziliao/现期计算`），先答完领跑包再点练同考点。回查必须带 `disabled` 列（`ZL-JQ-05` 第 4 题、`现期计算` 第 2 题都是 disabled，光看 count 会误判）。
+- 「同页开下一场」（练同考点 / 只重练本组错题 / 再来一组 / 每日一练）时 `session` 不翻转：断言首题**无**上一场领跑横幅、顶栏按当前来源（练同考点 `… · 强化练习`、错题本 redo `错题重练`、每日一练 `每日一练`）。R578 前生产两处都残留（375/1440 实拍）；修后 375/1440 复验 PASS。**注**：完成页「只重练本组错题」是 `retryWrong()` 就地重开，源码不改 `_source/_reinforce`，顶栏沿用本场来源（强化场重练仍「… · 强化练习」）——不要拿「错题重练」当断言（R578 复验指令初版错在这），是否应改显归 R578-1 论证。
+- `practice_progress` 的来源列叫 `psource`（无 `source`）。清理脚本 `q578c.sh <uid> ro|clean` 通用列扫描 41 表，`clean` 后打印 `after {} TOTAL 0` + `reinforce_log` 总数差。
+
+## R577 经验：生产 SQLite 只读探测必须走已有索引 + 强化回退分支的一手验证法
+
+- `questions` 10.9 万行，`group by tag3 ... having` 套子查询在生产宿主（load 15–20）跑 ≈200s 被 `timeout` 杀；先 `select name, sql from sqlite_master where type='index'` 拿到 `idx_q_reinforce(tag3, disabled, correct_ratio, id)` / `idx_q_pick(module, submodule, is_real, disabled, …)`，用 `indexed by idx_q_reinforce` 只分组出 `n<10` 的 tag3（17 个）再逐 tag3 点查原字段 → 1.3s。原则：窄列、先分组后点查、每步单独计时打印，不写一条大 SQL。
+- 验证 `reinforce_questions` 第二级 `module+submodule` 回退：挑活跃题数 < limit 的 tag3（同一 tag3 内 `submodule` 多为异值、`question_type` 大量 NULL，要按题库原字段选），新 uid 真实 GET `mode=reinforce&limit=5&module=&submodule=&tag3=`，回包 id 回查 `module/submodule/tag3/question_type`：精确 tag3 题数 + 其它 tag3 但同 `submodule` 的题数 = limit 即坐实；出现异 `submodule` 才说明第三级 `module` 回退触发。满额回包会写 `reinforce_log` 1 行（不满额不写，是既有去重设计），清理只删该 uid 该表并读总数差 = 1。
+- 「零自然样本」只能写「窗内无合格样本」；同一账号「累计做题」三页（我的/统计/首页）同源 `/api/growth total.n`，与本机 `pendingSession` 进度不是同口径，比对差异先想清数据源和拍照时刻再登记。
+
+## R575 经验：收藏页「本地收缩 + 后台对账」的复验口径 + 研究脚本路由必须先核 pages.json
+- R575 起取消收藏是 **DELETE 成功 → 本地收缩（`dropFavItem`）→ 后台 `load()` 对账**，且已有列表时不铺骨架：断言改为「DELETE 200 响应后**下一帧**卡数 −1、无 `kg-skeleton`」+「后续 GET 完成后仍 −1」两段；不再接受「先骨架再收缩」。阻断 own DELETE → 卡/本机/云三方不变（收缩在 `await removeFav` 之后）。
+- 旧快照回滚专项：先真实加载一次（`_liveAt`），阻断 `GET /api/favs`（或 `/api/favs/folders`）后取消一条云收藏 → DELETE 200、卡 −1、横幅「网络不稳定 · 展示 N 前缓存的收藏」+「重试」出现、**列表不被旧快照铺回**（R561-fix 同型）；解除阻断点「重试」→ 横幅消失、卡数与只读 DB 一致。冷 Document 首进即阻断则允许旧快照铺屏 + 横幅（有胜于无）。
+- 同题干「本机 + 云」两条并存（R574 F 前置：`重练全部收藏 → 返回` 造本机副本，再阻断 `favQuestions` 清理不可行，改用 `id:null` local-only 与云同题各一条）：取消云条目只删被点那条、本机同题按 R574 口径清理；`dropFavItem` 不按 `question` 匹配。
+- 骨架计数选择器是 **`.kg-skel`**（`kg-skeleton` 组件根类），不是 `.kg-skeleton`——R575 复验第一版用错选择器得到全 0 假阴性，重验才有效；删到最后一张（0 卡）会有 ≈175ms 一帧骨架（`loading = !items.length`），断言「无骨架」只对「仍有剩余卡」成立。
+- 研究脚本截图路由**先核 `pages.json`**：每日一练没有独立页（`#/pkgA/daily/daily` 不存在，空白页是脚本错），入口是首页 `startDaily()` 进练习页；guest 截图只覆盖首页/我的，登录态路径交生产复验。
+
+## R574 经验：收藏页「本机 + 云」双写形态的取消复验 + 派生式 chips 的深链断言
+- 收藏在生产不是单源：题页 `toggleFav` 与 R561 `syncCloudFavs`（进练习页时触发）都会把**云收藏写进本机 `favQuestions`**，`favorites.vue load()` 再按 `question` 去重合并。凡「取消收藏」类复验必须先走一次真实「重练全部收藏 → 返回」把本机副本造出来，再取消云条目并断言：`DELETE /api/favs` 恰 1 条、`uni.getStorageSync('favQuestions')` 无该题、F5 后仍收缩；否则只测纯云用户会漏掉「复活要第二次取消」（R574 生产 F）。反向也要测：阻断 own DELETE → toast 且本机数组不动（清本机必须在 removeFav 成功之后）。
+- 取消后是 `load()` 全量重拉再收缩（既有设计），宿主慢时先见重载骨架数秒（375 DELETE 9.4s + GET 4.0s）——**截图时间戳必须与 DELETE 响应时刻对齐**再下「响应后仍 N 卡」结论；R574 复验一就是把响应前截图误报成复活证据。指令里不要写「立即 1 卡」，写「DELETE 200 + 后续 GET 完成后 1 卡」。
+- 派生式 chips（`favModulePlan`）断言口径：present 集按**全部 items**（非当前夹）算；单模块 + 深链 `?mod=<无收藏模块>` 是 **3 枚**（全部 / 深链模块 / present 模块，按 `MOD_KEYS` 序）不是 2 枚；单模块无深链整行不渲染（用 CTA y 坐标上移量作可感知证据）。
+- 收藏页 URL 回写与 R546 `book.vue` 同型：`replaceState` 必须传 `window.history.state`（`null` 会抹 vue-router state），`onShow` 在 `load()` 后回写、深链 `?folder=` 尚未落地（`_pendingFolder != null`）时让位；断言 `history.state` 非 null + `position` 保留即可，`__id__` 本就不存在。
+
 ## R572 经验：tabBar KeepAlive 页的「暖轮」必测 + `stale_fallback` 埋点按调用方计数
 - 统计/错题本/首页/我的是 uni tabBar KeepAlive 页：冷 Document（F5）旧快照态 PASS **不代表**暖轮 PASS——`data` 里上一轮真实回包留下的 `dueSynced=true` 等「已同步」标志会跨 `onShow → refresh` 沿用。R572 生产 F 就是：真实 2 due → 切错题本 → 只 `route.abort` `/api/review` → 切回统计，横幅出现但仍「2 题今日待复习」（375/1440 同复现）。凡「未同步显 —/待同步」类断言，必须补一条**同一 Document 内先真实后阻断再切回**的序列；恢复用可见「重试」按钮，先 unroute 再点。
 - 统计页故障注入用 `route.abort` 十端点 + 原生 F5（不是 `page.reload()` 才会命中 `snapPeek` 首帧）；`stale_fallback` 事件条数 ≥ 失败 GET 数：埋点在 `getCache.run` 在途合并之外按调用方各记一条（`/api/predict` 两处消费 → 1 GET 2 事件，R572-1），审计以 request-ledger 的唯一失败 GET 为准、事件数只作上界。

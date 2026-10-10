@@ -4,9 +4,11 @@
     <wd-segmented ref="seg" :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
 
     <template v-if="tab === 'fav'">
+      <kg-banner v-if="offlineView" tone="warn" icon="plane" :text="offlineText" action-text="重试" :closable="false" class="offbar" @action="load" />
       <kg-skeleton v-if="loading" preset="cards" />
+      <!-- 已有列表在手时刷新失败只 toast、列表原地保留 -->
       <kg-empty-state
-        v-else-if="favErr"
+        v-else-if="favErr && !items.length"
         icon="wifi-off"
         :title="'加载失败：' + favErr"
         cta-text="重试"
@@ -53,8 +55,8 @@
           </kg-card>
         </template>
         <template #main>
-          <!-- 模块筛选 -->
-          <kg-chip-row v-model="modFilter" :options="modOpts" class="chips" />
+          <!-- 模块筛选：只列本人有收藏的模块，只有 1 个模块时不显示 -->
+          <kg-chip-row v-if="modChipsVisible" v-model="modFilter" :options="modOpts" class="chips" />
 
           <kg-empty-state
             v-if="!shownItems.length"
@@ -133,9 +135,12 @@
 import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, getToken, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
 import { askPrefill } from '../../ask-prefill.js';
 import { askQid, findAskSid } from '../../ask-link.js';
+import { dropFavItem } from '../../fav-list.js';
+import { favModulePlan } from '../../fav-module-opts.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
 import { MODULES, MODULE_KEYS, moduleLabel } from '../../module-meta.js';
 import { segResizeMixin } from '../../seg-resize.js';
+import { snapshotViewMixin } from '../../snapshot-view.js';
 
 // 收藏页模块筛选项：题库 5 模块（module-meta 单一来源）+ 本地时政收藏
 const MOD_KEYS = [...MODULE_KEYS, '时政'];
@@ -145,7 +150,7 @@ const TAB_OPTS = [
 ];
 
 export default {
-  mixins: [segResizeMixin],
+  mixins: [segResizeMixin, snapshotViewMixin({ noun: '收藏', reload: 'load' })],
   data() {
     return {
       tab: 'fav',
@@ -168,8 +173,14 @@ export default {
     tabLabel() {
       return (TAB_OPTS.find((o) => o.value === this.tab) || TAB_OPTS[0]).label;
     },
+    modPlan() {
+      return favModulePlan(this.items, this.modFilter, MOD_KEYS, (m) => this.modName(m));
+    },
     modOpts() {
-      return [{ label: '全部模块', value: '' }, ...MOD_KEYS.map((m) => ({ label: this.modName(m), value: m }))];
+      return this.modPlan.opts;
+    },
+    modChipsVisible() {
+      return this.modPlan.visible;
     },
     shownItems() {
       let list = this.items;
@@ -193,6 +204,9 @@ export default {
     this.askSeenTick++;
     this.logged = !!getToken();
     this.load();
+    // 与 book.vue 同口径（R546）：进深页时 router 用自己缓存的地址覆写本条目，返回后地址栏丢 tab/mod，回来重写一次；
+    // 深链 ?folder= 尚未落地（load 里才应用）时让位，否则会把入参抹掉
+    if (this._pendingFolder == null) this.syncUrl();
   },
   watch: {
     tab() {
@@ -209,7 +223,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId }));
+        window.history.replaceState(window.history.state, '', buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId }));
       }
       // #endif
     },
@@ -232,11 +246,23 @@ export default {
       const d = new Date(ts * 1000);
       return `${d.getMonth() + 1}/${d.getDate()}`;
     },
-    async load() {
-      this.loading = true;
+    async load(opts) {
+      // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩；
+      // 取消收藏删到 0 条时列表状态已由云端回执确认（known），空态直出、不铺骨架等对账
+      const known = !!opts && opts.known === true;
+      this.loading = !known && !this.items.length;
       this.favErr = '';
+      this.beginSnapshotRound();
       try {
         const [f, v] = await Promise.all([fetchFavFolders(), fetchFavs()]);
+        const staleF = this.noteSnapshot(f);
+        const staleV = this.noteSnapshot(v);
+        if ((staleF || staleV) && this._liveAt) {
+          // 网络失败回退的旧快照是上次成功 GET 的镜像，比手上这份真实列表更旧（刚 DELETE 的题还在里面）：不覆盖，只提示
+          this.showSnapshot(this._liveAt);
+          this.loading = false;
+          return;
+        }
         this.folders = f.items;
         this.items = v.items.map((it) => ({ ...it, _open: false }));
         // 合并本地收藏（时政题等无题库 id 的收藏只存本地），与题目页/错题本口径一致
@@ -251,6 +277,10 @@ export default {
           const want = this._pendingFolder;
           this._pendingFolder = null;
           if (this.folders.some((x) => x.id === want)) this.folderId = want;
+        }
+        if (!staleF && !staleV) {
+          this._liveAt = Date.now();
+          this.settleSnapshotRound();
         }
       } catch (e) {
         this.favErr = e.message || '网络异常';
@@ -372,13 +402,15 @@ export default {
         success: async (r) => {
           if (!r.confirm) return;
           try {
-            if (it._local) {
-              const locals = (uni.getStorageSync('favQuestions') || []).filter((x) => x.question !== it.question);
-              uni.setStorageSync('favQuestions', locals);
-            } else {
-              await removeFav(it.id);
-            }
-            this.load();
+            if (!it._local) await removeFav(it.id);
+            // 云条目也清本机同题：题页/错题本对账（syncCloudFavs）会把云收藏写进 favQuestions，只删云端的话 load() 合并时它会以本机条目复活
+            const locals = (uni.getStorageSync('favQuestions') || []).filter((x) => x.question !== it.question && !(it.id != null && x.id === it.id));
+            uni.setStorageSync('favQuestions', locals);
+            // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
+            const next = dropFavItem(this.items, this.folders, it);
+            this.items = next.items;
+            this.folders = next.folders;
+            this.load({ known: true });
           } catch (e) {
             uni.showToast({ title: e.message, icon: 'none' });
           }
@@ -404,6 +436,7 @@ export default {
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
 .seg { margin-bottom: var(--sp-16); }
+.offbar { margin-bottom: var(--sp-12); }
 .folder { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--cell-h); padding: var(--sp-8) 0; border-bottom: 1px solid var(--line); }
 .folder:last-child { border-bottom: none; }
 .fico { width: 32px; height: 32px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

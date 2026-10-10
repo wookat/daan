@@ -946,9 +946,15 @@ export default {
     // #endif
   },
   watch: {
-    items() {
-      this.matOpen = {};
-    },
+    items: [
+      // 领跑题提示只属于赋 items 那一次会话：同页开下一场（练同考点 / 重练 / 每日一练 / 恢复）即清，start() 在赋 items 后再写本场的
+      { handler() { this.leadHint = ''; }, flush: 'sync' },
+      function () {
+        this.matOpen = {};
+        // 会话来源（_reinforce/_daily/_source/lastModule）不是响应式，完成页内开下一场 session 不翻转，题包落地时重算标题
+        this.syncNavTitle();
+      },
+    ],
     session() {
       this.syncNavTitle();
     },
@@ -1719,13 +1725,13 @@ export default {
         }
         const lead = await leadP;
         const items = mergeLead(lead, d.items);
-        this.leadHint = leadQid && items.length && items[0].id === leadQid ? leadHintText(tag3, items.length) : '';
         if (!items.length) {
           this._starting = false;
           this.endLoadState('该模块暂无题目，换个模块试试');
           return;
         }
         this.items = items.map((q) => ({ ...q, _saved: false }));
+        this.leadHint = leadQid && items[0].id === leadQid ? leadHintText(tag3, items.length) : '';
         this._plainStart =
           !(submodule || adaptive || forceReal || tag3 || this.realMode) && module !== 'ziliao';
         this._prefetched = false;

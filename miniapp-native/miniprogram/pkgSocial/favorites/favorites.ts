@@ -5,6 +5,8 @@ import { setFav } from '../../api/social';
 import type { FavFolder, NoteItem, Question } from '../../api/types';
 import { askPrefill, askQid, findAskSid } from '../../utils/ask-sessions';
 import { getToken } from '../../utils/auth';
+import { dropFavItem } from '../../utils/fav-list';
+import { favModulePlan } from '../../utils/fav-module-opts';
 import { MODULE_KEYS, MODULES, moduleLabel } from '../../utils/module-meta';
 import { toastInfo } from '../../utils/toast';
 
@@ -77,7 +79,8 @@ Page({
     rows: [] as FavRow[],
     notes: [] as NoteRow[],
     modFilter: '',
-    modOpts: [{ label: '全部模块', value: '' }, ...MOD_KEYS.map((m) => ({ label: modName(m), value: m }))],
+    modOpts: [{ label: '全部模块', value: '' }],
+    modChipsVisible: false,
     curFolderName: '全部收藏',
   },
 
@@ -96,8 +99,11 @@ Page({
   },
 
   // ---------- 收藏 ----------
-  async load() {
-    this.setData({ loading: true, favErr: '' });
+  async load(opts?: { known?: boolean }) {
+    // 已有列表在手时（onShow 回来 / 取消收藏 / 移动后）后台刷新不铺骨架，列表原地收缩（与 H5 同口径）；
+    // 取消收藏删到 0 条时列表状态已由云端回执确认（known），空态直出不铺骨架；bind:cta 传入的是事件对象，known 不为 true
+    const known = !!opts && opts.known === true;
+    this.setData({ loading: !known && !this.items.length, favErr: '' });
     try {
       const [f, v] = await Promise.all([fetchFavFolders(), fetchFavs()]);
       const folders = f.items;
@@ -138,6 +144,7 @@ Page({
 
   render() {
     const { folderId, modFilter, folders } = this.data;
+    const plan = favModulePlan(this.items, modFilter, MOD_KEYS, modName);
     let list = this.items;
     if (folderId != null) list = list.filter((it) => it.folder_id === folderId);
     if (modFilter) list = list.filter((it) => it.module === modFilter);
@@ -167,7 +174,7 @@ Page({
       const f = folders.find((x) => x.id === folderId);
       curFolderName = f ? '「' + f.name + '」' : '本夹';
     }
-    this.setData({ rows, curFolderName });
+    this.setData({ rows, curFolderName, modOpts: plan.opts, modChipsVisible: plan.visible });
   },
 
   onTab(e: WechatMiniprogram.CustomEvent<{ value: 'fav' | 'note' }>) {
@@ -328,13 +335,16 @@ Page({
       success: async (r) => {
         if (!r.confirm) return;
         try {
-          if (it._local) {
-            const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
-            wx.setStorageSync('favQuestions', locals);
-          } else {
-            await deleteFav(it.id as number);
-          }
-          this.load();
+          if (!it._local) await deleteFav(it.id as number);
+          // 云条目也清本机同题（题页/报告页收藏同时写本机 favQuestions 与云端，只删云端的话 load() 合并时会以本机条目复活），与 H5 同口径
+          const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
+          wx.setStorageSync('favQuestions', locals);
+          // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
+          const next = dropFavItem(this.items, this.data.folders, it);
+          this.items = next.items;
+          this.setData({ folders: next.folders, hasItems: this.items.length > 0 });
+          this.render();
+          this.load({ known: true });
         } catch (err) {
           toastInfo((err as Error).message);
         }

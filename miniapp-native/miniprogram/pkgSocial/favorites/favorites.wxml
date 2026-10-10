@@ -6,7 +6,7 @@
     <!-- 收藏题目 -->
     <block wx:if="{{tab === 'fav'}}">
       <kg-card wx:if="{{loading}}" variant="raised"><t-skeleton theme="paragraph" animation="gradient" /></kg-card>
-      <kg-empty wx:elif="{{favErr}}" icon="wifi-off" title="加载失败：{{favErr}}" ctaText="重试" bind:cta="load" />
+      <kg-empty wx:elif="{{favErr && !hasItems}}" icon="wifi-off" title="加载失败：{{favErr}}" ctaText="重试" bind:cta="load" />
       <kg-empty
         wx:elif="{{!hasItems}}"
         icon="star"
@@ -44,8 +44,8 @@
           </view>
         </kg-card>
 
-        <!-- 模块筛选 -->
-        <view class="chips"><kg-chip-row options="{{modOpts}}" value="{{modFilter}}" bind:change="onModFilter" /></view>
+        <!-- 模块筛选：只列本人有收藏的模块，只有 1 个模块时不显示 -->
+        <view wx:if="{{modChipsVisible}}" class="chips"><kg-chip-row options="{{modOpts}}" value="{{modFilter}}" bind:change="onModFilter" /></view>
         <kg-empty wx:if="{{!rows.length}}" compact icon="star" title="这个筛选下还没有收藏" desc="换个收藏夹或模块看看" />
         <block wx:else>
           <view class="redo"><kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onRedo">重练{{curFolderName}}（{{rows.length}} 题 · 乱序）</kg-button></view>

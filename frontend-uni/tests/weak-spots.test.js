@@ -57,8 +57,36 @@ describe('weakSpots', () => {
     expect(r).toEqual([{ key: 'YY-LJ-01', name: '逻辑填空', module: 'yanyu', submodule: '逻辑填空', tag3: 'YY-LJ-01', n: 1 }]);
   });
 
-  it('无 question_type 时 name 退化为模块名，不同模块同名不合并', () => {
+  it('无 question_type 且无 submodule 时 name 退化为模块名，不同模块同名不合并', () => {
     const r = weakSpots([wrong({ tag3: 'x' }), wrong({ module: 'ziliao', tag3: 'y' })], modName);
     expect(r.map((w) => w.name).sort()).toEqual(['言语理解', '资料分析']);
+  });
+
+  it('R576：无 question_type 时 name/submodule 退到题库 submodule 列（每日一练真题 6/10 无 question_type）', () => {
+    const r = weakSpots(
+      [
+        wrong({ question_type: null, submodule: '中心理解', tag3: 'YY-ZX-05' }),
+        wrong({ question_type: null, submodule: '中心理解', tag3: 'YY-ZX-02' }),
+        wrong({ module: 'ziliao', question_type: null, submodule: '简单计算与读数', tag3: 'ZL-JS-01' }),
+      ],
+      modName
+    );
+    expect(r).toEqual([
+      { key: 'YY-ZX-05', name: '中心理解', module: 'yanyu', submodule: '中心理解', tag3: null, n: 2 },
+      { key: 'ZL-JS-01', name: '简单计算与读数', module: 'ziliao', submodule: '简单计算与读数', tag3: 'ZL-JS-01', n: 1 },
+    ]);
+  });
+
+  it('R576：有 question_type 时展示名仍取子名，但 submodule 入口传题库 submodule 列原值（后端按该列回退取题）', () => {
+    const r = weakSpots([wrong({ question_type: '言语理解-意图判断', submodule: '中心理解', tag3: 'a' }), wrong({ question_type: '言语理解-意图判断', submodule: '中心理解', tag3: 'b' })], modName);
+    expect(r).toEqual([{ key: 'a', name: '意图判断', module: 'yanyu', submodule: '中心理解', tag3: null, n: 2 }]);
+  });
+
+  it('R576：无 tag3 无 question_type 时按 module|submodule 分桶，不同 submodule 不并成一条模块名', () => {
+    const r = weakSpots([wrong({ submodule: '中心理解' }), wrong({ submodule: '逻辑填空' }), wrong({ submodule: '逻辑填空' })], modName);
+    expect(r.map((w) => [w.name, w.submodule, w.n])).toEqual([
+      ['逻辑填空', '逻辑填空', 2],
+      ['中心理解', '中心理解', 1],
+    ]);
   });
 });
