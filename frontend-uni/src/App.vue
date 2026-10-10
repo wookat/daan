@@ -203,6 +203,24 @@ html.theme-dark body {
 .theme-dark uni-tabbar .uni-tabbar__icon img[src*='-on'] {
   filter: saturate(0.6) brightness(1.45);
 }
+/* tabbar 激活态跟皮肤走：selectedColor 与 -on 图标都是 pages.json 静态蓝（uni-h5 无 setTabBarStyle），
+   文字按内联色值定向覆盖到 --brand-text；图标按皮肤 hue-rotate 换色相（底蓝 hue≈225°，
+   森林绿 142°→277°、暖橙 21°→156°），深色叠加同款提亮滤镜 */
+uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
+  color: var(--brand-text) !important;
+}
+.acc-forest uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+  filter: hue-rotate(277deg);
+}
+.acc-sunset uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+  filter: hue-rotate(156deg);
+}
+.theme-dark.acc-forest uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+  filter: hue-rotate(277deg) saturate(0.6) brightness(1.45);
+}
+.theme-dark.acc-sunset uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+  filter: hue-rotate(156deg) saturate(0.6) brightness(1.45);
+}
 .theme-dark uni-page-head .uni-page-head {
   background: var(--bg) !important;
   color: var(--ink);
