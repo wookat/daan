@@ -159,6 +159,15 @@ if (typeof window !== 'undefined') {
 			} catch (e) { /* 自愈失败保持原状 */ }
 		};
 		setTimeout(staleShellHeal, 15000);
+		// 前台复现补检：长挂旧标签页此前没有任何自愈触发点（定时器只在 load 后跑一次、
+		// kg-sw-updated 只在 sw.js 换版时到）；回前台时 60s 节流补一次 hash 比对
+		let healLast = 0;
+		document.addEventListener('visibilitychange', () => {
+			const now = Date.now();
+			if (document.visibilityState !== 'visible' || now - healLast < 60000) return;
+			healLast = now;
+			staleShellHeal();
+		});
 		// 旧壳动态 import 已下线的 chunk（发版后旧 hash 404）→ 立即校验，比 15s 定时先到；hash 一致（真网络故障）不动
 		healOnChunkLoadError = staleShellHeal;
 		// SW 升级即校验：新 SW activate 后 postMessage，穿透缓存壳触达存量客户端
