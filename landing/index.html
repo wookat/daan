@@ -30,7 +30,7 @@ section{padding:76px 0}
 /* ---- motion & FX ---- */
 @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
 @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-100%)}}
 @keyframes sheen{0%{transform:translateX(-120%) skewX(-18deg)}60%,100%{transform:translateX(220%) skewX(-18deg)}}
 @keyframes glowDrift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-3%) scale(1.06)}}
 @keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
@@ -102,7 +102,7 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 /* ---- module chip strip：无限跑马灯 ---- */
 .chipstrip{border-top:var(--hairline);border-bottom:var(--hairline);background:var(--card);padding:14px 0;overflow:hidden}
 .chipstrip-in{display:flex;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
-.chiptrack{display:flex;gap:10px;padding-right:10px;animation:marquee 36s linear infinite;will-change:transform}
+.chiptrack{display:flex;flex-shrink:0;gap:10px;padding-right:10px;animation:marquee 36s linear infinite;will-change:transform}
 .chipstrip:hover .chiptrack{animation-play-state:paused}
 .chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:var(--hairline);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card)}
 .chip i{width:8px;height:8px;border-radius:2px;background:var(--brand);display:inline-block}
@@ -150,7 +150,8 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 .feat:hover::after,.step:hover::after{opacity:1}
 
 /* ---- faq (details/summary，无需 JS) ---- */
-.faq{max-width:760px}
+#faq .shead,#get .shead{text-align:center;margin-left:auto;margin-right:auto}
+.faq{max-width:760px;margin:0 auto}
 .faq details{background:rgba(255,255,255,.66);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 24px -14px rgba(23,53,171,.12);border-radius:var(--r-md)}
 .faq details+details{margin-top:12px}
 .faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center}
@@ -170,7 +171,8 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 .shot img{width:100%;border-radius:16px;display:block;background:var(--fill)}
 .shot p{text-align:center;font-size:12.5px;color:var(--ink-3);margin-top:12px}
 
-#method,#faq,#get{background:linear-gradient(165deg,rgba(46,91,255,.05),rgba(56,189,248,.03) 45%,rgba(255,255,255,0) 80%)}
+/* method→faq→get 三段共用一条连续渐变，避免分段重启出接缝 */
+.tint{background:linear-gradient(165deg,rgba(46,91,255,.05),rgba(56,189,248,.03) 45%,rgba(255,255,255,0) 80%)}
 
 /* ---- method ---- */
 .method-in{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center}
@@ -182,7 +184,8 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 .mrow p{font-size:13px;color:var(--ink-3);margin-top:3px;line-height:1.7}
 
 /* ---- platforms ---- */
-.plat{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.plat{display:flex;justify-content:center;gap:20px}
+.plat .pcard{width:100%;max-width:420px}
 .pcard{background:rgba(255,255,255,.66);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.85);box-shadow:0 8px 24px -14px rgba(23,53,171,.12);border-radius:var(--r-md);padding:26px 24px;text-align:center;transition:border-color .15s}
 .pcard:hover{border-color:var(--brand-soft-2);transform:translateY(-4px);box-shadow:0 10px 28px -14px rgba(23,53,171,.18)}
 .pcard{transition:border-color .15s,transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
@@ -258,7 +261,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <a href="#faq">FAQ</a>
       <a href="#get">开始使用</a>
     </div>
-    <a class="btn btn-brand btn-sm nav-cta" href="/app/">打开 H5</a>
+    <a class="btn btn-brand btn-sm nav-cta" href="/app/">打开网页版</a>
   </div>
 </nav>
 
@@ -269,8 +272,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <h1 data-hero="2">把每一道错题<br>讲成<em>下次不再错</em></h1>
       <p class="lede" data-hero="3">答岸是面向国考、省考、事业单位的行测+申论备考助手：拍题即得花生十三速解讲解，错题自动归集按间隔复习召回，69 套整卷真题 + 全真模考排位，让练习的每一题都算数。</p>
       <div class="hero-cta" data-hero="4">
-        <a class="btn btn-brand" href="/app/">立即体验 H5 →</a>
-        <a class="btn btn-ghost" href="#get">微信小程序</a>
+        <a class="btn btn-brand" href="/app/">立即体验 →</a>
       </div>
       <div class="hero-stats" data-hero="4">
         <div class="hstat"><b><span class="cnt" data-to="63992">0</span><span>+</span></b><small>智能题库</small></div>
@@ -295,7 +297,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <div><b>六段式</b><small>AI 讲解结构</small></div>
       <div><b>SM-2</b><small>间隔复习调度</small></div>
       <div><b>全站先验</b><small>每题正确率校准</small></div>
-      <div><b>双端同步</b><small>小程序 + H5</small></div>
+      <div><b>云端同步</b><small>账号进度随身</small></div>
     </div>
   </div>
 </section>
@@ -394,6 +396,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
   </div>
 </section>
 
+<div class="tint">
 <section id="method">
   <div class="wrap method-in">
     <div class="shead reveal" style="margin-bottom:0">
@@ -420,9 +423,9 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     </div>
     <div class="faq reveal">
       <details><summary>答岸收费吗？</summary><p>刷题、错题本、真题卷库、模考等核心功能免费开放，注册即可使用。</p></details>
-      <details><summary>需要注册才能用吗？</summary><p>H5 打开即可匿名练题；注册后错题、学习进度、外观设置在小程序与 H5 之间互通同步，也支持 Zalize 统一账号一键登录。</p></details>
+      <details><summary>需要注册才能用吗？</summary><p>网页版打开即可匿名练题；注册后错题、学习进度、外观设置云端同步，也支持 Zalize 统一账号一键登录。</p></details>
       <details><summary>题库覆盖什么考试？</summary><p>国考 2012–2026 全链 + 多省省考、选调行测真题，合计 23,205 题、69 套整卷；申论素材与 AI 批改同步覆盖。</p></details>
-      <details><summary>小程序和 H5 有什么区别？</summary><p>同一套数据、同一套功能：小程序适合碎片时间刷题，H5 适合桌面端长时间学习，进度实时互通。</p></details>
+      <details><summary>手机和平板能用吗？</summary><p>网页版适配手机与平板浏览器，直接打开 kaogong.zalize.com 即可；微信小程序正在内测，上线后与网页版数据互通。</p></details>
       <details><summary>我的做题数据存在哪？</summary><p>答题记录与错题本保存在你的账号下，仅用于生成复习计划与学习统计，不对外提供。</p></details>
     </div>
   </div>
@@ -435,12 +438,11 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <h2>在哪都能练</h2>
     </div>
     <div class="plat reveal">
-      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.8 4C5.2 4 2.5 6.6 2.5 9.8c0 1.9 1 3.5 2.6 4.6l-.7 2.6 3-1.5c.5.1 1 .2 1.4.2"/><path d="M21.5 14.8c0-2.9-2.6-5.2-5.8-5.2s-5.8 2.3-5.8 5.2 2.6 5.2 5.8 5.2c.6 0 1.2-.1 1.7-.2l2.6 1.3-.7-2.3c1.3-.9 2.2-2.3 2.2-4z"/></svg></div><b>微信小程序</b><p>微信搜索「答岸」<br>碎片时间掏出手机就刷</p></div>
-      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.3 3.8 5.2 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5.2-3.8-8.5s1.3-6.2 3.8-8.5z"/></svg></div><b>H5 网页版</b><p>浏览器直接打开<br>kaogong.zalize.com，与小程序数据互通</p><a class="btn btn-ghost btn-sm" href="/app/">打开 →</a></div>
-      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13.5A8 8 0 0 1 10.5 4 8 8 0 1 0 20 13.5z"/></svg></div><b>深色模式 · 皮肤</b><p>跟随系统或手动切换<br>晚间刷题不伤眼，皮肤随心情换</p></div>
+      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.3 3.8 5.2 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5.2-3.8-8.5s1.3-6.2 3.8-8.5z"/></svg></div><b>网页版</b><p>浏览器打开即用<br>kaogong.zalize.com</p><a class="btn btn-ghost btn-sm" href="/app/">打开 →</a></div>
     </div>
   </div>
 </section>
+</div>
 
 <section style="padding-top:0">
   <div class="wrap">
@@ -455,11 +457,11 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 
 <footer>
   <div class="wrap foot-grid">
-    <div class="fcol"><b>答岸</b><span>原岸上见 · 上岸 Zalize 体系</span></div>
-    <div class="fcol"><b>产品</b><a href="/app/">H5 网页版</a><span>微信小程序 · 搜「答岸」</span></div>
+    <div class="fcol"><b>答岸</b><span>考公行测错题助手</span><span>花生十三方法体系</span></div>
+    <div class="fcol"><b>产品</b><a href="/app/">网页版</a></div>
     <div class="fcol"><b>说明</b><span>题库数据含公开真题整理</span><span>部分解析由 AI 生成</span></div>
   </div>
-  <div class="wrap foot-copy">© 2026 Zalize · 答岸</div>
+  <div class="wrap foot-copy">© 2026 答岸 版权所有 · 运营团队：Zalize</div>
 </footer>
 
 <script>
