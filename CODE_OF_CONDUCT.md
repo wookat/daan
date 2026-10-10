@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/readme/lockup.png" alt="答岸" width="220"></p>
+<p align="center"><img src="docs/readme/brand-lockup.png" alt="答岸" width="220"></p>
 
 # 行为准则（Code of Conduct）
 

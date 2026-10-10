@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/readme/lockup.png" alt="答岸" width="260"></p>
+<p align="center"><img src="docs/readme/brand-lockup.png" alt="答岸" width="260"></p>
 
 # 贡献指南（Contributing）
 

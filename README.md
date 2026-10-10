@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/readme/lockup.png" alt="答岸" width="420">
+  <img src="docs/readme/brand-lockup.png" alt="答岸" width="420">
 </p>
 
 <h3 align="center">AI 考公刷题与错题助手 · 花生十三方法体系</h3>
