@@ -16,7 +16,7 @@ describe('R445 首页「今日全站同题」行首帧占位（源文件锁）',
     expect(fallback).toMatch(/今日全站同题 10 题\{\{\s*dsMeta \?/);
   });
   it('每日一练选题按日哈希确定、题库非空即有 10 题（占位文案与后端口径一致）', () => {
-    const db = readFileSync(fileURLToPath(new URL('../../backend/app/db.py', import.meta.url)), 'utf8');
+    const db = readFileSync(fileURLToPath(new URL('../../backend/app/db_daily.py', import.meta.url)), 'utf8');
     expect(db).toMatch(/def daily_set_ids\(day: str\)/);
     expect(db).toMatch(/每模块 2 题共 10 题/);
     expect(db).toMatch(/pool\.sort\(key=lambda q: hashlib\.md5\(f"\{day\}:\{q\}"/);

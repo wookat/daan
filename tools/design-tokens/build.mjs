@@ -360,8 +360,11 @@ function darkDecls(flat) {
 /* 手动外观档 + 皮肤槽：
    .tc-light/.tc-dark = 用户手动浅色/深色（class 打在页面/组件顶层容器，system 档不带类走媒体查询）；
    .acc-<key> = tokens.json accent 皮肤，覆盖 --brand 系。
-   选择器同时覆盖「类在祖先」与「类在同一元素」两种形态。 */
-function accentBlocks(tree) {
+   选择器同时覆盖「类在祖先」与「类在同一元素」两种形态。
+   descSel：H5 端 .acc-* 打在 <html> 上，而 page 编译成 uni-page-body 并自带 --brand 声明，
+   继承自 html 的皮肤变量到不了页面内容——必须再镜像一条「acc 祖先 → uni-page-body」的后代规则
+   （同 .theme-dark uni-page-body 的镜像逻辑）。WXSS 无 uni-page-body，class 打在页面容器上 .acc-* 即生效。 */
+function accentBlocks(tree, descSel) {
   const acc = tree.accent || {};
   const keys = Object.keys(acc).filter((k) => !k.startsWith('$') && acc[k] && acc[k].brand);
   if (!keys.length) return '';
@@ -373,12 +376,13 @@ function accentBlocks(tree) {
     `--brand-soft: ${dark ? a.dSoft : a.soft}`,
     `--brand-soft-2: ${dark ? a.dSoft2 : a.soft2}`,
   ].join(';\n  ') + ';';
+  const sel = (s) => (descSel ? `${s}, ${s} ${descSel}` : s);
   const parts = ['/* 皮肤槽：.acc-<key> 覆盖 --brand 系（手动/系统深色各有映射） */'];
   for (const k of keys) {
     const a = acc[k];
-    parts.push(`.acc-${k} {\n  ${decls(a, false)}\n}`);
-    parts.push(`.tc-dark .acc-${k}, .tc-dark.acc-${k}, .theme-dark .acc-${k}, .theme-dark.acc-${k} {\n  ${decls(a, true)}\n}`);
-    parts.push(`@media (prefers-color-scheme: dark) {\n  .acc-${k} {\n  ${decls(a, true)}\n  }\n  .tc-light .acc-${k}, .tc-light.acc-${k} {\n  ${decls(a, false)}\n  }\n}`);
+    parts.push(`${sel(`.acc-${k}`)} {\n  ${decls(a, false)}\n}`);
+    parts.push(`${[`.tc-dark .acc-${k}`, `.tc-dark.acc-${k}`, `.theme-dark .acc-${k}`, `.theme-dark.acc-${k}`].map(sel).join(', ')} {\n  ${decls(a, true)}\n}`);
+    parts.push(`@media (prefers-color-scheme: dark) {\n  ${sel(`.acc-${k}`)} {\n  ${decls(a, true)}\n  }\n  ${[`.tc-light .acc-${k}`, `.tc-light.acc-${k}`].map(sel).join(', ')} {\n  ${decls(a, false)}\n  }\n}`);
   }
   return parts.join('\n');
 }
@@ -422,7 +426,7 @@ export function emitCss(flat, tree) {
     '/* uni-h5 把 page 编成 uni-page-body；tabbar/page-head 壳在其外层，需要 :root 镜像才能读到 token */',
     cssBlock(':root', lightDecls(flat)),
     cssBlock('.theme-dark uni-page-body, html.theme-dark', darkDecls(flat)),
-    accentBlocks(tree),
+    accentBlocks(tree, 'uni-page-body'),
     '/* #endif */',
     '/* component: wot-design-uni（变量名以 wot-design-uni@1.14.0 components/common/abstracts/variable.scss 为准） */',
     cssBlock('page', WOT_MAP.map(([k, v]) => decl('  ', k, v))),
