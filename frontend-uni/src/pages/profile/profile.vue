@@ -124,25 +124,13 @@
           <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
             <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="20" tone="warn" /></view></template>
           </wd-cell>
-          <wd-cell title="关于" value="答岸" is-link clickable @click="about">
+          <wd-cell title="关于" value="答岸" is-link clickable @click="aboutOpen = true">
             <template #icon><view class="cell-ico"><l-icon name="info" :size="20" tone="warn" /></view></template>
           </wd-cell>
         </wd-cell-group>
 
         <view v-if="user" class="logout">
           <kg-button variant="secondary" tone="bad" size="lg" block @click="doLogout">退出登录</kg-button>
-        </view>
-
-        <view class="zl-footer">
-          <view class="zl-links">
-            <text class="zl-link" v-for="p in zlProducts" :key="p.url" @click="zlOpen(p.url)">{{ p.name }}</text>
-          </view>
-          <view class="zl-links">
-            <text class="zl-link" @click="zlOpen('https://career.zalize.com/privacy/')">隐私政策</text>
-            <text class="zl-link" @click="zlOpen('https://career.zalize.com/terms/')">服务条款</text>
-            <text class="zl-link" @click="zlOpen('mailto:support@zalize.com')">联系我们</text>
-          </view>
-          <text class="zl-copy">© 2026 Zalize 上岸 · 答岸</text>
         </view>
       </template>
     </kg-two-col>
@@ -176,6 +164,29 @@
           <kg-button variant="secondary" size="lg" block :disabled="bkLoading" @click="doRestore">输入恢复码恢复</kg-button>
         </view>
       </template>
+    </kg-sheet>
+
+    <!-- 关于：产品链接/协议/版权统一收纳（不再散落页脚） -->
+    <kg-sheet v-model="aboutOpen" title="关于">
+      <view class="sheet-body">
+        <text class="about-name">答岸</text>
+        <text class="about-desc">行测刷题 · 错题本 · AI 讲解 · 全真模考</text>
+        <text class="about-site">kaogong.zalize.com</text>
+        <text class="about-sec">更多产品</text>
+        <view class="about-list">
+          <view v-for="p in zlProducts" :key="p.url" class="about-item" role="button" @click="zlOpen(p.url)">
+            <text class="about-item-t">{{ p.name }}</text>
+            <l-icon name="chevron-right" :size="16" tone="faint" />
+          </view>
+        </view>
+        <text class="about-sec">协议与支持</text>
+        <view class="about-list">
+          <view class="about-item" role="button" @click="zlOpen('https://career.zalize.com/privacy/')"><text class="about-item-t">隐私政策</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
+          <view class="about-item" role="button" @click="zlOpen('https://career.zalize.com/terms/')"><text class="about-item-t">服务条款</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
+          <view class="about-item" role="button" @click="zlOpen('mailto:support@zalize.com')"><text class="about-item-t">联系我们</text><l-icon name="chevron-right" :size="16" tone="faint" /></view>
+        </view>
+        <text class="about-copy">© 2026 Zalize · 答岸</text>
+      </view>
     </kg-sheet>
   </view>
 </template>
@@ -235,6 +246,7 @@ export default {
       coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''),
       coachLoading: false,
       bkOpen: false,
+      aboutOpen: false,
       backupCode: uni.getStorageSync('backupCode') || '',
       bkLoading: false,
       zlProducts: [
@@ -601,9 +613,6 @@ export default {
       uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制', icon: 'none' }) });
       // #endif
     },
-    about() {
-      uni.showModal({ title: '答岸', content: '行测刷题 · 错题本 · AI 讲解 · 全真模考\nkaogong.zalize.com', showCancel: false, confirmText: '知道了' });
-    },
     doLogout() {
       uni.showModal({
         title: '退出登录',
@@ -669,10 +678,15 @@ export default {
 .row2 { display: flex; gap: var(--sp-12); }
 .row2 :deep(.kg-btn) { flex: 1; }
 
-.zl-footer { margin: var(--sp-32) 0 var(--sp-8); text-align: center; }
-.zl-links { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-4) var(--sp-16); margin-bottom: var(--sp-8); }
-.zl-link { display: inline-block; font-size: var(--fs-caption); color: var(--brand-text); line-height: 28px; padding: var(--sp-8) 0; }
-.zl-copy { font-size: var(--fs-caption); color: var(--ink-3); }
+.about-name { display: block; font-size: var(--fs-h2); font-weight: 600; color: var(--ink); }
+.about-desc { display: block; font-size: var(--fs-body); color: var(--ink-2); margin-top: var(--sp-4); }
+.about-site { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
+.about-sec { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin: var(--sp-24) 0 var(--sp-8); }
+.about-list { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.about-item { display: flex; align-items: center; justify-content: space-between; min-height: var(--hit-min); padding: var(--sp-12) var(--sp-16); border-bottom: 1px solid var(--line); }
+.about-item:last-child { border-bottom: none; }
+.about-item-t { font-size: var(--fs-sub); color: var(--ink); }
+.about-copy { display: block; font-size: var(--fs-caption); color: var(--ink-3); text-align: center; margin-top: var(--sp-24); }
 
 /* #ifdef H5 */
 @media (min-width: 1024px) {

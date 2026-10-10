@@ -131,6 +131,13 @@ page {
   margin-top: 0;
 }
 
+/* wd-cell 库默认 align-items:flex-start：标题与右侧 value 行高不同时两条视觉中线错位，
+   列表项整体偏上；统一改居中（is--vertical 变体是 block 不受影响；
+   库内选择器带 data-v attr 同级权重且后加载，须 !important，同 wd-picker 覆盖惯例） */
+.wd-cell .wd-cell__wrapper {
+  align-items: center !important;
+}
+
 /* #ifdef H5 */
 /* uni-h5 壳：page-head/tabbar 998、原生 toast/modal 999；遮罩+sheet 走 --z-overlay 压过壳，原生反馈层再抬到 --z-toast */
 uni-toast,
