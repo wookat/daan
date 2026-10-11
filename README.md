@@ -17,6 +17,8 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/github/stars/wookat/daan?style=social" alt="GitHub stars">
+  <img src="https://img.shields.io/github/issues/wookat/daan" alt="GitHub issues">
   <img src="https://img.shields.io/badge/backend-FastAPI%20%2B%20SQLite-009688.svg" alt="backend">
   <img src="https://img.shields.io/badge/frontend-uni--app%20%2F%20Vue3-42b883.svg" alt="frontend">
   <img src="https://img.shields.io/badge/tests-vitest%201583%20%2B%20pytest-brightgreen.svg" alt="tests">
@@ -127,6 +129,12 @@ eval/              LLM 讲解质量评测集
 欢迎 Issue、PR 与产品反馈。开始前请阅读
 [贡献指南](CONTRIBUTING.md) 与 [行为准则](CODE_OF_CONDUCT.md)。
 产品内测反馈入口：https://kaogong.zalize.com/#feedback
+
+## 📮 联系
+
+- 邮箱：[wookat@qq.com](mailto:wookat@qq.com)
+- 微信：hveary
+- Issue / 讨论：直接在仓库开 Issue 或 Discussion
 
 ## 📄 许可证
 
