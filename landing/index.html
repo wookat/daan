@@ -10,6 +10,17 @@
 <meta name="keywords" content="考公,公务员,行测,申论,错题本,刷题,真题,模考,花生十三,AI 讲解,资料分析,数量关系,国考,省考">
 <meta name="author" content="答岸（Zalize 运营团队）">
 <meta name="theme-color" content="#2e5bff">
+<!-- 移动/平台适配 -->
+<meta name="applicable-device" content="pc,mobile">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="答岸">
+<meta name="msapplication-TileColor" content="#2e5bff">
+<link rel="apple-touch-icon" sizes="180x180" href="/lp-assets/apple-touch-icon.png">
+<link rel="manifest" href="/lp-assets/manifest.json">
+<!-- 机器可读声明：便于搜索引擎与 AI 爬虫发现站点资产 -->
+<link rel="sitemap" type="application/xml" href="/sitemap.xml" title="站点地图">
+<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM 站点说明">
+<link rel="me" href="https://github.com/wookat/daan">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="答岸">
@@ -21,11 +32,13 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="答岸 — 考公行测错题助手">
+<meta property="og:updated_time" content="2026-10-10T16:00:00+00:00">
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="答岸 · AI 考公刷题与错题助手">
 <meta name="twitter:description" content="拍题 AI 讲解（花生十三方法体系）、63,992 题题库、错题本间隔复习、真题模考、申论批改。网页版打开即用。">
 <meta name="twitter:image" content="https://kaogong.zalize.com/lp-assets/og-card.png">
+<meta name="twitter:image:alt" content="答岸 — 考公行测错题助手">
 <!-- 结构化数据：便于搜索引擎与 AI 摘要引用 -->
 <script type="application/ld+json">
 {
@@ -43,6 +56,7 @@
       "@type": "SoftwareApplication",
       "name": "答岸",
       "url": "https://kaogong.zalize.com/",
+      "@id": "https://kaogong.zalize.com/#app",
       "applicationCategory": "EducationalApplication",
       "operatingSystem": "Web（微信小程序内测中）",
       "inLanguage": "zh-CN",
@@ -50,7 +64,29 @@
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
       "description": "面向公务员考试（国考/省考/事业单位）的行测+申论备考工具：拍照或截图识题后由 AI 按花生十三方法体系分步讲解，错题自动归集按间隔复习，含五大模块题库、历年真题整卷、每周模考大赛与申论 AI 批改。",
       "featureList": "拍照/截图识题 AI 讲解;花生十三方法体系（ABRX、截位直除、415 份数等）;错题本 SM-2 间隔复习;63,992 题智能题库;69 套真题整卷;每周模考大赛;申论素材与 AI 批改;学习统计与掌握度图谱",
-      "creator": { "@type": "Organization", "name": "Zalize" }
+      "creator": { "@type": "Organization", "name": "Zalize" },
+      "softwareVersion": "2026.10",
+      "browserRequirements": "需要支持 JavaScript 的现代浏览器（Chrome/Edge/Safari/Firefox 及微信内置浏览器）",
+      "screenshot": [
+        "https://kaogong.zalize.com/lp-assets/home.png",
+        "https://kaogong.zalize.com/lp-assets/practice.png",
+        "https://kaogong.zalize.com/lp-assets/exam.png",
+        "https://kaogong.zalize.com/lp-assets/ask.png",
+        "https://kaogong.zalize.com/lp-assets/book.png",
+        "https://kaogong.zalize.com/lp-assets/contest.png"
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://kaogong.zalize.com/#webpage",
+      "url": "https://kaogong.zalize.com/",
+      "name": "答岸 · 考公错题助手",
+      "isPartOf": { "@id": "https://kaogong.zalize.com/#website" },
+      "about": { "@id": "https://kaogong.zalize.com/#app" },
+      "primaryImageOfPage": "https://kaogong.zalize.com/lp-assets/og-card.png",
+      "description": "考公考编错题助手官网：拍题 AI 讲解（花生十三方法体系）、智能题库、真题整卷、错题本间隔复习、全真模考与申论批改。网页版打开即用。",
+      "inLanguage": "zh-CN",
+      "dateModified": "2026-10-10"
     },
     {
       "@type": "Organization",
@@ -364,7 +400,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     </div>
     <div class="hero-visual">
       <div>
-        <div class="phone"><img src="lp-assets/home.png" alt="答岸刷题首页"></div>
+        <div class="phone"><img src="lp-assets/home.png" alt="答岸刷题首页" fetchpriority="high" width="390" height="844"></div>
         <div class="phone-cap">DAAN · 刷题首页</div>
       </div>
     </div>
@@ -467,15 +503,15 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <p>以下均为当前版本实拍——你看到的就是实际长相。</p>
     </div>
     <div class="strip">
-      <div class="shot"><div class="frame"><img src="lp-assets/home.png" alt="刷题首页"></div><p>刷题首页 · 免注册即练</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/practice.png" alt="作答判分"></div><p>作答判分 · 击败百分位</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/exam.png" alt="真题卷库"></div><p>真题卷库 · 组卷开考</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/contest.png" alt="模考大赛"></div><p>模考大赛 · 全站同卷</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/ask.png" alt="AI 问答"></div><p>AI 问答 · 拍题讲解</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/book.png" alt="错题本"></div><p>错题本 · 待复习队列</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/shenlun.png" alt="申论"></div><p>申论素材 · 热点三段式</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/stats.png" alt="学习统计"></div><p>学习统计 · 难度画像</p></div>
-      <div class="shot"><div class="frame"><img src="lp-assets/calendar.png" alt="学习日历"></div><p>学习日历 · 每日打卡</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/home.png" alt="刷题首页" loading="lazy" decoding="async" width="390" height="844"></div><p>刷题首页 · 免注册即练</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/practice.png" alt="作答判分" loading="lazy" decoding="async" width="390" height="844"></div><p>作答判分 · 击败百分位</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/exam.png" alt="真题卷库" loading="lazy" decoding="async" width="390" height="844"></div><p>真题卷库 · 组卷开考</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/contest.png" alt="模考大赛" loading="lazy" decoding="async" width="390" height="844"></div><p>模考大赛 · 全站同卷</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/ask.png" alt="AI 问答" loading="lazy" decoding="async" width="390" height="844"></div><p>AI 问答 · 拍题讲解</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/book.png" alt="错题本" loading="lazy" decoding="async" width="390" height="844"></div><p>错题本 · 待复习队列</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/shenlun.png" alt="申论" loading="lazy" decoding="async" width="390" height="844"></div><p>申论素材 · 热点三段式</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/stats.png" alt="学习统计" loading="lazy" decoding="async" width="390" height="844"></div><p>学习统计 · 难度画像</p></div>
+      <div class="shot"><div class="frame"><img src="lp-assets/calendar.png" alt="学习日历" loading="lazy" decoding="async" width="390" height="844"></div><p>学习日历 · 每日打卡</p></div>
     </div>
   </div>
 </section>
