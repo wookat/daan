@@ -1,0 +1,15 @@
+{
+  "name": "答岸 · AI 考公刷题与错题助手",
+  "short_name": "答岸",
+  "description": "拍照识题 AI 讲解、错题本间隔复习、五大模块题库与真题模考。",
+  "lang": "zh-CN",
+  "start_url": "/app/",
+  "scope": "/",
+  "display": "browser",
+  "background_color": "#f6f7fb",
+  "theme_color": "#2e5bff",
+  "icons": [
+    { "src": "/lp-assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "/lp-assets/logo-mark.png", "sizes": "466x363", "type": "image/png", "purpose": "any" }
+  ]
+}
