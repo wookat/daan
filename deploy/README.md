@@ -198,6 +198,26 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 - 搜索引擎侧入口：Google Search Console 资源 `sc-domain:kaogong.zalize.com`（DNS 自动验证）；
   Bing/Yandex 走 IndexNow（R89）；百度站长平台待账号。
 
+## LLM 模型通道（backend/app/llm.py，env 驱动，key 只在服务端 .env）
+
+| env 组 | 用途 | 生产当前值（2026-11-14 起） |
+|---|---|---|
+| `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | 主通道；**凡含图片的请求必走此通道**（识题/拍照讲解） | `api.999555999.com` / `grok-4.7`（多模态） |
+| `LLM_TEXT_BASE_URL` / `LLM_TEXT_API_KEY` / `LLM_TEXT_MODEL` | 纯文本请求专用；任一留空即回落主通道对应值 | 已置空 → 与主通道相同 |
+| `LLM_FALLBACK_MODEL` | 主模型 5xx 时同中继换模型重试 | compose 未透传 → 恒为代码默认 `gpt-5.5`（Grok 网关无此模型，5xx 时该次兜底必失败，属已知小冗余） |
+| `LLM_RESCUE_BASE_URL` / `LLM_RESCUE_API_KEY` / `LLM_RESCUE_MODEL` | 独立备用端点：主通道 402/403/429 或持续 5xx 时纯文本回落；`chat_fast` 轻量任务**优先**走它 | 已置空 → 禁用（`_rescue_ok` 要求 base+key 同时非空，且拒绝含图请求） |
+
+- 路由：`llm._endpoint()` 按消息是否含 `image_url` 分流；请求固定打
+  `{BASE}/v1/chat/completions`（**BASE 不带 /v1 后缀**）。
+- `think=False` 附加 `{"thinking":{"type":"disabled"}`（网关不识别则无副作用）；
+  `chat_stream` 消费 OpenAI SSE `data:` 行，`reasoning_content`/`reasoning` 透传为
+  Thinking 进度。
+- 历史：2026-09-19～11-14 生产用 `api.aicdks.com`（`swe-2-max`/`swe-2-high`），
+  该网关上游账号池耗尽（503 `no healthy upstream account` → 429），AI 功能全挂
+  约 6 天（`explain_cache` 自 11-07 零新增、`shenlun/grade` 28×502）。
+  2026-11-14 切换 `api.999555999.com` `grok-4.7`，文/图/流式实测通过；
+  旧配置备份在服务器 `deploy/.env.bak-20261114`。
+
 ## API 文档开关
 生产默认关闭公网 API 文档：compose 注入 `DISABLE_API_DOCS=1`（`/docs`、`/redoc`、
 `/openapi.json` 返回 404）。本地开发（uvicorn 直跑，不设该变量）不受影响。
