@@ -205,7 +205,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | 主通道；**凡含图片的请求必走此通道**（识题/拍照讲解） | `api.999555999.com` / `grok-4.7`（多模态） |
 | `LLM_TEXT_BASE_URL` / `LLM_TEXT_API_KEY` / `LLM_TEXT_MODEL` | 纯文本请求专用；任一留空即回落主通道对应值 | 已置空 → 与主通道相同 |
 | `LLM_FALLBACK_MODEL` | 主模型 5xx 时同中继换模型重试 | compose 未透传 → 恒为代码默认 `gpt-5.5`（Grok 网关无此模型，5xx 时该次兜底必失败，属已知小冗余） |
-| `LLM_RESCUE_BASE_URL` / `LLM_RESCUE_API_KEY` / `LLM_RESCUE_MODEL` | 独立备用端点：主通道 402/403/429 或持续 5xx 时纯文本回落；`chat_fast` 轻量任务**优先**走它 | 已置空 → 禁用（`_rescue_ok` 要求 base+key 同时非空，且拒绝含图请求） |
+| `LLM_RESCUE_BASE_URL` / `LLM_RESCUE_API_KEY` / `LLM_RESCUE_MODEL` | 独立备用端点：主通道 402/403/429 或持续 5xx 时回落；`chat_fast` 轻量任务**优先**走它 | `api.deepseek.com`（DeepSeek 官方直连）/ `deepseek-flash`（V4.1-Flash，支持视觉，图+文均可回落） |
 
 - 路由：`llm._endpoint()` 按消息是否含 `image_url` 分流；请求固定打
   `{BASE}/v1/chat/completions`（**BASE 不带 /v1 后缀**）。
@@ -217,6 +217,11 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
   约 6 天（`explain_cache` 自 11-07 零新增、`shenlun/grade` 28×502）。
   2026-11-14 切换 `api.999555999.com` `grok-4.7`，文/图/流式实测通过；
   旧配置备份在服务器 `deploy/.env.bak-20261114`。
+  2026-11-15 接入 DeepSeek 官方 `deepseek-flash` 为 rescue 通道（异地兜底，
+  备份 `.env.bak-20261115-rescue`），并将 `_rescue_ok` 放开含图请求
+  （deepseek-flash 支持视觉输入）。注意：`chat_fast`/`chat_json(fast=True)`
+  轻量任务自此**优先**走 DeepSeek——抽取/评分类调用提速且不再占 Grok 推理时长，
+  主通道仅在其失败时兜底。
 
 ## API 文档开关
 生产默认关闭公网 API 文档：compose 注入 `DISABLE_API_DOCS=1`（`/docs`、`/redoc`、

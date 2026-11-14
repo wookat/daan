@@ -22,7 +22,8 @@ TEXT_MODEL = os.environ.get("LLM_TEXT_MODEL", "") or MODEL
 # 主模型不可用（5xx）时的后备模型（同一中继）
 FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "gpt-5.5")
 
-# 中继整体不可用（额度耗尽 402/403/429 或持续 5xx）时，纯文本请求的备用端点
+# 中继整体不可用（额度耗尽 402/403/429 或持续 5xx）时的备用端点；
+# 含图请求同样允许回落——要求备用模型支持视觉（当前生产配置 deepseek-flash 支持）
 RESCUE_BASE_URL = os.environ.get("LLM_RESCUE_BASE_URL", "").rstrip("/")
 RESCUE_API_KEY = os.environ.get("LLM_RESCUE_API_KEY", "")
 RESCUE_MODEL = os.environ.get("LLM_RESCUE_MODEL", "deepseek-chat")
@@ -31,7 +32,7 @@ _QUOTA_CODES = (402, 403, 429)
 
 
 def _rescue_ok(messages: list) -> bool:
-    return bool(RESCUE_BASE_URL and RESCUE_API_KEY) and not _has_image(messages)
+    return bool(RESCUE_BASE_URL and RESCUE_API_KEY)
 
 TIMEOUT = httpx.Timeout(float(os.environ.get("LLM_TIMEOUT", "180")), connect=15.0)
 
