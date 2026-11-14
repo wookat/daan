@@ -195,29 +195,9 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
 
 
 async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 2000, think: bool = True) -> str:
-    """轻量任务（分类/抽取）优先走无排队的备用端点，失败时回退主通道。
-    think=False 时反过来：主文本通道关 thinking 优先（备用端点不识别关闭字段、仍会整段推理），
-    主通道 5xx/配额不足仍由 chat() 回落备用端点。"""
-    if not think:
-        return await chat(messages, temperature=temperature, max_tokens=max_tokens, think=False)
-    if _rescue_ok(messages):
-        try:
-            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-                resp = await client.post(
-                    f"{RESCUE_BASE_URL}/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
-                    json={
-                        "model": RESCUE_MODEL,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                    },
-                )
-                resp.raise_for_status()
-                return _content(resp.json(), reject_truncated=True)
-        except (httpx.HTTPError, KeyError, IndexError, ValueError, EmptyReply) as e:
-            log.warning("[llm] rescue %s failed (%s: %s), fallback to %s", RESCUE_MODEL, type(e).__name__, e, TEXT_MODEL)
-    return await chat(messages, temperature=temperature, max_tokens=max_tokens)
+    """轻量任务（分类/抽取）：路由与 chat() 一致——主通道优先，备用端点仅在
+    主通道 402/403/429 或 5xx 时接管（按成本优先调度：当前主通道单价远低于备用端点）。"""
+    return await chat(messages, temperature=temperature, max_tokens=max_tokens, think=think)
 
 
 def image_content(image_b64: str, mime: str, text: str) -> list:
