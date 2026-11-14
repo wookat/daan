@@ -44,7 +44,8 @@
 
 - **新机 `101.42.17.195`**（腾讯云 VM-24-13-opencloudos，**4 vCPU / 3.7 GiB / 60G 盘，
   kaogong 独享**——不再有多产品共用宿主的资源争抢）。
-  SSH：`ubuntu@101.42.17.195`（docker 组，可跑 docker/compose）或 `root@`；
+  SSH：`root@101.42.17.195`（2026-11-15 实测 `ubuntu@` 公钥认证被拒，用 root；
+  文件同步后须 `chown -R ubuntu:ubuntu` 回写应用目录）；
   密钥 `~/.ssh/wookat.pem`（`~/.ssh/config` 的 `Host *` 兜底自动尝试）。
 - 应用目录 `/home/ubuntu/kaogong-assistant`（`deploy_h5.sh` 的 `REMOTE_DIR` 不变）；
   compose 项目目录 `deploy/`，compose 项目名 `deploy`。
