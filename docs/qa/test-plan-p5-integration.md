@@ -2,7 +2,7 @@
 
 对象：https://kaogong.zalize.com（bundle `index-B9zg7FMl.js` 已确认=本地 dist，部署新鲜）。移动窄视口录屏。
 代码依据：stats.vue L4-8/L493（账号卡→/pages/user/login）、login.vue L44-77（注册+mergeAnon toast「本机记录已合并到账号」）、auth.py L163-206（409/401 文案）、practice.vue L45-53/L810-816（金刚区 迷你模考→exam?mini=1、真题卷库→exam/list）、exam.vue L104-119（进度恢复 confirm）、L251-255（submit→report）、list.vue（筛选 chips/导出 PDF/历史成绩）、practice.vue L314（答题后「题目有问题？纠错」）、book.vue L281（错题条目「纠错」）、admin.html L59/L221（纠错处理 tab+角标）、main.py L825-864（question_report 去重+admin patch）。
-Admin 鉴权：/admin 输入管理令牌 = 服务器 deploy env 的 IMPORT_TOKEN（已从 150.109.230.174 容器读取，执行时经 ssh 取值，不写入明文）。
+Admin 鉴权：/admin 输入管理令牌 = 服务器 deploy env 的 ADMIN_TOKEN/IMPORT_TOKEN（生产机 101.42.17.195，容器 deploy-kaogong-1；执行时经 ssh 取值，不写入明文）。
 
 前置基线：记录测前错题本待掌握数、`/api/mistakes` id 基线、浏览器匿名 anonUid。
 

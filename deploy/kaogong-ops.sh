@@ -83,7 +83,7 @@ if [ -f "$ENV_FILE" ] && { [ "$(date +%u)" = "7" ] || [ "${FORCE_R2_VERIFY:-}" =
   fi
   rm -f "$RF"
 fi
-# 1c. 磁盘水位巡检：共享宿主根分区 ≥90% 时告警入日志（DB 快照/日志膨胀早发现）
+# 1c. 磁盘水位巡检：宿主根分区 ≥90% 时告警入日志（DB 快照/日志膨胀早发现；新机独享但盘仅 60G，同样需要）
 PCT=$(df --output=pcent / | tail -1 | tr -dc '0-9')
 if [ "${PCT:-0}" -ge 90 ]; then
   echo "$TS DISK HIGH ${PCT}% used on /" >> "$LOG"
@@ -94,7 +94,7 @@ SNAP=$(docker exec deploy-kaogong-1 sh -c "find /data -maxdepth 1 -type f \( -na
 if [ -n "$SNAP" ]; then
   echo "$TS VOLUME-SNAPSHOT $SNAP (move to r2:$BUCKET_PREFIX/archive/)" >> "$LOG"
 fi
-# 1d. 宿主内存压力巡检：可用内存/交换占用/后端 RSS 每日一行（共享宿主 earlyoom 误杀早发现）
+# 1d. 宿主内存压力巡检：可用内存/交换占用/后端 RSS 每日一行（新机独享 3.7G，同机他家 earlyoom 误杀的老机场景已不存在，记录仍供容量观察）
 MEMLINE=$(free -m | awk '/^Mem:/{printf "mem_avail=%sMiB", $7} /^Swap:/{printf " swap_used=%sMiB", $3}')
 RSS=$(docker exec deploy-kaogong-1 sh -c "awk '/VmRSS/{print \$2}' /proc/1/status" 2>/dev/null || echo "?")
 echo "$TS MEM $MEMLINE uvicorn_rss=${RSS}kB" >> "$LOG"

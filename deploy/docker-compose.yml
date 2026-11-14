@@ -4,7 +4,7 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.runtime
     restart: unless-stopped
-    # 共享宿主 CPU 争抢时的相对调度权重（默认 1024），空闲时无影响
+    # CPU 调度权重（默认 1024）：老机多产品共用时抬权重，现新机独享后无实际竞争，保留无害
     cpu_shares: 4096
     # memswap_limit == mem_limit → cgroup memory.swap.max=0：进程页固定在 RAM，不再被整体换出
     # 后每个请求回页 25s+；mem_reservation → memory.low，宿主回收时优先保住工作集。

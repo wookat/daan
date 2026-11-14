@@ -75,7 +75,7 @@ step "3/6 rsync backend/deploy/dist 到生产"
   backend deploy knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
   --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 
-# caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（生产 VPS→ICN）的副本：
+# caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（新机 101.42.17.195 出口→AMS，老机曾为 ICN）的副本：
 # 保护的是重建窗口内 VPS 自身 cron/脚本的请求；引擎与真人所在机房的 stale-if-error 副本
 # 来自它们各自的历史访问，不受本步影响（取证见 docs/iter/round-3/r395-edge-swr-stale-evidence.md）。
 step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，仅本机所在机房）"
@@ -93,9 +93,8 @@ for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "
 done
 
 step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
-# 4-pre 宿主快照 + 同机其它 compose build / docker prune 让行：同一宿主多产品共用 dockerd/buildkit，别家 build 收尾
-# 会拖慢本家、且别家清理动作可能连带打断本家 build（R430b 首次重建在 exporting layers 被 client 侧 cancel；
-# R467 pip 层 exit 4294967295 的 00:17–00:27Z 与同机磁盘守护 cron 00:15Z 起的 `builder prune --keep-storage 1GB` 重叠，该 cron 高水位时每 15 min 跑一次）。
+# 4-pre 宿主快照 + 让行：老机曾多产品共用 dockerd/buildkit（别家 build/prune 会拖慢或打断本家，R430b/R467）；
+# 新机 101.42.17.195 已独享，host_probe/让行逻辑保留作防御（prunes 恒为 0，快照仍供审计）。
 host_probe() { sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s < "$REPO_DIR/deploy/host_probe.sh" 2>/dev/null || echo "probe-failed"; }
 WAIT_DEADLINE=$((SECONDS + 300))
 while :; do

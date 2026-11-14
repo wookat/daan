@@ -3,6 +3,33 @@ name: testing-kaogong-assistant
 description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend + 花生十三 knowledge base)
 ---
 
+## 当前生产环境（2026-11-14 实测，以此为准，覆盖下方历史轮次笔记里的旧宿主事实）
+
+- **生产机 `101.42.17.195`**（腾讯云 VM-24-13-opencloudos，4C/3.7G/60G，**kaogong 独享**）。
+  SSH：`ssh ubuntu@101.42.17.195`（docker 组）或 `root@`，密钥 `~/.ssh/wookat.pem`。
+  **老机 `150.109.230.174` 已无 kaogong**（compose 拆除、cron 清空、目录残留未生效）——
+  下方笔记里所有「共享宿主 / 同机他家 / recruit-disk-maintenance / earlyoom / load 15–28 /
+  `150.109.230.174` 出口」均为老机事实，新机不适用。
+- 链路：`kaogong.zalize.com`（CF Pages `kaogong-h5-zalize`，静态直出 + Functions 代理）
+  → `kaogong-origin.zalize.com`（CNAME→CF Tunnel `kaogong-origin`）→ 源站 Caddy
+  `/etc/caddy/Caddyfile`（校验 `X-Kg-Edge`、`@nosse` 免压缩、access log JSON）→
+  `127.0.0.1:8300` → 容器 `deploy-kaogong-1`（FastAPI，`deploy-kaogong:latest`）。
+- 目录：应用 `/home/ubuntu/kaogong-assistant`（compose 项目 `deploy/`）；
+  报表 `/home/ubuntu/kaogong-reports/`（容器只读挂 `/reports`）；
+  ops 脚本 `/home/ubuntu/kaogong-ops.sh` + `kaogong-lifecycle-watch.sh`（ubuntu crontab）；
+  R2 凭证 `/home/ubuntu/.env`。
+- 数据：volume `deploy_kaogong-data` → 容器 `/data/data.db`，宿主
+  `/var/lib/docker/volumes/deploy_kaogong-data/_data/data.db`（需 sudo 读）。
+  只读查询：`ssh ubuntu@101.42.17.195 "docker exec deploy-kaogong-1 python -c \"import sqlite3;…\""`，
+  或宿主 `sudo sqlite3 "file:/var/lib/docker/volumes/deploy_kaogong-data/_data/data.db?mode=ro" '…'`。
+- **走查脚本未随迁移**：老机 `~/r5xx|r58x/`、`~/venv-kg`（playwright）、Chrome CDP `:29229`
+  均不存在于新机；下方笔记引用的 `~/rXXX/clean*.py`、`verify*.py` 模板需重新 scp 或改写，
+  清理 uid 前缀纪律（先 ro 盘点→clean→ro 复核、保护表 digest）不变。
+- 备份现状：`kaogong-ops.sh` R2 上传自迁移后 FAILED（`kaogong-ops.log`），
+  `~/kaogong-backups` 不存在——**生产 DB 目前只有卷内单副本**，清理/写操作更要谨慎。
+- 新机出口打 `kaogong.zalize.com` 落 CF **AMS** 机房；`probe-ips.txt` 已在
+  `kaogong-reports/`，新机出口 IP `101.42.17.195` 是否已列入待核。
+
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
