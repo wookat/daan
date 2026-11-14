@@ -25,8 +25,9 @@ description: How to run and test the 答岸 app (FastAPI + uni-app H5 frontend +
 - **走查脚本未随迁移**：老机 `~/r5xx|r58x/`、`~/venv-kg`（playwright）、Chrome CDP `:29229`
   均不存在于新机；下方笔记引用的 `~/rXXX/clean*.py`、`verify*.py` 模板需重新 scp 或改写，
   清理 uid 前缀纪律（先 ro 盘点→clean→ro 复核、保护表 digest）不变。
-- 备份现状：`kaogong-ops.sh` R2 上传自迁移后 FAILED（`kaogong-ops.log`），
-  `~/kaogong-backups` 不存在——**生产 DB 目前只有卷内单副本**，清理/写操作更要谨慎。
+- 备份现状：曾因 `/home/ubuntu` 属主 root 导致本地备份链断裂（09-19～11-13，
+  R2 实际一直可用）；2026-11-14 已 `chown ubuntu:ubuntu /home/ubuntu` 修复并验证
+  `r2 upload ok`。排查备份先看 `ls ~/kaogong-backups` 本地环节，别先怀疑 R2 凭证。
 - 新机出口打 `kaogong.zalize.com` 落 CF **AMS** 机房；`probe-ips.txt` 已在
   `kaogong-reports/`，新机出口 IP `101.42.17.195` 是否已列入待核。
 

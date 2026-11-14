@@ -72,13 +72,16 @@
   `kaogong-ops.sh` 等残留文件仍在但不再生效（未清理）。旧「A 记录直连 + 独立 Caddy 站点块」
   回滚路径已不存在。
 
-### 已知问题（2026-11-14 记录）
+### 已知问题（2026-11-14 更新）
 
-- **R2 每日备份上传失败**：`kaogong-reports/kaogong-ops.log` 自迁移后每日
-  `r2 upload FAILED` + `RESTORE-VERIFY FAILED gunzip-failed`（`/home/ubuntu/.env` 的
-  `R2_*` 凭证疑似未随迁移更新）；`~/kaogong-backups` 目录不存在，本地副本链路未落盘，
-  `/data/daily.db`（≈860 MB）每日累积在数据卷内并触发 VOLUME-SNAPSHOT 告警。
-  数据库当前仅存于 `deploy_kaogong-data` 卷 + R2 内迁移前的历史备份。
+- ~~R2 每日备份上传失败~~ **已于 2026-11-14 修复**。根因：迁移后 `/home/ubuntu`
+  属 root:root 755，ubuntu 用户 `mkdir -p kaogong-backups` Permission denied；
+  脚本仅 `set -u` 无 `set -e`，本地备份链静默断裂 → `docker cp` 无文件 →
+  rclone 无文件可传（报 FAILED）→ `gunzip` 验证失败 → `daily.db` 残留卷内
+  （VOLUME-SNAPSHOT 告警）。R2 凭证本身一直有效。处置：`chown ubuntu:ubuntu
+  /home/ubuntu` + 手动跑一次 `kaogong-ops.sh` 验证：`r2 upload ok`（345 MB）、
+  `RESTORE-VERIFY ok questions=210857`。**教训：该脚本无 set -e，单点失败会
+  级联成「备份全挂」假象，排查先看本地环节再怀疑 R2。**
 - **边缘预热机房变化**：新机出口打 `kaogong.zalize.com` 落 CF **AMS**（欧洲）机房
   （老机是 ICN）；deploy_h5.sh 3b 预热只刷新发起方机房副本，用户主体在亚洲机房的
   副本靠各自历史访问自然建立，预热收益较迁移前下降。
@@ -122,7 +125,7 @@ SSE 端点：`/api/explain/stream`、`/api/interview/answer/stream`、
 
 ## 数据
 SQLite 存于 docker volume `deploy_kaogong-data`（`/data/data.db`，当前 ≈900 MB）。
-备份链路见「运维脚本」——**当前 R2 上传失败中（见已知问题），恢复前视为仅单机单副本**。
+备份链路见「运维脚本」（2026-11-14 已恢复：本地 3 份 + R2 每日 + 周日 R2 回读校验）。
 手工只读查询：`ssh ubuntu@101.42.17.195 "docker exec deploy-kaogong-1 python -c \"import sqlite3; …\""`，
 库文件用 `file:/data/data.db?mode=ro` URI 只读打开。
 
@@ -158,7 +161,8 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
   （`/api/questions?limit=1` 非 200 时 `docker compose up -d` 自愈）→ VOLUME-SNAPSHOT 巡检
   （`/data` 顶层非 `data.db*` 的 >1MB 文件只报不删）→ MEM 记录。
 - R2 凭证：`/home/ubuntu/.env`（`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ENDPOINT`，不入库）。
-  **当前上传失败，见已知问题——改前先核 `kaogong-ops.log` 尾部。**
+  2026-09-19～11-13 曾因 `/home/ubuntu` 属主错误致本地备份链断裂（见已知问题，已修复）；
+  改前仍先核 `kaogong-ops.log` 尾部 + `ls ~/kaogong-backups`。
 - 该脚本不走 `deploy_h5.sh` rsync：改完 `scp deploy/kaogong-ops.sh` 到
   `/home/ubuntu/kaogong-ops.sh`、两端 md5 核对（改前先 `diff` 生产副本）。
 - R2 前缀布局与 30 天清理边界（R434）：`kaogong-sqlite/` 顶层 = 每日 `data-YYYY-MM-DD.db.gz`
