@@ -2,7 +2,7 @@
 生产实测（容器内直连网关，4 题）：现行 chat_fast→rescue kimi-k3 8.6–18.4 s（reasoning_tokens 171–513）；
 主文本通道 deepseek-v4-pro 带 `thinking:{type:disabled}` 2.4–3.3 s、reasoning_tokens 0、模块 4/4 一致；
 kimi-k3 不识别关闭字段（reasoning_tokens 仍 259–420）。故 think=False 时改为主文本通道优先、请求体带关闭字段，
-主通道 5xx/配额不足仍由 chat() 回落备用端点；其余 chat_fast 调用方（追问/申论批改/面试评分）与含图识题不变。"""
+主通道 5xx/配额不足仍由 chat() 回落备用端点；后随成本优先调度，chat_fast 全部调用方统一主通道优先、rescue 仅失败兜底。"""
 import asyncio
 import json
 
@@ -64,12 +64,14 @@ def test_body_no_think_adds_disable_field():
     assert "thinking" not in llm._body("m", [], 0.2, 100)
 
 
-def test_chat_fast_default_still_rescue_first_without_disable(_endpoints, monkeypatch):
+def test_chat_fast_default_goes_main_first_without_disable(_endpoints, monkeypatch):
+    """chat_fast 与 chat 同路由（成本优先：主通道单价远低于备用端点），
+    think=True 默认不带 thinking 关闭字段。"""
     calls: list[tuple[str, dict]] = []
-    monkeypatch.setattr(llm.httpx, "AsyncClient", _client({"http://rescue.test": "ok"}, calls))
+    monkeypatch.setattr(llm.httpx, "AsyncClient", _client({"http://main.test": "ok"}, calls))
     out = asyncio.run(llm.chat_fast([{"role": "user", "content": "追问"}]))
     assert out == "ok"
-    assert [u for u, _ in calls] == ["http://rescue.test/v1/chat/completions"]
+    assert [u for u, _ in calls] == ["http://main.test/v1/chat/completions"]
     assert "thinking" not in calls[0][1]
 
 

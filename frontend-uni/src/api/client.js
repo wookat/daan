@@ -140,13 +140,51 @@ export async function withAuthRetry(fn) {
 }
 
 
+// ---------- 会话与平台维度（产品分析） ----------
+// 平台在构建期注入（h5/mp-weixin/app），埋点与后端平台拆分共用；
+// 会话 id 随每个请求经 X-Kg-Session 上送：30 分钟无活动自动轮换，
+// 用于管理端会话时长/深度聚合。持久化节流 30s 一次（重启续接精度可接受）。
+const TRACK_PLATFORM = (typeof process !== 'undefined' && process.env && process.env.UNI_PLATFORM) || 'h5';
+const SESS_IDLE_MS = 30 * 60 * 1000;
+let _sessId = null;
+let _sessAt = 0;
+let _sessSavedAt = 0;
+
+export function sessionId() {
+  const now = Date.now();
+  if (_sessId && now - _sessAt <= SESS_IDLE_MS) {
+    _sessAt = now;
+    if (now - _sessSavedAt > 30000) {
+      _sessSavedAt = now;
+      try { uni.setStorageSync('kgSess', { id: _sessId, at: now }); } catch (e) { /* 尽力而为 */ }
+    }
+    return _sessId;
+  }
+  if (!_sessId) {
+    try {
+      const s = uni.getStorageSync('kgSess');
+      if (s && s.id && now - (s.at || 0) <= SESS_IDLE_MS) {
+        _sessId = s.id;
+        _sessAt = now;
+        _sessSavedAt = now;
+        return _sessId;
+      }
+    } catch (e) { /* ignore */ }
+  }
+  _sessId = 's' + now.toString(36) + Math.random().toString(36).slice(2, 8);
+  _sessAt = now;
+  _sessSavedAt = now;
+  try { uni.setStorageSync('kgSess', { id: _sessId, at: now }); } catch (e) { /* 尽力而为 */ }
+  return _sessId;
+}
+
 export function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 } = {}) {
   return new Promise((resolve, reject) => {
     uni.request({
       url: BASE_URL + path,
       method,
       data,
-      header: { 'X-Access-Code': getAccessCode(), ...authHeader(), ...header },
+      header: { 'X-Access-Code': getAccessCode(), 'X-Kg-Session': sessionId(), ...authHeader(), ...header },
       timeout,
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);
@@ -324,7 +362,7 @@ export function flushTrackQueue() {
 }
 
 export function trackEvent(event, source, ref) {
-  const data = { uid: anonUid(), event, source: source || null, ref: ref || null };
+  const data = { uid: anonUid(), event, source: source || null, ref: ref || null, platform: TRACK_PLATFORM, session_id: sessionId() };
   return request('/api/track', { method: 'POST', data })
     .then((d) => {
       flushTrackQueue();

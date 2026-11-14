@@ -3,6 +3,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from collections.abc import AsyncIterator
 from typing import Literal, overload
 
@@ -90,35 +91,64 @@ def _endpoint(messages: list) -> tuple[str, str, str]:
 async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000, think: bool = True) -> str:
     """think=False：抽取/分类类任务关闭推理模型的 thinking 阶段（网关不识别该字段时无副作用）。"""
     base, key, model = _endpoint(messages)
+    img = _has_image(messages)
+    channel = "main" if img else "text"
+    used_model = model
     if (not base or not key) and _rescue_ok(messages):
         base, key, model = RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL
+        channel, used_model = "rescue", RESCUE_MODEL
     _require_configured(base, key)
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        for attempt in range(3):
-            resp = await client.post(
-                f"{base}/v1/chat/completions",
-                headers={"Authorization": f"Bearer {key}"},
-                json=_body(model, messages, temperature, max_tokens, think),
-            )
-            if resp.status_code >= 500 and attempt < 2:
-                await asyncio.sleep(2 * (attempt + 1))
-                continue
-            if resp.status_code >= 500 and FALLBACK_MODEL and model != FALLBACK_MODEL:
+    t0 = time.perf_counter()
+    ok = False
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            for attempt in range(3):
                 resp = await client.post(
                     f"{base}/v1/chat/completions",
                     headers={"Authorization": f"Bearer {key}"},
-                    json=_body(FALLBACK_MODEL, messages, temperature, max_tokens, think),
+                    json=_body(model, messages, temperature, max_tokens, think),
                 )
-            if (resp.status_code in _QUOTA_CODES or resp.status_code >= 500) and _rescue_ok(messages):
-                log.warning("[llm] main %s status=%s, fallback to rescue %s", model, resp.status_code, RESCUE_MODEL)
-                resp = await client.post(
-                    f"{RESCUE_BASE_URL}/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
-                    json=_body(RESCUE_MODEL, messages, temperature, max_tokens, think),
-                )
-            resp.raise_for_status()
-            return _content(resp.json())
-    raise RuntimeError("LLM 请求重试耗尽")
+                if resp.status_code >= 500 and attempt < 2:
+                    await asyncio.sleep(2 * (attempt + 1))
+                    continue
+                if resp.status_code >= 500 and FALLBACK_MODEL and model != FALLBACK_MODEL:
+                    channel, used_model = "fallback", FALLBACK_MODEL
+                    resp = await client.post(
+                        f"{base}/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {key}"},
+                        json=_body(FALLBACK_MODEL, messages, temperature, max_tokens, think),
+                    )
+                if (resp.status_code in _QUOTA_CODES or resp.status_code >= 500) and _rescue_ok(messages):
+                    channel, used_model = "rescue", RESCUE_MODEL
+                    log.warning("[llm] main %s status=%s, fallback to rescue %s", model, resp.status_code, RESCUE_MODEL)
+                    resp = await client.post(
+                        f"{RESCUE_BASE_URL}/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
+                        json=_body(RESCUE_MODEL, messages, temperature, max_tokens, think),
+                    )
+                resp.raise_for_status()
+                try:
+                    text = _content(resp.json())
+                except EmptyReply:
+                    # 主通道空回复（推理耗尽 max_tokens 等）按失败处理：
+                    # 还有 rescue 时换端点重试一次，避免直接 502 打到用户
+                    if not (_rescue_ok(messages) and channel != "rescue"):
+                        raise
+                    log.warning("[llm] %s empty reply, fallback to rescue %s", model, RESCUE_MODEL)
+                    channel, used_model = "rescue", RESCUE_MODEL
+                    resp = await client.post(
+                        f"{RESCUE_BASE_URL}/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
+                        json=_body(RESCUE_MODEL, messages, temperature, max_tokens, think),
+                    )
+                    resp.raise_for_status()
+                    text = _content(resp.json())
+                ok = True
+                return text
+        raise RuntimeError("LLM 请求重试耗尽")
+    finally:
+        from .db_analytics import record_llm
+        record_llm(channel, used_model, ok, (time.perf_counter() - t0) * 1000, img, False)
 
 
 class Thinking:
@@ -141,57 +171,65 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
     默认被丢弃，正文首字前调用方拿不到任何信号）。think=False 关闭推理阶段（网关不识别该字段时无副作用，
     此时 with_thinking=True 仍能把实际发生的 reasoning 透出为进度）。"""
     base, key, model = _endpoint(messages)
+    img = _has_image(messages)
     tries = []
     if base and key:
-        tries.append((base, key, model))
+        tries.append(("main" if img else "text", base, key, model))
         if FALLBACK_MODEL and FALLBACK_MODEL != model:
-            tries.append((base, key, FALLBACK_MODEL))
+            tries.append(("fallback", base, key, FALLBACK_MODEL))
     if _rescue_ok(messages):
-        tries.append((RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL))
+        tries.append(("rescue", RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL))
     if not tries:
         _require_configured(base, key)
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        for i, (b, k, m) in enumerate(tries):
-            async with client.stream(
-                "POST",
-                f"{b}/v1/chat/completions",
-                headers={"Authorization": f"Bearer {k}"},
-                json={**_body(m, messages, temperature, max_tokens, think), "stream": True},
-            ) as resp:
-                if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
-                    continue
-                resp.raise_for_status()
-                thinking_chars = content_chars = 0
-                finish = None
-                async for line in resp.aiter_lines():
-                    if not line.startswith("data:"):
+        for i, (ch, b, k, m) in enumerate(tries):
+            t0 = time.perf_counter()
+            attempt_ok = False
+            try:
+                async with client.stream(
+                    "POST",
+                    f"{b}/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {k}"},
+                    json={**_body(m, messages, temperature, max_tokens, think), "stream": True},
+                ) as resp:
+                    if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and i < len(tries) - 1:
                         continue
-                    payload = line[5:].strip()
-                    if payload == "[DONE]":
-                        break
-                    try:
-                        choice = json.loads(payload)["choices"][0]
-                        d = choice["delta"]
-                    except (json.JSONDecodeError, KeyError, IndexError, TypeError):
-                        continue
-                    if not isinstance(d, dict):
-                        continue
-                    finish = choice.get("finish_reason") or finish
-                    delta = d.get("content")
-                    if delta:
-                        content_chars += len(delta)
-                        yield delta
-                    elif with_thinking:
-                        reasoning = d.get("reasoning_content") or d.get("reasoning")
-                        if reasoning:
-                            thinking_chars += len(reasoning)
-                            yield Thinking(thinking_chars)
-                if finish == "length" or not content_chars:
-                    log.warning(
-                        "[llm] stream %s finish=%s content=%d reasoning_chars=%d max_tokens=%d",
-                        m, finish, content_chars, thinking_chars, max_tokens,
-                    )
-            return
+                    resp.raise_for_status()
+                    thinking_chars = content_chars = 0
+                    finish = None
+                    async for line in resp.aiter_lines():
+                        if not line.startswith("data:"):
+                            continue
+                        payload = line[5:].strip()
+                        if payload == "[DONE]":
+                            break
+                        try:
+                            choice = json.loads(payload)["choices"][0]
+                            d = choice["delta"]
+                        except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                            continue
+                        if not isinstance(d, dict):
+                            continue
+                        finish = choice.get("finish_reason") or finish
+                        delta = d.get("content")
+                        if delta:
+                            content_chars += len(delta)
+                            yield delta
+                        elif with_thinking:
+                            reasoning = d.get("reasoning_content") or d.get("reasoning")
+                            if reasoning:
+                                thinking_chars += len(reasoning)
+                                yield Thinking(thinking_chars)
+                    if finish == "length" or not content_chars:
+                        log.warning(
+                            "[llm] stream %s finish=%s content=%d reasoning_chars=%d max_tokens=%d",
+                            m, finish, content_chars, thinking_chars, max_tokens,
+                        )
+                    attempt_ok = True
+                    return
+            finally:
+                from .db_analytics import record_llm
+                record_llm(ch, m, attempt_ok, (time.perf_counter() - t0) * 1000, img, True)
 
 
 async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 2000, think: bool = True) -> str:

@@ -117,7 +117,7 @@ def _mistake_rec(uid: str, q: dict, qid: int, picked: str, correct_ans: str) -> 
     }
 
 
-def _persist_graded(uid: str, code: str, page: int, log_items: list[dict], wrong: list[dict], probe: bool) -> tuple[bool, float | None]:
+def _persist_graded(uid: str, code: str, page: int, log_items: list[dict], wrong: list[dict], probe: bool, session_id: str | None = None) -> tuple[bool, float | None]:
     """同一 uid 对同一卷同一页提交完全相同的作答（重扫同一张卡 / 手动录入重复交卷）只记一次：
     否则 answer_log 翻倍、mistakes.times 递增、已推进的复习进度（review_streak/next_review）被打回。
     整卷模考（code=None，每次 attempt 本身就是独立一次作答）不去重。
@@ -129,11 +129,11 @@ def _persist_graded(uid: str, code: str, page: int, log_items: list[dict], wrong
         return False, dup_at
     for rec in wrong:
         db.save_mistake(rec, probe=probe)
-    db.save_answer_log(uid[:64], log_items, probe=probe)
+    db.save_answer_log(uid[:64], log_items, probe=probe, session_id=session_id)
     return True, None
 
 
-def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None, probe: bool = False) -> dict:
+def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, int] | None = None, probe: bool = False, session_id: str | None = None) -> dict:
     """picks: {题号(从1开始): 'A'}；secs: {题号: 用时秒}；与扫描答题卡同一套判分/落库逻辑。"""
     qids = paper["question_ids"]
     questions = {q["id"]: q for q in db.questions_by_ids(qids)}
@@ -172,7 +172,7 @@ def _judge_paper(uid: str, paper: dict, picks: dict[int, str], secs: dict[int, i
             )
             if not is_correct:
                 wrong.append(_mistake_rec(uid, q, qid, picked, correct_ans))
-    saved, dup_at = _persist_graded(uid, paper["code"], 0, log_items, wrong, probe)
+    saved, dup_at = _persist_graded(uid, paper["code"], 0, log_items, wrong, probe, session_id)
     answered = [r for r in results if r["status"] == "ok"]
     return {
         "code": paper["code"],
@@ -203,7 +203,8 @@ def api_paper_answers(body: dict, request: Request):
             continue
     if not picks:
         raise HTTPException(400, "没有已选择的答案")
-    return _judge_paper(str(body.get("uid") or ""), paper, picks, probe=auth.probe_request(request))
+    return _judge_paper(str(body.get("uid") or ""), paper, picks, probe=auth.probe_request(request),
+                        session_id=(request.headers.get("x-kg-session") or "")[:48] or None)
 
 
 @router.post("/api/scan_sheet")
@@ -261,7 +262,8 @@ async def api_scan_sheet(request: Request, uid: str = Form(""), image: UploadFil
             if not is_correct:
                 wrong.append(_mistake_rec(uid, q, qid, picked, correct_ans))
     saved, dup_at = await run_in_threadpool(
-        _persist_graded, uid, rec["code"], page, log_items, wrong, auth.probe_request(request)
+        _persist_graded, uid, rec["code"], page, log_items, wrong, auth.probe_request(request),
+        (request.headers.get("x-kg-session") or "")[:48] or None,
     )
     answered = [r for r in results if r["status"] == "ok"]
     return {
@@ -521,7 +523,8 @@ def api_exam_submit(body: dict, request: Request):
     qids = attempt.get("question_ids") or db.exam_active_qids(paper["question_ids"])
     marks = _clean_marks(body.get("marks"), len(qids))
     judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": qids}, picks, secs,
-                          probe=auth.probe_request(request))
+                          probe=auth.probe_request(request),
+                          session_id=(request.headers.get("x-kg-session") or "")[:48] or None)
     per_module: dict = {}
     for r in judged["items"]:
         m = r.get("module") or "other"

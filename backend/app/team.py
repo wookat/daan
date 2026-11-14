@@ -81,8 +81,13 @@ def init_team_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_event ON growth_events(event, created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_ct ON growth_events(created_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ge_uid ON growth_events(uid, created_at)")
     # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段）；旧行 NULL=未知
     db.add_column_if_missing(conn, "growth_events", "probe", "INTEGER")
+    # 产品分析：会话 id（前端 30min 无活动轮换）与平台（h5/mp-weixin/app）
+    db.add_column_if_missing(conn, "growth_events", "session_id", "TEXT")
+    db.add_column_if_missing(conn, "growth_events", "platform", "TEXT")
     conn.commit()
     conn.close()
 
@@ -522,7 +527,8 @@ def api_share_answer(sid: str, body: dict, request: Request):
         "secs": secs,
         "picked": picked,
         "source": "share",
-    }], probe=probe_request(request))
+    }], probe=probe_request(request),
+        session_id=(request.headers.get("x-kg-session") or "")[:48] or None)
     conn2 = db.get_conn()
     db._ensure_answer_log(conn2)
     q_stats = _question_stats(conn2, s["question_id"])
@@ -574,12 +580,12 @@ def api_track(body: dict, request: Request):
         "review_similar_auto", "review_similar_click", "review_reason_tag", "review_resume_click", "home_review_resume_click", "share_poster",
         "book_go_paper", "book_redo_paper", "book_redo_sel", "practice_quit_keep", "practice_quit_end",
         "book_scan_jump", "manual_entry_open", "manual_entry_save", "practice_stay_here",
-        "practice_resume_cont", "practice_resume_drop",
+        "practice_resume_cont", "practice_resume_drop", "lp_view",
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
     rate_limit(f"track:{uid or client_ip(request)}", 60, 300)
-    ref = str(body.get("ref") or "")[:200 if event == "slow_load" else 32]
+    ref = str(body.get("ref") or "")[:200 if event in {"slow_load", "lp_view"} else 32]
     if event == "slow_load":
         # 慢载事件服务端补 UA：旧 bundle 客户端不会自报，只有入库侧追加才能全量归因
         ua = " ".join((request.headers.get("user-agent") or "").split())[:80]
@@ -603,9 +609,12 @@ def api_track(body: dict, request: Request):
         ago_ms = 0
     conn = db.get_conn()
     conn.execute(
-        "INSERT INTO growth_events (uid, event, source, ref, created_at, probe) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO growth_events (uid, event, source, ref, created_at, probe, session_id, platform) "
+        "VALUES (?,?,?,?,?,?,?,?)",
         (uid, event, str(body.get("source") or "")[:16] or None,
-         ref or None, time.time() - ago_ms / 1000, 1 if probe_request(request) else 0),
+         ref or None, time.time() - ago_ms / 1000, 1 if probe_request(request) else 0,
+         str(body.get("session_id") or request.headers.get("x-kg-session") or "")[:48] or None,
+         str(body.get("platform") or "")[:16] or None),
     )
     conn.commit()
     conn.close()

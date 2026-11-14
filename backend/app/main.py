@@ -21,6 +21,7 @@ from . import (
     ai_api,
     auth,
     db,
+    db_analytics,
     exam_api,
     insights,
     interview,
@@ -323,6 +324,7 @@ migrate.run_migrations()
 mock_event.init_mock_event_db()
 report.init_report_db()
 team.init_team_db()
+db_analytics.init_analytics_db()
 
 
 _HOT_UID_TABLES = (

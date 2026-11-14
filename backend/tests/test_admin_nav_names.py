@@ -25,7 +25,7 @@ def test_nav_links_title_matches_txt():
     html = _read("index.html")
     txts = dict(NAV_RE.findall(html))
     titles = dict(TITLE_RE.findall(html))
-    assert len(txts) == 12, f"侧栏导航链接数变化: {sorted(txts)}"
+    assert len(txts) == 13, f"侧栏导航链接数变化: {sorted(txts)}"
     for page, txt in txts.items():
         assert titles.get(page), f"{page} 缺 title tooltip"
         assert titles[page] == txt, f"{page} title 与 .txt 文案漂移: {titles[page]!r} != {txt!r}"

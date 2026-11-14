@@ -6,7 +6,7 @@ import httpx
 from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import Response
 
-from . import db, llm, ops_status, similarity, taxonomy
+from . import db, db_analytics, llm, ops_status, similarity, taxonomy
 from .deps import ACCESS_CODE, IMPORT_TOKEN, check_admin, clamp_limit
 
 router = APIRouter()
@@ -349,3 +349,57 @@ def api_admin_toggle_announcement(aid: int, body: dict, x_admin_token: str | Non
     if not db.admin_set_announcement(aid, bool(body.get("active"))):
         raise HTTPException(404, "公告不存在")
     return {"ok": True}
+
+
+# ---------- 产品数据分析 ----------
+# 聚合层 db_analytics；重查询走 db._cached（300s stale-while-revalidate），
+# 与 dashboard/governance 同一缓存口径。活跃=answer_log∪growth_events 真实流量。
+
+
+def _analytics_cached(response: Response, key: str, fn):
+    data, state = db._cached_state(key, 300, fn)
+    response.headers["X-Kg-Cache"] = state
+    return data
+
+
+@router.get("/api/admin/analytics/usage")
+def api_admin_analytics_usage(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return _analytics_cached(response, "an_usage", lambda: db_analytics.usage_overview(days))
+
+
+@router.get("/api/admin/analytics/retention")
+def api_admin_analytics_retention(response: Response, days: int = 35, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return _analytics_cached(response, "an_retention", lambda: db_analytics.retention(days))
+
+
+@router.get("/api/admin/analytics/habits")
+def api_admin_analytics_habits(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return _analytics_cached(response, "an_habits", lambda: db_analytics.habits(days))
+
+
+@router.get("/api/admin/analytics/funnel")
+def api_admin_analytics_funnel(response: Response, chain: str = "", days: int = 30, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    steps = [s.strip() for s in chain.split(",") if s.strip()] or list(db_analytics.FUNNEL_PRESETS["分享裂变"])
+    return _analytics_cached(response, f"an_funnel:{','.join(steps)}:{days}", lambda: db_analytics.funnel(steps, days))
+
+
+@router.get("/api/admin/analytics/team")
+def api_admin_analytics_team(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return _analytics_cached(response, "an_team", lambda: db_analytics.team_overview(days))
+
+
+@router.get("/api/admin/analytics/ai")
+def api_admin_analytics_ai(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return _analytics_cached(response, "an_ai", lambda: db_analytics.ai_quality(days))
+
+
+@router.get("/api/admin/analytics/exam")
+def api_admin_analytics_exam(response: Response, days: int = 90, x_admin_token: str | None = Header(None)):
+    check_admin(x_admin_token)
+    return _analytics_cached(response, "an_exam", lambda: db_analytics.exam_overview(days))

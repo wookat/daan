@@ -62,6 +62,8 @@ def _ensure_answer_log(conn):
     db.add_column_if_missing(conn, "answer_log", "source", "TEXT")
     # 探针流量标记（1=来自 KG_PROBE_CIDRS 网段，运营看板剔除）；旧行 NULL=未知
     db.add_column_if_missing(conn, "answer_log", "probe", "INTEGER")
+    # 产品分析：会话 id（X-Kg-Session，前端 30min 无活动轮换）；旧行 NULL
+    db.add_column_if_missing(conn, "answer_log", "session_id", "TEXT")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_al_qid ON answer_log(question_id)")
     # uid+question_id 过滤热路径（alembic 0002 同款，幂等兜底：被守卫跳过的库也能拿到）
     conn.execute(
@@ -70,7 +72,7 @@ def _ensure_answer_log(conn):
     )
 
 
-def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> dict:
+def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False, session_id: str | None = None) -> dict:
     """落 answer_log；答对且命中本 uid 未掌握错题的条目同步推进该错题复习计划（与 /api/review 同一套 SRS）。
     probe=True 标记为探针流量（运营看板剔除，用户自身的统计/复习不受影响）。
     条目 t（离线补传时的客户端作答时刻）在合理窗口内时作为 created_at。"""
@@ -97,7 +99,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
                 sub = qrow["submodule"] or sub
         sub = db.merge_submodule(module, sub)
         conn.execute(
-            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source, probe) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source, probe, session_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
                 uid,
                 db._client_ts(it.get("t"), now),
@@ -109,6 +111,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
                 db.normalize_answer(it.get("picked"))[:8] or None,
                 (str(it.get("source") or "")[:32] or None),
                 1 if probe else 0,
+                (session_id or "")[:48] or None,
             ),
         )
         n += 1
@@ -126,8 +129,8 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False) -> 
     return {"saved": n, "reviewed": reviewed}
 
 
-def save_answer_log(uid: str, items: list[dict], probe: bool = False) -> int:
-    return save_answer_log_detail(uid, items, probe=probe)["saved"]
+def save_answer_log(uid: str, items: list[dict], probe: bool = False, session_id: str | None = None) -> int:
+    return save_answer_log_detail(uid, items, probe=probe, session_id=session_id)["saved"]
 
 
 def practice_history(uid: str, limit: int = 50) -> list[dict]:

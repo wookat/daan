@@ -694,5 +694,30 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "3114a02fcbf84a80ba7f4258b80a82f9"}'></script>
 <!-- End Cloudflare Web Analytics -->
 
+<script>
+// 落地页访问埋点：与 App 同一 /api/track 通道、同一 anonUid，
+// 用于管理端「官网访问 → 进入 App」转化与入口来源（ref=referrer）统计。
+(function () {
+  try {
+    var uid = localStorage.getItem('anonUid');
+    if (!uid) {
+      uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('anonUid', uid);
+    }
+    var sid = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var data = JSON.stringify({
+      uid: uid, event: 'lp_view', source: 'landing',
+      ref: (document.referrer || '').slice(0, 200) || null,
+      platform: 'h5', session_id: sid
+    });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/track', new Blob([data], { type: 'application/json' }));
+    } else {
+      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: data, keepalive: true }).catch(function () {});
+    }
+  } catch (e) { /* 埋点失败不影响页面 */ }
+})();
+</script>
+
 </body>
 </html>

@@ -9,6 +9,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from . import db, engine, kb, llm, sse
+from .db_analytics import record_llm
 from .deps import cache_key, check_access, friendly_ai_err, rl
 
 router = APIRouter()
@@ -53,6 +54,7 @@ async def api_explain(
         raw_key = cache_key(text, user_answer)
         hit = await run_in_threadpool(db.get_explain_cache, raw_key)
         if hit:
+            record_llm("feat:explain_cache", None, True, 0, False, False)
             return {
                 "module": hit.get("module"),
                 "module_name": kb.MODULES.get(hit.get("module") or "", {}).get("name"),
@@ -70,8 +72,10 @@ async def api_explain(
         raw_key = cache_key(text, ua) if text else None
         cached = await run_in_threadpool(_explain_cached, key, raw_key)
         if cached:
+            record_llm("feat:explain_cache", None, True, 0, bool(image_b64), False)
             explanation = cached["explanation"]
         else:
+            record_llm("feat:explain_gen", None, True, 0, bool(image_b64), False)
             explanation = await engine.explain(extracted, user_answer)
     except Exception as e:
         raise HTTPException(502, f"解析失败：{friendly_ai_err(e)}") from e
@@ -144,6 +148,7 @@ async def api_explain_stream(
                 rk = cache_key(text, user_answer)
                 hit = await run_in_threadpool(db.get_explain_cache, rk)
                 if hit:
+                    record_llm("feat:explain_cache", None, True, 0, False, True)
                     meta0 = {
                         "module": hit.get("module"),
                         "module_name": kb.MODULES.get(hit.get("module") or "", {}).get("name"),
@@ -176,8 +181,10 @@ async def api_explain_stream(
             }
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             if cached:
+                record_llm("feat:explain_cache", None, True, 0, bool(image_b64), True)
                 yield "data: " + json.dumps({"d": cached["explanation"]}, ensure_ascii=False) + "\n\n"
             else:
+                record_llm("feat:explain_gen", None, True, 0, bool(image_b64), True)
                 parts: list[str] = []
                 async for line in sse.relay(
                     engine.explain_stream(extracted, user_answer, with_thinking=True), parts, THINKING_TICK_SEC

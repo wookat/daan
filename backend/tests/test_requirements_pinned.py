@@ -28,7 +28,10 @@ def test_runtime_deps_covered_by_pins():
 
 
 def test_dockerfiles_install_only_from_requirements():
-    for df in [ROOT / "Dockerfile", ROOT / "deploy" / "Dockerfile.runtime"]:
+    # 根 Dockerfile 已随仓库整理删除（d65d9654），只校验仍存在的构建文件
+    dfs = [df for df in [ROOT / "Dockerfile", ROOT / "deploy" / "Dockerfile.runtime"] if df.exists()]
+    assert dfs, "至少应存在一个 Dockerfile"
+    for df in dfs:
         text = df.read_text(encoding="utf-8")
         assert "pip install --no-cache-dir -r backend/requirements.txt" in text, df
         assert "COPY backend/requirements.txt backend/requirements.txt" in text, df
