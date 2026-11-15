@@ -15,6 +15,7 @@ ai_api 命中分支），sqlite 连接 isolation_level=IMMEDIATE 会在持锁竞
 """
 import queue
 import re
+import sqlite3
 import threading
 import time
 from collections import defaultdict
@@ -69,11 +70,17 @@ _WRITER: threading.Thread | None = None
 _LLM_COLS = "INSERT INTO llm_stats (channel, model, ok, ms, img, stream, created_at) VALUES (?,?,?,?,?,?,?)"
 
 
-def _drain_llm_stats() -> int:
-    """把队列中积压的记录批量写入；写线程主体，测试也可直接调用强制落盘。"""
-    conn = db.get_conn()
+def _drain_llm_stats(first: tuple | None = None) -> int:
+    """把队列中积压的记录批量写入；写线程主体，测试也可直接调用强制落盘。
+
+    不走 db.get_conn() 的线程本地缓存：写线程常驻，缓存连接一旦被早期锁态/换文件
+    污染，后续每批都静默失败且永不自愈；每批裸开新连接，失败也止于本批。"""
+    conn = sqlite3.connect(db.DB_PATH, timeout=30, isolation_level="IMMEDIATE")
     n = 0
     try:
+        if first is not None:
+            conn.execute(_LLM_COLS, first)
+            n += 1
         while n < 1000:
             try:
                 rec = _LLM_Q.get_nowait()
@@ -90,9 +97,9 @@ def _drain_llm_stats() -> int:
 
 def _llm_writer() -> None:
     while True:
-        _LLM_Q.get()  # 等第一条，醒后把积压的一批都带走
+        rec = _LLM_Q.get()  # 等第一条醒；唤醒的这条必须一并写入，不能直接丢弃
         try:
-            _drain_llm_stats()
+            _drain_llm_stats(first=rec)
         except Exception:
             pass
 
