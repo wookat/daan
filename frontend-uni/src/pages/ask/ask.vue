@@ -42,8 +42,8 @@
               <view class="ds-h"><l-icon name="camera" :size="18" tone="brand" /><text class="ds-t">上传题目截图</text></view>
               <view class="ds-drop" role="button" @click="openAlbum">
                 <l-icon name="files" :size="30" tone="brand" />
-                <text class="ds-d1">点击选择图片，或拖拽到这里</text>
-                <text class="ds-d2">也可直接 Ctrl+V 粘贴截图</text>
+                <text class="ds-d1">点击选择图片，或拖拽到这里（可多选，最多 4 张）</text>
+                <text class="ds-d2">也可直接 Ctrl+V 粘贴截图，多图按顺序合并识别</text>
               </view>
             </kg-card>
           </view>
@@ -86,7 +86,7 @@
           <!-- 用户消息 -->
           <view class="msg user">
             <view class="bubble ub">
-              <image v-if="r.userImage" :src="r.userImage" mode="widthFix" class="ub-img" />
+              <image v-for="(u, ui) in r.userImages || (r.userImage ? [r.userImage] : [])" :key="ui" :src="u" mode="widthFix" class="ub-img" />
               <text v-if="r.userText" class="ub-t">{{ r.userText }}</text>
               <text v-if="r.user_answer" class="ub-ans">我选：{{ r.user_answer }}</text>
             </view>
@@ -175,7 +175,7 @@
         <view v-if="loading" class="msgs">
           <view class="msg user">
             <view class="bubble ub">
-              <image v-if="stagedImage" :src="stagedImage" mode="widthFix" class="ub-img" />
+              <image v-for="(u, ui) in stagedImages" :key="ui" :src="u" mode="widthFix" class="ub-img" />
               <text v-if="stagedText" class="ub-t">{{ stagedText }}</text>
             </view>
           </view>
@@ -230,9 +230,20 @@
       <template #footer><kg-button variant="primary" size="lg" block :disabled="loading" @click="submitText">用花生十三方法讲解</kg-button></template>
     </kg-sheet>
 
-    <!-- 图片确认 sheet -->
-    <kg-sheet :model-value="!!imagePath" title="确认题目图片" @update:model-value="(v) => { if (!v) clearImage(); }">
-      <image :src="imagePath" mode="widthFix" class="preview" />
+    <!-- 图片确认 sheet（多图：拍照/相册/粘贴可叠加，最多 4 张，按顺序合并识别为一道题） -->
+    <kg-sheet :model-value="!!imagePaths.length" :title="'确认题目图片（' + imagePaths.length + '/4）'" @update:model-value="(v) => { if (!v) clearImage(); }">
+      <view class="pgrid">
+        <view v-for="(p, pi) in imagePaths" :key="pi" class="pcell">
+          <image :src="p" mode="aspectFill" class="pthumb" @click="previewImg(pi)" />
+          <view class="pdel" role="button" :aria-label="'移除第 ' + (pi + 1) + ' 张'" @click="removeImage(pi)"><l-icon name="x" :size="14" tone="ink-2" /></view>
+          <text class="pno num">{{ pi + 1 }}</text>
+        </view>
+        <view v-if="imagePaths.length < 4" class="pcell padd" role="button" aria-label="再加一张" @click="addMoreImage">
+          <l-icon name="plus" :size="24" tone="ink-3" />
+          <text class="padd-t">再加一张</text>
+        </view>
+      </view>
+      <text v-if="imagePaths.length > 1" class="phint">多图将按顺序合并识别为同一道题（适合题目跨截图/含材料大图）</text>
       <text class="label">你选的答案（可选，填了会帮你分析错因）</text>
       <view class="ans-chips">
         <view v-for="o in ['A', 'B', 'C', 'D']" :key="o" class="ans-chip" :class="{ on: uanswer === o }" role="button" @click="uanswer = uanswer === o ? '' : o">{{ o }}</view>
@@ -258,7 +269,7 @@
 <script>
 import { fmtSlashMD } from '../../fmt.js';
 import { md } from '../../md.js';
-import { request, uploadExplain, streamExplain, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
+import { request, uploadExplain, streamExplain, filePathToB64, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
 import { failBannerText } from '../../api-policy.js';
 import { isNativeApp, pickImageNative } from '../../native.js';
 import { setBookBadge } from '../../tabbar-badge.js';
@@ -268,8 +279,8 @@ import { askQid, askViewUrl, thinkingSecs, thinkingLabel } from '../../ask-link.
 export default {
   data() {
     return {
-      imagePath: '',
-      imageFile: null,
+      imagePaths: [],
+      imageFiles: [],
       qtext: '',
       uanswer: '',
       fuText: '',
@@ -277,7 +288,7 @@ export default {
       historyOpen: false,
       loading: false,
       loadingText: '',
-      stagedImage: '',
+      stagedImages: [],
       stagedText: '',
       error: '',
       results: [],
@@ -336,8 +347,8 @@ export default {
       uni.removeStorageSync('redoAnswer');
       this.pendingQid = askQid(uni.getStorageSync('redoQid'));
       uni.removeStorageSync('redoQid');
-      this.imagePath = '';
-      this.imageFile = null;
+      this.imagePaths = [];
+      this.imageFiles = [];
       this.textOpen = true;
       uni.removeStorageSync('redoQuestion');
       uni.showToast({ title: '题目已填入，先自己做一遍再点讲解', icon: 'none', duration: 2500 });
@@ -382,26 +393,80 @@ export default {
     handlePaste(e) {
       if (this.loading || window.innerWidth < 1024) return;
       const items = (e.clipboardData && e.clipboardData.items) || [];
+      let took = false;
       for (const it of items) {
         if (it.kind === 'file' && it.type.startsWith('image/')) {
           const f = it.getAsFile();
           if (f) {
-            this.imageFile = f;
-            this.imagePath = URL.createObjectURL(f);
-            e.preventDefault();
+            this.pushImage(null, f);
+            took = true;
           }
-          return;
         }
       }
+      if (took) e.preventDefault();
     },
     onDrop(e) {
-      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      if (f && f.type.startsWith('image/')) {
-        this.imageFile = f;
-        this.imagePath = URL.createObjectURL(f);
+      const fs = (e.dataTransfer && e.dataTransfer.files) || [];
+      for (const f of fs) {
+        if (f && f.type.startsWith('image/')) this.pushImage(null, f);
       }
     },
     // #endif
+    // 手机原图 5-12MB 是识图超时主因：H5 上传前压到 1600px 内（体积降 ~90%，识别准确率不变）
+    // #ifdef H5
+    compressImageFile(f) {
+      return new Promise((resolve) => {
+        if (!f || f.size < 400 * 1024) return resolve(f);
+        const img = new Image();
+        img.onload = () => {
+          const max = 1600;
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          if (scale >= 1 && f.size < 1024 * 1024) {
+            URL.revokeObjectURL(img.src);
+            return resolve(f);
+          }
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(img.width * scale);
+          cv.height = Math.round(img.height * scale);
+          cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+          URL.revokeObjectURL(img.src);
+          cv.toBlob(
+            (b) => resolve(b ? new File([b], (f.name || 'photo').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' }) : f),
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = () => resolve(f);
+        img.src = URL.createObjectURL(f);
+      });
+    },
+    // #endif
+    // 统一入列：path（小程序临时路径）或 File（H5），去重+上限 4 张
+    pushImage(path, file) {
+      if (this.imagePaths.length >= 4) {
+        uni.showToast({ title: '最多上传 4 张图片', icon: 'none' });
+        return;
+      }
+      const add = (p, f) => {
+        this.imagePaths = this.imagePaths.concat([p]);
+        this.imageFiles = this.imageFiles.concat([f]);
+      };
+      // #ifdef H5
+      if (file) {
+        this.compressImageFile(file).then((cf) => {
+          const url = cf === file ? URL.createObjectURL(file) : URL.createObjectURL(cf);
+          add(url, cf);
+        });
+        return;
+      }
+      // #endif
+      if (path) add(path, file || null);
+    },
+    removeImage(i) {
+      this.imagePaths = this.imagePaths.filter((_, x) => x !== i);
+      this.imageFiles = this.imageFiles.filter((_, x) => x !== i);
+      if (!this.imagePaths.length) this.clearImage();
+    },
     stripStop(s) {
       return (s || '').replace(/<\|[a-z_]+\|>/gi, '').trimEnd();
     },
@@ -463,8 +528,27 @@ export default {
       } catch (e) { /* 接口失败时忽略 */ }
     },
     clearImage() {
-      this.imagePath = '';
-      this.imageFile = null;
+      this.imagePaths = [];
+      this.imageFiles = [];
+    },
+    previewImg(i) {
+      if (!this.imagePaths.length) return;
+      uni.previewImage({ urls: this.imagePaths, current: i });
+    },
+    // 「再加一张」：优先相机（拍下一页），已有图时进相册多选；H5 用文件多选
+    addMoreImage() {
+      // #ifdef H5
+      this.h5Pick(false);
+      return;
+      // #endif
+      // eslint-disable-next-line no-unreachable
+      uni.showActionSheet({
+        itemList: ['拍照', '从相册选择'],
+        success: (r) => {
+          if (r.tapIndex === 0) this.openCamera();
+          else if (r.tapIndex === 1) this.openAlbum();
+        },
+      });
     },
     goBook() {
       uni.switchTab({ url: '/pages/book/book' });
@@ -481,19 +565,17 @@ export default {
       // #ifdef H5
       if (isNativeApp()) {
         pickImageNative()
-          .then(({ path, file }) => {
-            this.imagePath = path;
-            this.imageFile = file;
-          })
+          .then(({ path, file }) => this.pushImage(path, file))
           .catch(() => {});
         return;
       }
       // #endif
       uni.chooseImage({
-        count: 1,
+        count: 4 - this.imagePaths.length || 1,
         success: (res) => {
-          this.imagePath = res.tempFilePaths[0];
-          this.imageFile = (res.tempFiles && res.tempFiles[0]) || null;
+          const paths = res.tempFilePaths || [];
+          const files = res.tempFiles || [];
+          paths.forEach((p, i) => this.pushImage(p, files[i] || null));
         },
       });
     },
@@ -509,11 +591,12 @@ export default {
       // #endif
       // eslint-disable-next-line no-unreachable
       uni.chooseImage({
-        count: 1,
+        count: 4 - this.imagePaths.length || 1,
         sourceType: ['camera'],
         success: (res) => {
-          this.imagePath = res.tempFilePaths[0];
-          this.imageFile = (res.tempFiles && res.tempFiles[0]) || null;
+          const paths = res.tempFilePaths || [];
+          const files = res.tempFiles || [];
+          paths.forEach((p, i) => this.pushImage(p, files[i] || null));
         },
       });
     },
@@ -528,11 +611,12 @@ export default {
       // #endif
       // eslint-disable-next-line no-unreachable
       uni.chooseImage({
-        count: 1,
+        count: 4 - this.imagePaths.length || 1,
         sourceType: ['album'],
         success: (res) => {
-          this.imagePath = res.tempFilePaths[0];
-          this.imageFile = (res.tempFiles && res.tempFiles[0]) || null;
+          const paths = res.tempFilePaths || [];
+          const files = res.tempFiles || [];
+          paths.forEach((p, i) => this.pushImage(p, files[i] || null));
         },
       });
     },
@@ -543,15 +627,13 @@ export default {
       const inp = document.createElement('input');
       inp.type = 'file';
       inp.accept = 'image/*';
+      if (!camera) inp.multiple = true;
       if (camera) inp.setAttribute('capture', 'environment');
       inp.id = 'ask-cap-input';
       inp.style.display = 'none';
       inp.onchange = () => {
-        const f = inp.files && inp.files[0];
-        if (f) {
-          this.imageFile = f;
-          this.imagePath = URL.createObjectURL(f);
-        }
+        const fs = Array.from(inp.files || []);
+        fs.slice(0, 4 - this.imagePaths.length).forEach((f) => this.pushImage(null, f));
         inp.remove();
       };
       document.body.appendChild(inp);
@@ -592,17 +674,19 @@ export default {
     },
     async submitImage() {
       if (!(await this.ensureAccess())) return;
-      const img = this.imagePath;
-      const file = this.imageFile;
-      this.imagePath = '';
-      this.imageFile = null;
-      this.doExplain(img, file, '');
+      const imgs = this.imagePaths.slice();
+      const files = this.imageFiles.slice();
+      this.imagePaths = [];
+      this.imageFiles = [];
+      this.doExplain(imgs, files, '');
     },
-    async doExplain(img, imgFile, txt) {
-      if (!img && !txt) return;
+    async doExplain(imgs, imgFiles, txt) {
+      imgs = Array.isArray(imgs) ? imgs : imgs ? [imgs] : [];
+      imgFiles = Array.isArray(imgFiles) ? imgFiles : imgFiles ? [imgFiles] : [];
+      if (!imgs.length && !txt) return;
       this.loading = true;
       this.error = '';
-      this.stagedImage = img || '';
+      this.stagedImages = imgs;
       this.stagedText = txt || '';
       const uans = this.uanswer.trim();
       const qid = txt ? this.pendingQid || 0 : 0;
@@ -616,7 +700,7 @@ export default {
           module_name: '',
           question_type: '',
           html: '',
-          userImage: img || '',
+          userImages: imgs,
           userText: txt || '',
           user_answer: uans,
           saved: false,
@@ -628,15 +712,21 @@ export default {
           streaming: true,
           thinkSecs: 0,
         };
-        // H5 图片重做回填时无 File 对象，退回非流式
+        // H5 图片重做回填时无 File 对象（或部分缺失），退回非流式
         // #ifdef H5
-        if (img && !imgFile) {
+        if (imgs.length && imgFiles.filter(Boolean).length !== imgs.length) {
+          const extras = [];
+          for (const p of imgs.slice(1)) {
+            const it = await filePathToB64(p);
+            if (it && it.data) extras.push(it);
+          }
           d = await uploadExplain({
-            filePath: img,
+            filePath: imgs[0],
+            imagesB64: extras,
             text: txt || null,
             userAnswer: uans || null,
           });
-          const nr = { ...rec, ...d, userImage: img, user_answer: uans, ansCard: null, streaming: false };
+          const nr = { ...rec, ...d, userImages: imgs, user_answer: uans, ansCard: null, streaming: false };
           this.applyExplain(nr, d.explanation);
           this.results.unshift(nr);
           this.uanswer = '';
@@ -651,13 +741,13 @@ export default {
         let inserted = false;
         let live = rec; // 插入后改用响应式代理，保证增量更新触发渲染
         d = await streamExplain({
-          file: imgFile,
-          filePath: img || null,
+          files: imgFiles,
+          filePaths: imgs,
           text: txt || null,
           userAnswer: uans || null,
           questionId: qid,
           onMeta: (m) => {
-            Object.assign(rec, m, { qid: askQid(m.qid) || qid, ansCard: null, userImage: img || '', userText: txt || '', user_answer: uans });
+            Object.assign(rec, m, { qid: askQid(m.qid) || qid, ansCard: null, userImages: imgs, userText: txt || '', user_answer: uans });
             this.results.unshift(rec);
             live = this.results[0];
             inserted = true;
@@ -672,7 +762,7 @@ export default {
           this.results.unshift(rec);
           live = this.results[0];
         }
-        Object.assign(live, d, { streaming: false, userImage: img || '', userText: txt || '', user_answer: uans });
+        Object.assign(live, d, { streaming: false, userImages: imgs, userText: txt || '', user_answer: uans });
         this.applyExplain(live, d.explanation);
         this.uanswer = '';
         this.qtext = '';
@@ -718,7 +808,7 @@ export default {
         question_type: seed.qt || '',
         question_text: seed.q,
         html: '',
-        userImage: '',
+        userImages: [],
         userText: (seed.q || '').slice(0, 200),
         user_answer: '',
         explanation: '',
@@ -955,7 +1045,7 @@ export default {
           simSecs: 0,
           fuLoading: false,
           streaming: false,
-          userImage: '',
+          userImages: [],
           fu: (r.fu || []).map((m) => ({ ...m, html: m.role === 'ai' ? md(m.content) : '' })),
         };
         this.applyExplain(nr, r.explanation);
@@ -1055,6 +1145,16 @@ export default {
 .wenze-chip:hover { border-color: var(--brand); color: var(--brand-text); }
 .ta { width: 100%; min-height: 96px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-body); box-sizing: border-box; background: var(--fill); color: var(--ink); }
 .preview { width: 100%; border-radius: var(--r-sm); margin-top: var(--sp-4); }
+
+/* 多图确认网格 */
+.pgrid { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-4); }
+.pcell { position: relative; width: calc(50% - var(--sp-4)); aspect-ratio: 4 / 3; border-radius: var(--r-sm); overflow: hidden; background: var(--fill); }
+.pthumb { width: 100%; height: 100%; display: block; }
+.pdel { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: var(--r-full); background: rgba(255,255,255,.92); display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
+.pno { position: absolute; left: 4px; bottom: 4px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-full); background: rgba(0,0,0,.55); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.padd { border: 2px dashed var(--line-strong); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-4); cursor: pointer; }
+.padd-t { font-size: var(--fs-caption); color: var(--ink-3); }
+.phint { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
 
 /* 底部固定输入条（H5 Tab 页需抬到 TabBar 之上） */
 .askbar { gap: var(--sp-8); }

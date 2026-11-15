@@ -239,17 +239,15 @@
           </view>
         </kg-card>
 
-        <!-- 连签摘要（≥1024 辅栏，窄屏在流末） -->
-        <kg-card clickable chevron class="streak" @click="goCalendar">
+        <!-- 练习历史（≥1024 辅栏）：对题复盘与错题回顾的直达入口 -->
+        <kg-card clickable chevron class="streak" @click="goHistory">
           <view class="modrow-in">
-            <kg-streak-badges :days="streakShown" />
+            <view class="modrow-ico"><l-icon name="clock" :size="24" tone="brand" /></view>
             <view class="grow">
-              <text class="modrow-t">连续打卡</text>
-              <text v-if="nextMilestone" class="modrow-s">再打卡 {{ nextMilestone.left }} 天解锁「{{ nextMilestone.days }} 天」徽章</text>
-              <text v-else class="modrow-s">已解锁全部打卡徽章，太强了！</text>
+              <text class="modrow-t">练习历史</text>
+              <text class="modrow-s">做过的题逐组回看 · 对题错题都能复盘</text>
             </view>
           </view>
-          <kg-progress v-if="nextMilestone" :value="nextMilestone.pct" :thickness="4" class="streak-bar" aria-label="距下一个徽章" />
         </kg-card>
       </template>
     </kg-two-col>
@@ -499,14 +497,6 @@ export default {
       if (this.badgeInfo && this.badgeInfo.streak != null) return this.badgeInfo.streak;
       return this.dailyStreak;
     },
-    nextMilestone() {
-      const ms = [3, 7, 14, 30, 60, 100];
-      const s = this.streakShown;
-      const next = ms.find((m) => m > s);
-      if (!next) return null;
-      const prev = ms.filter((m) => m <= s).pop() || 0;
-      return { days: next, left: next - s, pct: Math.round(((s - prev) / (next - prev)) * 100) };
-    },
   },
   onLoad() {
     this._onAuth = () => {
@@ -599,8 +589,9 @@ export default {
     openPoster() {
       uni.navigateTo({ url: '/pkgA/social/poster' });
     },
-    goCalendar() {
-      uni.navigateTo({ url: '/pages/stats/calendar' });
+    goHistory() {
+      trackEvent('home_entry_click', 'practice_history');
+      uni.navigateTo({ url: '/pkgA/stats/practice-history' });
     },
     modName(m) {
       return modLabel(m) || m || '未知';

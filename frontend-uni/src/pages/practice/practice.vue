@@ -20,10 +20,11 @@
     <!-- 作答（T3） -->
     <kg-two-col v-if="session && cur">
       <template #main>
-        <view v-if="beiMode || timedMode || examMode" class="modechips">
+        <view v-if="(beiMode || timedMode || examMode || deferMode) && !resultSent" class="modechips">
           <kg-tag v-if="beiMode" tone="brand">背题模式</kg-tag>
           <kg-tag v-if="timedMode && !beiMode && !examMode" tone="info">限时训练</kg-tag>
           <kg-tag v-if="examMode" tone="bad">模考态 · 交卷统一判分</kg-tag>
+          <kg-tag v-if="deferMode && !examMode" tone="bad">整组作答 · 提交后统一看解析</kg-tag>
         </view>
         <view class="topbar">
           <view class="top-mod" role="button" aria-label="打开答题卡" @click="cardOpen = true">
@@ -33,8 +34,8 @@
           </view>
           <view class="hstats">
             <text class="timer num" :class="{ examleft: examMode, overtime: timedMode && !examMode && qsecs > targetSecs }">{{ examMode ? fmtSecs(examLeft) : timedMode ? (qsecs > targetSecs ? '超时+' + fmtSecs(qsecs - targetSecs) : fmtSecs(targetSecs - qsecs)) : fmtSecs(qsecs) }}</text>
-            <text v-if="!examMode" class="cnt okc num">✓{{ right }}</text>
-            <text v-if="!examMode" class="cnt badc num">✗{{ wrongCount }}</text>
+            <text v-if="(!examMode && !deferMode) || resultSent" class="cnt okc num">✓{{ right }}</text>
+            <text v-if="(!examMode && !deferMode) || resultSent" class="cnt badc num">✗{{ wrongCount }}</text>
             <view v-if="streak >= 3" class="cnt fire"><l-icon name="flame" :size="16" tone="streak" fill="currentColor" /><text class="num">{{ streak }}</text></view>
             <view class="icon-btn" role="button" aria-label="退出练习" hover-class="tool-hover" @click="quit"><l-icon name="log-out" :size="20" tone="ink-2" /></view>
           </view>
@@ -53,7 +54,7 @@
             :options="optList"
             :model-value="picked ? ansKeys(picked) : multiSel"
             :answer="ansKeys(cur.answer)"
-            :revealed="(!!picked || beiMode) && !examMode"
+            :revealed="(!!picked || beiMode) && !examMode && (!deferMode || resultSent)"
             :excluded="cur._excl || []"
             :readonly="beiMode"
             :multiple="isMulti"
@@ -67,7 +68,7 @@
           </view>
         </kg-question-card>
 
-        <view v-if="(picked || beiMode) && !examMode" class="after">
+        <view v-if="(picked || beiMode) && !examMode && (!deferMode || resultSent)" class="after">
           <kg-banner
             :tone="beiMode || picked === cur.answer ? 'ok' : 'bad'"
             :text="beiMode ? '背题模式 · 答案 ' + cur.answer : picked === cur.answer ? '回答正确' + (streak >= 3 ? ' · 连对 ' + streak + ' 题！' : '') : '正确答案 ' + cur.answer + (cur._saved ? ' · 已自动存入错题本' : '')"
@@ -150,7 +151,7 @@
         <kg-card class="side-card">
           <view class="side-h">
             <text class="side-t">答题卡</text>
-            <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></text>
+            <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="(!examMode && !deferMode) || resultSent"> · 正确 {{ right }}</template></text>
           </view>
           <view class="acard-grid side-grid">
             <view
@@ -163,7 +164,7 @@
               @click="jumpTo(i)"
             >{{ i + 1 }}</view>
           </view>
-          <kg-button v-if="examMode" size="md" block @click="confirmFinishExam">交卷</kg-button>
+          <kg-button v-if="(examMode || deferMode) && !resultSent" size="md" block @click="deferMode ? confirmFinishDefer() : confirmFinishExam()">{{ deferMode ? '提交看解析' : '交卷' }}</kg-button>
         </kg-card>
         <kg-card class="side-card">
           <text class="side-t">键盘快捷键</text>
@@ -334,8 +335,8 @@
           @click="jumpTo(i)"
         >{{ i + 1 }}</view>
       </view>
-      <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="!examMode"> · 正确 {{ right }}</template></text>
-      <kg-button v-if="examMode" size="lg" block @click="confirmFinishExam">交卷</kg-button>
+      <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="(!examMode && !deferMode) || resultSent"> · 正确 {{ right }}</template></text>
+      <kg-button v-if="(examMode || deferMode) && !resultSent" size="lg" block @click="deferMode ? confirmFinishDefer() : confirmFinishExam()">{{ deferMode ? '提交看解析' : '交卷' }}</kg-button>
     </kg-sheet>
 
     <!-- 练习工具 -->
@@ -344,11 +345,15 @@
         <text class="tool-name">字号大小</text>
         <text class="tool-val">{{ ['小', '标准', '大'][fontLv] || '标准' }} · 点击切换</text>
       </view>
-      <view v-if="!examMode" class="tool-row" role="switch" :aria-checked="beiMode ? 'true' : 'false'" @click="toggleBei">
+      <view v-if="!examMode" class="tool-row" role="switch" :aria-checked="deferMode ? 'true' : 'false'" @click="toggleDefer">
+        <text class="tool-name">先做题后看解析（整组提交统一判分）</text>
+        <text class="tool-val" :class="{ on: deferMode }">{{ deferMode ? '已开启' : '已关闭' }}</text>
+      </view>
+      <view v-if="!examMode && !deferMode" class="tool-row" role="switch" :aria-checked="beiMode ? 'true' : 'false'" @click="toggleBei">
         <text class="tool-name">背题模式</text>
         <text class="tool-val" :class="{ on: beiMode }">{{ beiMode ? '已开启' : '已关闭' }}</text>
       </view>
-      <view v-if="!examMode" class="tool-row" role="switch" :aria-checked="autoNext ? 'true' : 'false'" @click="toggleAutoNext">
+      <view v-if="!examMode && !deferMode" class="tool-row" role="switch" :aria-checked="autoNext ? 'true' : 'false'" @click="toggleAutoNext">
         <text class="tool-name">答对自动跳下一题</text>
         <text class="tool-val" :class="{ on: autoNext }">{{ autoNext ? '已开启' : '已关闭' }}</text>
       </view>
@@ -517,6 +522,7 @@ export default {
       vibrateOn: uni.getStorageSync('vibrateOff') ? false : true,
       beiMode: false,
       timedMode: uni.getStorageSync('timedMode') ? true : false,
+      deferMode: uni.getStorageSync('deferMode') ? true : false,
       favs: uni.getStorageSync('favQuestions') || [],
       autoNext: uni.getStorageSync('autoNextOff') ? false : true,
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
@@ -588,7 +594,7 @@ export default {
     },
     qSegs() {
       const q = this.cur;
-      if (!q || (!this.picked && !this.beiMode) || this.examMode) return null;
+      if (!q || (!this.picked && !this.beiMode) || this.examMode || (this.deferMode && !this.resultSent)) return null;
       const src = [q.hs_explanation, q.explanation, q.xp_explanation].filter(Boolean).join('\n');
       if (!src) return null;
       const toks = new Set();
@@ -736,6 +742,13 @@ export default {
     barPrimary() {
       const last = this.idx + 1 >= this.items.length;
       if (this.examMode) return { text: '交卷', disabled: false, go: () => this.confirmFinishExam() };
+      if (this.deferMode && !this.resultSent) {
+        // 整组作答模式：全答完或处于末题时主按钮是「提交看解析」，否则「下一题」
+        if (last || this.answeredCount >= this.items.length) {
+          return { text: '提交看解析', disabled: false, go: () => this.confirmFinishDefer() };
+        }
+        return { text: '下一题', disabled: false, go: () => this.next() };
+      }
       if (!this.picked && !this.beiMode) return { text: '请选择答案', disabled: true, go: () => {} };
       return { text: last ? '完成' : '下一题', disabled: false, go: () => this.next() };
     },
@@ -1276,6 +1289,65 @@ export default {
       this.idx = this.items.length;
       this.picked = '';
       this.submitResult();
+    },
+    // 整组作答（先做题后看解析）：未答完先确认，提交后按 _picked 统一判分进结算页逐题复盘
+    confirmFinishDefer() {
+      const left = this.items.filter((q) => !q._picked).length;
+      if (!left) {
+        this.finishDefer();
+        return;
+      }
+      uni.showModal({
+        title: '提交看解析？',
+        content: '还有 ' + left + ' 题未作答，提交后按已作答判分',
+        confirmText: '提交',
+        cancelText: '继续作答',
+        success: (res) => {
+          if (res.confirm) this.finishDefer();
+        },
+      });
+    },
+    finishDefer() {
+      if (!this.deferMode) return;
+      this.cardOpen = false;
+      this.stopQTimer();
+      // 统一判分：计分已在作答时静默累计，这里补错题入库与最高连对
+      let st = 0;
+      let best = 0;
+      this.items.forEach((q) => {
+        const ok = !!q._picked && q._picked === q.answer;
+        if (ok) {
+          st++;
+          if (st > best) best = st;
+        } else {
+          st = 0;
+        }
+        if (q._picked && q._picked !== q.answer) this.saveExamWrong(q);
+      });
+      if (best > this.bestStreak) this.bestStreak = best;
+      if (best > ((this.pstats && this.pstats.bestStreak) || 0)) {
+        this.pstats.bestStreak = best;
+        savePStats(this.pstats);
+      }
+      this.idx = this.items.length;
+      this.picked = '';
+      // 与 next() 收尾同序：每日一练/时政的完成标记与成绩上报不能因延后判分被跳过
+      this.markDailyDone();
+      this.markShizhengDone();
+      this.submitResult();
+    },
+    toggleDefer() {
+      this.deferMode = !this.deferMode;
+      uni.setStorageSync('deferMode', this.deferMode ? '1' : '');
+      if (this.deferMode && this.beiMode) {
+        this.beiMode = false;
+        uni.setStorageSync('beiMode', '');
+      }
+      uni.showToast({
+        title: this.deferMode ? '整组作答：做完统一判分看解析' : '已切回即做即判',
+        icon: 'none',
+        duration: 1500,
+      });
     },
     async saveExamWrong(q) {
       if (q._saved) return;
@@ -1914,7 +1986,7 @@ export default {
     acardClass(q, i) {
       if (i === this.idx) return 'cur';
       if (!q._picked) return '';
-      if (this.examMode) return 'cur';
+      if (this.examMode || (this.deferMode && !this.resultSent)) return 'cur';
       return q._picked === q.answer ? 'ok' : 'bad';
     },
     jumpTo(i) {
@@ -1954,7 +2026,7 @@ export default {
           e.preventDefault();
           this.pick(K);
         }
-      } else if (k === 'Enter' && (this.picked || this.beiMode) && !this.examMode) {
+      } else if (k === 'Enter' && (this.picked || this.beiMode) && !this.examMode && (!this.deferMode || this.resultSent)) {
         e.preventDefault();
         this.next();
       } else if (k === 'ArrowLeft' && this.idx > 0) {
@@ -1997,6 +2069,26 @@ export default {
           if (un === -1) this.finishExam();
           else {
             uni.showToast({ title: '还有未答题目，答完自动交卷', icon: 'none' });
+            this.jumpTo(un);
+          }
+        }, 200);
+        return;
+      }
+      if (this.deferMode && !this.resultSent) {
+        // 整组作答：判对错延后到提交——只记选择与用时、静默累计分数，不揭示答案
+        const ok = k === this.cur.answer.trim();
+        this.recordStat(this.cur.module, ok, this.cur.submodule);
+        if (ok) this.right++;
+        this.saveSession();
+        setTimeout(() => {
+          if (this.idx + 1 < this.items.length) {
+            this.next();
+            return;
+          }
+          const un = this.items.findIndex((q) => !q._picked);
+          if (un === -1) this.finishDefer();
+          else {
+            uni.showToast({ title: '还有未答题目，答完可提交看解析', icon: 'none' });
             this.jumpTo(un);
           }
         }, 200);
@@ -2106,7 +2198,7 @@ export default {
       return typeof ans === 'string' ? ans.trim().split('') : [];
     },
     optClass(k) {
-      if (this.examMode) return this.hasKey(this.picked, k) || this.multiSel.includes(k) ? 'sel' : '';
+      if (this.examMode || (this.deferMode && !this.resultSent)) return this.hasKey(this.picked, k) || this.multiSel.includes(k) ? 'sel' : '';
       if (this.beiMode) return this.hasKey(this.cur.answer, k) ? 'right' : '';
       if (!this.picked) return this.multiSel.includes(k) ? 'sel' : '';
       if (this.hasKey(this.cur.answer, k)) return 'right';
@@ -2266,6 +2358,12 @@ export default {
     finalizeIfAnswered() {
       if (!this.session || this.resultSent || this.examMode || this.beiMode || this._shizheng) return false;
       if (!allAnswered(this.items)) return false;
+      // 整组作答未点提交就离开：按已作答判分补错题入库（与 finishDefer 同口径），再静默落成绩
+      if (this.deferMode) {
+        this.items.forEach((q) => {
+          if (q._picked && q._picked !== q.answer) this.saveExamWrong(q);
+        });
+      }
       this.markDailyDone(true);
       this.submitResult(true);
       return true;
@@ -2381,7 +2479,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     quit() {
-      const sum = quitSummary(this.items, this.session && !this.examMode && !this.beiMode && !this._shizheng);
+      const sum = quitSummary(this.items, this.session && !this.examMode && !this.deferMode && !this.beiMode && !this._shizheng);
       if (!sum) {
         this.leave(false);
         return;

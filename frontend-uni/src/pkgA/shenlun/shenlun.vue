@@ -70,11 +70,11 @@
       <kg-button v-if="!loading && !qErr && !qFavOnly && !qEnd && qs.length >= 20" variant="secondary" size="md" block class="more" @click="loadMore">加载更多</kg-button>
     </template>
 
-    <!-- 真题详情 / 作答 -->
+    <!-- 真题详情 / 作答（≥768px 双栏各自独立滚动：材料与作答/批改互不干扰） -->
     <template v-if="tab === 'q' && detail">
       <kg-button variant="text" size="sm" icon="chevron-left" class="back" @click="detail = null">返回列表</kg-button>
-      <kg-two-col>
-        <template #main>
+      <view class="d-cols">
+        <scroll-view scroll-y class="d-col" :style="splitH ? { height: splitH + 'px' } : {}">
           <kg-card class="d-card">
             <view class="q-top">
               <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
@@ -99,40 +99,43 @@
             <text class="d-nav-pos num">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
             <kg-button variant="ghost" size="md" :disabled="!qNav.nextId" aria-label="下一题" @click="qNav.nextId && openQ(qNav.nextId)">下一题</kg-button>
           </view>
-        </template>
-        <template #aside>
-          <kg-card class="d-card">
+        </scroll-view>
+        <view class="d-col d-col-r" :style="splitH ? { height: splitH + 'px' } : {}">
+          <kg-card class="d-card d-card-r">
+            <!-- 作答头固定不滚：长文作答时字数统计始终可见 -->
             <view class="d-ans-h">
               <text class="d-h">我的作答</text>
               <text v-if="qWordLim" class="d-save num" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text>
               <text v-else-if="myAnswer" class="d-save">已自动保存 · <text class="num">{{ myAnswer.length }}</text> 字</text>
             </view>
-            <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" placeholder-style="color: var(--ink-4)" auto-height @input="saveDraft" />
-            <kg-button variant="primary" size="lg" block :disabled="grading || !myAnswer.trim()" :loading="grading" class="grade-btn" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</kg-button>
-            <view v-if="gradeResult" class="d-grade">
-              <text class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></text>
-              <text class="g-body">{{ gradeResult }}</text>
-            </view>
-            <view v-if="history.length" class="d-toggle" role="button" :aria-expanded="showHist ? 'true' : 'false'" @click="showHist = !showHist">
-              <text class="d-h">历史作答（{{ history.length }}）</text>
-              <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showHist }" />
-            </view>
-            <view v-if="showHist">
-              <view v-for="h in history" :key="h.id" class="hist-item">
-                <text class="hist-time num">{{ fmtTime(h.created_at) }}</text>
-                <text class="hist-ans">{{ h.answer }}</text>
-                <text v-if="h.result" class="hist-res">{{ h.result }}</text>
+            <scroll-view scroll-y class="d-ans-body">
+              <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" placeholder-style="color: var(--ink-4)" auto-height @input="saveDraft" />
+              <kg-button variant="primary" size="lg" block :disabled="grading || !myAnswer.trim()" :loading="grading" class="grade-btn" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</kg-button>
+              <view v-if="gradeResult" class="d-grade">
+                <text class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></text>
+                <text class="g-body">{{ gradeResult }}</text>
               </view>
-            </view>
-            <view class="d-toggle ref" role="button" :aria-expanded="showRef ? 'true' : 'false'" @click="showRef = !showRef">
-              <text class="d-h ref-t">{{ showRef ? '收起参考要点' : '写完再看 · 参考要点' }}</text>
-              <l-icon name="chevron-down" :size="20" tone="brand-text" :class="{ flip: showRef }" />
-            </view>
-            <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
-            <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
+              <view v-if="history.length" class="d-toggle" role="button" :aria-expanded="showHist ? 'true' : 'false'" @click="showHist = !showHist">
+                <text class="d-h">历史作答（{{ history.length }}）</text>
+                <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showHist }" />
+              </view>
+              <view v-if="showHist">
+                <view v-for="h in history" :key="h.id" class="hist-item" role="button" title="还原这次作答与批改" @click="applyHist(h)">
+                  <text class="hist-time num">{{ fmtTime(h.created_at) }}</text>
+                  <text class="hist-ans">{{ h.answer }}</text>
+                  <text v-if="h.result" class="hist-res">{{ h.result }}</text>
+                </view>
+              </view>
+              <view class="d-toggle ref" role="button" :aria-expanded="showRef ? 'true' : 'false'" @click="showRef = !showRef">
+                <text class="d-h ref-t">{{ showRef ? '收起参考要点' : '写完再看 · 参考要点' }}</text>
+                <l-icon name="chevron-down" :size="20" tone="brand-text" :class="{ flip: showRef }" />
+              </view>
+              <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
+              <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
+            </scroll-view>
           </kg-card>
-        </template>
-      </kg-two-col>
+        </view>
+      </view>
     </template>
 
     <!-- 素材/范文 -->
@@ -258,13 +261,14 @@
         @cta="tapQ"
       />
       <view v-else class="rgrid">
-        <kg-card v-for="r in recs" :key="r.id" class="r-item">
+        <kg-card v-for="r in recs" :key="r.id" class="r-item" clickable @click="openRec(r)">
           <view class="q-top">
             <text class="hist-time num">{{ fmtTime(r.created_at) }}</text>
             <kg-tag tone="brand">{{ r.qtype || '申论' }}</kg-tag>
           </view>
-          <text class="q-text link" role="link" @click="openQ(r.qid); tab = 'q'">{{ r.question || '（题目已下线）' }}</text>
-          <text class="m-content" :class="{ ellip3: expanded !== 'r' + r.id }" @click="expanded = expanded === 'r' + r.id ? 0 : 'r' + r.id">{{ '【我的作答】\n' + r.answer + (r.result ? '\n\n【批改结果】\n' + r.result : '') }}</text>
+          <text class="q-text link" role="link" @click.stop="openRec(r)">{{ r.question || '（题目已下线）' }}</text>
+          <text class="m-content" :class="{ ellip3: expanded !== 'r' + r.id }" @click.stop="expanded = expanded === 'r' + r.id ? 0 : 'r' + r.id">{{ '【我的作答】\n' + r.answer + (r.result ? '\n\n【批改结果】\n' + r.result : '') }}</text>
+          <text class="rec-cta">点卡片还原「材料 + 作答 + 批改」完整界面 ›</text>
         </kg-card>
       </view>
     </template>
@@ -354,6 +358,7 @@ export default {
       region: '',
       paper: '',
       fltOpen: false,
+      splitH: 0,
     };
   },
   watch: {
@@ -363,6 +368,8 @@ export default {
         window.history.replaceState(null, '', v && v.id ? buildShenlunUrl(v.id) : this.filterUrl());
       }
       // #endif
+      if (v) this.measureSplit();
+      else this.splitH = 0;
     },
   },
   computed: {
@@ -423,6 +430,9 @@ export default {
       this._slKeyHandler = null;
     }
     // #endif
+  },
+  onResize() {
+    if (this.detail) this.measureSplit();
   },
   onLoad(opts) {
     if (opts && typeof opts.paper === 'string' && opts.paper && opts.paper.length <= 100) this.paper = opts.paper;
@@ -820,6 +830,25 @@ export default {
       else if (e.key === 'ArrowRight' && this.qNav.nextId) { e.preventDefault(); this.openQ(this.qNav.nextId); }
     },
     // #endif
+    // ≥768 双栏独立滚动：量出分栏顶部到视口底的高度，交给两列 scroll-view
+    measureSplit() {
+      const win = (uni.getSystemInfoSync && uni.getSystemInfoSync()) || {};
+      if ((win.windowWidth || 0) < 768) {
+        this.splitH = 0;
+        return;
+      }
+      this.$nextTick(() => {
+        uni.createSelectorQuery()
+          .in(this)
+          .select('.d-cols')
+          .boundingClientRect((r) => {
+            const top = r && r.top != null ? r.top : 0;
+            const wh = win.windowHeight || (typeof window !== 'undefined' ? window.innerHeight : 0) || 700;
+            if (top > 0) this.splitH = Math.max(360, Math.floor(wh - top - 16));
+          })
+          .exec();
+      });
+    },
     async openQ(id) {
       try {
         const d = await request('/api/shenlun/questions/' + id);
@@ -835,6 +864,57 @@ export default {
       } catch (e) {
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
+    },
+    // 作答记录直达：还原「材料 + 当次作答 + 批改结果」的完整作答界面
+    async openRec(r) {
+      if (!r || !r.qid) return;
+      // 当前题目有未提交草稿且与历史作答不同：先确认，避免静默覆盖用户正在写的内容
+      if (this.myAnswer && this.detail && this.detail.id === r.qid && this.myAnswer !== r.answer) {
+        const ok = await new Promise((resolve) => {
+          uni.showModal({
+            title: '还原历史作答？',
+            content: '当前未提交的草稿将被这次历史作答覆盖',
+            confirmText: '还原',
+            cancelText: '取消',
+            success: (res) => resolve(!!res.confirm),
+            fail: () => resolve(false),
+          });
+        });
+        if (!ok) return;
+      }
+      this.tab = 'q';
+      await this.openQ(r.qid);
+      if (!this.detail || this.detail.id !== r.qid) return;
+      if (r.answer) {
+        this.myAnswer = r.answer;
+        uni.setStorageSync('slDraft:' + r.qid, r.answer);
+      }
+      this.gradeResult = r.result || '';
+      uni.showToast({ title: '已还原本次作答与批改结果', icon: 'none', duration: 1600 });
+    },
+    // 同题历史作答：点条目即换回那次作答与批改（草稿保护同 openRec）
+    async applyHist(h) {
+      if (!h || !this.detail) return;
+      const target = h.answer || '';
+      if (this.myAnswer && this.myAnswer !== target) {
+        const ok = await new Promise((resolve) => {
+          uni.showModal({
+            title: '还原这次作答？',
+            content: '当前未提交的草稿将被覆盖',
+            confirmText: '还原',
+            cancelText: '取消',
+            success: (res) => resolve(!!res.confirm),
+            fail: () => resolve(false),
+          });
+        });
+        if (!ok) return;
+      }
+      if (target) {
+        this.myAnswer = target;
+        uni.setStorageSync('slDraft:' + this.detail.id, target);
+      }
+      this.gradeResult = h.result || '';
+      uni.showToast({ title: '已还原这次作答与批改', icon: 'none', duration: 1200 });
     },
     copyQLink() {
       if (!this.detail) return;
@@ -960,8 +1040,27 @@ export default {
 .d-toggle.ref .ref-t { color: var(--brand-text); }
 .flip { transform: rotate(180deg); }
 .d-mat { display: block; font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); white-space: pre-wrap; }
-.d-ans-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+
+/* ≥768 双栏独立滚动：两列各占一半，各自 scroll-view；窄屏退化为单列整页滚动 */
+.d-cols { display: flex; flex-direction: column; gap: 0; }
+.d-col { min-width: 0; }
+.d-col-r { display: flex; flex-direction: column; min-width: 0; }
+.d-card-r { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.d-ans-body { flex: 1; min-height: 0; }
+@media (min-width: 768px) {
+  .d-cols { flex-direction: row; align-items: stretch; gap: var(--sp-16); }
+  .d-col { flex: 1 1 0; }
+  .d-col-r { flex: 1 1 0; }
+  .d-card-r { margin-bottom: 0; height: 100%; }
+}
+/* 窄屏单列：作答头吸顶，字数统计滚出材料区后仍可见 */
+@media (max-width: 767.9px) {
+  .d-ans-h { position: sticky; top: var(--window-top, 0px); z-index: 5; background: var(--card); margin: calc(var(--card-pad, 16px) * -1) calc(var(--card-pad, 16px) * -1) 0; padding: var(--card-pad, 16px) var(--card-pad, 16px) var(--sp-8); }
+}
+
+.d-ans-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); flex-shrink: 0; }
 .d-ans-h .d-h { margin-top: 0; }
+.rec-cta { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--brand-text); }
 .d-save { font-size: var(--fs-caption); color: var(--ink-3); }
 .d-save.near { color: var(--warn-strong); }
 .d-save.over { color: var(--bad); font-weight: 600; }
@@ -970,7 +1069,7 @@ export default {
 .d-grade { margin-top: var(--sp-4); }
 .g-note { font-size: var(--fs-caption); font-weight: 400; color: var(--ink-3); }
 .g-body { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
-.hist-item { padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
+.hist-item { padding: var(--sp-8) 0; border-top: 1px solid var(--line); cursor: pointer; }
 .hist-time { display: block; font-size: var(--fs-caption); color: var(--ink-3); }
 .hist-ans { display: block; margin-top: var(--sp-4); font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink); white-space: pre-wrap; }
 .hist-res { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); line-height: var(--lh-sub); color: var(--ink-2); white-space: pre-wrap; }
@@ -1003,6 +1102,7 @@ export default {
 @media (min-width: 1024px) {
   .qgrid, .mgrid, .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .d-ta { min-height: 320px; }
+  .hist-item:hover { background: var(--fill); }
 }
 /* #endif */
 </style>

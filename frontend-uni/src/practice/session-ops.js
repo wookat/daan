@@ -66,6 +66,7 @@ export const sessionOps = {
         source: this._source || '',
         ptitle: this._ptitle || '',
         redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,
+        defer: this.deferMode ? 1 : 0,
         reviewed: this._reviewed || [],
         daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,
       });
@@ -91,7 +92,8 @@ export const sessionOps = {
     },
 
     adoptLocalPending(s) {
-      s.items.forEach((q) => { if (q._picked) q._logged = true; });
+      // 整组作答存的快照里已答题目从未落库：以快照的 defer 标记为准，不能标 _logged 否则恢复后提交全被跳过
+      s.items.forEach((q) => { if (q._picked && !s.defer) q._logged = true; });
       this.items = s.items;
       this.idx = resumeIndex(s.items, s.idx);
       this.picked = this.items[this.idx]._picked || '';
@@ -121,6 +123,8 @@ export const sessionOps = {
     // 恢复的错题若快照缺 _mid（POST 回包前就退出/刷新），按本人错题本回填，错因自评才有 mid 可 PATCH,
 
     adoptRemoteSnap(snap) {
+      // 整组作答的已答题目尚未落库：adoptPracticeResume 默认 _logged:!!picked 会让提交时跳过，恢复时清掉
+      if (this.deferMode) snap.items.forEach((q) => { if (q._picked) q._logged = false; });
       this.items = snap.items;
       this.idx = snap.idx;
       this.picked = this.items[this.idx]._picked || '';

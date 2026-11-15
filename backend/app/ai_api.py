@@ -20,6 +20,43 @@ THINKING_TICK_SEC = sse.THINKING_TICK_SEC
 # 错题分析同 uid 飞行中合并：同一 uid 并发到达的请求共用一次 LLM 调用，结束即移除（成功/失败都不缓存）
 _ANALYSIS_INFLIGHT: dict[str, asyncio.Future] = {}
 
+MAX_IMAGES = 4
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+async def _collect_images(
+    files: list[UploadFile] | None, images_b64: str | None
+) -> list[tuple[str, str]]:
+    """收齐识题图片：multipart 可重复传 'image' 字段（H5 多选），
+    images_b64 为 JSON [{data,mime}]（小程序多图/无 File 对象的重做路径）。
+    返回 [(b64, mime), ...]，最多 MAX_IMAGES 张。"""
+    imgs: list[tuple[str, str]] = []
+    for f in files or []:
+        raw = await f.read()
+        if len(raw) > MAX_IMAGE_BYTES:
+            raise HTTPException(400, "单张图片过大（限 8MB）")
+        imgs.append((base64.b64encode(raw).decode(), f.content_type or "image/jpeg"))
+        if len(imgs) >= MAX_IMAGES:
+            return imgs
+    if images_b64:
+        try:
+            extra = json.loads(images_b64)
+        except ValueError:
+            extra = None
+        if isinstance(extra, list):
+            for item in extra:
+                if len(imgs) >= MAX_IMAGES:
+                    break
+                if not isinstance(item, dict):
+                    continue
+                b64 = str(item.get("data") or "")
+                if b64.startswith("data:"):
+                    b64 = b64.split(",", 1)[-1]
+                mime = str(item.get("mime") or "image/jpeg")[:32]
+                if b64 and len(b64) * 3 // 4 <= MAX_IMAGE_BYTES:
+                    imgs.append((b64, mime))
+    return imgs
+
 
 async def _shared_mistake_analysis(uid: str, prompt: str) -> str:
     fut = _ANALYSIS_INFLIGHT.get(uid)
@@ -33,24 +70,18 @@ async def _shared_mistake_analysis(uid: str, prompt: str) -> str:
 @router.post("/api/explain")
 async def api_explain(
     request: Request,
-    image: UploadFile | None = File(None),
+    image: list[UploadFile] | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
+    images_b64: str | None = Form(None),
     x_access_code: str | None = Header(None),
 ):
     check_access(x_access_code)
     rl(request, "ai_explain", 20, 300)
-    if not image and not text:
+    imgs = await _collect_images(image, images_b64)
+    if not imgs and not text:
         raise HTTPException(400, "需要图片或题目文字")
-    image_b64 = None
-    mime = None
-    if image:
-        raw = await image.read()
-        if len(raw) > 8 * 1024 * 1024:
-            raise HTTPException(400, "图片过大（限 8MB）")
-        image_b64 = base64.b64encode(raw).decode()
-        mime = image.content_type or "image/jpeg"
-    if text and not image:
+    if text and not imgs:
         raw_key = cache_key(text, user_answer)
         hit = await run_in_threadpool(db.get_explain_cache, raw_key)
         if hit:
@@ -66,16 +97,16 @@ async def api_explain(
                 "explanation": hit["explanation"],
             }
     try:
-        extracted = await engine.extract_question(image_b64, mime, text)
+        extracted = await engine.extract_question(imgs, None, text)
         ua = user_answer or extracted.get("user_answer")
         key = cache_key(extracted.get("question_text"), ua)
         raw_key = cache_key(text, ua) if text else None
         cached = await run_in_threadpool(_explain_cached, key, raw_key)
         if cached:
-            record_llm("feat:explain_cache", None, True, 0, bool(image_b64), False)
+            record_llm("feat:explain_cache", None, True, 0, bool(imgs), False)
             explanation = cached["explanation"]
         else:
-            record_llm("feat:explain_gen", None, True, 0, bool(image_b64), False)
+            record_llm("feat:explain_gen", None, True, 0, bool(imgs), False)
             explanation = await engine.explain(extracted, user_answer)
     except Exception as e:
         raise HTTPException(502, f"解析失败：{friendly_ai_err(e)}") from e
@@ -117,34 +148,28 @@ def _cached_qid(hit: dict, question_id: int | None) -> int | None:
 @router.post("/api/explain/stream")
 async def api_explain_stream(
     request: Request,
-    image: UploadFile | None = File(None),
+    image: list[UploadFile] | None = File(None),
     text: str | None = Form(None),
     user_answer: str | None = Form(None),
     question_id: int | None = Form(None),
+    images_b64: str | None = Form(None),
     x_access_code: str | None = Header(None),
 ):
     check_access(x_access_code)
     rl(request, "ai_explain", 20, 300)
-    if not image and not text:
+    imgs = await _collect_images(image, images_b64)
+    if not imgs and not text:
         raise HTTPException(400, "需要图片或题目文字")
-    image_b64 = None
-    mime = None
-    if image:
-        raw = await image.read()
-        if len(raw) > 8 * 1024 * 1024:
-            raise HTTPException(400, "图片过大（限 8MB）")
-        image_b64 = base64.b64encode(raw).decode()
-        mime = image.content_type or "image/jpeg"
 
     def _linked() -> dict | None:
-        if image or not text or not question_id or question_id <= 0:
+        if imgs or not text or not question_id or question_id <= 0:
             return None
         rows = db.questions_by_ids([question_id])
         return engine.extract_from_qbank(rows[0] if rows else None, text)
 
     async def gen():
         try:
-            if text and not image:
+            if text and not imgs:
                 rk = cache_key(text, user_answer)
                 hit = await run_in_threadpool(db.get_explain_cache, rk)
                 if hit:
@@ -163,7 +188,7 @@ async def api_explain_stream(
                     yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"
                     yield "event: done\ndata: {}\n\n"
                     return
-            extracted = await run_in_threadpool(_linked) or await engine.extract_question(image_b64, mime, text)
+            extracted = await run_in_threadpool(_linked) or await engine.extract_question(imgs, None, text)
             ua = user_answer or extracted.get("user_answer")
             key = cache_key(extracted.get("question_text"), ua)
             raw_key = cache_key(text, ua) if text else None
@@ -181,10 +206,10 @@ async def api_explain_stream(
             }
             yield "event: meta\ndata: " + json.dumps(meta, ensure_ascii=False) + "\n\n"
             if cached:
-                record_llm("feat:explain_cache", None, True, 0, bool(image_b64), True)
+                record_llm("feat:explain_cache", None, True, 0, bool(imgs), True)
                 yield "data: " + json.dumps({"d": cached["explanation"]}, ensure_ascii=False) + "\n\n"
             else:
-                record_llm("feat:explain_gen", None, True, 0, bool(image_b64), True)
+                record_llm("feat:explain_gen", None, True, 0, bool(imgs), True)
                 parts: list[str] = []
                 async for line in sse.relay(
                     engine.explain_stream(extracted, user_answer, with_thinking=True), parts, THINKING_TICK_SEC

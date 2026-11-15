@@ -238,10 +238,20 @@ async def chat_fast(messages: list, temperature: float = 0.2, max_tokens: int = 
     return await chat(messages, temperature=temperature, max_tokens=max_tokens, think=think)
 
 
-def image_content(image_b64: str, mime: str, text: str) -> list:
-    return [
-        {"type": "text", "text": text},
-        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{image_b64}"}},
+def image_content(images, mime_or_text=None, text=None) -> list:
+    """识题消息体：支持单图或多图。
+
+    多图签名 image_content([(b64, mime), ...], text)；
+    旧签名 image_content(b64, mime, text) 兼容保留。
+    """
+    if isinstance(images, str):
+        images = [(images, mime_or_text or "image/jpeg")]
+        text = text if text is not None else ""
+    else:
+        text = mime_or_text or ""
+    return [{"type": "text", "text": text}] + [
+        {"type": "image_url", "image_url": {"url": f"data:{m or 'image/jpeg'};base64,{b}"}}
+        for b, m in images
     ]
 
 

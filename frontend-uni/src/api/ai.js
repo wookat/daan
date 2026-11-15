@@ -5,10 +5,12 @@ import { netFailMessage } from '../api-policy';
 
 // #ifdef H5
 // H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。
-export async function streamExplain({ file, text, userAnswer, questionId, onMeta, onDelta, onThinking }) {
+// files: File[] 多图（同名 image 字段重复上传）；file: File 旧签名兼容。
+export async function streamExplain({ file, files, text, userAnswer, questionId, onMeta, onDelta, onThinking }) {
+  const imgs = (files && files.length ? files : file ? [file] : []).slice(0, 4);
   const doIt = async () => {
     const fd = new FormData();
-    if (file) fd.append('image', file);
+    imgs.forEach((f) => fd.append('image', f));
     if (text) fd.append('text', text);
     if (userAnswer) fd.append('user_answer', userAnswer);
     if (questionId > 0) fd.append('question_id', String(questionId));
@@ -40,9 +42,10 @@ export async function streamExplain({ file, text, userAnswer, questionId, onMeta
 // #ifndef H5
 // 小程序/App 无 fetch 流。文字题走分块流式（微信 enableChunked / App XHR 进度），
 // 图片题无法分块上传 → 降级为一次性 /api/explain（uploadExplain）。
-export function streamExplain({ filePath, text, userAnswer, questionId, onMeta, onDelta, onThinking }) {
-  if (filePath || !text) {
-    return uploadExplain({ filePath: filePath || null, text: text || null, userAnswer }).then((d) => {
+export function streamExplain({ filePath, filePaths, text, userAnswer, questionId, onMeta, onDelta, onThinking }) {
+  const paths = (filePaths && filePaths.length ? filePaths : filePath ? [filePath] : []);
+  if (paths.length || !text) {
+    return uploadExplain({ filePaths: paths, text: text || null, userAnswer }).then((d) => {
       onMeta && onMeta(d);
       onDelta && onDelta(d.explanation || '');
       return d;
@@ -144,38 +147,82 @@ export function scanSheet({ filePath, uid }) {
   });
 }
 
-export function uploadExplain({ filePath, text, userAnswer }) {
+// 本地文件/URL 转 base64（小程序 getFileSystemManager；H5 fetch blob）。
+// 用于 uploadFile 只能带一个文件时的多图补充字段（后端 images_b64）。
+export function filePathToB64(filePath) {
+  return new Promise((resolve) => {
+    // #ifdef H5
+    fetch(filePath)
+      .then((r) => r.blob())
+      .then((b) => {
+        const rd = new FileReader();
+        rd.onload = () => resolve({ data: String(rd.result).split(',')[1] || '', mime: b.type || 'image/jpeg' });
+        rd.onerror = () => resolve(null);
+        rd.readAsDataURL(b);
+      })
+      .catch(() => resolve(null));
+    // #endif
+    // #ifndef H5
+    try {
+      const fs = uni.getFileSystemManager && uni.getFileSystemManager();
+      if (!fs) return resolve(null);
+      fs.readFile({
+        filePath,
+        encoding: 'base64',
+        success: (r) => resolve({ data: r.data || '', mime: 'image/jpeg' }),
+        fail: () => resolve(null),
+      });
+    } catch (e) {
+      resolve(null);
+    }
+    // #endif
+  });
+}
+
+export function uploadExplain({ filePath, filePaths, imagesB64, text, userAnswer }) {
+  const paths = (filePaths && filePaths.length ? filePaths : filePath ? [filePath] : []).slice(0, 4);
   const doIt = () =>
     new Promise((resolve, reject) => {
-      const formData = {};
-      if (text) formData.text = text;
-      if (userAnswer) formData.user_answer = userAnswer;
-      if (filePath) {
-        uni.uploadFile({
-          url: BASE_URL + '/api/explain',
-          filePath,
-          name: 'image',
-          formData,
-          header: { 'X-Access-Code': getAccessCode(), ...authHeader() },
-          timeout: 180000,
-          success: (res) => {
-            try {
-              const data = JSON.parse(res.data);
-              if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
-              else reject(new Error(data.detail || `HTTP ${res.statusCode}`));
-            } catch (e) {
-              reject(e);
-            }
-          },
-          fail: (err) => reject(new Error(netFailMessage(err && err.errMsg, '上传失败，请检查网络后重试'))),
-        });
-      } else {
-        rawRequest('/api/explain', {
-          method: 'POST',
-          header: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          data: formData,
-        }).then(resolve, reject);
-      }
+      (async () => {
+        const formData = {};
+        if (text) formData.text = text;
+        if (userAnswer) formData.user_answer = userAnswer;
+        if (paths.length) {
+          // 多图：首图走文件字段（uni.uploadFile 单文件），其余转 base64 进 images_b64
+          const extras = [];
+          for (const p of paths.slice(1)) {
+            const it = await filePathToB64(p);
+            if (it && it.data) extras.push(it);
+          }
+          if (imagesB64 && imagesB64.length) extras.push(...imagesB64);
+          if (extras.length) formData.images_b64 = JSON.stringify(extras.slice(0, 3));
+          uni.uploadFile({
+            url: BASE_URL + '/api/explain',
+            filePath: paths[0],
+            name: 'image',
+            formData,
+            header: { 'X-Access-Code': getAccessCode(), ...authHeader() },
+            timeout: 180000,
+            success: (res) => {
+              try {
+                const data = JSON.parse(res.data);
+                if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
+                else reject(new Error(data.detail || `HTTP ${res.statusCode}`));
+              } catch (e) {
+                reject(e);
+              }
+            },
+            fail: (err) => reject(new Error(netFailMessage(err && err.errMsg, '上传失败，请检查网络后重试'))),
+          });
+        } else {
+          if (imagesB64 && imagesB64.length) formData.images_b64 = JSON.stringify(imagesB64.slice(0, 4));
+          rawRequest('/api/explain', {
+            method: 'POST',
+            header: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            data: formData,
+          }).then(resolve, reject);
+        }
+      })().catch(reject);
     });
   return withAuthRetry(doIt);
 }

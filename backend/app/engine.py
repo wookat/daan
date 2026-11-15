@@ -42,13 +42,20 @@ EXPLAIN_SYSTEM = """你是一位深谙"花生十三"解题体系的公考老师�
 """
 
 
-async def extract_question(image_b64: str | None, mime: str | None, text: str | None) -> dict:
-    if image_b64:
-        content = llm.image_content(image_b64, mime or "image/jpeg", EXTRACT_PROMPT)
+async def extract_question(images, mime: str | None = None, text: str | None = None) -> dict:
+    """images：[(b64, mime), ...] 多图按顺序拼接识别；兼容旧签名传单个 b64 字符串。"""
+    if isinstance(images, str):
+        images = [(images, mime or "image/jpeg")]
+    images = images or []
+    if images:
+        prompt = EXTRACT_PROMPT
+        if len(images) > 1:
+            prompt += f"\n\n注：用户上传了 {len(images)} 张图片，按顺序为同一道题的连续内容（可能因截图/分页拆开），请合并识别为一道题。"
+        content = llm.image_content(images, prompt)
     else:
         content = EXTRACT_PROMPT + "\n\n题目内容：\n" + (text or "")
     try:
-        data = await llm.chat_json([{"role": "user", "content": content}], fast=not image_b64, max_tokens=2000, think=bool(image_b64))
+        data = await llm.chat_json([{"role": "user", "content": content}], fast=not images, max_tokens=2000, think=bool(images))
     except (ValueError, KeyError, TypeError):
         data = {}
     if not isinstance(data, dict):
