@@ -24,7 +24,7 @@
     "@dcloudio/uni-app": "3.0.0-5010520260709002",
     "@dcloudio/uni-components": "3.0.0-5010520260709002",
     "@dcloudio/uni-h5": "3.0.0-5010520260709002",
-    "@zalize/brand": "github:wookat/zalize-brand#129920bc1df1b69f415d8bf75fd3f95b7988e79e",
+    "@zalize/brand": "file:vendor/zalize-brand",
     "vue": "^3.4.21",
     "wot-design-uni": "1.14.0",
     "echarts": "^5.6.0",

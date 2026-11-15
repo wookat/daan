@@ -205,7 +205,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 |---|---|---|
 | `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | 主通道；**凡含图片的请求必走此通道**（识题/拍照讲解） | `api.999555999.com` / `grok-4.7`（多模态） |
 | `LLM_TEXT_BASE_URL` / `LLM_TEXT_API_KEY` / `LLM_TEXT_MODEL` | 纯文本请求专用；任一留空即回落主通道对应值 | 已置空 → 与主通道相同 |
-| `LLM_FALLBACK_MODEL` | 主模型 5xx 时同中继换模型重试 | compose 未透传 → 恒为代码默认 `gpt-5.5`（Grok 网关无此模型，5xx 时该次兜底必失败，属已知小冗余） |
+| `LLM_FALLBACK_MODEL` | 主模型 5xx 时同中继换模型重试 | 猫肥网关仅售 `grok-4.7` → 代码默认已置空（跳过该死重试），`.env` 无需配置 |
 | `LLM_RESCUE_BASE_URL` / `LLM_RESCUE_API_KEY` / `LLM_RESCUE_MODEL` | 独立备用端点：主通道 402/403/429 或持续 5xx 时回落（含图请求亦可） | `api.deepseek.com`（DeepSeek 官方直连）/ `deepseek-flash`（V4.1-Flash，支持视觉） |
 
 - 路由：`llm._endpoint()` 按消息是否含 `image_url` 分流；请求固定打

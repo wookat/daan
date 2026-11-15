@@ -21,7 +21,7 @@ TEXT_API_KEY = os.environ.get("LLM_TEXT_API_KEY", "") or API_KEY
 TEXT_MODEL = os.environ.get("LLM_TEXT_MODEL", "") or MODEL
 
 # 主模型不可用（5xx）时的后备模型（同一中继）
-FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "gpt-5.5")
+FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "")
 
 # 中继整体不可用（额度耗尽 402/403/429 或持续 5xx）时的备用端点；
 # 含图请求同样允许回落——要求备用模型支持视觉（当前生产配置 deepseek-flash 支持）

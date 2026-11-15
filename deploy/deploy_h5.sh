@@ -12,9 +12,17 @@ SITE="https://kaogong.zalize.com"
 
 : "${TICKETS_VPS_SSH_USER:?need TICKETS_VPS_SSH_USER}"
 : "${TICKETS_VPS_SSH_HOST:?need TICKETS_VPS_SSH_HOST}"
-: "${TICKETS_VPS_SSH_CREDENTIAL:?need TICKETS_VPS_SSH_CREDENTIAL}"
-export SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL"
+# 认证二选一：TICKETS_VPS_SSH_CREDENTIAL（sshpass 密码）或 TICKETS_VPS_SSH_KEY / ~/.ssh/config 里的私钥；
+# 本机无 sshpass 时走后者（生产 ubuntu@101.42.17.195 已配 wookat.pem 免密）。
 SSH_OPTS=(-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+[[ -n "${TICKETS_VPS_SSH_KEY:-}" ]] && SSH_OPTS+=(-i "$TICKETS_VPS_SSH_KEY" -o IdentitiesOnly=yes)
+if [[ -n "${TICKETS_VPS_SSH_CREDENTIAL:-}" ]]; then
+  command -v sshpass >/dev/null || { echo "FAIL: 给了 TICKETS_VPS_SSH_CREDENTIAL 但本机无 sshpass；改用 TICKETS_VPS_SSH_KEY 私钥认证"; exit 1; }
+  export SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL"
+  SSH_RUN=(sshpass -e ssh "${SSH_OPTS[@]}")
+else
+  SSH_RUN=(ssh "${SSH_OPTS[@]}")
+fi
 REMOTE="$TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST"
 
 step() { echo; echo "==> $*"; }
@@ -41,7 +49,7 @@ LOCAL_INDEX_REF=$(grep -o 'index-[^"]*\.js' "$DIST/index.html" | head -1)
 echo "本机 bundle: $LOCAL_INDEX_REF"
 
 step "2/6 生产 .env 预检"
-sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "test -s $REMOTE_DIR/deploy/.env" \
+"${SSH_RUN[@]}" "$REMOTE" "test -s $REMOTE_DIR/deploy/.env" \
   || { echo "FAIL: 生产 $REMOTE_DIR/deploy/.env 不存在或为空（轮40曾被 rsync --delete 误删导致密钥丢失），先恢复再部署！"; exit 1; }
 
 BUILD_REV=$(git -C "$REPO_DIR" rev-parse --short HEAD)
@@ -71,9 +79,22 @@ else
 fi
 
 step "3/6 rsync backend/deploy/dist 到生产"
-(cd "$REPO_DIR" && sshpass -e rsync -azR --delete -e "ssh ${SSH_OPTS[*]}" \
-  backend deploy knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
-  --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
+if command -v rsync >/dev/null; then
+  if [[ -n "${TICKETS_VPS_SSH_CREDENTIAL:-}" ]]; then RSYNC_PREFIX=(sshpass -e); else RSYNC_PREFIX=(); fi
+  (cd "$REPO_DIR" && "${RSYNC_PREFIX[@]}" rsync -azR --delete -e "ssh ${SSH_OPTS[*]}" \
+    backend deploy knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
+    --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
+else
+  echo "本机无 rsync，走 tar|ssh 兜底（远端先清同步目标、保留 deploy/.env，写后 chown 回目录属主）"
+  (cd "$REPO_DIR" && tar --exclude='.git' --exclude='__pycache__' --exclude='node_modules' --exclude='.env' \
+    -czf - backend deploy knowledge frontend-uni/dist) \
+    | "${SSH_RUN[@]}" "$REMOTE" \
+      "cd $REMOTE_DIR && rm -rf backend knowledge frontend-uni/dist \
+       && find deploy -mindepth 1 -maxdepth 1 ! -name .env -exec rm -rf {} + \
+       && tar -xzf - \
+       && chown -R \$(stat -c '%U:%G' .) backend deploy knowledge frontend-uni/dist" \
+    || { echo "FAIL: tar|ssh 同步失败"; exit 1; }
+fi
 
 # caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（新机 101.42.17.195 出口→AMS，老机曾为 ICN）的副本：
 # 保护的是重建窗口内 VPS 自身 cron/脚本的请求；引擎与真人所在机房的 stale-if-error 副本
@@ -95,7 +116,7 @@ done
 step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
 # 4-pre 宿主快照 + 让行：老机曾多产品共用 dockerd/buildkit（别家 build/prune 会拖慢或打断本家，R430b/R467）；
 # 新机 101.42.17.195 已独享，host_probe/让行逻辑保留作防御（prunes 恒为 0，快照仍供审计）。
-host_probe() { sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s < "$REPO_DIR/deploy/host_probe.sh" 2>/dev/null || echo "probe-failed"; }
+host_probe() { "${SSH_RUN[@]}" "$REMOTE" bash -s < "$REPO_DIR/deploy/host_probe.sh" 2>/dev/null || echo "probe-failed"; }
 WAIT_DEADLINE=$((SECONDS + 300))
 while :; do
   HOST_SNAP=$(host_probe)
@@ -109,16 +130,16 @@ while :; do
 done
 [[ "${BUSY:-0}" != "0" ]] && echo "  WARN: 300s 后仍有其它 build/prune 在跑，继续重建（并发互相挤，层缓存可能被清、收敛变慢）"
 
-PREV_STARTED=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+PREV_STARTED=$("${SSH_RUN[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null" || true)
 # 4-pre2 旧容器应用日志归档：json-file 日志随容器销毁，重建即丢（见 deploy/app_log_snapshot.sh 头注）
-SNAP=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s "${LIVE_REV:-unknown}" < "$REPO_DIR/deploy/app_log_snapshot.sh" 2>/dev/null || echo "snapshot=skipped reason=ssh-failed")
+SNAP=$("${SSH_RUN[@]}" "$REMOTE" bash -s "${LIVE_REV:-unknown}" < "$REPO_DIR/deploy/app_log_snapshot.sh" 2>/dev/null || echo "snapshot=skipped reason=ssh-failed")
 echo "  old-container-log: $SNAP"
 # 每次重建独立日志（不再互相覆盖）+ 末行写 compose 退出码/时刻，进程被打断时事后可辨「退出」与「仍在跑」；
 # setsid -f 让 compose 自成会话并立刻返回：旧写法 `cd && nohup ... &` 把整个 && 列表放进后台子 shell，
 # 该子 shell 持有 ssh 的管道直到 compose 结束（本地 ssh 被拖住整个 build，ssh 掉线即 SIGHUP 波及）。
 COMPOSE_LOG="/tmp/kg-compose-${BUILD_REV}-$(date -u +%Y%m%dT%H%M%SZ).log"
-sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+"${SSH_RUN[@]}" "$REMOTE" \
   "cd $REMOTE_DIR/deploy && setsid -f nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null && ln -sfn $COMPOSE_LOG /tmp/kg-compose.log && echo compose-started log=$COMPOSE_LOG"
 WAIT_SECS="${DEPLOY_WAIT_SECS:-600}"
 DEADLINE=$((SECONDS + WAIT_SECS))
@@ -127,7 +148,7 @@ COMPOSE_RC=""
 GRACE=0
 while (( SECONDS < DEADLINE )); do
   sleep 10
-  POLL=$(sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+  POLL=$("${SSH_RUN[@]}" "$REMOTE" \
     "docker inspect deploy-kaogong-1 --format '{{.State.StartedAt}}' 2>/dev/null; echo; tail -1 $COMPOSE_LOG 2>/dev/null" || true)
   CUR_STARTED=$(sed -n 1p <<<"$POLL")
   LAST_LINE=$(tail -1 <<<"$POLL")
@@ -143,7 +164,7 @@ while (( SECONDS < DEADLINE )); do
   # compose 正常退出但容器/rev 还没收敛：再给 3 轮（health 经边缘可能慢半拍），仍不收敛按失败
   if [[ "$COMPOSE_RC" == "0" ]] && (( ++GRACE >= 3 )); then break; fi
 done
-sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" "tail -3 $COMPOSE_LOG" || true
+"${SSH_RUN[@]}" "$REMOTE" "tail -3 $COMPOSE_LOG" || true
 if [[ "$REBUILT" != "1" ]]; then
   if [[ -z "$COMPOSE_RC" ]]; then
     echo "FAIL: ${WAIT_SECS}s 内 compose 未退出、容器未完成重建（线上仍 ${CUR_REV:-?}，目标 $BUILD_REV）"
@@ -156,12 +177,12 @@ if [[ "$REBUILT" != "1" ]]; then
   fi
   echo "--- 宿主现场（事后归因用；OOM 看内核日志而非猜）---"
   host_probe
-  sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+  "${SSH_RUN[@]}" "$REMOTE" \
     "pgrep -af '[d]ocker compose' || echo 'no compose proc'; tail -40 $COMPOSE_LOG; \
      journalctl -k --since '-20 min' --no-pager 2>/dev/null | grep -i -E 'out of memory|oom-kill|killed process' || echo 'kernel: no OOM in last 20 min'" || true
   exit 1
 fi
-sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+"${SSH_RUN[@]}" "$REMOTE" \
   "docker inspect deploy-kaogong-1 --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -q '^ADMIN_TOKEN=..'" \
   || { echo "FAIL: 容器 ADMIN_TOKEN 为空，.env 未正确注入！"; exit 1; }
 fi
@@ -177,7 +198,7 @@ fi
 echo "OK: 线上后端与本机代码一致"
 
 step "4a2 部署审计记录（服务器侧 deploy-history.log，事后可追溯任意时刻线上 rev 与部署来源）"
-sshpass -e ssh "${SSH_OPTS[@]}" "$REMOTE" \
+"${SSH_RUN[@]}" "$REMOTE" \
   "mkdir -p /home/ubuntu/kaogong-reports && printf '%s rev=%s bundle=%s by=%s\n' \
    \"\$(date -u +%Y-%m-%dT%H:%M:%SZ)\" '$BUILD_REV' '$LOCAL_INDEX_REF' '$(hostname)' \
    >> /home/ubuntu/kaogong-reports/deploy-history.log" \
