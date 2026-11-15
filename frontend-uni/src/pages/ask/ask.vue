@@ -460,6 +460,18 @@ export default {
         return;
       }
       // #endif
+      // #ifndef H5
+      if (path && uni.compressImage) {
+        uni.compressImage({
+          src: path,
+          quality: 85,
+          compressedWidth: 1600,
+          success: (r) => add(r.tempFilePath || path, file || null),
+          fail: () => add(path, file || null),
+        });
+        return;
+      }
+      // #endif
       if (path) add(path, file || null);
     },
     removeImage(i) {
