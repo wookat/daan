@@ -46,7 +46,7 @@ export default {
 </script>
 
 <style scoped>
-.kg-mod { display: flex; align-items: center; gap: var(--sp-12); }
+.kg-mod { display: flex; align-items: center; gap: var(--sp-12); box-sizing: border-box; }
 .kg-mod--row { min-height: 72px; padding: var(--sp-12) var(--sp-16); }
 .kg-mod__ico { flex-shrink: 0; width: 44px; height: 44px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; }
 .kg-mod__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }

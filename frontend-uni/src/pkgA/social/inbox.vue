@@ -2,7 +2,7 @@
   <view class="wrap">
     <kg-two-col>
       <template #main>
-        <view v-if="items.length" class="list">
+        <view v-if="items.length" class="list kg-cards">
           <kg-card v-for="(it, i) in items" :key="it.type + '-' + it.id + '-' + i" clickable class="item" @click="openDiscuss(it)">
             <view class="row">
               <view class="avatar" :class="{ 'is-like': it.type === 'like' }" aria-hidden="true">
@@ -105,7 +105,6 @@ export default {
 
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
-.list { display: flex; flex-direction: column; gap: var(--card-gap); }
 .row { display: flex; gap: var(--sp-12); align-items: flex-start; }
 .avatar { flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--r-full); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; }
 .avatar-t { font-size: var(--fs-body); font-weight: 600; color: var(--brand-text); }

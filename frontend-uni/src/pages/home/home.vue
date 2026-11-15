@@ -163,7 +163,7 @@
           <kg-skeleton preset="cards" />
           <text class="skel-hint">题库加载中…点此重试</text>
         </view>
-        <view v-else class="modlist">
+        <view v-else class="modlist kg-cards kg-cards--grid">
           <kg-module-card v-for="c in modCounts" :key="c.module" :module="c.module" :progress="modProgress(c)" :sub="modSub(c)" @click="openModule(c.module)" />
           <kg-card clickable chevron class="modrow" @click="szTodayDone ? launch({ kind: 'szreview' }) : launch({ kind: 'shizheng' })">
             <view class="modrow-in">
@@ -1184,7 +1184,7 @@ export default {
 /* 专项练习列表 */
 .skelwrap { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
 .skel-hint { font-size: var(--fs-caption); color: var(--ink-4); text-align: center; padding: var(--sp-8) 0; }
-.modlist { display: flex; flex-direction: column; gap: var(--card-gap); margin-top: var(--sp-12); }
+.modlist { margin-top: var(--sp-12); }
 .modrow-in { display: flex; align-items: center; gap: var(--sp-12); }
 .modrow-ico { width: 44px; height: 44px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .modrow-ico.is-warn { background: var(--warn-soft); }
@@ -1196,7 +1196,7 @@ export default {
 
 /* 更多练习 4 格 */
 .more-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap); margin-top: var(--sp-12); }
-.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; }
+.more-c { display: flex; flex-direction: column; gap: var(--sp-4); min-height: 96px; box-sizing: border-box; }
 .more-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; margin-bottom: var(--sp-4); }
 .more-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -448,4 +448,28 @@ uni-modal .uni-modal__btn_primary {
   }
 }
 /* #endif */
+
+/* 卡片间距唯一来源约定：
+ * 1) 裸堆叠（无容器）：kg-card 自带兄弟边距（.kg-card + .kg-card）生效；
+ * 2) 列表/网格容器：挂 .kg-cards —— gap 提供间距并清零卡外边距，防双份；
+ *    .kg-cards--grid 于 ≥768px 自动切两列网格。禁止再自写 gap + 卡 margin。
+ * !important：各页面作用域样式里的 .item/.kg-card 边距会被编译成
+ * 0,2,0~0,3,0 优先级，普通声明压不住，必须显式提升。 */
+.kg-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--card-gap);
+}
+.kg-cards .kg-card {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .kg-cards--grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* #endif */
 </style>

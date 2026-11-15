@@ -58,7 +58,7 @@
           @cta="year || region || st ? clearFilters() : startMini()"
         />
 
-        <view v-else class="plist">
+        <view v-else class="plist kg-cards">
           <kg-card v-for="p in visible" :key="p.id" :id="'paper-' + p.id" variant="flat" class="paper" :selected="p.id === pinnedId">
             <view class="paper-top" role="button" @click="startPaper(p)">
               <kg-tag v-if="p.id === pinnedId" tone="brand">邀你挑战的卷</kg-tag>
@@ -523,7 +523,6 @@ export default {
 .prog-t { font-size: var(--fs-sub); font-weight: 500; color: var(--ink); }
 .prog-p { font-size: var(--fs-sub); color: var(--brand-text); }
 .filters { display: flex; flex-direction: column; gap: var(--sp-12); margin-bottom: var(--sp-16); }
-.plist { display: flex; flex-direction: column; gap: var(--card-gap); }
 .plist .paper + .paper { margin-top: 0; }
 .paper-top { min-height: var(--hit-min); display: flex; flex-direction: column; gap: var(--sp-8); align-items: flex-start; }
 .paper-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: var(--lh-body); }

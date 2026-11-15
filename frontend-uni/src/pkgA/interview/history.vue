@@ -6,7 +6,7 @@
           <kg-stat-row :items="statItems" />
         </kg-card>
 
-        <view v-if="items.length" class="list">
+        <view v-if="items.length" class="list kg-cards">
           <kg-card v-for="it in items" :key="it.id" clickable chevron class="item" @click="openSession(it.id)">
             <view class="item-top">
               <kg-tag tone="brand">{{ it.category }}</kg-tag>
@@ -101,7 +101,6 @@ export default {
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
 .stats { margin-bottom: var(--sp-16); }
-.list { display: flex; flex-direction: column; gap: var(--card-gap); }
 .item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
 .score { font-size: var(--fs-h3); color: var(--ink); flex-shrink: 0; }
 .score.good { color: var(--ok); }

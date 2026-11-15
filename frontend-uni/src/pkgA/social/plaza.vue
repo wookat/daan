@@ -2,7 +2,7 @@
   <view class="wrap">
     <kg-two-col>
       <template #main>
-        <view v-if="items.length" class="list">
+        <view v-if="items.length" class="list kg-cards">
           <kg-card v-for="it in items" :key="it.question_id" clickable class="item" @click="openDiscuss(it)">
             <view class="item-top">
               <kg-tag tone="module" :module="it.module">{{ modName(it.module) }}</kg-tag>
@@ -91,7 +91,6 @@ export default {
 
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
-.list { display: flex; flex-direction: column; gap: var(--card-gap); }
 .item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
 .cnt { display: flex; align-items: center; gap: var(--sp-4); color: var(--ink-3); flex-shrink: 0; }
 .cnt-t { font-size: var(--fs-sub); color: var(--ink-2); }

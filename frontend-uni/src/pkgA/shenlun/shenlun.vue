@@ -48,7 +48,7 @@
         :cta-text="qFavOnly || fltCount || qtype !== '全部' ? '查看全部真题' : ''"
         @cta="clearFlt"
       />
-      <view v-else class="qgrid">
+      <view v-else class="qgrid kg-cards">
         <kg-card v-for="q in shownQs" :key="q.id" clickable class="q-item" @click="openQ(q.id)">
           <view class="q-top">
             <view class="q-tags">
@@ -156,7 +156,7 @@
       <!-- 热点：内涵/角度/金句 三段式 -->
       <template v-if="mtype === '热点'">
         <kg-empty-state v-if="!loading && !hots.length" icon="book-open" title="暂无热点素材" desc="按「内涵/角度/金句」整理的热点将陆续上线" />
-        <view v-else class="mgrid">
+        <view v-else class="mgrid kg-cards">
           <kg-card v-for="g in hots" :key="g.topic" class="m-item">
             <view class="q-top" role="button" @click="expanded = expanded === 'h' + g.topic ? 0 : 'h' + g.topic">
               <text class="m-topic">{{ g.topic }}</text>
@@ -192,7 +192,7 @@
       <!-- 我的笔记 -->
       <template v-else-if="mtype === '我的笔记'">
         <kg-empty-state v-if="!loading && !notes.length" icon="square-pen" title="还没有笔记" desc="自己的金句、案例、写作框架记在这里，和素材库放在一起" cta-text="写一条" @cta="openNoteForm()" />
-        <view v-else class="mgrid">
+        <view v-else class="mgrid kg-cards">
           <kg-card v-for="n in notes" :key="n.id" class="m-item">
             <view class="q-top">
               <text class="m-topic">{{ n.title || n.topic || '笔记' }}</text>
@@ -217,7 +217,7 @@
         :cta-text="favOnly || mtype !== '全部' ? '查看全部素材' : ''"
         @cta="setMtype('全部')"
       />
-      <view v-else-if="mtype !== '热点' && mtype !== '我的笔记'" class="mgrid">
+      <view v-else-if="mtype !== '热点' && mtype !== '我的笔记'" class="mgrid kg-cards">
         <kg-card v-for="m in shownMats" :key="m.id" class="m-item">
           <view class="q-top">
             <view class="q-tags">
@@ -260,7 +260,7 @@
         cta-text="去题库作答"
         @cta="tapQ"
       />
-      <view v-else class="rgrid">
+      <view v-else class="rgrid kg-cards">
         <kg-card v-for="r in recs" :key="r.id" class="r-item" clickable @click="openRec(r)">
           <view class="q-top">
             <text class="hist-time num">{{ fmtTime(r.created_at) }}</text>
@@ -1021,7 +1021,7 @@ export default {
 .sheet-foot { display: flex; gap: var(--sp-12); }
 .sheet-body :deep(.wd-radio-group) { display: flex; flex-wrap: wrap; gap: var(--sp-8); --wot-radio-label-color: var(--ink); --wot-radio-button-bg: var(--fill); --wot-radio-button-border: var(--line); }
 
-.qgrid, .mgrid, .rgrid { display: flex; flex-direction: column; gap: var(--card-gap); }
+/* 卡间距由全局 .kg-cards 统一提供（gap + 卡外边距清零），勿再叠加兄弟边距 */
 .q-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
 .q-tags { display: flex; align-items: center; gap: var(--sp-8); flex: 1; min-width: 0; flex-wrap: wrap; }
 .q-top-r { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
