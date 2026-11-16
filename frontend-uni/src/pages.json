@@ -8,23 +8,23 @@
   "pages": [
     {
       "path": "pages/home/home",
-      "style": { "navigationBarTitleText": "刷题" }
+      "style": { "navigationBarTitleText": "刷题", "h5": { "navigationStyle": "custom" } }
     },
     {
       "path": "pages/book/book",
-      "style": { "navigationBarTitleText": "错题本" }
+      "style": { "navigationBarTitleText": "错题本", "h5": { "navigationStyle": "custom" } }
     },
     {
       "path": "pages/ask/ask",
-      "style": { "navigationBarTitleText": "AI 问答" }
+      "style": { "navigationBarTitleText": "AI 问答", "h5": { "navigationStyle": "custom" } }
     },
     {
       "path": "pages/stats/stats",
-      "style": { "navigationBarTitleText": "统计" }
+      "style": { "navigationBarTitleText": "统计", "h5": { "navigationStyle": "custom" } }
     },
     {
       "path": "pages/profile/profile",
-      "style": { "navigationBarTitleText": "我的" }
+      "style": { "navigationBarTitleText": "我的", "h5": { "navigationStyle": "custom" } }
     },
     {
       "path": "pages/practice/practice",
