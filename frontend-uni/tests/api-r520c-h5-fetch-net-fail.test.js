@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isNetMsg, failBannerText } from '../src/api-policy';
+import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isNetMsg, failBannerText } from '../src/api/api-policy';
 
 const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 const ASK = readFileSync(new URL('../src/pages/ask/ask.vue', import.meta.url), 'utf8');
@@ -26,7 +26,7 @@ describe('问答页失败横幅：网络文案不再双「请重试」', () => {
     expect((ASK.match(/<kg-banner v-if="error"[^\n]*:text="errorText"/g) || []).length).toBe(2);
     expect(ASK).not.toMatch(/error\.includes\('再试'\)/);
     expect(ASK).toMatch(/errorText\(\) \{\s*return failBannerText\(this\.error\);/);
-    expect(ASK).toMatch(/import \{ failBannerText \} from '\.\.\/\.\.\/api-policy\.js';/);
+    expect(ASK).toMatch(/import \{ failBannerText \} from '\.\.\/\.\.\/api\/api-policy\.js';/);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { askQid, askViewUrl, findAskSid } from '../src/ask-link.js';
+import { askQid, askViewUrl, findAskSid } from '../src/ask/ask-link.js';
 
 describe('askViewUrl', () => {
   it('合法 qid 返回搜索深链', () => {

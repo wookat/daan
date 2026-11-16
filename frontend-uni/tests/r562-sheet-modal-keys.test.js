@@ -4,10 +4,10 @@
 // Tab 圈在 .wd-popup 内，打开焦点移入、关闭归还；KgSheet 内层加 role=dialog/aria-modal/aria-label。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { modalEntry, modalKeyAction, isTextWithValue, pickRestoreTarget } from '../src/modal-policy.js';
-import { popAction, validMarker, markerOf, canPush, pageKey } from '../src/sheet-history.js';
+import { modalEntry, modalKeyAction, isTextWithValue, pickRestoreTarget } from '../src/a11y/modal-policy.js';
+import { popAction, validMarker, markerOf, canPush, pageKey } from '../src/utils/sheet-history.js';
 
-const A11Y = readFileSync(new URL('../src/a11y-focus.js', import.meta.url), 'utf8');
+const A11Y = readFileSync(new URL('../src/a11y/a11y-focus.js', import.meta.url), 'utf8');
 const SHEET = readFileSync(new URL('../src/components/kg-sheet/kg-sheet.vue', import.meta.url), 'utf8');
 const POPUP_TYPES = readFileSync(new URL('../node_modules/wot-design-uni/components/wd-popup/types.ts', import.meta.url), 'utf8');
 const POPUP = readFileSync(new URL('../node_modules/wot-design-uni/components/wd-popup/wd-popup.vue', import.meta.url), 'utf8');
@@ -209,7 +209,7 @@ describe('KgSheet dialog 语义', () => {
   });
 
   it('KgSheet H5 接 sheet-history：打开登记（Back 回调 = update:modelValue false），关闭/卸载登出；非 H5 不引入', () => {
-    expect(SHEET).toContain("// #ifdef H5\nimport { sheetOpened, sheetClosed } from '../../sheet-history.js';\n// #endif");
+    expect(SHEET).toContain("// #ifdef H5\nimport { sheetOpened, sheetClosed } from '../../utils/sheet-history.js';\n// #endif");
     expect(SHEET).toContain("if (this._histTok == null) this._histTok = sheetOpened(() => this.$emit('update:modelValue', false));");
     expect(SHEET.match(/sheetClosed\(this\._histTok\)/g)).toHaveLength(2);
   });

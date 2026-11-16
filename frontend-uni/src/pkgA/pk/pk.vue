@@ -135,8 +135,8 @@
 </template>
 
 <script>
-import { pkCreate, pkJoin, pkRandomMatch, pkMatch, pkSubmit, pkMine, pkLeaderboard, pkNickname, trackEvent } from '../../api.js';
-import { MODULES } from '../../module-meta.js';
+import { pkCreate, pkJoin, pkRandomMatch, pkMatch, pkSubmit, pkMine, pkLeaderboard, pkNickname, trackEvent } from '../../api/api.js';
+import { MODULES } from '../../utils/module-meta.js';
 
 const MODS = Object.fromEntries(Object.keys(MODULES).map((k) => [k, MODULES[k].label]));
 const PER_Q_SEC = 30;

@@ -26,7 +26,7 @@ describe('R585 统计页 loadReco 同步错题本 tab 角标', () => {
   const lr = methodBody(stats, 'async loadReco\\(\\)');
 
   it('引入 tabbar-badge.js 的 setBookBadge，且只在 review 真实回包分支调用', () => {
-    expect(stats).toContain("import { setBookBadge } from '../../tabbar-badge.js';");
+    expect(stats).toContain("import { setBookBadge } from '../../utils/tabbar-badge.js';");
     expect(lr.match(/setBookBadge\(/g)).toHaveLength(1);
     const review = lr.slice(lr.indexOf('await request(vp)'));
     expect(review).toContain('} else {\n              this.dueSynced = false;\n            }\n            if (this.dueSynced) setBookBadge(this.dueN);');

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGetCache } from '../src/api-get-cache.js';
-import { HOST_RE } from '../src/a11y-focus.js';
+import { createGetCache } from '../src/api/api-get-cache.js';
+import { HOST_RE } from '../src/a11y/a11y-focus.js';
 
 function deferred() {
   let resolve;

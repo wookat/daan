@@ -133,9 +133,9 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid } from '../../api.js';
-import { buildMasteryUrl, parseMasteryOpts } from '../../mastery-url.js';
-import { segResizeMixin } from '../../seg-resize.js';
+import { request, snapPeek, anonUid } from '../../api/api.js';
+import { buildMasteryUrl, parseMasteryOpts } from '../../utils/mastery-url.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
 
 const LEVELS = [
   { key: 'untouched', label: '未接触' },

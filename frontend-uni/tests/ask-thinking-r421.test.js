@@ -2,8 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { thinkingSecs, thinkingLabel } from '../src/ask-link.js';
-import { parseSseEvents } from '../src/api-policy.js';
+import { thinkingSecs, thinkingLabel } from '../src/ask/ask-link.js';
+import { parseSseEvents } from '../src/api/api-policy.js';
 
 const ASK = readFileSync(new URL('../src/pages/ask/ask.vue', import.meta.url), 'utf8');
 const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');

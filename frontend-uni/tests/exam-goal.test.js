@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { goalGap, prevScoreDelta } from '../src/exam-goal.js';
+import { goalGap, prevScoreDelta } from '../src/exam/exam-goal.js';
 
 describe('goalGap', () => {
   it('缺目标/缺分数返回 null', () => {

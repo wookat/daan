@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { backLabel, prevRoute } from '../src/back-label.js';
+import { backLabel, prevRoute } from '../src/utils/back-label.js';
 
 const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8');
 
@@ -33,7 +33,7 @@ describe('backLabel', () => {
 
 describe('practice.vue 接线', () => {
   it('onShow 按页面栈算 backLabel，三处退出按钮绑定，不再硬编码「返回首页」', () => {
-    expect(PRACTICE).toContain("import { backLabel } from '../../back-label.js';");
+    expect(PRACTICE).toContain("import { backLabel } from '../../utils/back-label.js';");
     expect(PRACTICE).toContain("      backLabel: '返回首页',");
     expect(PRACTICE).toMatch(/onShow\(\) \{\n\s+this\.askSeenTick\+\+;\n\s+this\.backLabel = backLabel\(getCurrentPages\(\)\);/);
     expect(PRACTICE).toContain(':secondary-text="backLabel"');

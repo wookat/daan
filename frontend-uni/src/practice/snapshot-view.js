@@ -1,7 +1,7 @@
 // 多端点页面的旧快照展示态：request() 网络失败以 apiSnap 旧快照 resolve（staleAt 打标），
 // 页面把每个回包交给 noteSnapshot 登记；任一为旧快照即进入快照态（横幅取最旧时刻、采样 navigator.onLine），
 // 一轮刷新的主回包为真实且本轮未见旧快照时清除；H5 监听 online/offline 改文案并联网自动重拉。
-import { staleAt } from './api.js';
+import { staleAt } from '../api/api.js';
 import { snapshotNotice } from './snapshot-notice.js';
 
 /**

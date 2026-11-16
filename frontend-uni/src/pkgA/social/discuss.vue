@@ -118,10 +118,10 @@
 </template>
 
 <script>
-import { fmtAgo } from '../../fmt.js';
-import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
-import { segResizeMixin } from '../../seg-resize.js';
+import { fmtAgo } from '../../utils/fmt.js';
+import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api/api.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
 
 const SORT_OPTS = [
   { label: '最热', value: 'hot' },

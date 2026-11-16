@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSearchUrl, buildTikuQPath, SEARCH_PATH } from '../src/search-url.js';
+import { buildSearchUrl, buildTikuQPath, SEARCH_PATH } from '../src/utils/search-url.js';
 
 describe('buildTikuQPath', () => {
   it('合法正整数 id 生成 /tiku/q/{id}/', () => {

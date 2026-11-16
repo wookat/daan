@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GROUP_SIZES, normalizeGroupSize, normalizeFlag, adoptServerPracticePrefs } from '../src/practice-prefs.js';
+import { GROUP_SIZES, normalizeGroupSize, normalizeFlag, adoptServerPracticePrefs } from '../src/practice/practice-prefs.js';
 
 describe('GROUP_SIZES', () => {
   it('档位白名单为 10/20/30/50', () => {

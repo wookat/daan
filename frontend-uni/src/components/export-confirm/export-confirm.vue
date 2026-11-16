@@ -28,7 +28,7 @@
 
 <script>
 // #ifdef H5
-import { sheetOpened, sheetClosed } from '../../sheet-history.js';
+import { sheetOpened, sheetClosed } from '../../utils/sheet-history.js';
 // #endif
 
 // H5 浏览器 Back 先关本层（与 KgSheet 同走 sheet-history；叠在筛选层之上时 Back 逐层关）

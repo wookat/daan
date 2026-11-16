@@ -2,7 +2,7 @@
 // + 排序补「最早」（粉笔评论区多次提出的按新旧排序需求）。源码锁 + 逻辑抽取执行。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { buildBookUrl, parseBookOpts, BOOK_PATH } from '../src/book-url.js';
+import { buildBookUrl, parseBookOpts, BOOK_PATH } from '../src/book/book-url.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 

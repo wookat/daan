@@ -11,8 +11,8 @@ describe('R560 错题本取消收藏同步云端', () => {
     expect(PRACTICE).toContain("this.favs.unshift({ t: Date.now(), id: qid || null, question,");
   });
   it('book.vue 从 api.js 引入 fetchFavs/removeFav、从 exam-fav.js 引入 cloudFavId', () => {
-    expect(BOOK).toMatch(/import \{[^}]*\bfetchFavs\b[^}]*\bremoveFav\b[^}]*\} from '\.\.\/\.\.\/api\.js'/);
-    expect(BOOK).toContain("import { cloudFavId } from '../../exam-fav.js';");
+    expect(BOOK).toMatch(/import \{[^}]*\bfetchFavs\b[^}]*\bremoveFav\b[^}]*\} from '\.\.\/\.\.\/api\/api\.js'/);
+    expect(BOOK).toContain("import { cloudFavId } from '../../exam/exam-fav.js';");
   });
   it('unfav 取出被删条目后调用 unfavCloud；unfavCloud 先按 id、无 id 再按题干回查云列表，命中才 removeFav', () => {
     const unfav = BOOK.slice(BOOK.indexOf('    unfav(i) {'), BOOK.indexOf('    isDue(m) {'));

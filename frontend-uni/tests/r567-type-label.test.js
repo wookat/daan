@@ -3,7 +3,7 @@
 // 非测试错题 4/287；无分隔符前缀（政治常识 / 增长率比较）2222 行不切。只改展示，筛选值与 redo qtype 不变。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fineTypeLabel, qtypeName } from '../src/type-label.js';
+import { fineTypeLabel, qtypeName } from '../src/utils/type-label.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const MP_BOOK = readFileSync(new URL('../../miniapp-native/miniprogram/pages/book/book.ts', import.meta.url), 'utf8');
@@ -63,7 +63,7 @@ describe('fineTypeLabel', () => {
 
 describe('book.vue 接线：展示走 label，筛选值仍是完整细分名', () => {
   it('卡面细分标签 / 细分 chips / 当前筛选 tag / 重练入口标题四处用 fineTypeLabel', () => {
-    expect(BOOK).toContain("import { fineTypeLabel, qtypeName } from '../../type-label.js';");
+    expect(BOOK).toContain("import { fineTypeLabel, qtypeName } from '../../utils/type-label.js';");
     expect(BOOK).toContain('<kg-tag v-if="fineType(m)" tone="neutral" class="finetag">{{ fineLabel(m) }}</kg-tag>');
     expect(BOOK).toContain(`@click="qtFilter = qtFilter === g.name ? '' : g.name">{{ fineTypeLabel(kpFilter, g.name) }} ×{{ g.n }}</kg-tag>`);
     expect(BOOK).toContain("kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) || modName(filterMod)");

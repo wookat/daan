@@ -23,8 +23,8 @@ import {
   dailySetShareTail,
   percentileLine,
   percentileShareTail,
-} from '../src/exam-copy.js';
-import { reviewDoneCopy, reviewVerdict } from '../src/review-summary.js';
+} from '../src/exam/exam-copy.js';
+import { reviewDoneCopy, reviewVerdict } from '../src/review/review-summary.js';
 import * as mp from '../../miniapp-native/miniprogram/utils/review-verdict.ts';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');

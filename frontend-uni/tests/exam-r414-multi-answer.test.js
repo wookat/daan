@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { toggleExcl, togglePickLetter } from '../src/exam-excl.js';
-import { optionState } from '../src/option-state.js';
+import { toggleExcl, togglePickLetter } from '../src/exam/exam-excl.js';
+import { optionState } from '../src/utils/option-state.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 

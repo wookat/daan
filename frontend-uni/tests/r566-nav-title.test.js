@@ -2,7 +2,7 @@
 // 生产 375 截图（r565 prod paper-complete）：顶栏「刷题」+ 内容头「本卷练完 · <卷名>」；小程序 navTitleFor 返回 ptitle。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { practiceNavTitle, practicePageOnTop, PRACTICE_TITLE_DEFAULT } from '../src/practice-title.js';
+import { practiceNavTitle, practicePageOnTop, PRACTICE_TITLE_DEFAULT } from '../src/practice/practice-title.js';
 
 const PRACTICE = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/practice/daily-ops.js', import.meta.url), 'utf8')+readFileSync(new URL('../src/practice/session-ops.js', import.meta.url), 'utf8');
 const PAGES = JSON.parse(readFileSync(new URL('../src/pages.json', import.meta.url), 'utf8'));
@@ -55,7 +55,7 @@ describe('practiceNavTitle', () => {
 
 describe('practice.vue 接线', () => {
   it('session 变化与 onShow 都同步标题；同值不重复调 setNavigationBarTitle', () => {
-    expect(PRACTICE).toContain("import { practiceNavTitle, practicePageOnTop } from '../../practice-title.js';");
+    expect(PRACTICE).toContain("import { practiceNavTitle, practicePageOnTop } from '../../practice/practice-title.js';");
     expect(PRACTICE).toContain('    session() {\n      this.syncNavTitle();\n    },');
     expect(PRACTICE).toContain("    this.backLabel = backLabel(getCurrentPages());\n    this._navTitle = '';\n    this.syncNavTitle();\n");
     expect(PRACTICE).toContain('if (title === this._navTitle) return;\n      if (!practicePageOnTop(getCurrentPages())) return;\n      this._navTitle = title;\n      uni.setNavigationBarTitle({ title, fail: () => {} });');

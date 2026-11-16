@@ -3,10 +3,10 @@
 // UI 仍是「法律 · 个税」筛选，地址栏只剩 ?mod=changshi。哑条目在筛选层打开那一刻的 URL 上 push，层内改筛选只 replaceState 了哑条目，
 // 本页真条目的 query 停在开层前；Back 逐条跳过哑条目落到真条目后，页面得到 onSheetHistoryLanded 回调按当前筛选重写 URL。
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, onSheetHistoryLanded, _resetSheetHistory } from '../src/sheet-history.js';
+import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, onSheetHistoryLanded, _resetSheetHistory } from '../src/utils/sheet-history.js';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { isBookHref } from '../src/book-url.js';
+import { isBookHref } from '../src/book/book-url.js';
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 const BOOK = '/#/pages/book/book';
@@ -116,7 +116,7 @@ describe('sheet-history：跳过哑条目落回本页真条目时回调（R569�
 
   it('book.vue：onLoad 订阅、只在本页且深链 kp 未落地前不重写、onUnload 取消', () => {
     const src = readFileSync(resolve(process.cwd(), 'src/pages/book/book.vue'), 'utf8');
-    expect(src).toMatch(/import \{ onSheetHistoryLanded \} from '\.\.\/\.\.\/sheet-history\.js'/);
+    expect(src).toMatch(/import \{ onSheetHistoryLanded \} from '\.\.\/\.\.\/utils\/sheet-history\.js'/);
     expect(src).toMatch(/this\._offLanded = onSheetHistoryLanded\(\(href\) => \{\s*if \(isBookHref\(href\) && !this\._pendingKp && !this\._pendingKp3\) this\.syncBookUrl\(\);/);
     expect(src).toMatch(/onUnload\(\) \{[\s\S]*?if \(this\._offLanded\) \{\s*this\._offLanded\(\);/);
   });

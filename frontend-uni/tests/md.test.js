@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { md } from '../src/md.js';
+import { md } from '../src/utils/md.js';
 
 describe('md（AI 答案渲染，v-html 唯一入口）', () => {
   it('HTML 转义：& 与 < 必须被转义（XSS 面）', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toastAnnounceText, pickAnnounceText } from '../src/live-policy';
+import { toastAnnounceText, pickAnnounceText } from '../src/a11y/live-policy';
 
 describe('toastAnnounceText', () => {
   it('可见且文案非空时通报（trim 后）', () => {

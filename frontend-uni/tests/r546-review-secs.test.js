@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { reviewElapsedSecs, REVIEW_SECS_MAX } from '../src/review-snap.js';
+import { reviewElapsedSecs, REVIEW_SECS_MAX } from '../src/review/review-snap.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
@@ -39,6 +39,6 @@ describe('R546 book.vue 复习计时接线', () => {
     const rec = method('record');
     expect(rec).toMatch(/request\('\/api\/review\/' \+ this\.cur\.id, \{\s*method: 'POST',\s*data: \{ correct, uid: anonUid\(\), picked: this\.picked \|\| undefined, secs: this\.reviewSecs\(\) \},/);
     expect(method('reviewSecs')).toContain('reviewElapsedSecs(this._qStart, Date.now())');
-    expect(script).toContain("import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review-snap.js';");
+    expect(script).toContain("import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review/review-snap.js';");
   });
 });

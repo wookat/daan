@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFaved, toggleFav, cloudFavId } from '../src/exam-fav.js';
+import { isFaved, toggleFav, cloudFavId } from '../src/exam/exam-fav.js';
 
 const item = {
   question: '甲题干',

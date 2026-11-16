@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isExplanationCovered, normalizeExplanation } from '../src/exp-dup.js';
+import { isExplanationCovered, normalizeExplanation } from '../src/practice/exp-dup.js';
 
 const EXPL = '第一步，本题考查增长率计算。第二步，根据材料 2019 年同比增长 12.5%，故选 A。';
 

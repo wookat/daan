@@ -60,8 +60,8 @@
 </template>
 
 <script>
-import { fmtMDHM } from '../../fmt.js';
-import { fetchCommentInbox, readCommentInbox, getToken } from '../../api.js';
+import { fmtMDHM } from '../../utils/fmt.js';
+import { fetchCommentInbox, readCommentInbox, getToken } from '../../api/api.js';
 
 export default {
   data() {

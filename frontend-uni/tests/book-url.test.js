@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOOK_PATH, buildBookUrl, parseBookOpts } from '../src/book-url.js';
+import { BOOK_PATH, buildBookUrl, parseBookOpts } from '../src/book/book-url.js';
 
 describe('buildBookUrl', () => {
   it('全默认回落基础路径', () => {

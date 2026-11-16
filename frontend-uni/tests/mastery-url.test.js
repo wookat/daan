@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MASTERY_PATH, buildMasteryUrl, parseMasteryOpts } from '../src/mastery-url.js';
+import { MASTERY_PATH, buildMasteryUrl, parseMasteryOpts } from '../src/utils/mastery-url.js';
 
 describe('buildMasteryUrl', () => {
   it('无模块回落基础路径', () => {

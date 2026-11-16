@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DAILY_GOALS, normalizeDailyGoal, adoptServerDailyGoal } from '../src/daily-goal.js';
+import { DAILY_GOALS, normalizeDailyGoal, adoptServerDailyGoal } from '../src/home/daily-goal.js';
 
 describe('normalizeDailyGoal', () => {
   it('只接受产品档位 20/50/100', () => {

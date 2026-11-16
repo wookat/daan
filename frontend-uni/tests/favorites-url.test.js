@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FAVORITES_PATH, buildFavoritesUrl, parseFavoritesOpts } from '../src/favorites-url.js';
+import { FAVORITES_PATH, buildFavoritesUrl, parseFavoritesOpts } from '../src/fav/favorites-url.js';
 
 describe('buildFavoritesUrl', () => {
   it('默认态回落基础路径', () => {

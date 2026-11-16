@@ -319,11 +319,11 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent, isStaleUidErr } from '../../api.js';
-import { checkinStreak, dayKey, cnWeekKey } from '../../checkin.js';
-import { examTrend } from '../../exam-trend.js';
-import { snapshotViewMixin } from '../../snapshot-view.js';
-import { setBookBadge } from '../../tabbar-badge.js';
+import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent, isStaleUidErr } from '../../api/api.js';
+import { checkinStreak, dayKey, cnWeekKey } from '../../home/checkin.js';
+import { examTrend } from '../../exam/exam-trend.js';
+import { snapshotViewMixin } from '../../practice/snapshot-view.js';
+import { setBookBadge } from '../../utils/tabbar-badge.js';
 import { visColors } from '../../components/kg-echart/kg-echart.vue';
 
 // 统一柱状图底座：隐藏轴、柱距自适应、点按有反馈

@@ -21,8 +21,8 @@
 </template>
 
 <script>
-import { md } from '../../md.js';
-import { qSourceText, qStatLine } from '../../q-stat.js';
+import { md } from '../../utils/md.js';
+import { qSourceText, qStatLine } from '../../utils/q-stat.js';
 
 /**
  * KgAnalysisCard（COMPONENTS §2.1）：默认折叠 3 行的解析卡。底部数据行复用 q-stat.js 口径（样本 <5 不显示）；

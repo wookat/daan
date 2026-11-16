@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildExamRedoSet } from '../src/exam-redo.js';
+import { buildExamRedoSet } from '../src/exam/exam-redo.js';
 
 const wrong = (i, extra = {}) => ({
   no: i,

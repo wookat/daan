@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { weakModule } from '../src/exam-weak.js';
+import { weakModule } from '../src/exam/exam-weak.js';
 
 const row = (key, pct, avgPct, n = 10, name = key + '名') => ({ key, name, n, correct: 0, pct, avgPct });
 

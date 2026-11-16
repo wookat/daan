@@ -64,11 +64,11 @@
 </template>
 
 <script>
-import { fmtMDHM, fmtDayLabel, fmtDurShort } from '../../fmt.js';
-import { request, snapPeek, anonUid, trackEvent } from '../../api.js';
-import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
+import { fmtMDHM, fmtDayLabel, fmtDurShort } from '../../utils/fmt.js';
+import { request, snapPeek, anonUid, trackEvent } from '../../api/api.js';
+import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 
 // module-meta 只收录题库 5 模块；练习历史里还会出现申论/时政会话
 const EXTRA_NAMES = { shenlun: '申论', shizheng: '时事政治' };

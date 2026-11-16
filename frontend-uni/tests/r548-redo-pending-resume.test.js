@@ -13,7 +13,7 @@ import {
   redoItemsFromPending,
   stripPracticeRuntime,
   REDO_PENDING_TITLE,
-} from '../src/practice-progress.js';
+} from '../src/practice/practice-progress.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
@@ -100,7 +100,7 @@ describe('R548 practice.vue 接线', () => {
     expect(tr).toContain('{ title, done, total: s.items.length }');
     for (const n of ['collectPracticeProgress', 'adoptPracticeResume', 'pendingTitle', 'redoItemsFromPending', 'dailyFromPending', 'dailyPendingFor', 'cnDayOf', 'REDO_PENDING_TITLE'])
       expect(script).toContain(n);
-    expect(script).toMatch(/import \{ [^}]*\} from '\.?\.\.?\/\.?\.\.?\/practice-progress\.js';/);
+    expect(script).toMatch(/import \{ [^}]*\} from '\.?\.\.?\/\.?\.\.?\/practice\/practice-progress\.js';/);
   });
 
   it('完成页 redoReport 与「再来一组」仍按 _redoItems && !lastModule 判重练（恢复后语义不丢）', () => {

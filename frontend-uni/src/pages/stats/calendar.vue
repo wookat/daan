@@ -61,7 +61,7 @@
 </template>
 
 <script>
-import { fetchCheckinBadges, fetchCheckinSummary } from '../../api.js';
+import { fetchCheckinBadges, fetchCheckinSummary } from '../../api/api.js';
 
 export default {
   data() {

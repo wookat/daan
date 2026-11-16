@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { isExamDatePast, examDateFieldText, cnTodayStr } from '../src/plan-days-label.js';
+import { isExamDatePast, examDateFieldText, cnTodayStr } from '../src/home/plan-days-label.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 

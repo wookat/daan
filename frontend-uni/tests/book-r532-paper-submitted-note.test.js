@@ -2,7 +2,7 @@
 // 手动录入整卷 page 0、扫描答题卡 1..P，含 first_at/last_at/n）→ 进层即出「这份卷你已判过分：…」，不必录完 N 题再被告知 dup。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { paperSubmittedNote, scanWhen, scanDupNote } from '../src/paper-scan-pages.js';
+import { paperSubmittedNote, scanWhen, scanDupNote } from '../src/exam/paper-scan-pages.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const now = new Date(2026, 8, 8, 16, 30).getTime();
@@ -59,7 +59,7 @@ describe('book.vue 源锁', () => {
   it('查卷带 uid；录入层在 n>0 时出 paperSubmittedNote（warn 样式）、n=0 仍走 R527 文案不出', () => {
     expect(BOOK).toContain("this.manualPaper = await request('/api/paper/' + encodeURIComponent(code) + '?uid=' + encodeURIComponent(anonUid()));");
     expect(BOOK).toContain('<text v-if="manualPaper.n && paperSubmittedNote(manualPaper)" class="scan-note scan-dup">{{ paperSubmittedNote(manualPaper) }}</text>');
-    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';");
+    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../exam/paper-scan-pages.js';");
     expect(BOOK).toMatch(/methods:[\s\S]*paperSubmittedNote,/);
   });
 });

@@ -103,8 +103,8 @@
 </template>
 
 <script>
-import { request, anonUid, pkNickname } from '../../api.js';
-import { fmtWindow as fmtWindowCst, fmtDay as fmtDayCst } from '../../contest-time.js';
+import { request, anonUid, pkNickname } from '../../api/api.js';
+import { fmtWindow as fmtWindowCst, fmtDay as fmtDayCst } from '../../exam/contest-time.js';
 
 export default {
   data() {

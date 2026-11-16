@@ -1,14 +1,14 @@
 // 错题本复习会话域：组卷/快照/作答/判定/同类题/强化（book.vue 抽离；this 仍指组件实例）
 
-import { md } from '../../md.js';
-import { request, anonUid, trackEvent } from '../../api.js';
-import { fontSizes } from '../../font-size.js';
-import { askPrefill } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
-import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review-snap.js';
-import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review-summary.js';
-import { reviewOptions, reviewOptionsFull, extractLetter } from '../../review-opts.js';
+import { md } from '../../utils/md.js';
+import { request, anonUid, trackEvent } from '../../api/api.js';
+import { fontSizes } from '../../services/font-size.js';
+import { askPrefill } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer, similarSubmodule, hasSimilarPool } from '../../review/review-similar.js';
+import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review/review-snap.js';
+import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review/review-summary.js';
+import { reviewOptions, reviewOptionsFull, extractLetter } from '../../review/review-opts.js';
 
 export const reviewComputed = {
 

@@ -6,8 +6,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
   collectPracticeProgress, parseRemotePractice, adoptPracticeResume, markRemoteResume, dailyMeta, cnDayOf,
-} from '../src/practice-progress.js';
-import { snapshotProgressNote, netOnlineNow } from '../src/snapshot-notice.js';
+} from '../src/practice/practice-progress.js';
+import { snapshotProgressNote, netOnlineNow } from '../src/practice/snapshot-notice.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const home = read('../src/pages/home/home.vue');
@@ -84,7 +84,7 @@ describe('源锁：home.vue 远端续练卡 / practice.vue 上送与远端采纳
     const body = method(home, 'loadPracticeResume');
     expect(body).toMatch(/const local = parsePendingPractice\(uni\.getStorageSync\('pendingSession'\), Date\.now\(\)\);[\s\S]*if \(local\) \{[\s\S]*this\.practiceResume = local;[\s\S]*return;/);
     expect(body).toContain("this.practiceResume = markRemoteResume(parseRemotePractice(d), staleAt(d), netOnlineNow());");
-    expect(home).toMatch(/import \{[^}]*\bstaleAt\b[^}]*\} from '\.\.\/\.\.\/api\.js'/);
+    expect(home).toMatch(/import \{[^}]*\bstaleAt\b[^}]*\} from '\.\.\/\.\.\/api\/api\.js'/);
   });
 
   it('home 卡面：snapAt 非 0 才出旧快照注（warn 色），标题/计数行不变', () => {

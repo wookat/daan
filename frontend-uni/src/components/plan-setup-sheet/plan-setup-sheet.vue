@@ -53,9 +53,9 @@
 /** PlanSetupSheet：3 步学习计划向导（考试信息 → 目标 → 每日时长）。
  * 原来内嵌在 home.vue；抽成组件后 home 只负责 openSetup() 与 saved 后刷新计划卡。
  * 保存走 POST /api/profile，成功后 emit('saved', profile)。 */
-import { fmtYMD } from '../../fmt.js';
-import { request, anonUid } from '../../api.js';
-import { isExamDatePast, examDateFieldText, cnTodayStr } from '../../plan-days-label.js';
+import { fmtYMD } from '../../utils/fmt.js';
+import { request, anonUid } from '../../api/api.js';
+import { isExamDatePast, examDateFieldText, cnTodayStr } from '../../home/plan-days-label.js';
 
 export default {
   name: 'PlanSetupSheet',

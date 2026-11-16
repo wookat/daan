@@ -92,9 +92,9 @@
 </template>
 
 <script>
-import { request, anonUid, isNetErr } from '../../api.js';
-import { moduleLabel } from '../../module-meta.js';
-import { rankLine, contestHeroLine, weakNote, contestCorrectTotal } from '../../exam-copy.js';
+import { request, anonUid, isNetErr } from '../../api/api.js';
+import { moduleLabel } from '../../utils/module-meta.js';
+import { rankLine, contestHeroLine, weakNote, contestCorrectTotal } from '../../exam/exam-copy.js';
 
 export default {
   data() {

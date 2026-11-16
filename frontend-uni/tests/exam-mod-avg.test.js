@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { modAvgPct } from '../src/exam-mod-avg.js';
+import { modAvgPct } from '../src/exam/exam-mod-avg.js';
 
 describe('modAvgPct（R306 模块全站均值 fail-closed）', () => {
   it('rank/module_avg 缺失 → null', () => {

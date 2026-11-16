@@ -2,7 +2,7 @@
 // ② 统计页 hero「总正确率」0 题作答时显示「—」而非「0%」（生产 375 截图：只有错题无作答时 by_module 非空 → 满页仪表盘，hero 却 0%）。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { fineTypeLabel, qtypeName } from '../src/type-label.js';
+import { fineTypeLabel, qtypeName } from '../src/utils/type-label.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const STATS = readFileSync(new URL('../src/pages/stats/stats.vue', import.meta.url), 'utf8');

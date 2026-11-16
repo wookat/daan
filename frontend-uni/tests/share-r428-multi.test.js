@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { optionState } from '../src/option-state.js';
+import { optionState } from '../src/utils/option-state.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 
 describe('R428 分享作答页多选（源文件锁）', () => {
   const src = read('../src/pkgA/share/share-q.vue');
   it('多选题点选只切换字母（复用 togglePickLetter，与服务端 normalize_answer 同序），确认后才提交；单选保持点选即提交', () => {
-    expect(src).toMatch(/import \{ togglePickLetter \} from '\.\.\/\.\.\/exam-excl\.js'/);
+    expect(src).toMatch(/import \{ togglePickLetter \} from '\.\.\/\.\.\/exam\/exam-excl\.js'/);
     expect(src).toMatch(/pick\(k\)\s*\{[\s\S]*?if \(this\.isMulti\) \{\s*this\.multiSel = togglePickLetter\(this\.multiSel, k\);\s*return;\s*\}\s*this\.submit\(k\);/);
     expect(src).toMatch(/confirmMulti\(\)\s*\{[\s\S]*?this\.submit\(this\.multiSel\);/);
     expect(src).toMatch(/isMulti\(\)\s*\{\s*return !!\(this\.d && this\.d\.question && this\.d\.question\.multi\);/);

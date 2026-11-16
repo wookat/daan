@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mistakePaper, paperGroups, inPaper, PAPER_GROUP_MAX } from '../src/book-paper.js';
+import { mistakePaper, paperGroups, inPaper, PAPER_GROUP_MAX } from '../src/book/book-paper.js';
 
 const P1 = { pid: 7, title: '2018年青海卷', psource: '2018年青海省考行测真题' };
 const P2 = { pid: 9, title: '2024年河北卷', psource: '2024年河北省考行测真题' };

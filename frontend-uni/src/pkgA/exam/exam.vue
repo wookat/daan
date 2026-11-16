@@ -119,16 +119,16 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
-import { submitFailPlan } from '../../exam-policy.js';
-import { dayKey } from '../../checkin.js';
-import { splitMaterial, sameMaterial } from '../../material.js';
-import { crossedTimeAlert } from '../../exam-alert.js';
-import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam-excl.js';
-import { countAnswered, shouldPushProgress } from '../../exam-resume.js';
-import { resumeAsk, resumeDismissAction } from '../../resume-ask.js';
-import { normFontLv } from '../../font-size.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
+import { request, anonUid } from '../../api/api.js';
+import { submitFailPlan } from '../../exam/exam-policy.js';
+import { dayKey } from '../../home/checkin.js';
+import { splitMaterial, sameMaterial } from '../../utils/material.js';
+import { crossedTimeAlert } from '../../exam/exam-alert.js';
+import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam/exam-excl.js';
+import { countAnswered, shouldPushProgress } from '../../exam/exam-resume.js';
+import { resumeAsk, resumeDismissAction } from '../../ask/resume-ask.js';
+import { normFontLv } from '../../services/font-size.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 
 const PROG_KEY = 'examProgress';
 

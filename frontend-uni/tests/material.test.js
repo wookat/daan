@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitMaterial, sameMaterial } from '../src/material.js';
+import { splitMaterial, sameMaterial } from '../src/utils/material.js';
 
 const MAT = '2024年某省粮食总产量为3850万吨，比上年增长4.2%；其中夏粮产量1540万吨，比上年增长6.5%；秋粮产量2310万吨。全省粮食播种面积6160万亩，比上年增长1.5%。2023年该省粮食总产量中夏粮占比约39.1%。全省农业总产值8200亿元，比上年增长5.3%，其中种植业产值4100亿元。';
 

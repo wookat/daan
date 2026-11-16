@@ -5,11 +5,11 @@
 // （「当前离线 / 网络不稳定 · 展示 n 前缓存的统计」+ 重试 + online 自动重拉），到期数旧快照保持 dueSynced=false。
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { snapshotNotice } from '../src/snapshot-notice.js';
+import { snapshotNotice } from '../src/practice/snapshot-notice.js';
 
 const marks = new WeakMap();
-vi.mock('../src/api.js', () => ({ staleAt: (d) => (d && typeof d === 'object' && marks.get(d)) || 0 }));
-const { snapshotViewMixin } = await import('../src/snapshot-view.js');
+vi.mock('../src/api/api.js', () => ({ staleAt: (d) => (d && typeof d === 'object' && marks.get(d)) || 0 }));
+const { snapshotViewMixin } = await import('../src/practice/snapshot-view.js');
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const stats = read('../src/pages/stats/stats.vue');
@@ -111,7 +111,7 @@ describe('snapshot-view mixin', () => {
 
 describe('stats.vue 接线', () => {
   it('mixin 注入名词「统计」+ 重拉 refreshAccountData；onUnload 摘监听；每轮刷新先 beginSnapshotRound', () => {
-    expect(script).toContain("import { snapshotViewMixin } from '../../snapshot-view.js';");
+    expect(script).toContain("import { snapshotViewMixin } from '../../practice/snapshot-view.js';");
     expect(script).toContain("mixins: [snapshotViewMixin({ noun: '统计', reload: 'refreshAccountData' })],");
     const unload = script.slice(script.indexOf('\n  onUnload() {'), script.indexOf('\n  onShow() {'));
     expect(unload).toContain('this.unbindNet();');

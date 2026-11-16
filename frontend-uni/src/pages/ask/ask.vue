@@ -267,14 +267,14 @@
 </template>
 
 <script>
-import { fmtSlashMD } from '../../fmt.js';
-import { md } from '../../md.js';
-import { request, uploadExplain, streamExplain, filePathToB64, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api.js';
-import { failBannerText } from '../../api-policy.js';
-import { isNativeApp, pickImageNative } from '../../native.js';
-import { setBookBadge } from '../../tabbar-badge.js';
-import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask-sessions.js';
-import { askQid, askViewUrl, thinkingSecs, thinkingLabel } from '../../ask-link.js';
+import { fmtSlashMD } from '../../utils/fmt.js';
+import { md } from '../../utils/md.js';
+import { request, uploadExplain, streamExplain, filePathToB64, anonUid, hasAccessCode, fetchAccessInfo, promptAccessCode, trackEvent } from '../../api/api.js';
+import { failBannerText } from '../../api/api-policy.js';
+import { isNativeApp, pickImageNative } from '../../services/native.js';
+import { setBookBadge } from '../../utils/tabbar-badge.js';
+import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask/ask-sessions.js';
+import { askQid, askViewUrl, thinkingSecs, thinkingLabel } from '../../ask/ask-link.js';
 
 export default {
   data() {

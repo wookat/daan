@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { crossedTimeAlert, TIME_ALERTS } from '../src/exam-alert.js';
+import { crossedTimeAlert, TIME_ALERTS } from '../src/exam/exam-alert.js';
 
 describe('crossedTimeAlert', () => {
   it('向下穿越 300s 触发 5 分钟提醒', () => {

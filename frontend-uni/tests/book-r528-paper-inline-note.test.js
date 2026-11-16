@@ -3,7 +3,7 @@
 // total/answered/correct 仍是机读普通题口径，OMR 槽位契约（R525）不动。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { inlineSkipNote } from '../src/paper-inline-note.js';
+import { inlineSkipNote } from '../src/exam/paper-inline-note.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
@@ -21,7 +21,7 @@ describe('inlineSkipNote', () => {
 
 describe('错题本接入', () => {
   it('结果 sheet：总结行下按回包 inline_n 出说明，逐题行仍只渲染机读 items', () => {
-    expect(BOOK).toContain("import { inlineSkipNote } from '../../paper-inline-note.js';");
+    expect(BOOK).toContain("import { inlineSkipNote } from '../../exam/paper-inline-note.js';");
     expect(BOOK).toContain('  methods: {\n    ...reviewOps,\n    inlineSkipNote,');
     expect(BOOK).toContain(
       "已作答 {{ scanResult.answered }}/{{ scanResult.total }} · 答对 <text class=\"scan-good num\">{{ scanResult.correct }}</text> 题{{ scanResult.saved ? ' · 已记入做题记录' : '' }}</text>\n" +

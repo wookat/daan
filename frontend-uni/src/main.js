@@ -4,12 +4,12 @@ import {
 import App from "./App.vue";
 
 // #ifdef H5
-import "./pwa.js"; // 尽早注册 beforeinstallprompt 监听，供「我的」页安装入口使用
-import { normalizeDailyDeepLink } from "./deeplink.js";
-import { initKeyboardFocus } from "./a11y-focus.js";
-import { initA11yLive } from "./a11y-live.js";
-import { initRoutePrecache } from "./precache.js";
-import { createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from "./monitor-client.js";
+import "./services/pwa.js"; // 尽早注册 beforeinstallprompt 监听，供「我的」页安装入口使用
+import { normalizeDailyDeepLink } from "./services/deeplink.js";
+import { initKeyboardFocus } from "./a11y/a11y-focus.js";
+import { initA11yLive } from "./a11y/a11y-live.js";
+import { initRoutePrecache } from "./services/precache.js";
+import { createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from "./services/monitor-client.js";
 initKeyboardFocus(); // 必须先于 app 挂载：拦截 Vue runtime 的 click addEventListener
 initA11yLive();
 initRoutePrecache();
@@ -94,7 +94,7 @@ if (typeof window !== 'undefined') {
 				if (localStorage.getItem('kg_boot_day') === day) return;
 				localStorage.setItem('kg_boot_day', day);
 				const sw = navigator.serviceWorker && navigator.serviceWorker.controller ? 1 : 0;
-				import('./api.js').then(({ trackEvent }) => trackEvent('boot', 'h5', `v:${runningHash() || '-'};sw:${sw}`));
+				import('./api/api.js').then(({ trackEvent }) => trackEvent('boot', 'h5', `v:${runningHash() || '-'};sw:${sw}`));
 			} catch (e) { /* 心跳失败不影响主流程 */ }
 		}, 6000);
 		// 慢加载 RUM：偶发 ~40s 壳/chunk 长尾在服务端无痕（疑 SW/客户端侧），上报导航与最慢资源耗时取证。
@@ -118,7 +118,7 @@ if (typeof window !== 'undefined') {
 					: '';
 				const ver = runningHash();
 				const ref = `nav:${nav ? Math.round(nav.duration) : -1}${phases}` + (worst ? `;${part(worst)}` : '') + (ver ? `;v:${ver}` : '');
-				import('./api.js').then(({ trackEvent }) => trackEvent('slow_load', 'h5', ref));
+				import('./api/api.js').then(({ trackEvent }) => trackEvent('slow_load', 'h5', ref));
 			} catch (e) { /* RUM 失败不影响主流程 */ }
 		};
 		setTimeout(rumCheck, 5000);
@@ -131,7 +131,7 @@ if (typeof window !== 'undefined') {
 			if (hb && navE && navE.type === 'reload') {
 				const gap = Date.now() - hb;
 				if (gap > 15000 && gap < 300000) {
-					import('./api.js').then(({ trackEvent }) => trackEvent('slow_load', 'h5', `hb-gap:${Math.round(gap / 1000)}s;reload`));
+					import('./api/api.js').then(({ trackEvent }) => trackEvent('slow_load', 'h5', `hb-gap:${Math.round(gap / 1000)}s;reload`));
 				}
 			}
 			setInterval(() => {

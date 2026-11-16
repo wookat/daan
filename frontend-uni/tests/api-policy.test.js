@@ -10,7 +10,7 @@ import {
   trackRetryable,
   trackQueuePush,
   trackReplayPayload,
-} from '../src/api-policy';
+} from '../src/api/api-policy';
 
 describe('错误消息分类', () => {
   it('timeout/超时 判为超时', () => {

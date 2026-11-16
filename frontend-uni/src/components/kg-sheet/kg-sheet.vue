@@ -27,7 +27,7 @@
 /** KgSheet（COMPONENTS §1.11）：wd-popup 封装，≥1024 自动改 dialog 形态。遮罩色走 --wot-overlay-bg；层级 wd-popup 只认内联 z-index prop，运行时读 --z-overlay（须压过 uni-h5 壳 tabbar/page-head 998）。
  * H5 键盘/返回：Esc 关、Tab 圈定、焦点归还由 a11y-focus 全局栈按 .wd-popup 接管；浏览器 Back 先关层不离页由 sheet-history 接管。 */
 // #ifdef H5
-import { sheetOpened, sheetClosed } from '../../sheet-history.js';
+import { sheetOpened, sheetClosed } from '../../utils/sheet-history.js';
 // #endif
 const Z_OVERLAY_FALLBACK = 1000;
 

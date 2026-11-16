@@ -6,7 +6,7 @@
 // 本地实测（本 R563 研究，本地 dist + Chromium）：更多操作层 Tab 到「删除」按 Enter → keydown 激活开确认框 → 同一次 keyup 被
 // uni 当「确定」→ DELETE 直发、确认框一闪即过；Space/鼠标无此问题。
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { initKeyboardFocus } from '../src/a11y-focus.js';
+import { initKeyboardFocus } from '../src/a11y/a11y-focus.js';
 
 function shown(el) {
   for (let n = el; n && n.style; n = n.parentElement) if (n.style.display === 'none') return false;

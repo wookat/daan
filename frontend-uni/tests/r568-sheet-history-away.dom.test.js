@@ -3,7 +3,7 @@
 // 根因：从哑条目上离开且落地无标记时一律视为「Back 落到本页真条目」补 history.back()，把地址栏/书签这类前向 hash 导航也撤销了。
 // 修后：落到别页、或历史长度增加（新建条目）都不算 Back；Back 落回本页真条目仍补跳一次离页。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, popAction, _resetSheetHistory } from '../src/sheet-history.js';
+import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, popAction, _resetSheetHistory } from '../src/utils/sheet-history.js';
 
 const flush = () => new Promise((r) => setTimeout(r, 20));
 

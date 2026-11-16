@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-import { classifyVueError, createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from '../src/monitor-client.js';
-import { badgeText, setBookBadge } from '../src/tabbar-badge.js';
+import { classifyVueError, createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from '../src/services/monitor-client.js';
+import { badgeText, setBookBadge } from '../src/utils/tabbar-badge.js';
 
 describe('createErrorReporter', () => {
   it('同 message 只上报一次，单页最多 10 条', () => {

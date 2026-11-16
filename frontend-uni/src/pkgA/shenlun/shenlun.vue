@@ -289,14 +289,14 @@
 </template>
 
 <script>
-import { fmtYMDHM } from '../../fmt.js';
-import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api';
-import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun-url.js';
-import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun-qfav.js';
-import { qNavState } from '../../shenlun-qnav.js';
-import { parseWordLimit, wordState } from '../../shenlun-words.js';
-import { adoptServerDraft } from '../../shenlun-draft.js';
-import { segResizeMixin } from '../../seg-resize.js';
+import { fmtYMDHM } from '../../utils/fmt.js';
+import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api/api';
+import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun/shenlun-url.js';
+import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun/shenlun-qfav.js';
+import { qNavState } from '../../shenlun/shenlun-qnav.js';
+import { parseWordLimit, wordState } from '../../shenlun/shenlun-words.js';
+import { adoptServerDraft } from '../../shenlun/shenlun-draft.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '热点', '金句', '案例', '政策理论', '范文', '我的笔记'];

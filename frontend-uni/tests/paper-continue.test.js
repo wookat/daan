@@ -1,6 +1,6 @@
 // R360：按卷练习「只练剩余」——paperContinuePlan fail-closed 纯函数
 import { describe, it, expect } from 'vitest';
-import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../src/paper-continue.js';
+import { paperContinuePlan, paperPracticedState, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch } from '../src/exam/paper-continue.js';
 
 describe('paperQuery', () => {
   it('基础：src 必带且编码', () => {

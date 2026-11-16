@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BASE_Z, reconcileStack, zIndexFor, pickFocusTarget, nextTabIndex } from '../src/modal-policy.js';
+import { BASE_Z, reconcileStack, zIndexFor, pickFocusTarget, nextTabIndex } from '../src/a11y/modal-policy.js';
 
 const entry = (id, visible = true) => ({ id, visible });
 const present = (e) => e.visible;
@@ -101,7 +101,7 @@ describe('nextTabIndex', () => {
 });
 
 // R563：uni-h5 原生层（uni.showModal / uni.showActionSheet）进栈的纯决策
-import { modalEntry, modalKeyAction, nativeKind, initialFocusables, shouldSwallowKeyup, shouldRetryFocus, FOCUS_RETRY_MAX, isTransitionLeaving, NATIVE_BTN_SEL } from '../src/modal-policy.js';
+import { modalEntry, modalKeyAction, nativeKind, initialFocusables, shouldSwallowKeyup, shouldRetryFocus, FOCUS_RETRY_MAX, isTransitionLeaving, NATIVE_BTN_SEL } from '../src/a11y/modal-policy.js';
 
 const tag = (tagName, cls = []) => ({ tagName, classList: { contains: (c) => cls.includes(c) } });
 

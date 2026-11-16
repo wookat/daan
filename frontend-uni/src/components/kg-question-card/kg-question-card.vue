@@ -29,8 +29,8 @@
 </template>
 
 <script>
-import { moduleLabel } from '../../module-meta.js';
-import { fontSizes } from '../../font-size.js';
+import { moduleLabel } from '../../utils/module-meta.js';
+import { fontSizes } from '../../services/font-size.js';
 
 /**
  * KgQuestionCard（COMPONENTS §2.1）：meta 行 + 材料折叠 + 题干 + 图片。选项/解析是独立组件（模考不显解析、分享页选项只读）。

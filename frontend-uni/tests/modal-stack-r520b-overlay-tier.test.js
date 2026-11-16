@@ -3,10 +3,10 @@
 // 生产 375/1440 elementFromPoint 命中 sheet 内按钮、确认层不可点。基准改为 --z-overlay 档并运行时与 KgSheet 同源读取。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { BASE_Z, zIndexFor } from '../src/modal-policy.js';
+import { BASE_Z, zIndexFor } from '../src/a11y/modal-policy.js';
 
 const TOKENS = readFileSync(new URL('../src/styles/tokens.generated.css', import.meta.url), 'utf8');
-const A11Y = readFileSync(new URL('../src/a11y-focus.js', import.meta.url), 'utf8');
+const A11Y = readFileSync(new URL('../src/a11y/a11y-focus.js', import.meta.url), 'utf8');
 const SHEET = readFileSync(new URL('../src/components/kg-sheet/kg-sheet.vue', import.meta.url), 'utf8');
 const EXPORT = readFileSync(new URL('../src/components/export-confirm/export-confirm.vue', import.meta.url), 'utf8');
 

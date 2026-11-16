@@ -10,7 +10,7 @@
 </template>
 
 <script>
-import { moduleMeta } from '../../module-meta.js';
+import { moduleMeta } from '../../utils/module-meta.js';
 
 /** KgProgress（COMPONENTS §1.13）：线性 4/8px（槽 --brand-soft-2）或环形 48/72/96（conic-gradient）；填色 brand 或模块色。 */
 export const PROGRESS_RING_SIZES = [48, 72, 96];

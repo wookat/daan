@@ -4,7 +4,7 @@
 // 模拟 uni-h5 产物：<uni-view class="wd-popup-wrapper"><uni-view class="wd-transition wd-overlay"/><uni-view class="wd-transition kg-sheet wd-popup">…
 // 关闭 = wot hideWhenClose → display:none（不是移除节点）。jsdom 无布局，getClientRects 用 display 链模拟。
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
-import { initKeyboardFocus } from '../src/a11y-focus.js';
+import { initKeyboardFocus } from '../src/a11y/a11y-focus.js';
 
 function shown(el) {
   for (let n = el; n && n.style; n = n.parentElement) if (n.style.display === 'none') return false;

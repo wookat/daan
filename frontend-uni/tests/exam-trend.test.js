@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { examTrend } from '../src/exam-trend.js';
+import { examTrend } from '../src/exam/exam-trend.js';
 
 const a = (id, score, t = '2026-01-0' + id) => ({ id, score, submitted_at: t, kind: 'zhenti' });
 

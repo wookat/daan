@@ -1,9 +1,9 @@
 // 练习会话：预取/持久化/服务器续练/本地恢复与续练弹窗（practice.vue 抽离，方法 this 仍指组件实例）
 
-import { request, anonUid, trackEvent } from '../api.js';
-import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, resumeIndex, REDO_PENDING_TITLE } from '../practice-progress.js';
-import { reviewedFromPending } from '../review-advance.js';
-import { resumeAsk } from '../resume-ask.js';
+import { request, anonUid, trackEvent } from '../api/api.js';
+import { collectPracticeProgress, adoptPracticeResume, pendingTitle, redoItemsFromPending, dailyFromPending, resumeIndex, REDO_PENDING_TITLE } from './practice-progress.js';
+import { reviewedFromPending } from '../review/review-advance.js';
+import { resumeAsk } from '../ask/resume-ask.js';
 
 export const sessionOps = {
     retryStart() {

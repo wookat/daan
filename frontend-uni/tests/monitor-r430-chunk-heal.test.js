@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { installVueErrorHandler } from '../src/monitor-client.js';
+import { installVueErrorHandler } from '../src/services/monitor-client.js';
 
 const main = readFileSync(fileURLToPath(new URL('../src/main.js', import.meta.url)), 'utf8');
 

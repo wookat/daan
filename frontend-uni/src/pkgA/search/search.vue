@@ -162,11 +162,11 @@
 </template>
 
 <script>
-import { request, trackEvent } from '../../api.js';
-import { buildSearchUrl, buildTikuQPath } from '../../search-url.js';
-import { askPrefill } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
-import { MODULES } from '../../module-meta.js';
+import { request, trackEvent } from '../../api/api.js';
+import { buildSearchUrl, buildTikuQPath } from '../../utils/search-url.js';
+import { askPrefill } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
+import { MODULES } from '../../utils/module-meta.js';
 
 const MODS = { shenlun: '申论' };
 

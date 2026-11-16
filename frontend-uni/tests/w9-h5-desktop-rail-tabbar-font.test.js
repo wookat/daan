@@ -53,7 +53,7 @@ describe('W9-B 桌面非 tab 页 208px 让位 / tabbar 字阶 / 焦点环 token'
   });
 
   it('a11y-focus.js 焦点环不含 #2e5bff，改用 var(--brand)', () => {
-    const focus = read('a11y-focus.js');
+    const focus = read('a11y/a11y-focus.js');
     expect(focus).not.toMatch(/#2e5bff/i);
     expect(focus).toMatch(/:focus-visible\{outline:2px solid var\(--brand\);/);
     // --brand 在 :root 镜像上有定义（焦点环可落在 uni-page-body 之外的 tabbar/page-head）

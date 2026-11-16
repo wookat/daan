@@ -5,7 +5,7 @@
 
 <script>
 import PATHS from './paths.js';
-import { ICON_SIZES, isIconTone, resolveIconColor, iconMaskUri, iconSvgUri } from '../../icon-tone.js';
+import { ICON_SIZES, isIconTone, resolveIconColor, iconMaskUri, iconSvgUri } from '../../utils/icon-tone.js';
 
 /**
  * Lucide 图标组件（H5 / mp-weixin / App）。

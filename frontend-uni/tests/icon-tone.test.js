@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ICON_SIZES, ICON_TONES, isIconTone, resolveIconColor, iconSvgUri, iconMaskUri } from '../src/icon-tone';
-import { MODULE_KEYS, moduleMeta, moduleLabel } from '../src/module-meta';
+import { ICON_SIZES, ICON_TONES, isIconTone, resolveIconColor, iconSvgUri, iconMaskUri } from '../src/utils/icon-tone';
+import { MODULE_KEYS, moduleMeta, moduleLabel } from '../src/utils/module-meta';
 
 describe('l-icon tone/size（SPEC §2.9）', () => {
   it('尺寸只有 16/20/24/32', () => {

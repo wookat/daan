@@ -320,19 +320,19 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr, staleAt } from '../../api.js';
-import { snapshotProgressNote, netOnlineNow } from '../../snapshot-notice.js';
-import { checkinStreak, dayKey, loadSzDaily } from '../../checkin.js';
-import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
-import { setBookBadge } from '../../tabbar-badge.js';
-import { adoptServerExamProgress } from '../../exam-progress-sync.js';
-import { parsePendingPractice, parseRemotePractice, markRemoteResume, dailyPendingTitle, cnDayOf, REDO_PENDING_TITLE } from '../../practice-progress.js';
-import { parseReviewSnap } from '../../review-snap.js';
-import { adoptServerDailyGoal } from '../../daily-goal.js';
-import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { planDaysLabel, planCardMark } from '../../plan-days-label.js';
-import { MODULE_KEYS, moduleLabel } from '../../module-meta.js';
-import { todayShown } from '../../home-today.js';
+import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr, staleAt } from '../../api/api.js';
+import { snapshotProgressNote, netOnlineNow } from '../../practice/snapshot-notice.js';
+import { checkinStreak, dayKey, loadSzDaily } from '../../home/checkin.js';
+import { parseExamProgress, fmtLeftSecs } from '../../exam/exam-resume.js';
+import { setBookBadge } from '../../utils/tabbar-badge.js';
+import { adoptServerExamProgress } from '../../exam/exam-progress-sync.js';
+import { parsePendingPractice, parseRemotePractice, markRemoteResume, dailyPendingTitle, cnDayOf, REDO_PENDING_TITLE } from '../../practice/practice-progress.js';
+import { parseReviewSnap } from '../../review/review-snap.js';
+import { adoptServerDailyGoal } from '../../home/daily-goal.js';
+import { adoptServerPracticePrefs } from '../../practice/practice-prefs.js';
+import { planDaysLabel, planCardMark } from '../../home/plan-days-label.js';
+import { MODULE_KEYS, moduleLabel } from '../../utils/module-meta.js';
+import { todayShown } from '../../home/home-today.js';
 
 // module-meta.js 只含行测五模块；申论不是练习模块但会出现在续练/薄弱项文案里
 const EXTRA_NAMES = { shenlun: '申论' };

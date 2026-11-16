@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { leadHintText, leadPickOf, leadQidOf, mergeLead } from '../src/leadq.js';
+import { leadHintText, leadPickOf, leadQidOf, mergeLead } from '../src/practice/leadq.js';
 
 describe('leadQidOf', () => {
   it('正整数字符串解析为数字', () => {

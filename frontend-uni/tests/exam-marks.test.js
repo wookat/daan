@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { markedNos, nextNavMode } from '../src/exam-marks.js';
-import { reviewFilter, reviewStep } from '../src/exam-review.js';
+import { markedNos, nextNavMode } from '../src/exam/exam-marks.js';
+import { reviewFilter, reviewStep } from '../src/exam/exam-review.js';
 
 const items = [
   { no: 1, picked: 'A', correct: true, marked: true },

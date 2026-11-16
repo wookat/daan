@@ -1,6 +1,6 @@
 // 做卷交卷失败的重试决策纯函数：无 uni/window 依赖，exam.vue 委托调用；
 // 单测见 tests/exam-policy.test.js。
-import { trackRetryable } from './api-policy';
+import { trackRetryable } from '../api/api-policy';
 
 export const SUBMIT_MAX_AUTO_RETRIES = 5;
 

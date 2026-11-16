@@ -419,37 +419,37 @@
 </template>
 
 <script>
-import { request, BASE_URL, anonUid, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent } from '../../api.js';
-import { markFavLocalOnly } from '../../exam-fav.js';
-import { syncCloudFavs } from '../../fav-sync.js';
-import { enqueueAnswers, enqueueMistake, drawOffline, flushOfflineQueue } from '../../offline.js';
-import { dayKey, loadSzDaily } from '../../checkin.js';
-import { dailySetLine, dailySetShareTail, percentileLine, percentileShareTail } from '../../exam-copy.js';
-import { splitMaterial, sameMaterial } from '../../material.js';
-import { normFontLv } from '../../font-size.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
-import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
+import { request, BASE_URL, anonUid, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent } from '../../api/api.js';
+import { markFavLocalOnly } from '../../exam/exam-fav.js';
+import { syncCloudFavs } from '../../fav/fav-sync.js';
+import { enqueueAnswers, enqueueMistake, drawOffline, flushOfflineQueue } from '../../services/offline.js';
+import { dayKey, loadSzDaily } from '../../home/checkin.js';
+import { dailySetLine, dailySetShareTail, percentileLine, percentileShareTail } from '../../exam/exam-copy.js';
+import { splitMaterial, sameMaterial } from '../../utils/material.js';
+import { normFontLv } from '../../services/font-size.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
+import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
 // #ifdef H5
-import { requestNotificationPermission } from '../../reminder.js';
-import { announce } from '../../a11y-live.js';
-import { pickAnnounceText } from '../../live-policy.js';
+import { requestNotificationPermission } from '../../services/reminder.js';
+import { announce } from '../../a11y/a11y-live.js';
+import { pickAnnounceText } from '../../a11y/live-policy.js';
 import { dailyOps } from '../../practice/daily-ops.js';
 import { sessionOps } from '../../practice/session-ops.js';
 // #endif
-import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan, doneBarPlan } from '../../paper-continue.js';
-import { adoptServerDailyGoal } from '../../daily-goal.js';
-import { adoptServerPracticePrefs } from '../../practice-prefs.js';
-import { qStatLine, qDifficulty } from '../../q-stat.js';
-import { toggleExcl, pickWithExcl, exclVisible } from '../../exam-excl.js';
-import { dailyPendingFor, cnDayOf, patchPendingMistake, unlinkedWrongItems, relinkMistakeIds } from '../../practice-progress.js';import { weakSpots as buildWeakSpots } from '../../weak-spots.js';
-import { isExplanationCovered } from '../../exp-dup.js';
-import { reviewedMasteredCount, fixReportText } from '../../review-advance.js';
-import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../leadq.js';
-import { allAnswered, quitSummary } from '../../quit-summary.js';
-import { resumeDismissAction } from '../../resume-ask.js';
-import { backLabel } from '../../back-label.js';
-import { practiceNavTitle, practicePageOnTop } from '../../practice-title.js';
+import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan, doneBarPlan } from '../../exam/paper-continue.js';
+import { adoptServerDailyGoal } from '../../home/daily-goal.js';
+import { adoptServerPracticePrefs } from '../../practice/practice-prefs.js';
+import { qStatLine, qDifficulty } from '../../utils/q-stat.js';
+import { toggleExcl, pickWithExcl, exclVisible } from '../../exam/exam-excl.js';
+import { dailyPendingFor, cnDayOf, patchPendingMistake, unlinkedWrongItems, relinkMistakeIds } from '../../practice/practice-progress.js';import { weakSpots as buildWeakSpots } from '../../practice/weak-spots.js';
+import { isExplanationCovered } from '../../practice/exp-dup.js';
+import { reviewedMasteredCount, fixReportText } from '../../review/review-advance.js';
+import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../practice/leadq.js';
+import { allAnswered, quitSummary } from '../../practice/quit-summary.js';
+import { resumeDismissAction } from '../../ask/resume-ask.js';
+import { backLabel } from '../../utils/back-label.js';
+import { practiceNavTitle, practicePageOnTop } from '../../practice/practice-title.js';
 
 
 function loadPStats() {

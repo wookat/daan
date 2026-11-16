@@ -17,7 +17,7 @@
 </template>
 
 <script>
-import { MODULE_KEYS, moduleMeta } from '../../module-meta.js';
+import { MODULE_KEYS, moduleMeta } from '../../utils/module-meta.js';
 
 /** KgModuleCard（COMPONENTS §2.2）：练习入口卡 row/grid，label/icon/color 全部来自 module-meta.js，页面不再持有 COLORS。 */
 export default {

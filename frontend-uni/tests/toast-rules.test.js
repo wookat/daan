@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TOAST_KINDS, toastOptions, normalizeToastText } from '../src/toast';
+import { TOAST_KINDS, toastOptions, normalizeToastText } from '../src/utils/toast';
 
 describe('toast 规则层（COMPONENTS §1.10）', () => {
   it('duration 固定：成功 1500 / 提示 2000 / 错误 2500，不随文案长度变化', () => {

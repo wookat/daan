@@ -232,9 +232,9 @@
 </template>
 
 <script>
-import { MODULE_KEYS, moduleMeta } from '../../module-meta.js';
-import { ICON_TONES } from '../../icon-tone.js';
-import { getThemeMode, setThemeMode, isDark, THEME_LABELS } from '../../theme.js';
+import { MODULE_KEYS, moduleMeta } from '../../utils/module-meta.js';
+import { ICON_TONES } from '../../utils/icon-tone.js';
+import { getThemeMode, setThemeMode, isDark, THEME_LABELS } from '../../services/theme.js';
 
 /**
  * 开发用总览页（任务 3）：只读展示 token 与 Kg* 全部状态，不入 tabBar、不埋点。

@@ -2,8 +2,8 @@
 // 结果 sheet 出说明行、「看错题 ›」在 dup 时仍可跳（错题已在首次落库）。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { scanDupNote } from '../src/paper-scan-pages.js';
-import { scanRowJumpable, scanRowKey } from '../src/paper-scan-jump.js';
+import { scanDupNote } from '../src/exam/paper-scan-pages.js';
+import { scanRowJumpable, scanRowKey } from '../src/exam/paper-scan-jump.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const wrong = { no: 2, question_id: 112, status: 'ok', correct: false, picked: 'A', answer: 'C' };
@@ -50,14 +50,14 @@ describe('scanRowKey：v-for key 带可跳态（R531b 生产一手：同题号�
   it('模板 v-for 用 scanRowKey 而非裸 r.no', () => {
     expect(BOOK).toContain('<view v-for="r in scanResult.items" :key="scanRowKey(scanResult, r)" class="scan-row"');
     expect(BOOK).not.toContain(':key="r.no" class="scan-row"');
-    expect(BOOK).toContain("import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../paper-scan-jump.js';");
+    expect(BOOK).toContain("import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../exam/paper-scan-jump.js';");
     expect(BOOK).toContain('    scanRowJumpable,\n    scanRowKey,\n');
   });
 });
 
 describe('错题本接入', () => {
   it('结果 sheet 在汇总行下、页数说明行上出 scan-dup 说明行；import 与 methods 接入', () => {
-    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';");
+    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../exam/paper-scan-pages.js';");
     expect(BOOK).toContain(
       '<text v-if="scanDupNote(scanResult)" class="scan-note scan-dup">{{ scanDupNote(scanResult) }}</text>\n' +
         '          <text v-if="scanPagesNote(scanResult, scanAcc)" class="scan-note">{{ scanPagesNote(scanResult, scanAcc) }}</text>',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseWordLimit, wordState } from '../src/shenlun-words.js';
+import { parseWordLimit, wordState } from '../src/shenlun/shenlun-words.js';
 
 describe('shenlun-words parseWordLimit', () => {
   it('不超过N字', () => {

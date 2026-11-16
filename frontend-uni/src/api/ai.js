@@ -1,7 +1,7 @@
 // AI 端点：拍题讲解（流式/上传）/ 答题卡扫描 / AI 面试陪练
 import { BASE_URL, request, rawRequest, anonUid, getAccessCode, authHeader, withAuthRetry } from './client';
 import { fetchNet, readNet, feedSse, makeUtf8Decoder } from './net';
-import { netFailMessage } from '../api-policy';
+import { netFailMessage } from './api-policy';
 
 // #ifdef H5
 // H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。

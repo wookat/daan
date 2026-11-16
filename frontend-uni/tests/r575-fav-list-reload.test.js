@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { dropFavItem } from '../src/fav-list.js';
+import { dropFavItem } from '../src/fav/fav-list.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 
@@ -62,7 +62,7 @@ describe('favorites.vue 接线', () => {
   };
 
   it('挂 snapshotViewMixin（noun 收藏 / reload load）并在收藏 tab 顶部渲染横幅', () => {
-    expect(VUE).toContain("import { snapshotViewMixin } from '../../snapshot-view.js';");
+    expect(VUE).toContain("import { snapshotViewMixin } from '../../practice/snapshot-view.js';");
     expect(VUE).toContain("mixins: [segResizeMixin, snapshotViewMixin({ noun: '收藏', reload: 'load' })],");
     expect(VUE).toContain('<kg-banner v-if="offlineView" tone="warn" icon="plane" :text="offlineText" action-text="重试" :closable="false" class="offbar" @action="load" />');
   });
@@ -92,7 +92,7 @@ describe('favorites.vue 接线', () => {
 
   it('unfav：DELETE 成功 + 清本机之后先 dropFavItem 本地收缩，再 load() 后台对账；失败路径不收缩', () => {
     const unfav = method('unfav');
-    expect(VUE).toContain("import { dropFavItem } from '../../fav-list.js';");
+    expect(VUE).toContain("import { dropFavItem } from '../../fav/fav-list.js';");
     const del = unfav.indexOf('await removeFav(it.id)');
     const loc = unfav.indexOf("uni.setStorageSync('favQuestions', locals)");
     const drop = unfav.indexOf('const next = dropFavItem(this.items, this.folders, it);');

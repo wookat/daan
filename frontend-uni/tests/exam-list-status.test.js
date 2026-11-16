@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { filterPapersByStatus } from '../src/exam-list-status.js';
+import { filterPapersByStatus } from '../src/exam/exam-list-status.js';
 
 const rows = [
   { id: 1, best_score: 12.5 },

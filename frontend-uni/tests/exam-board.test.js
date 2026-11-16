@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { examBoardRows } from '../src/exam-board.js';
+import { examBoardRows } from '../src/exam/exam-board.js';
 
 const rank = (over = {}) => ({
   rank: 5,

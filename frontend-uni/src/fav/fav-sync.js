@@ -1,5 +1,5 @@
-import { fetchFavsLive } from './api.js';
-import { reconcileFavs } from './exam-fav.js';
+import { fetchFavsLive } from '../api/api.js';
+import { reconcileFavs } from '../exam/exam-fav.js';
 
 let inflight = null;
 

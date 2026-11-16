@@ -43,7 +43,7 @@ describe('R546 重练返回后地址栏筛选同步', () => {
   });
 
   it('模拟：重练返回（onShow）后地址栏恢复 mod/kp/qt，且 state 原样保留', async () => {
-    const { buildBookUrl } = await import('../src/book-url.js');
+    const { buildBookUrl } = await import('../src/book/book-url.js');
     const state = { __id__: 3, position: 2, current: '/pages/book/book' };
     const replaceState = vi.fn();
     const vm = {

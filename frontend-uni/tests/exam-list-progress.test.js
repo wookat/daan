@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { paperProgress } from '../src/exam-list-progress.js';
+import { paperProgress } from '../src/exam/exam-list-progress.js';
 
 describe('paperProgress', () => {
   it('非数组/空数组 fail-closed', () => {

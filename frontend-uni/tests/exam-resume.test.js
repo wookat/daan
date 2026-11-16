@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseExamProgress, fmtLeftSecs } from '../src/exam-resume.js';
+import { parseExamProgress, fmtLeftSecs } from '../src/exam/exam-resume.js';
 
 const NOW = 1_700_000_000_000;
 

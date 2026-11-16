@@ -157,9 +157,9 @@
 </template>
 
 <script>
-import { request, snapPeek, anonUid } from '../../api.js';
-import { fmtDayHour } from '../../contest-time.js';
-import { weeklyMockLine, weeklyEmptyDesc, weeklyPendingDesc } from '../../exam-copy.js';
+import { request, snapPeek, anonUid } from '../../api/api.js';
+import { fmtDayHour } from '../../exam/contest-time.js';
+import { weeklyMockLine, weeklyEmptyDesc, weeklyPendingDesc } from '../../exam/exam-copy.js';
 
 const W = 660;
 const H = 760;

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { cnWeekKey } from '../src/checkin.js';
+import { cnWeekKey } from '../src/home/checkin.js';
 import { legacyHit, assertHitLayer } from './_w5-hit.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');

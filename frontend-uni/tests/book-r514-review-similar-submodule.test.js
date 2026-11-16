@@ -1,9 +1,9 @@
 // R514：复习答错后「同类题自动加练」/「练 3 道同类题」的子模块口径 + 加练条目作答卡铺选项
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { similarSubmodule, similarItemFromQuestion } from '../src/review-similar.js';
-import { reviewOptions, reviewOptionsFull } from '../src/review-opts.js';
-import { askPrefill } from '../src/ask-prefill.js';
+import { similarSubmodule, similarItemFromQuestion } from '../src/review/review-similar.js';
+import { reviewOptions, reviewOptionsFull } from '../src/review/review-opts.js';
+import { askPrefill } from '../src/ask/ask-prefill.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
@@ -52,7 +52,7 @@ describe('similarItemFromQuestion 加练条目 → 作答卡/AI 预填', () => {
 
 describe('book.vue 源锁', () => {
   it('appendSimilar / practiceSimilar 走 similarSubmodule（不再从 question_type split("-") 取 null）；reinforceFromMistake 优先题库 submodule', () => {
-    expect(BOOK).toMatch(/import \{[^}]*\bsimilarSubmodule\b[^}]*\} from '\.\.\/\.\.\/review-similar\.js'/);
+    expect(BOOK).toMatch(/import \{[^}]*\bsimilarSubmodule\b[^}]*\} from '\.\.\/\.\.\/review\/review-similar\.js'/);
     expect(BOOK).toContain('const sub = similarSubmodule(m);');
     expect(BOOK).toContain("uni.setStorageSync('practicePreset', { module: m.module, submodule: similarSubmodule(m), count: 3 });");
     expect(BOOK).toContain('submodule: similarSubmodule(m) || sub, tag3: m.tag3');

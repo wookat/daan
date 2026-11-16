@@ -37,8 +37,8 @@
 
 <script>
 import qrcode from 'qrcode-generator';
-import { fetchCheckinSummary, request, anonUid } from '../../api.js';
-import { examPosterData } from '../../exam-poster.js';
+import { fetchCheckinSummary, request, anonUid } from '../../api/api.js';
+import { examPosterData } from '../../exam/exam-poster.js';
 
 const SITE_URL = 'https://kaogong.zalize.com';
 const W = 660;

@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { wrongRetryPlan, paperWrongItems } from '../src/paper-continue.js';
+import { wrongRetryPlan, paperWrongItems } from '../src/exam/paper-continue.js';
 
 const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8');
 
@@ -43,7 +43,7 @@ describe('R553 wrongRetryPlan 完成页错题重练入口', () => {
 
 describe('R553 practice.vue 完成页接线', () => {
   it('引入 wrongRetryPlan，模板方法 wrongRetry() 规避非响应式 _ptitle', () => {
-    expect(PRACTICE).toMatch(/import \{[^}]*wrongRetryPlan[^}]*\} from '\.\.\/\.\.\/paper-continue\.js'/);
+    expect(PRACTICE).toMatch(/import \{[^}]*wrongRetryPlan[^}]*\} from '\.\.\/\.\.\/exam\/paper-continue\.js'/);
     expect(PRACTICE).toContain('wrongRetry() {\n      return wrongRetryPlan(this.items, this._ptitle);');
   });
   it('普通与按卷完成页共用一个重练入口：R565 起走固定底栏 doneBar()，主位文案取 wrongRetryPlan().label（不再是行内 kg-button）', () => {

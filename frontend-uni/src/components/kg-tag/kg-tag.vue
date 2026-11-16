@@ -6,7 +6,7 @@
 </template>
 
 <script>
-import { moduleMeta } from '../../module-meta.js';
+import { moduleMeta } from '../../utils/module-meta.js';
 
 /** KgTag（COMPONENTS §1.3）：只读状态/模块标，高 20，颜色全由 token。tone=module 时传 module=key。 */
 export const TAG_TONES = ['brand', 'ok', 'bad', 'warn', 'info', 'neutral', 'module'];

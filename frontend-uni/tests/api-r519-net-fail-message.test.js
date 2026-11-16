@@ -4,8 +4,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isTimeoutMsg, isNetMsg, trackRetryable } from '../src/api-policy';
-import { submitFailPlan } from '../src/exam-policy';
+import { netFailMessage, NET_FAIL_TEXT, NET_TIMEOUT_TEXT, isTimeoutMsg, isNetMsg, trackRetryable } from '../src/api/api-policy';
+import { submitFailPlan } from '../src/exam/exam-policy';
 
 const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { examPosterData } from '../src/exam-poster.js';
+import { examPosterData } from '../src/exam/exam-poster.js';
 
 const rep = (over = {}) => ({
   attempt: { id: 9, score: 61.55 },

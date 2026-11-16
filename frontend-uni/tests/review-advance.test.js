@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reviewedMasteredCount, fixReportText } from '../src/review-advance.js';
+import { reviewedMasteredCount, fixReportText } from '../src/review/review-advance.js';
 
 describe('R371 reviewedMasteredCount', () => {
   it('只统计 mastered === true 的条目', () => {

@@ -282,25 +282,25 @@
 </template>
 
 <script>
-import { request, anonUid, isNetErr, trackEvent, BASE_URL, setFav, removeFav } from '../../api.js';
-import { splitMaterial } from '../../material.js';
-import { buildPaceRows, fmtMin } from '../../exam-pace.js';
-import { buildExamRedoSet } from '../../exam-redo.js';
-import { buildExamReportShareText } from '../../exam-share.js';
-import { reviewStep } from '../../exam-review.js';
-import { markedNos, nextNavMode } from '../../exam-marks.js';
-import { isFaved, toggleFav, markFavLocalOnly } from '../../exam-fav.js';
-import { qStatLine } from '../../q-stat.js';
-import { qTimeLine, paperAvgSecs } from '../../exam-time.js';
+import { request, anonUid, isNetErr, trackEvent, BASE_URL, setFav, removeFav } from '../../api/api.js';
+import { splitMaterial } from '../../utils/material.js';
+import { buildPaceRows, fmtMin } from '../../exam/exam-pace.js';
+import { buildExamRedoSet } from '../../exam/exam-redo.js';
+import { buildExamReportShareText } from '../../exam/exam-share.js';
+import { reviewStep } from '../../exam/exam-review.js';
+import { markedNos, nextNavMode } from '../../exam/exam-marks.js';
+import { isFaved, toggleFav, markFavLocalOnly } from '../../exam/exam-fav.js';
+import { qStatLine } from '../../utils/q-stat.js';
+import { qTimeLine, paperAvgSecs } from '../../exam/exam-time.js';
 import { visColors } from '../../components/kg-echart/kg-echart.vue';
-import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
-import { goalGap, prevScoreDelta } from '../../exam-goal.js';
-import { modAvgPct } from '../../exam-mod-avg.js';
-import { weakModule } from '../../exam-weak.js';
-import { nextPaper } from '../../exam-next.js';
-import { moduleLabel } from '../../module-meta.js';
-import { rankLine, reportHeroLine, weakNote, redoDesc } from '../../exam-copy.js';
+import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
+import { goalGap, prevScoreDelta } from '../../exam/exam-goal.js';
+import { modAvgPct } from '../../exam/exam-mod-avg.js';
+import { weakModule } from '../../exam/exam-weak.js';
+import { nextPaper } from '../../exam/exam-next.js';
+import { moduleLabel } from '../../utils/module-meta.js';
+import { rankLine, reportHeroLine, weakNote, redoDesc } from '../../exam/exam-copy.js';
 const PACE_TAG = { over: '超时', fast: '偏快', ok: '合理', skip: '未作答' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 

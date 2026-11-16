@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildExamReportShareText } from '../src/exam-share.js';
+import { buildExamReportShareText } from '../src/exam/exam-share.js';
 
 const rep = (over = {}, paperOver = {}) => ({
   correct: 55,

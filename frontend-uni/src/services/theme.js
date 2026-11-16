@@ -1,7 +1,7 @@
 // 外观模式（深色模式）：三档设置 跟随系统 / 浅色 / 深色，存 localStorage。
 // H5 / App(Capacitor) 生效；小程序端由 utils/theme.ts 独立实现同口径逻辑。
 
-import { anonUid, request } from './api.js';
+import { anonUid, request } from '../api/api.js';
 
 export const THEME_MODES = ['system', 'light', 'dark'];
 export const THEME_LABELS = { system: '跟随系统', light: '浅色', dark: '深色' };

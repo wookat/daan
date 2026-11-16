@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { qNavState } from '../src/shenlun-qnav.js';
+import { qNavState } from '../src/shenlun/shenlun-qnav.js';
 
 describe('shenlun-qnav', () => {
   it('中间题：前后皆有', () => {

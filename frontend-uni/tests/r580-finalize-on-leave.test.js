@@ -5,7 +5,7 @@
 // 修法：finalizeIfAnswered() 挂 onUnload 与 leave() 入口，全答且未 resultSent 即 markDailyDone(true) + submitResult(true)（silent 只落数据）。
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { allAnswered, quitSummary } from '../src/quit-summary.js';
+import { allAnswered, quitSummary } from '../src/practice/quit-summary.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const practice = read('../src/pages/practice/practice.vue') + read('../src/practice/daily-ops.js') + read('../src/practice/session-ops.js');

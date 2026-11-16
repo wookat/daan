@@ -3,7 +3,7 @@
 // 真机实测基线：错题本更多操作层打开 → 浏览器 Back → 直接回首页（R560-1）。这里锁定修后序列：
 // Back 只关层；X/Esc 关后 Back 一次离页；从更深页面返回落到哑条目自动跳过；跨页残留标记不生效。
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, _resetSheetHistory } from '../src/sheet-history.js';
+import { sheetOpened, sheetClosed, noteRouteChange, noteHistoryPop, installSheetHistory, _resetSheetHistory } from '../src/utils/sheet-history.js';
 
 // 模拟 vue-router 4 的 popstate 链：其 history 监听先于本模块（createRouter 时就 addEventListener），同步回调
 // history.listen 订阅者，之后对同 URL / 跨 URL pop 都会跑到 afterEach（同 URL 为 NAVIGATION_DUPLICATED，仍触发 afterEach）

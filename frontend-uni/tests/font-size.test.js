@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fontSizes, normFontLv } from '../src/font-size.js';
+import { fontSizes, normFontLv } from '../src/services/font-size.js';
 
 describe('normFontLv', () => {
   it('valid levels pass through', () => {

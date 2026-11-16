@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeAskSessions, upsertLocalSession } from '../src/ask-sessions.js';
+import { mergeAskSessions, upsertLocalSession } from '../src/ask/ask-sessions.js';
 
 const s = (id, ts = id) => ({ id, ts, title: 't' + id, n: 1, items: [{ q: 'x' }] });
 
@@ -57,7 +57,7 @@ describe('upsertLocalSession', () => {
   });
 });
 
-import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../src/ask-sessions.js';
+import { addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../src/ask/ask-sessions.js';
 
 describe('tombstones (R330)', () => {
   it('adds, removes, and normalizes invalid inputs', () => {

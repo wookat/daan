@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dayKey } from '../src/checkin.js';
+import { dayKey } from '../src/home/checkin.js';
 
 describe('dayKey 本地日语义（pstats.days 读写同键）', () => {
   it('用本地年月日拼 key，两位补零', () => {

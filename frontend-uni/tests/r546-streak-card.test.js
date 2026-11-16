@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { MASTER_STREAK, streakProgressText } from '../src/review-summary.js';
+import { MASTER_STREAK, streakProgressText } from '../src/review/review-summary.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');

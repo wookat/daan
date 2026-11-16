@@ -594,34 +594,34 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
 </template>
 
 <script>
-import { md } from '../../md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api.js';
-import { staleAt } from '../../api.js';
-import { snapshotNotice } from '../../snapshot-notice.js';
-import { cloudFavId } from '../../exam-fav.js';
-import { syncCloudFavs } from '../../fav-sync.js';
-import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book-url.js';
-import { isBookHref } from '../../book-url.js';
-import { onSheetHistoryLanded } from '../../sheet-history.js';
-import { exportNote, exportNotesMap } from '../../book-export.js';
-import { setBookBadge } from '../../tabbar-badge.js';
-import { mistakePaper, paperGroups, inPaper } from '../../book-paper.js';
-import { cacheMistakes, getCachedMistakes } from '../../offline.js';
-import { qStatLine } from '../../q-stat.js';
-import { normFontLv } from '../../font-size.js';
-import { askPrefill, askAnswerLetter } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
-import { reviewReasonMid, similarSubmodule, hasSimilarPool } from '../../review-similar.js';
-import { parseReviewSnap } from '../../review-snap.js';
-import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review-summary.js';
-import { extractLetter } from '../../review-opts.js';
+import { md } from '../../utils/md.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api/api.js';
+import { staleAt } from '../../api/api.js';
+import { snapshotNotice } from '../../practice/snapshot-notice.js';
+import { cloudFavId } from '../../exam/exam-fav.js';
+import { syncCloudFavs } from '../../fav/fav-sync.js';
+import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book/book-url.js';
+import { isBookHref } from '../../book/book-url.js';
+import { onSheetHistoryLanded } from '../../utils/sheet-history.js';
+import { exportNote, exportNotesMap } from '../../book/book-export.js';
+import { setBookBadge } from '../../utils/tabbar-badge.js';
+import { mistakePaper, paperGroups, inPaper } from '../../book/book-paper.js';
+import { cacheMistakes, getCachedMistakes } from '../../services/offline.js';
+import { qStatLine } from '../../utils/q-stat.js';
+import { normFontLv } from '../../services/font-size.js';
+import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
+import { reviewReasonMid, similarSubmodule, hasSimilarPool } from '../../review/review-similar.js';
+import { parseReviewSnap } from '../../review/review-snap.js';
+import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review/review-summary.js';
+import { extractLetter } from '../../review/review-opts.js';
 import { reviewComputed, reviewOps } from './review-ops.js';
-import { redoSkippedNote } from '../../book-redo-skipped.js';
-import { fineTypeLabel, qtypeName } from '../../type-label.js';
-import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book-manual-entry.js';
-import { inlineSkipNote } from '../../paper-inline-note.js';
-import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';
-import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../paper-scan-jump.js';
+import { redoSkippedNote } from '../../book/book-redo-skipped.js';
+import { fineTypeLabel, qtypeName } from '../../utils/type-label.js';
+import { MANUAL_MODULES, MANUAL_LETTERS, MANUAL_QUESTION_MAX, MANUAL_EXPLANATION_MAX, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast } from '../../book/book-manual-entry.js';
+import { inlineSkipNote } from '../../exam/paper-inline-note.js';
+import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../exam/paper-scan-pages.js';
+import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../exam/paper-scan-jump.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名

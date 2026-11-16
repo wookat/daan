@@ -53,8 +53,8 @@
 </template>
 
 <script>
-import { PACK_MODULES, PACK_SIZE, downloadPack, removePack, listPacks, packUsageBytes, pendingCount, flushOfflineQueue } from '../../offline.js';
-import { moduleMeta } from '../../module-meta.js';
+import { PACK_MODULES, PACK_SIZE, downloadPack, removePack, listPacks, packUsageBytes, pendingCount, flushOfflineQueue } from '../../services/offline.js';
+import { moduleMeta } from '../../utils/module-meta.js';
 
 export default {
   data() {

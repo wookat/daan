@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { resumeAsk, resumeDismissAction } from '../src/resume-ask.js';
+import { resumeAsk, resumeDismissAction } from '../src/ask/resume-ask.js';
 
 const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/daily-ops.js', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/session-ops.js', import.meta.url)), 'utf8');
 const EXAM = readFileSync(fileURLToPath(new URL('../src/pkgA/exam/exam.vue', import.meta.url)), 'utf8');

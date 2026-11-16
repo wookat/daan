@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reviewSummary } from '../src/review-summary.js';
+import { reviewSummary } from '../src/review/review-summary.js';
 
 describe('reviewSummary', () => {
   it('非数组/空 fail-closed 返回 null', () => {

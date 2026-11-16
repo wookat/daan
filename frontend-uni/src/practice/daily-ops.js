@@ -1,7 +1,7 @@
 // 每日一练/时政每日答：完成标记、成绩上报与失败重投（practice.vue 抽离，方法 this 仍指组件实例）
 
-import { request, anonUid, pkNickname, submitDailySet } from '../api.js';
-import { dayKey, saveSzDaily } from '../checkin.js';
+import { request, anonUid, pkNickname, submitDailySet } from '../api/api.js';
+import { dayKey, saveSzDaily } from '../home/checkin.js';
 
 export const dailyOps = {
     markDailyDone(silent = false) {

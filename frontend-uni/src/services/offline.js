@@ -1,7 +1,7 @@
 // 离线做题：题包下载到本地 storage，无网时可作答并本地判分；
 // 作答记录（answer_log / 错题）进入本地队列，恢复网络后自动同步（按 key 去重）。
 // 小程序 storage 上限 10MB → 小包（20 题/包）；H5/App 用 50 题/包。
-import { request, anonUid } from './api.js';
+import { request, anonUid } from '../api/api.js';
 
 let packSize = 50;
 // #ifdef MP-WEIXIN

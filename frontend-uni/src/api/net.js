@@ -1,5 +1,5 @@
 // fetch 流网络层 + SSE 事件流喂给器 + 增量 UTF-8 解码——export/ai 域共用（全平台可导入，仅 H5 路径实际调用 fetch）。
-import { netFailMessage, parseSseEvents } from '../api-policy';
+import { netFailMessage, parseSseEvents } from './api-policy';
 
 export async function fetchNet(url, init) {
   try {

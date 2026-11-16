@@ -72,8 +72,8 @@
 </template>
 
 <script>
-import { authLogin, authRegister, authSso, mergeAnon, setAuth, trackEvent } from '../../api.js';
-import { segResizeMixin } from '../../seg-resize.js';
+import { authLogin, authRegister, authSso, mergeAnon, setAuth, trackEvent } from '../../api/api.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
 const MERGE_FAIL_TIP = '已登录，但本机记录合并失败；退出后重新登录会再次合并';
 
 const MODE_OPTS = [

@@ -1,7 +1,7 @@
 // R559-fix-2：恢复的会话里「已答错但没 _mid」的题（POST /api/mistakes 回包前就 F5 / 退出保留）按本人错题本回填；
 // 「退出并保留」后才回包则直接补进已存快照，「不保留」快照已清则不重建（生产 c8fabd0f 复验坐实的两个窗口）。
 import { describe, expect, it } from 'vitest';
-import { unlinkedWrongItems, relinkMistakeIds, patchPendingMistake } from '../src/practice-progress.js';
+import { unlinkedWrongItems, relinkMistakeIds, patchPendingMistake } from '../src/practice/practice-progress.js';
 
 const q = (id, extra = {}) => ({ id, question: '题干' + id + '\nA.a B.b', options: { A: 'a', B: 'b' }, answer: 'A', ...extra });
 const m = (id, extra = {}) => ({ id, question_id: null, question_text: '', error_reason: null, ...extra });

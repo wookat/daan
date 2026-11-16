@@ -182,16 +182,16 @@
 </template>
 
 <script>
-import { fmtCnDHM } from '../../fmt.js';
-import { request, snapPeek, anonUid, exportPdf } from '../../api.js';
-import { buildExamListUrl, parseExamListOpts } from '../../exam-list-url.js';
-import { parseExamProgress, fmtLeftSecs } from '../../exam-resume.js';
-import { filterPapersByStatus } from '../../exam-list-status.js';
-import { paperProgress } from '../../exam-list-progress.js';
-import { adoptServerExamProgress } from '../../exam-progress-sync.js';
-import { paperPracticedState } from '../../paper-continue.js';
-import { paperModsText } from '../../exam-paper-mods.js';
-import { segResizeMixin } from '../../seg-resize.js';
+import { fmtCnDHM } from '../../utils/fmt.js';
+import { request, snapPeek, anonUid, exportPdf } from '../../api/api.js';
+import { buildExamListUrl, parseExamListOpts } from '../../exam/exam-list-url.js';
+import { parseExamProgress, fmtLeftSecs } from '../../exam/exam-resume.js';
+import { filterPapersByStatus } from '../../exam/exam-list-status.js';
+import { paperProgress } from '../../exam/exam-list-progress.js';
+import { adoptServerExamProgress } from '../../exam/exam-progress-sync.js';
+import { paperPracticedState } from '../../exam/paper-continue.js';
+import { paperModsText } from '../../exam/exam-paper-mods.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
 
 const PAGE = 20;
 const ST_LABELS = ['全部', '没考过', '考过的'];

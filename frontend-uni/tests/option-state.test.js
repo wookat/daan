@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { OPTION_STATES, optionState, nextPicked } from '../src/option-state';
+import { OPTION_STATES, optionState, nextPicked } from '../src/utils/option-state';
 
 describe('KgOptionGroup 7 态（COMPONENTS §2.1）', () => {
   it('状态集合', () => {

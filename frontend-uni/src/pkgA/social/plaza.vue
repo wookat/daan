@@ -45,9 +45,9 @@
 </template>
 
 <script>
-import { fmtMDHM } from '../../fmt.js';
-import { fetchCommentsPlaza } from '../../api.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
+import { fmtMDHM } from '../../utils/fmt.js';
+import { fetchCommentsPlaza } from '../../api/api.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 
 export default {
   data() {

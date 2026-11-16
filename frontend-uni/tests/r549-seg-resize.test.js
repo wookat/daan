@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { SEG_RESIZE_DEBOUNCE_MS, segResizeMixin, segUpdater } from '../src/seg-resize.js';
+import { SEG_RESIZE_DEBOUNCE_MS, segResizeMixin, segUpdater } from '../src/utils/seg-resize.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const PAGES = ['pkgA/social/discuss', 'pkgA/social/favorites', 'pkgA/shenlun/shenlun', 'pkgA/user/login', 'pkgA/exam/list', 'pkgA/stats/mastery-map'];
@@ -72,7 +72,7 @@ describe('segResizeMixin', () => {
   });
 
   it('mixin 只在 H5 条件编译块内生效', () => {
-    const src = read('../src/seg-resize.js');
+    const src = read('../src/utils/seg-resize.js');
     expect(src.match(/\/\/ #ifdef H5/g)).toHaveLength(2);
     expect(src.match(/\/\/ #endif/g)).toHaveLength(2);
   });
@@ -91,7 +91,7 @@ describe('接入：仓库内所有用 wd-segmented 的页面', () => {
       const tags = src.match(/<wd-segmented[^>]*>/g) || [];
       expect(tags.length, p).toBeGreaterThan(0);
       for (const t of tags) expect(t, p).toContain('ref="seg"');
-      expect(src, p).toContain("import { segResizeMixin } from '../../seg-resize.js';");
+      expect(src, p).toContain("import { segResizeMixin } from '../../utils/seg-resize.js';");
       expect(src, p).toMatch(/\n {2}mixins: \[segResizeMixin[,\]]/);
     }
   });

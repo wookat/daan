@@ -8,7 +8,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { pathUid, isStaleUidResponse, isStaleUidErr } from '../src/api-policy';
+import { pathUid, isStaleUidResponse, isStaleUidErr } from '../src/api/api-policy';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const api = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');
@@ -76,18 +76,18 @@ describe('tab 页 catch 对旧身份回包静默（不 toast / 不置 loadErr / 
     const m = home.match(/async loadHome\(\) \{[\s\S]*?\} catch \(e\) \{\n([\s\S]*?)\n {6}\}/);
     expect(m).not.toBeNull();
     expect(m[1].trim().split('\n')[0]).toMatch(/if \(isStaleUidErr\(e\)\) return;/);
-    expect(home).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\.js';/);
+    expect(home).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\/api\.js';/);
   });
 
   it('book.vue load() catch 在 seq 判定后对旧身份 return（复位 loading），不落缓存/不 toast', () => {
     const m = book.match(/if \(seq !== this\._loadSeq\) return;\n {8}if \(isStaleUidErr\(e\)\) \{\n {10}this\.loading = false;\n {10}return;\n {8}\}\n {8}const c = getCachedMistakes\(anonUid\(\)\);/);
     expect(m).not.toBeNull();
-    expect(book).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\.js';/);
+    expect(book).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\/api\.js';/);
   });
 
   it('stats.vue load() catch 对旧身份 return，不置 loadErr / 不 toast', () => {
     const m = stats.match(/this\.applyStats\(await request\(sp\)\);\n {6}\} catch \(e\) \{\n {8}if \(isStaleUidErr\(e\)\) return;\n {8}this\.loadErr = /);
     expect(m).not.toBeNull();
-    expect(stats).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\.js';/);
+    expect(stats).toMatch(/import \{[^}]*isStaleUidErr[^}]*\} from '\.\.\/\.\.\/api\/api\.js';/);
   });
 });

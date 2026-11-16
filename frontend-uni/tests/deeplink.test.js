@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeDailyDeepLink } from '../src/deeplink.js';
+import { normalizeDailyDeepLink } from '../src/services/deeplink.js';
 
 describe('normalizeDailyDeepLink', () => {
   it('基础深链 /?daily=1 归一化为练习页 hash 路由', () => {

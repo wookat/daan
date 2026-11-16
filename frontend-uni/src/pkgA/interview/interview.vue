@@ -130,13 +130,13 @@
 </template>
 
 <script>
-import { fmtDur as fmtDurShared } from '../../fmt.js';
-import { interviewCategories, interviewDraw, interviewSession, streamInterview } from '../../api.js';
+import { fmtDur as fmtDurShared } from '../../utils/fmt.js';
+import { interviewCategories, interviewDraw, interviewSession, streamInterview } from '../../api/api.js';
 // #ifdef H5
-import { streamInterviewReviewRegen } from '../../api.js';
+import { streamInterviewReviewRegen } from '../../api/api.js';
 // #endif
-import { md } from '../../md.js';
-import { reviewThinkingLabel, thinkingSecs } from '../../ask-link.js';
+import { md } from '../../utils/md.js';
+import { reviewThinkingLabel, thinkingSecs } from '../../ask/ask-link.js';
 
 export default {
   data() {

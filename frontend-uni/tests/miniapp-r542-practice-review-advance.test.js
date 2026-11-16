@@ -8,7 +8,7 @@ import {
   redoReportTip,
   reviewedMasteredCount,
 } from '../../miniapp-native/miniprogram/utils/review-advance.ts';
-import { fixReportText as h5FixReportText, reviewedMasteredCount as h5Count } from '../src/review-advance.js';
+import { fixReportText as h5FixReportText, reviewedMasteredCount as h5Count } from '../src/review/review-advance.js';
 
 const mp = (p) => readFileSync(fileURLToPath(new URL('../../miniapp-native/miniprogram/' + p, import.meta.url)), 'utf8');
 

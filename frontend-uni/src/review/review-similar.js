@@ -1,8 +1,8 @@
 // 复习流「加练同类题」条目与错题记录构造（fail-closed 纯函数）
 
-import { askAnswerLetter } from './ask-prefill.js';
+import { askAnswerLetter } from '../ask/ask-prefill.js';
 import { reviewOptions, reviewOptionsFull } from './review-opts.js';
-import { MODULE_KEYS } from './module-meta.js';
+import { MODULE_KEYS } from '../utils/module-meta.js';
 
 /** 错题/复习条目是否有题库同类题池：只有行测五模块走 /api/questions 抽题；时政（/api/shizheng/daily）、手录等模块无池，同类题入口不应出现。 */
 export function hasSimilarPool(m) {

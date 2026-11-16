@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FOCUS_CSS } from '../src/a11y-focus.js';
+import { FOCUS_CSS } from '../src/a11y/a11y-focus.js';
 
 // 把注入样式按 {} 切成 selector → 声明 的表，断言意图而不是逐字比对
 function rules(css) {

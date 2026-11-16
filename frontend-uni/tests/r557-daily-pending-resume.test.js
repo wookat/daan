@@ -14,7 +14,7 @@ import {
   parsePendingPractice,
   pendingTitle,
   REDO_PENDING_TITLE,
-} from '../src/practice-progress.js';
+} from '../src/practice/practice-progress.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');

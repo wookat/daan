@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextPaper } from '../src/exam-next.js';
+import { nextPaper } from '../src/exam/exam-next.js';
 
 const p = (id, extra = {}) => ({ id, title: '卷' + id, year: 2024, region: '四川', takers: 0, ...extra });
 const cur = { id: 1, region: '四川' };

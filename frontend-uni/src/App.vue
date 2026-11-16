@@ -1,10 +1,10 @@
 <script>
 // #ifdef H5
-import { initReminderLoop } from './reminder.js'
-import { installSheetHistory } from './sheet-history.js'
+import { initReminderLoop } from './services/reminder.js'
+import { installSheetHistory } from './utils/sheet-history.js'
 // #endif
-import { applyTheme, watchSystemTheme } from './theme.js'
-import { flushOfflineQueue, watchNetwork } from './offline.js'
+import { applyTheme, watchSystemTheme } from './services/theme.js'
+import { flushOfflineQueue, watchNetwork } from './services/offline.js'
 
 export default {
   onLaunch: function () {

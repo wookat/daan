@@ -3,7 +3,7 @@
 // 直接返回 → onUnload flushProgress 把 N/N 存进本机 + 远端快照、不 postPracticeResult → 下次进页弹「上次还有一组未做完（10/10 题）」。
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { allAnswered } from '../src/quit-summary.js';
+import { allAnswered } from '../src/practice/quit-summary.js';
 import { allAnswered as mpAllAnswered } from '../../miniapp-native/miniprogram/utils/practice-progress.ts';
 
 const q = (id, picked = '') => ({ id, stem: 's' + id, options: { A: 'a', B: 'b' }, answer: 'A', _picked: picked });

@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { planDaysLabel } from '../src/plan-days-label.js';
+import { planDaysLabel } from '../src/home/plan-days-label.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 
@@ -39,7 +39,7 @@ describe('home.vue 今日计划头走 planDaysLabel（源锁）', () => {
   });
 
   it('computed planDaysText 调 planDaysLabel(days_left, phase_name)', () => {
-    expect(src).toMatch(/import \{ planDaysLabel[^}]*\} from '\.\.\/\.\.\/plan-days-label\.js'/);
+    expect(src).toMatch(/import \{ planDaysLabel[^}]*\} from '\.\.\/\.\.\/home\/plan-days-label\.js'/);
     expect(src).toMatch(/planDaysText\(\) \{\s*return this\.planToday \? planDaysLabel\(this\.planToday\.days_left, this\.planToday\.phase_name\) : '';/);
   });
 });

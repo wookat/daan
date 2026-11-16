@@ -2,8 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { BOOK_PATH, buildBookUrl, parseBookOpts } from '../src/book-url.js';
-import { qtypeName } from '../src/type-label.js';
+import { BOOK_PATH, buildBookUrl, parseBookOpts } from '../src/book/book-url.js';
+import { qtypeName } from '../src/utils/type-label.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');

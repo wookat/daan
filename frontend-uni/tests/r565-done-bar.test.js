@@ -3,7 +3,7 @@
 // 小程序结算态与 H5 模考报告都已是固定底栏，H5 练习完成页是唯一例外。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { doneBarPlan } from '../src/paper-continue.js';
+import { doneBarPlan } from '../src/exam/paper-continue.js';
 
 const PRACTICE = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
 

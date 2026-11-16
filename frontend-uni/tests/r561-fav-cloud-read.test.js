@@ -3,14 +3,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { favFromCloud, reconcileFavs, markFavLocalOnly, favsLocalOnly, FAV_GRACE_MS } from '../src/exam-fav.js';
+import { favFromCloud, reconcileFavs, markFavLocalOnly, favsLocalOnly, FAV_GRACE_MS } from '../src/exam/exam-fav.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const PRACTICE = read('../src/pages/practice/practice.vue');
 const PROFILE = read('../src/pages/profile/profile.vue');
 const REPORT = read('../src/pkgA/exam/report.vue');
-const SYNC = read('../src/fav-sync.js');
+const SYNC = read('../src/fav/fav-sync.js');
 const TAG = read('../src/components/kg-tag/kg-tag.vue');
 
 const cloudItem = (id, question, faved_at = 1_700_000_000, extra = {}) => ({
@@ -124,13 +124,13 @@ describe('syncCloudFavs', () => {
   });
   afterEach(() => {
     delete globalThis.uni;
-    vi.doUnmock('../src/api.js');
+    vi.doUnmock('../src/api/api.js');
   });
 
   it('并发调用只发一次 /api/favs，落盘对账结果并返回', async () => {
     let calls = 0;
     let resolve;
-    vi.doMock('../src/api.js', () => ({
+    vi.doMock('../src/api/api.js', () => ({
       fetchFavsLive: () => {
         calls++;
         return new Promise((r) => {
@@ -138,7 +138,7 @@ describe('syncCloudFavs', () => {
         });
       },
     }));
-    const { syncCloudFavs } = await import('../src/fav-sync.js');
+    const { syncCloudFavs } = await import('../src/fav/fav-sync.js');
     store.favQuestions = [{ t: 1, question: '时政题', id: null }];
     const p1 = syncCloudFavs();
     const p2 = syncCloudFavs();
@@ -154,16 +154,16 @@ describe('syncCloudFavs', () => {
   });
 
   it('请求失败返回 null 且不动本机存储', async () => {
-    vi.doMock('../src/api.js', () => ({ fetchFavsLive: () => Promise.reject(new Error('net')) }));
-    const { syncCloudFavs } = await import('../src/fav-sync.js');
+    vi.doMock('../src/api/api.js', () => ({ fetchFavsLive: () => Promise.reject(new Error('net')) }));
+    const { syncCloudFavs } = await import('../src/fav/fav-sync.js');
     store.favQuestions = [{ t: 1, id: 5, question: '甲' }];
     expect(await syncCloudFavs()).toBe(null);
     expect(store.favQuestions).toEqual([{ t: 1, id: 5, question: '甲' }]);
   });
 
   it('回包无 items 数组（非真实列表）返回 null 且不动本机存储', async () => {
-    vi.doMock('../src/api.js', () => ({ fetchFavsLive: () => Promise.resolve({}) }));
-    const { syncCloudFavs } = await import('../src/fav-sync.js');
+    vi.doMock('../src/api/api.js', () => ({ fetchFavsLive: () => Promise.resolve({}) }));
+    const { syncCloudFavs } = await import('../src/fav/fav-sync.js');
     store.favQuestions = [{ t: 1, id: 5, question: '甲' }];
     expect(await syncCloudFavs()).toBe(null);
     expect(store.favQuestions).toEqual([{ t: 1, id: 5, question: '甲' }]);
@@ -184,14 +184,14 @@ describe('R561-fix 对账不吃 apiSnap 快照（生产 E3：POST 后阻断 GET�
 
 describe('R561 页面接线（源锁）', () => {
   it('fav-sync 只读 fetchFavsLive + reconcileFavs，失败吞掉返回 null', () => {
-    expect(SYNC).toContain("import { fetchFavsLive } from './api.js';");
+    expect(SYNC).toContain("import { fetchFavsLive } from '../api/api.js';");
     expect(SYNC).not.toContain('fetchFavs()');
     expect(SYNC).toContain('if (!d || !Array.isArray(d.items)) return null;');
-    expect(SYNC).toContain("import { reconcileFavs } from './exam-fav.js';");
+    expect(SYNC).toContain("import { reconcileFavs } from '../exam/exam-fav.js';");
     expect(SYNC).toContain('.catch(() => null)');
   });
   it('book.vue：onShow 先显本机再 syncFavs；等待期间本机取消过（_favSeq 变）不拿云列表覆盖；展开态按题干保留', () => {
-    expect(BOOK).toContain("import { syncCloudFavs } from '../../fav-sync.js';");
+    expect(BOOK).toContain("import { syncCloudFavs } from '../../fav/fav-sync.js';");
     const onShow = BOOK.slice(BOOK.indexOf('  onShow() {'), BOOK.indexOf('  onHide() {'));
     expect(onShow.indexOf("this.favs = (uni.getStorageSync('favQuestions') || [])")).toBeLessThan(onShow.indexOf('this.syncFavs();'));
     const sync = BOOK.slice(BOOK.indexOf('    async syncFavs() {'), BOOK.indexOf('    unfav(i) {'));
@@ -207,21 +207,21 @@ describe('R561 页面接线（源锁）', () => {
     expect(BOOK).toContain('title="还没有收藏" desc="刷题时点顶栏星星收藏好题；小程序、其他设备的收藏也会同步到这里"');
   });
   it('practice.vue：onShow 同步；取消收藏计 _favSeq；setFav 失败降级本机独有', () => {
-    expect(PRACTICE).toContain("import { markFavLocalOnly } from '../../exam-fav.js';");
-    expect(PRACTICE).toContain("import { syncCloudFavs } from '../../fav-sync.js';");
+    expect(PRACTICE).toContain("import { markFavLocalOnly } from '../../exam/exam-fav.js';");
+    expect(PRACTICE).toContain("import { syncCloudFavs } from '../../fav/fav-sync.js';");
     expect(PRACTICE).toContain("this.favs = uni.getStorageSync('favQuestions') || [];\n    this.syncFavs();");
     expect(PRACTICE).toContain('if (qid) setFav(qid).catch(() => this.favLocalOnly(favQ));');
     const toggle = PRACTICE.slice(PRACTICE.indexOf('    toggleFav() {'), PRACTICE.indexOf('    favLocalOnly(question) {'));
     expect(toggle).toContain('this._favSeq = (this._favSeq || 0) + 1;');
   });
   it('report.vue：setFav 失败降级本机独有，removeFav 失败不回滚', () => {
-    expect(REPORT).toContain("import { isFaved, toggleFav, markFavLocalOnly } from '../../exam-fav.js';");
+    expect(REPORT).toContain("import { isFaved, toggleFav, markFavLocalOnly } from '../../exam/exam-fav.js';");
     expect(REPORT).toContain("this.favs = markFavLocalOnly(uni.getStorageSync('favQuestions') || [], d.question);");
     expect(REPORT).toContain('if (!added) return;');
   });
   it('profile.vue：收藏数先本机后云对账；恢复码恢复后 favQuestions 整体降级', () => {
-    expect(PROFILE).toContain("import { syncCloudFavs } from '../../fav-sync.js';");
-    expect(PROFILE).toContain("import { favsLocalOnly } from '../../exam-fav.js';");
+    expect(PROFILE).toContain("import { syncCloudFavs } from '../../fav/fav-sync.js';");
+    expect(PROFILE).toContain("import { favsLocalOnly } from '../../exam/exam-fav.js';");
     expect(PROFILE).toContain('syncCloudFavs().then((list) => {\n      if (list) this.favN = list.length;\n    });');
     expect(PROFILE).toContain("uni.setStorageSync('favQuestions', favsLocalOnly(uni.getStorageSync('favQuestions') || []));");
   });

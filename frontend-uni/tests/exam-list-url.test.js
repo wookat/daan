@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EXAM_LIST_PATH, buildExamListUrl, parseExamListOpts } from '../src/exam-list-url.js';
+import { EXAM_LIST_PATH, buildExamListUrl, parseExamListOpts } from '../src/exam/exam-list-url.js';
 
 describe('buildExamListUrl', () => {
   it('全默认回落基础路径', () => {

@@ -45,8 +45,8 @@
 </template>
 
 <script>
-import { fmtMDHM, fmtDur as fmtDurShared } from '../../fmt.js';
-import { interviewHistory } from '../../api.js';
+import { fmtMDHM, fmtDur as fmtDurShared } from '../../utils/fmt.js';
+import { interviewHistory } from '../../api/api.js';
 
 export default {
   data() {

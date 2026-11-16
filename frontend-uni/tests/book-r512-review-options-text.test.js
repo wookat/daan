@@ -2,8 +2,8 @@
 // H5 复习作答卡曾只画 A/B/C/D 裸字母 → 题目不可作答。锁：选项文本铺出 + AI 详解预填带选项。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { reviewOptions, reviewOptionsFull } from '../src/review-opts.js';
-import { askPrefill } from '../src/ask-prefill.js';
+import { reviewOptions, reviewOptionsFull } from '../src/review/review-opts.js';
+import { askPrefill } from '../src/ask/ask-prefill.js';
 
 const src = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 

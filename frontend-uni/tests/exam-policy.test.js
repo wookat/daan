@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { submitFailPlan, SUBMIT_MAX_AUTO_RETRIES } from '../src/exam-policy.js';
+import { submitFailPlan, SUBMIT_MAX_AUTO_RETRIES } from '../src/exam/exam-policy.js';
 
 describe('submitFailPlan', () => {
   it('确定性业务错误终止（会话失效重试永不成功）', () => {

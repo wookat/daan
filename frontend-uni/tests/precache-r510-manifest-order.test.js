@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { orderPrecache, PRECACHE_FIRST_ROUTES } from '../scripts/gen-precache-manifest.mjs';
-import { PRECACHE_DELAY_MS } from '../src/precache.js';
+import { PRECACHE_DELAY_MS } from '../src/services/precache.js';
 
 // R510：运行期 precache 按清单顺序逐个 fetch，主循环页（练习/错题本）分包必须排在清单最前，
 // 否则首页停留 8–12 s 内点进练习时仍有 ~30 个分包依赖走网络（生产一手：字母序清单爬不到 p）。
@@ -48,7 +48,7 @@ describe('gen-precache-manifest: 主循环页分包前置', () => {
 describe('precache.js: load 后延迟', () => {
   it('延迟 3 s：晚于首屏数据/题包预取，早于用户点进练习的最短间隔（生产非探针 ≥8 s）', () => {
     expect(PRECACHE_DELAY_MS).toBe(3000);
-    const src = readFileSync(new URL('../src/precache.js', import.meta.url), 'utf8');
+    const src = readFileSync(new URL('../src/services/precache.js', import.meta.url), 'utf8');
     expect(src).toMatch(/setTimeout\(\(\) => \{[\s\S]*?\}, PRECACHE_DELAY_MS\)/);
     expect(src).not.toMatch(/\}, 8000\)/);
   });

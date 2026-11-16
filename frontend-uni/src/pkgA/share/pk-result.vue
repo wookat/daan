@@ -63,8 +63,8 @@
 </template>
 
 <script>
-import { pkResult, trackEvent, canonicalizeSharePath } from '../../api.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
+import { pkResult, trackEvent, canonicalizeSharePath } from '../../api/api.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 
 export default {
   data() {

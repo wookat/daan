@@ -1,6 +1,6 @@
 // 玩法端点：异步 PK / 组队打卡 / 题目分享 / 分享漏斗埋点辅助
 import { request, anonUid, getAuthUser } from './client';
-import { qShareCopy } from '../exam-copy.js';
+import { qShareCopy } from '../exam/exam-copy.js';
 
 // ---------- 答题 PK（异步） ----------
 

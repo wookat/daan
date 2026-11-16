@@ -194,20 +194,20 @@
 </template>
 
 <script>
-import { request, snapPeek, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api.js';
-import { syncCloudFavs } from '../../fav-sync.js';
-import { favsLocalOnly } from '../../exam-fav.js';
-import { md } from '../../md.js';
-import { getReminderSettings } from '../../reminder.js';
-import { cycleThemeMode, getThemeMode, getThemeAccent, setThemeAccent, THEME_ACCENTS, THEME_LABELS } from '../../theme.js';
-import { normFontLv } from '../../font-size.js';
+import { request, snapPeek, getAuthUser, authLogout, clearAuth, anonUid, fetchCheckinBadges, fetchCommentInbox } from '../../api/api.js';
+import { syncCloudFavs } from '../../fav/fav-sync.js';
+import { favsLocalOnly } from '../../exam/exam-fav.js';
+import { md } from '../../utils/md.js';
+import { getReminderSettings } from '../../services/reminder.js';
+import { cycleThemeMode, getThemeMode, getThemeAccent, setThemeAccent, THEME_ACCENTS, THEME_LABELS } from '../../services/theme.js';
+import { normFontLv } from '../../services/font-size.js';
 // #ifdef H5
-import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from '../../pwa.js';
+import { canInstall, promptInstall, onInstallable, isIosSafariInstallable } from '../../services/pwa.js';
 // #endif
-import { listPacks } from '../../offline.js';
-import { checkinStreak } from '../../checkin.js';
-import { DAILY_GOALS, adoptServerDailyGoal } from '../../daily-goal.js';
-import { moduleLabel } from '../../module-meta.js';
+import { listPacks } from '../../services/offline.js';
+import { checkinStreak } from '../../home/checkin.js';
+import { DAILY_GOALS, adoptServerDailyGoal } from '../../home/daily-goal.js';
+import { moduleLabel } from '../../utils/module-meta.js';
 
 // 旧版缓存的 AI 建议 HTML 内联了旧紫色，读取时映射到品牌色
 function cleanCoach(s) {

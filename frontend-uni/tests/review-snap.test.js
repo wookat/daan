@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildReviewSnap, parseReviewSnap } from '../src/review-snap.js';
+import { buildReviewSnap, parseReviewSnap } from '../src/review/review-snap.js';
 
 const NOW = 1_700_000_000;
 const item = (over = {}) => ({

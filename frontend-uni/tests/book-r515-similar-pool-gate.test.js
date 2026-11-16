@@ -2,8 +2,8 @@
 // 改前生产一手：时政复习答错 → 「还不稳？练 3 道同类题巩固 ›」→ 练习页 practicePreset {module:'时政'} → /api/questions?module=时政 items 0 → 「题目加载失败 该模块暂无题目」死路
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { hasSimilarPool } from '../src/review-similar.js';
-import { MODULE_KEYS } from '../src/module-meta.js';
+import { hasSimilarPool } from '../src/review/review-similar.js';
+import { MODULE_KEYS } from '../src/utils/module-meta.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
@@ -27,7 +27,7 @@ describe('hasSimilarPool', () => {
 
 describe('book.vue 源锁', () => {
   it('复习卡 CTA / 列表「练3道同类」/ appendSimilar 三处都按 hasSimilarPool 门控，不再只看 m.module 真值', () => {
-    expect(BOOK).toMatch(/import \{[^}]*\bhasSimilarPool\b[^}]*\} from '\.\.\/\.\.\/review-similar\.js'/);
+    expect(BOOK).toMatch(/import \{[^}]*\bhasSimilarPool\b[^}]*\} from '\.\.\/\.\.\/review\/review-similar\.js'/);
     expect(BOOK).toContain('v-if="!wasCorrect && similarableReview && !cur._extra"');
     expect(BOOK).toContain('similarableReview() {\n      return hasSimilarPool(this.cur);\n    },');
     expect(BOOK).toContain('if (m._simFetched || m._requeued || !hasSimilarPool(m)) return;');

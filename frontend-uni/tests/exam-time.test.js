@@ -1,6 +1,6 @@
 // R315：成绩报告逐题用时锚点纯函数
 import { describe, it, expect } from 'vitest';
-import { fmtSecs, paperAvgSecs, qTimeLine } from '../src/exam-time.js';
+import { fmtSecs, paperAvgSecs, qTimeLine } from '../src/exam/exam-time.js';
 
 describe('fmtSecs', () => {
   it('秒级', () => expect(fmtSecs(45)).toBe('45 秒'));

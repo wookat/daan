@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun-url.js';
+import { buildShenlunUrl, buildShenlunPaperUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl, SHENLUN_PATH } from '../src/shenlun/shenlun-url.js';
 
 describe('buildShenlunPaperUrl', () => {
   it('encodes paper name into ?paper deeplink', () => {

@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { prefersReducedMotion } from '../../a11y-motion.js';
+import { prefersReducedMotion } from '../../a11y/a11y-motion.js';
 
 /** KgSkeleton（COMPONENTS §1.9）：wd-skeleton 五套预设（banner = 单行 KgBanner 等高占位；plan = 首页学习计划卡等高占位，放在 kg-card.plan 内，rows=0 为「去制定」引导卡、rows=n 为 n 行任务的今日计划卡），回包后不抬/不压下方内容；reduced-motion 下静止。空态与骨架互斥由页面保证。 */
 export const SKELETON_PRESETS = ['hero', 'cards', 'lines', 'banner', 'plan'];

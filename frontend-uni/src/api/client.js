@@ -1,7 +1,7 @@
 // API transport 层：BASE_URL/请求封装/登录态/访问码/快照兜底/GET 合并缓存/埋点可靠投递。
 // 端点按域分在 api/{social,daily,export,ai,play}.js；src/api.js 只做 barrel 重导出，调用侧 import 不变。
-import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, trackRetryable, trackQueuePush, trackReplayPayload } from '../api-policy';
-import { createGetCache, getTtl, isTrackPath } from '../api-get-cache';
+import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+import { createGetCache, getTtl, isTrackPath } from './api-get-cache';
 
 export { isStaleUidErr };
 

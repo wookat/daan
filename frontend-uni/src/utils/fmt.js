@@ -1,7 +1,7 @@
 // 共享日期/时长格式化——全部基于 dayjs（vendor/dayjs，npm tarball 内嵌版）。
 // 各页同名本地 fmt* 方法统一收敛到这里；新增时间展示先来这里找，没有再写。
 // 入参约定：ts 均为「秒」（后端 created_at/submitted_at 均为 epoch 秒），fmtSlashMD 例外（毫秒）。
-import dayjs from './vendor/dayjs/index.js';
+import dayjs from '../vendor/dayjs/index.js';
 
 export { dayjs };
 

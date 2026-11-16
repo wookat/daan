@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toggleExcl, pickWithExcl, exclVisible } from '../src/exam-excl.js';
+import { toggleExcl, pickWithExcl, exclVisible } from '../src/exam/exam-excl.js';
 
 describe('toggleExcl（R319 排除干扰项）', () => {
   it('长按未排除项加入排除，不改已选', () => {

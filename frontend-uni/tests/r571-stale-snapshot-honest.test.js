@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { snapshotNotice, snapshotAgeText } from '../src/snapshot-notice.js';
+import { snapshotNotice, snapshotAgeText } from '../src/practice/snapshot-notice.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
@@ -139,8 +139,8 @@ describe('book.vue load()：旧快照不当已同步、不回写 mistakesCache�
     expect(tpl).not.toContain('离线中 ·');
   });
   it('导入与状态；navigator 不可用时采样为 null；onUnload 摘掉 online/offline 监听', () => {
-    expect(script).toContain("import { staleAt } from '../../api.js';");
-    expect(script).toContain("import { snapshotNotice } from '../../snapshot-notice.js';");
+    expect(script).toContain("import { staleAt } from '../../api/api.js';");
+    expect(script).toContain("import { snapshotNotice } from '../../practice/snapshot-notice.js';");
     expect(script).toContain('snapAt: 0,');
     expect(method('showSnapshot')).toContain(
       "this.netOnline = typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean' ? navigator.onLine : null;"

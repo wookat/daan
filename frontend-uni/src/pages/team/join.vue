@@ -37,7 +37,7 @@
 </template>
 
 <script>
-import { teamJoin, trackEvent } from '../../api.js';
+import { teamJoin, trackEvent } from '../../api/api.js';
 
 const SEO_TITLE = '队友邀请你加入刷题小队，一起打卡冲上岸 - 答岸';
 

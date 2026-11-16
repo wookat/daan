@@ -4,7 +4,7 @@
 // 修法：resumeIndex 快照 idx 停在已答题则接着其后第一道未答题；parsePendingPractice/parseRemotePractice 透出 next（1 基），hero 改用 next。
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { adoptPracticeResume, parsePendingPractice, parseRemotePractice, resumeIndex } from '../src/practice-progress.js';
+import { adoptPracticeResume, parsePendingPractice, parseRemotePractice, resumeIndex } from '../src/practice/practice-progress.js';
 import { adoptPracticeResume as mpAdopt, resumeIndex as mpResumeIndex } from '../../miniapp-native/miniprogram/utils/practice-progress.ts';
 
 const q = (id, picked = '') => ({ id, stem: 's' + id, options: { A: 'a', B: 'b' }, answer: 'A', _picked: picked });

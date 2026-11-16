@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../src/review-similar.js';
+import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAskAnswer } from '../src/review/review-similar.js';
 
 const Q = {
   id: 646,

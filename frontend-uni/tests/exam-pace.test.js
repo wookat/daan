@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildPaceRows, fmtMin } from '../src/exam-pace.js';
+import { buildPaceRows, fmtMin } from '../src/exam/exam-pace.js';
 
 describe('buildPaceRows', () => {
   const pm = {

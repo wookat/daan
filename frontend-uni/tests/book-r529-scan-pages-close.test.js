@@ -3,8 +3,8 @@
 // 结果 sheet 右上 ✕ / 遮罩关闭与「完成」同走 closeScan() → load()（已记入做题记录后列表即时刷新）。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { scanPageLabel, scanPagesNote } from '../src/paper-scan-pages.js';
-import { inlineSkipNote } from '../src/paper-inline-note.js';
+import { scanPageLabel, scanPagesNote } from '../src/exam/paper-scan-pages.js';
+import { inlineSkipNote } from '../src/exam/paper-inline-note.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
@@ -35,7 +35,7 @@ describe('scanPagesNote', () => {
 
 describe('错题本接入', () => {
   it('结果 sheet 标题用 scanPageLabel，多页说明行在 inline 说明行之前', () => {
-    expect(BOOK).toMatch(/import \{ scanPageLabel, scanPagesNote[^}]*\} from '\.\.\/\.\.\/paper-scan-pages\.js';/);
+    expect(BOOK).toMatch(/import \{ scanPageLabel, scanPagesNote[^}]*\} from '\.\.\/\.\.\/exam\/paper-scan-pages\.js';/);
     expect(BOOK).toContain('    inlineSkipNote,\n    scanPageLabel,\n    scanPagesNote,\n');
     expect(BOOK).toContain("卷码 {{ scanResult.code }}{{ scanPageLabel(scanResult) ? ' · ' + scanPageLabel(scanResult) : '' }} · 已作答");
     expect(BOOK).toContain(

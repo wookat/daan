@@ -2,8 +2,8 @@
 // + 多页卷各页都扫过后说明行改为整卷合计（仍是普通题口径；页内 items/total 契约不动；手动录入回包不计）。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { scanRowJumpable, findScanMistake, pageNFor } from '../src/paper-scan-jump.js';
-import { recordScanPage, scanAllPagesSummary, scanPagesNote } from '../src/paper-scan-pages.js';
+import { scanRowJumpable, findScanMistake, pageNFor } from '../src/exam/paper-scan-jump.js';
+import { recordScanPage, scanAllPagesSummary, scanPagesNote } from '../src/exam/paper-scan-pages.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 
@@ -74,8 +74,8 @@ describe('多页卷整卷合计', () => {
 
 describe('错题本接入', () => {
   it('结果行：仅可跳行挂 click 监听（a11y-focus 只给有监听的元素补 tabindex/role）+ jump/role=button + 「看错题 ›」，点击走 scanRowJump → closeScan；说明行传 scanAcc', () => {
-    expect(BOOK).toContain("import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../paper-scan-jump.js';");
-    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../paper-scan-pages.js';");
+    expect(BOOK).toContain("import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../exam/paper-scan-jump.js';");
+    expect(BOOK).toContain("import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordScanPage } from '../../exam/paper-scan-pages.js';");
     expect(BOOK).toContain(
       '<view v-for="r in scanResult.items" :key="scanRowKey(scanResult, r)" class="scan-row" :class="{ jump: scanRowJumpable(scanResult, r) }" :role="scanRowJumpable(scanResult, r) ? \'button\' : null" v-on="scanRowJumpable(scanResult, r) ? { click: () => scanRowJump(r) } : {}">',
     );

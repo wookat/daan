@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { qSourceText, qStatLine } from '../src/q-stat.js';
+import { qSourceText, qStatLine } from '../src/utils/q-stat.js';
 
 describe('qStatLine', () => {
   it('样本不足 5 人次不产出', () => {

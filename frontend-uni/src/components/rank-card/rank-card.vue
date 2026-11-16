@@ -38,9 +38,9 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
-import { examBoardRows } from '../../exam-board.js';
-import { rankCardView } from '../../exam-copy.js';
+import { request, anonUid } from '../../api/api.js';
+import { examBoardRows } from '../../exam/exam-board.js';
+import { rankCardView } from '../../exam/exam-copy.js';
 
 export default {
   name: 'RankCard',

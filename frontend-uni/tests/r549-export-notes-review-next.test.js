@@ -3,8 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { exportNote, exportNotesMap } from '../src/book-export.js';
-import { nextReviewText } from '../src/review-summary.js';
+import { exportNote, exportNotesMap } from '../src/book/book-export.js';
+import { nextReviewText } from '../src/review/review-summary.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
@@ -93,7 +93,7 @@ describe('export-confirm 「含我的错答/错因」', () => {
 
 describe('错题本接入', () => {
   it('确认层标 reviewable；exportMistakes 剥 with_notes、题库题走 mistakes、内联题带 picked/reason', () => {
-    expect(BOOK).toContain("import { exportNote, exportNotesMap } from '../../book-export.js';");
+    expect(BOOK).toContain("import { exportNote, exportNotesMap } from '../../book/book-export.js';");
     expect(BOOK).toMatch(/:busy="exporting"\n\s+reviewable\n/);
     expect(BOOK).toContain('const { with_notes: withNotes, ...pdfOpts } = opts || {};');
     expect(BOOK).toContain('const note = (m) => (withNotes ? exportNote(m) : {});');
@@ -124,8 +124,8 @@ describe('nextReviewText', () => {
 
 describe('复习清零小结接入', () => {
   it('每题 POST /api/review 回的 next_review_days 落 cur._nextDays；清零时算 nextText；CTA 改「回错题本」', () => {
-    expect(BOOK).toContain("import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review-summary.js';");
-    expect(BOOK).toContain("import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review-summary.js';");
+    expect(BOOK).toContain("import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review/review-summary.js';");
+    expect(BOOK).toContain("import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review/review-summary.js';");
     expect(BOOK).toContain('this.cur._nextDays = res.next_review_days;\n        this.cur._streak = res.streak;');
     expect(BOOK).toContain('this.rSummary = reviewSummary(this.rItems);\n        this.nextText = nextReviewText(this.rItems);');
     expect(BOOK).toContain('<text v-if="nextText" class="cb-s cb-next">{{ nextText }}</text>');

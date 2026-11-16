@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { reviewThinkingLabel } from '../src/ask-link.js';
+import { reviewThinkingLabel } from '../src/ask/ask-link.js';
 
 const VUE = readFileSync(new URL('../src/pkgA/interview/interview.vue', import.meta.url), 'utf8');
 const API = readdirSync(fileURLToPath(new URL('../src/api/', import.meta.url))).filter((f)=>f.endsWith('.js')).sort().map((f)=>readFileSync(fileURLToPath(new URL('../src/api/'+f, import.meta.url)),'utf8')).join('\n');

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { adoptServerExamProgress } from '../src/exam-progress-sync.js';
+import { adoptServerExamProgress } from '../src/exam/exam-progress-sync.js';
 
 const NOW = 1_700_000_000_000;
 

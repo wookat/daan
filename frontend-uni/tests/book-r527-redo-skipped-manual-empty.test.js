@@ -2,7 +2,7 @@
 // + R526-1 手动录入层对 n=0 全内联卷（时政/手录，无机读答题卡）给解释文案并收起「交卷判分」。
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { redoSkippedNote } from '../src/book-redo-skipped.js';
+import { redoSkippedNote } from '../src/book/book-redo-skipped.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 const PRACTICE = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
@@ -20,7 +20,7 @@ describe('redoSkippedNote', () => {
 
 describe('错题本接入', () => {
   it('redoSel 回包少于勾选数时把说明交给练习页（本页 toast 会被练习页「错题重练开始」覆盖）', () => {
-    expect(BOOK).toContain("import { redoSkippedNote } from '../../book-redo-skipped.js';");
+    expect(BOOK).toContain("import { redoSkippedNote } from '../../book/book-redo-skipped.js';");
     const m = /async redoSel\(\) \{([\s\S]*?)\n {4}\},/.exec(BOOK);
     expect(m).not.toBeNull();
     const body = m[1];

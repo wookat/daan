@@ -1,7 +1,7 @@
 // 学习提醒：H5 用 Notification API 本地定时提示今日目标进度；
 // 小程序端为订阅消息占位（无正式模板 ID 时降级隐藏订阅入口）。
 
-import { dayKey } from './checkin.js';
+import { dayKey } from '../home/checkin.js';
 
 // 微信订阅消息模板 ID（申请通过后填入即可启用订阅入口）
 export const MP_SUBSCRIBE_TEMPLATE_ID = '';

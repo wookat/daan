@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reviewFilter, reviewStep } from '../src/exam-review.js';
+import { reviewFilter, reviewStep } from '../src/exam/exam-review.js';
 
 const items = [
   { no: 1, picked: 'A', correct: true },

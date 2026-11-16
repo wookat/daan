@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import {
   MANUAL_MODULES, MANUAL_LETTERS, emptyManualEntry, toggleLetter, manualEntryError, manualEntryBody, manualSavedToast,
-} from '../src/book-manual-entry.js';
+} from '../src/book/book-manual-entry.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
 const BOOK = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');

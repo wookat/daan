@@ -28,8 +28,8 @@
 </template>
 
 <script>
-import { fontSizes } from '../../font-size.js';
-import { optionState, nextPicked } from '../../option-state.js';
+import { fontSizes } from '../../services/font-size.js';
+import { optionState, nextPicked } from '../../utils/option-state.js';
 
 /**
  * KgOptionGroup（COMPONENTS §2.1）：选项组 7 态 idle/selected/right/wrong/dim/excluded/disabled（判定在 option-state.js）。

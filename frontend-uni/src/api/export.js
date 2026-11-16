@@ -1,8 +1,8 @@
 // 试卷 PDF 导出：mp/app 写文件预览，H5 触发浏览器下载（含 Capacitor 原生壳保存）
 import { BASE_URL, getAccessCode, authHeader } from './client';
 import { fetchNet } from './net';
-import { isNativeApp, savePdfNative } from '../native';
-import { netFailMessage } from '../api-policy';
+import { isNativeApp, savePdfNative } from '../services/native';
+import { netFailMessage } from './api-policy';
 
 // 记录最近导出的试卷码（各端共用）
 function rememberPaper(paperCode, title) {

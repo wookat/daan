@@ -48,7 +48,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api.js';
+import { request, anonUid } from '../../api/api.js';
 import { visColors } from '../kg-echart/kg-echart.vue';
 
 export default {

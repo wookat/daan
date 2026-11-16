@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { fmtWindow, fmtDay, fmtDayHour, cstParts } from '../src/contest-time.js';
+import { fmtWindow, fmtDay, fmtDayHour, cstParts } from '../src/exam/contest-time.js';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
-const helper = read('../src/contest-time.js');
+const helper = read('../src/exam/contest-time.js');
 const contest = read('../src/pkgA/exam/contest.vue');
 const report = read('../src/pkgA/exam/contest-report.vue');
 const weekly = read('../src/pkgA/stats/weekly-report.vue');
@@ -31,10 +31,10 @@ describe('R420 比赛窗口/日期固定东八区（与后端 mock_event.TZ 一�
   it('helper 只用 UTC getter；contest.vue / weekly-report.vue 不再自行按本地时区格式化场次', () => {
     expect(helper).not.toMatch(/\.get(?:FullYear|Month|Date|Hours|Minutes|TimezoneOffset)\(/);
     const script = (s) => s.slice(s.indexOf('<script'), s.indexOf('</script>'));
-    expect(script(contest)).toContain("from '../../contest-time.js'");
+    expect(script(contest)).toContain("from '../../exam/contest-time.js'");
     expect(script(contest)).not.toMatch(/new Date\(/);
     expect(contest).toMatch(/fmtDay\(p\.close_at - 1\)/);
-    expect(script(weekly)).toContain("from '../../contest-time.js'");
+    expect(script(weekly)).toContain("from '../../exam/contest-time.js'");
     expect(script(weekly)).not.toMatch(/getTimezoneOffset/);
   });
 });

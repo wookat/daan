@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { reviewedFromPending, reviewedMasteredCount } from '../src/review-advance.js';
+import { reviewedFromPending, reviewedMasteredCount } from '../src/review/review-advance.js';
 
 const PRACTICE = readFileSync(fileURLToPath(new URL('../src/pages/practice/practice.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/daily-ops.js', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/practice/session-ops.js', import.meta.url)), 'utf8');
 
@@ -93,9 +93,9 @@ describe('R553-fix ② practice.vue reviewed 随 pendingSession 持久', () => {
   it('saveSession 快照带 reviewed；adoptLocalPending 经 reviewedFromPending 还原', () => {
     for (const n of ['reviewedMasteredCount', 'fixReportText', 'reviewedFromPending'])
       expect(PRACTICE).toContain(n);
-    expect(PRACTICE).toContain("from '../review-advance.js'");
+    expect(PRACTICE).toContain("from '../review/review-advance.js'");
     const save = fnBody('    saveSession() {', '    pushPracticeProgress() {');
-    expect(save).toContain("redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,\n        reviewed: this._reviewed || [],\n        daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,\n      });");
+    expect(save).toContain("redo: this._redoItems && this._redoItems.length && !this.lastModule ? 1 : 0,\n        defer: this.deferMode ? 1 : 0,\n        reviewed: this._reviewed || [],\n        daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,\n      });");
     const adopt = fnBody('    adoptLocalPending(s) {', '    adoptRemoteSnap(snap) {');
     expect(adopt).toContain('this._redoItems = redoItemsFromPending(s);\n      this._reviewed = reviewedFromPending(s);');
   });

@@ -2,7 +2,7 @@
 // 错题本卡片标签 / 操作单标题「单选 · 更多操作」/ 题型分组都把作答形式当成了题型 → 退回模块名「时政」
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { qtypeName } from '../src/type-label.js';
+import { qtypeName } from '../src/utils/type-label.js';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');
 

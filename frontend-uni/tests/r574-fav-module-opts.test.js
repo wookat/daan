@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { favModulePlan } from '../src/fav-module-opts.js';
+import { favModulePlan } from '../src/fav/fav-module-opts.js';
 
 const KEYS = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi', '时政'];
 const label = (k) => 'L:' + k;
@@ -49,7 +49,7 @@ describe('favModulePlan', () => {
 describe('favorites.vue 接线', () => {
   const VUE = read('../src/pkgA/social/favorites.vue');
   it('modOpts/modChipsVisible 由 favModulePlan(items, modFilter, MOD_KEYS) 派生（按全部 items 而非当前夹）', () => {
-    expect(VUE).toContain("import { favModulePlan } from '../../fav-module-opts.js';");
+    expect(VUE).toContain("import { favModulePlan } from '../../fav/fav-module-opts.js';");
     expect(VUE).toContain('return favModulePlan(this.items, this.modFilter, MOD_KEYS, (m) => this.modName(m));');
     expect(VUE).toContain('return this.modPlan.opts;');
     expect(VUE).toContain('return this.modPlan.visible;');

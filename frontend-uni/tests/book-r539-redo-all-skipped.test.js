@@ -4,7 +4,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { redoSkippedNote } from '../src/book-redo-skipped.js';
+import { redoSkippedNote } from '../src/book/book-redo-skipped.js';
 import { redoSkippedNote as mpRedoSkippedNote } from '../../miniapp-native/miniprogram/utils/redo-note.ts';
 
 const BOOK = readFileSync(new URL('../src/pages/book/book.vue', import.meta.url), 'utf8')+readFileSync(new URL('../src/pages/book/review-ops.js', import.meta.url), 'utf8');

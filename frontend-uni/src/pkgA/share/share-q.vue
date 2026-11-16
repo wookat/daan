@@ -84,10 +84,10 @@
 </template>
 
 <script>
-import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api.js';
-import { MODULES, moduleLabel } from '../../module-meta.js';
-import { shareBeatLine } from '../../exam-copy.js';
-import { togglePickLetter } from '../../exam-excl.js';
+import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api/api.js';
+import { MODULES, moduleLabel } from '../../utils/module-meta.js';
+import { shareBeatLine } from '../../exam/exam-copy.js';
+import { togglePickLetter } from '../../exam/exam-excl.js';
 
 const modName = (m) => (MODULES[m] ? moduleLabel(m) : m === 'shenlun' ? '申论' : m || '行测');
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isQFaved, toggleQFav, missingSnapIds, mergeQFavSync } from '../src/shenlun-qfav.js';
+import { isQFaved, toggleQFav, missingSnapIds, mergeQFavSync } from '../src/shenlun/shenlun-qfav.js';
 
 const q = (id) => ({ id, qtype: '归纳概括', paper: 'P', exam_year: 2023, exam_region: '国考', question: '题' + id });
 

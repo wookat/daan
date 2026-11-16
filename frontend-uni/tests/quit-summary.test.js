@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { quitSummary } from '../src/quit-summary.js';
+import { quitSummary } from '../src/practice/quit-summary.js';
 
 const q = (id, answer, picked) => ({ id, answer, _picked: picked || '' });
 

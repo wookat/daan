@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { REVIEW_BATCH, REVIEW_EXTRA_MAX, similarRoom, reviewDueLeft, reviewDoneCopy } from '../src/review-summary.js';
+import { REVIEW_BATCH, REVIEW_EXTRA_MAX, similarRoom, reviewDueLeft, reviewDoneCopy } from '../src/review/review-summary.js';
 import * as mp from '../../miniapp-native/miniprogram/utils/review-verdict.ts';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');

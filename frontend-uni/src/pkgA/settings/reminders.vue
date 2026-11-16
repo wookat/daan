@@ -73,16 +73,16 @@
 </template>
 
 <script>
-import { getReminderSettings, setReminderSettings } from '../../reminder.js';
-import { dayKey } from '../../checkin.js';
+import { getReminderSettings, setReminderSettings } from '../../services/reminder.js';
+import { dayKey } from '../../home/checkin.js';
 // #ifdef H5
-import { request, anonUid } from '../../api.js';
+import { request, anonUid } from '../../api/api.js';
 // #endif
 // #ifdef H5
-import { notificationPermission, requestNotificationPermission } from '../../reminder.js';
+import { notificationPermission, requestNotificationPermission } from '../../services/reminder.js';
 // #endif
 // #ifdef MP-WEIXIN
-import { MP_SUBSCRIBE_TEMPLATE_ID, requestMpSubscribe } from '../../reminder.js';
+import { MP_SUBSCRIBE_TEMPLATE_ID, requestMpSubscribe } from '../../services/reminder.js';
 // #endif
 
 export default {

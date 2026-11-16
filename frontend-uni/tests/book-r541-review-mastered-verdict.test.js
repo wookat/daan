@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { reviewVerdict, reviewSummary } from '../src/review-summary.js';
-import { buildReviewSnap, parseReviewSnap } from '../src/review-snap.js';
+import { reviewVerdict, reviewSummary } from '../src/review/review-summary.js';
+import { buildReviewSnap, parseReviewSnap } from '../src/review/review-snap.js';
 import { reviewVerdict as mpReviewVerdict } from '../../miniapp-native/miniprogram/utils/review-verdict.ts';
 
 const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
@@ -87,8 +87,8 @@ describe('R541 快照恢复带回 _streak/_mastered（条目字段透传，快�
 describe('R541 源锁', () => {
   const vue = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
   it('H5 复习卡 verdict 走 reviewVerdict（record 写回 _streak/_mastered、恢复态回填 streak、庆祝态含达成掌握行）', () => {
-    expect(vue).toContain("import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review-summary.js';");
-    expect(vue).toContain("import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review-summary.js';");
+    expect(vue).toContain("import { reviewVerdict, streakProgressText, reviewDoneCopy } from '../../review/review-summary.js';");
+    expect(vue).toContain("import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review/review-summary.js';");
     expect(vue).toContain('>{{ verdictText }}</view>');
     expect(vue).toContain('this.cur._streak = res.streak;');
     expect(vue).toContain('this.cur._mastered = res.mastered === true;');

@@ -132,15 +132,15 @@
 </template>
 
 <script>
-import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, getToken, removeFav, renameFavFolder, setFav, trackEvent } from '../../api.js';
-import { askPrefill } from '../../ask-prefill.js';
-import { askQid, findAskSid } from '../../ask-link.js';
-import { dropFavItem } from '../../fav-list.js';
-import { favModulePlan } from '../../fav-module-opts.js';
-import { buildFavoritesUrl, parseFavoritesOpts } from '../../favorites-url.js';
-import { MODULES, MODULE_KEYS, moduleLabel } from '../../module-meta.js';
-import { segResizeMixin } from '../../seg-resize.js';
-import { snapshotViewMixin } from '../../snapshot-view.js';
+import { createFavFolder, deleteFavFolder, fetchFavFolders, fetchFavs, fetchNotes, getToken, removeFav, renameFavFolder, setFav, trackEvent } from '../../api/api.js';
+import { askPrefill } from '../../ask/ask-prefill.js';
+import { askQid, findAskSid } from '../../ask/ask-link.js';
+import { dropFavItem } from '../../fav/fav-list.js';
+import { favModulePlan } from '../../fav/fav-module-opts.js';
+import { buildFavoritesUrl, parseFavoritesOpts } from '../../fav/favorites-url.js';
+import { MODULES, MODULE_KEYS, moduleLabel } from '../../utils/module-meta.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
+import { snapshotViewMixin } from '../../practice/snapshot-view.js';
 
 // 收藏页模块筛选项：题库 5 模块（module-meta 单一来源）+ 本地时政收藏
 const MOD_KEYS = [...MODULE_KEYS, '时政'];

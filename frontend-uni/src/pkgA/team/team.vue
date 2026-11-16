@@ -130,7 +130,7 @@
 </template>
 
 <script>
-import { teamMine, teamCreate, teamJoin, teamLeave, teamPanel, trackEvent } from '../../api.js';
+import { teamMine, teamCreate, teamJoin, teamLeave, teamPanel, trackEvent } from '../../api/api.js';
 
 const SITE = 'https://kaogong.zalize.com';
 

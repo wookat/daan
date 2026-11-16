@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adoptPracticeResume, collectPracticeProgress, parsePendingPractice, parseRemotePractice } from '../src/practice-progress.js';
+import { adoptPracticeResume, collectPracticeProgress, parsePendingPractice, parseRemotePractice } from '../src/practice/practice-progress.js';
 
 const q = (id, extra = {}) => ({ id, stem: 's' + id, options: { A: 'a', B: 'b' }, answer: 'A', ...extra });
 

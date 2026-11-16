@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { weakSpots } from '../src/weak-spots.js';
+import { weakSpots } from '../src/practice/weak-spots.js';
 
 const NAMES = { yanyu: '言语理解', ziliao: '资料分析' };
 const modName = (m) => NAMES[m] || m;

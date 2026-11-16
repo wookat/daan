@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { todayShown } from '../src/home-today.js';
+import { todayShown } from '../src/home/home-today.js';
 
 describe('todayShown(svTodayN, svLocalAtSync, localNow)', () => {
   it('无服务端值 → 本地数（离线降级）', () => {

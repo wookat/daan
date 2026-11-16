@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { adoptServerDraft } from '../src/shenlun-draft.js';
+import { adoptServerDraft } from '../src/shenlun/shenlun-draft.js';
 
 describe('adoptServerDraft', () => {
   it('本机为空且服务端有内容时采用服务端草稿', () => {

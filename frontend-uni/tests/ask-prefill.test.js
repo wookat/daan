@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { askPrefill, askAnswerLetter } from '../src/ask-prefill.js';
+import { askPrefill, askAnswerLetter } from '../src/ask/ask-prefill.js';
 
 describe('askPrefill', () => {
   it('joins stem and options', () => {
