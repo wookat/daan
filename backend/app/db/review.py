@@ -73,6 +73,7 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
             if byid:
                 d = dict(byid)
                 d["options"] = json.loads(d.get("options") or "{}")
+                d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
                 d["difficulty"] = difficulty.band(d.get("correct_ratio"), d.get("attempt_count"))
                 d["difficulty_label"] = difficulty.label(d["difficulty"])
                 d["mistake_id"] = r["id"]
@@ -120,6 +121,7 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
             continue
         d = dict(q)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         d["mistake_id"] = r["id"]
         out.append(d)
         if len(out) >= limit:
@@ -469,6 +471,7 @@ def due_mix_questions(
             continue
         seen.add(d["id"])
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
         if len(out) >= limit:
             break

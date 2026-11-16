@@ -178,6 +178,7 @@ def find_similar(conn, qid: int, limit: int = 10) -> list[dict]:
             continue
         d = dict(row)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         d["similarity"] = round(j, 4)
         d["hamming"] = hamming(sh, c["simhash"])
         scored.append(d)

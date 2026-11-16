@@ -253,6 +253,7 @@ def random_questions(
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         by_id[d["id"]] = d
     return [by_id[i] for i in ids if i in by_id]
 
@@ -269,6 +270,7 @@ def questions_by_ids(ids: list[int]) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         # B3：全站正确率 → 难度分档（1 最易…5 最难，样本不足 → None=待校准）
         d["difficulty"] = difficulty.band(d.get("correct_ratio"), d.get("attempt_count"))
         d["difficulty_label"] = difficulty.label(d["difficulty"])
@@ -311,6 +313,7 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
         for i, r in enumerate(rows):
             d = dict(r)
             d["options"] = json.loads(d.get("options") or "{}")
+            d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
             d["group_seq"] = f"{i + 1}/{len(rows)}"
             out.append(d)
     conn.close()
@@ -464,6 +467,7 @@ def export_questions(offset: int = 0, limit: int = 200, module: str | None = Non
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
     return out
 

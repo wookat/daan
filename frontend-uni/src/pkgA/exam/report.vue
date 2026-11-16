@@ -367,7 +367,8 @@ export default {
     },
     detailOpts() {
       const o = (this.detail && this.detail.options) || {};
-      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+      const oi = (this.detail && this.detail.option_imgs) || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]), images: ((oi[k] || []).map(this.imgUrl)) }));
     },
     /** KgAnalysisCard stats：与 qStatLine 同口径（attempt_count/correct_ratio/most_wrong），无 avg_secs 字段则不显示平均用时 */
     detailStats() {

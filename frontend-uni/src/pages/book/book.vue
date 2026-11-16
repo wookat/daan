@@ -153,7 +153,7 @@
               </view>
               <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
               <template v-if="f._open">
-                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text></view>
+                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><image v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
                 <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
                 <template v-if="f.xp_explanation">
                   <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
@@ -600,7 +600,7 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
 
 <script>
 import { md } from '../../utils/md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav } from '../../api/api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav, imgUrl } from '../../api/api.js';
 import { staleAt } from '../../api/api.js';
 import { snapshotNotice } from '../../practice/snapshot-notice.js';
 import { cloudFavId } from '../../exam/exam-fav.js';
@@ -1090,6 +1090,7 @@ export default {
     inlineSkipNote,
     scanPageLabel,
     scanPagesNote,
+    imgUrl,
     scanDupNote,
     paperSubmittedNote,
     scanRowJumpable,
@@ -1999,6 +2000,7 @@ export default {
 .mopt--bad { color: var(--bad-strong); }
 .anscmp { margin-top: var(--sp-8); font-size: var(--fs-sub); display: flex; gap: var(--sp-8); align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
+.optimg { width: 100%; max-width: 560rpx; margin-top: var(--sp-8); border-radius: var(--r-xs); display: block; }
 .mstat { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
 .attempts { margin-top: var(--sp-8); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); }
 .att-h { font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-4); }

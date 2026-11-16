@@ -550,6 +550,7 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
     conn.close()
     for q in out:
         q["options"] = json.loads(q.get("options") or "{}")
+        q["option_imgs"] = json.loads(q.get("option_imgs") or "{}")
     return out[:limit]
 
 

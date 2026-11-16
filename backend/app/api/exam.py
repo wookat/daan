@@ -321,7 +321,7 @@ def _clean_marks(raw, total: int) -> list[int]:
             out.add(n)
     return sorted(out)
 
-_EXAM_ITEM_FIELDS = ("id", "question", "options", "module", "submodule", "image",
+_EXAM_ITEM_FIELDS = ("id", "question", "options", "option_imgs", "module", "submodule", "image",
                      "is_real", "exam_year", "exam_region")
 
 

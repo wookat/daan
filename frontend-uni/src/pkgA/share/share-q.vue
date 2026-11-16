@@ -84,7 +84,7 @@
 </template>
 
 <script>
-import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath } from '../../api/api.js';
+import { shareDetail, shareAnswer, trackEvent, teamJoin, qShareText, canonicalizeSharePath, imgUrl } from '../../api/api.js';
 import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 import { shareBeatLine } from '../../exam/exam-copy.js';
 import { togglePickLetter } from '../../exam/exam-excl.js';
@@ -128,7 +128,8 @@ export default {
     },
     optList() {
       const o = (this.d && this.d.question.options) || {};
-      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+      const oi = (this.d && this.d.question.option_imgs) || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]), images: ((oi[k] || []).map(imgUrl)) }));
     },
     optPicked() {
       const v = this.revealed && this.myResult ? this.myResult.picked : this.isMulti ? this.multiSel : this.picked;

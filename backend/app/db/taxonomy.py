@@ -70,6 +70,7 @@ def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
     return out
 

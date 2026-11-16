@@ -14,6 +14,11 @@ export const BASE_URL = import.meta.env.VITE_API_BASE || '';
 export const BASE_URL = import.meta.env.VITE_API_BASE || REMOTE_BASE;
 // #endif
 
+/** 相对路径静态资源（/qimg/* 等）补全域名；H5 同源为空串、非 H5 补远端域。 */
+export function imgUrl(p) {
+  return !p ? '' : (/^https?:/.test(p) ? p : (BASE_URL || '') + p);
+}
+
 export function getAccessCode() {
   return uni.getStorageSync('accessCode') || '';
 }

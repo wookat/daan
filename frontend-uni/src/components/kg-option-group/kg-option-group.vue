@@ -21,7 +21,7 @@
       </view>
       <view class="kg-opt__b">
         <text class="q-text">{{ o.text }}</text>
-        <image v-if="o.image" :src="o.image" mode="widthFix" class="kg-opt__img" />
+        <image v-for="(src, si) in (o.images || (o.image ? [o.image] : []))" :key="si" :src="src" mode="widthFix" class="kg-opt__img" />
       </view>
     </view>
   </view>

@@ -4,7 +4,7 @@
 输入：ERRRC/xingcezhenti 稀疏克隆目录（仅 .md，无 90-图片/）。
 输出：每行一个题目：
   {paper, year, region, mod, no, qid, subtype, material, stem, options, answer,
-   explanation, images, exp_images}
+   explanation, images(仅题干/材料), option_imgs(按选项字母), exp_images}
 模块目录映射：政治理论/常识判断→changshi，言语→yanyu，数量→shuliang，
 判断→panduan，资料→ziliao（与本库 MODULE_ORDER 一致）。
 用法：
@@ -102,7 +102,7 @@ def parse_file(path: str):
                 "qid": int(m_qid.group(1)) if m_qid else None,
                 "subtype": (m_qid.group(2) or "").strip() if m_qid else "",
                 "stem_parts": [], "options": {}, "answer": "",
-                "images": [],
+                "images": [], "option_imgs": {},
             }
             stage = "stem"
             continue
@@ -120,8 +120,9 @@ def parse_file(path: str):
         if m_opt:
             stage = "opt"
             letter, otxt = m_opt.group(1), m_opt.group(2)
-            for im in IMG_RE.findall(otxt):
-                q["images"].append(im[1])
+            oimgs = [im[1] for im in IMG_RE.findall(otxt)]
+            if oimgs:
+                q["option_imgs"][letter] = oimgs
             otxt = re.sub(r"✅", "", clean_html(otxt)).strip()
             q["options"][letter] = otxt
             continue
@@ -139,6 +140,8 @@ def parse_file(path: str):
             # 选项跨行（罕见）：并入最后一项
             if q["options"]:
                 k = list(q["options"])[-1]
+                for im in IMG_RE.findall(line):
+                    q["option_imgs"].setdefault(k, []).append(im[1])
                 q["options"][k] += " " + clean_html(line)
         else:
             for im in IMG_RE.findall(line):

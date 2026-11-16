@@ -142,6 +142,7 @@ def daily_set_questions(day: str) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         by_id[d["id"]] = d
     return [by_id[i] for i in ids if i in by_id]
 

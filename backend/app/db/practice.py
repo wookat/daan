@@ -195,6 +195,7 @@ def practice_history_detail(uid: str, start: float, end: float) -> list[dict]:
             if qrow:
                 d = dict(qrow)
                 d["options"] = json.loads(d.get("options") or "{}")
+                d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
                 item["question"] = d
         out.append(item)
     conn.close()

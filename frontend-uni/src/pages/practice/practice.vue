@@ -726,7 +726,8 @@ export default {
     },
     optList() {
       const o = (this.cur && this.cur.options) || {};
-      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+      const oi = (this.cur && this.cur.option_imgs) || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]), images: ((oi[k] || []).map(this.imgUrl)) }));
     },
     mainExplanation() {
       const q = this.cur;

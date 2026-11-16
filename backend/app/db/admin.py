@@ -258,6 +258,7 @@ def admin_search_questions(
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
     return out
 
@@ -324,6 +325,7 @@ def dup_cluster_detail(cluster_id: int) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
     return out
 
@@ -411,6 +413,7 @@ def admin_batch_sample(batch: str, limit: int = 10) -> list[dict]:
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d["options"] or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
     return out
 
@@ -746,6 +749,7 @@ def admin_shizheng(offset: int = 0, limit: int = 20) -> dict:
     for r in rows:
         d = dict(r)
         d["options"] = json.loads(d.get("options") or "{}")
+        d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
         out.append(d)
     return {"total": total, "items": out}
 

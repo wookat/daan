@@ -119,7 +119,7 @@
 </template>
 
 <script>
-import { request, anonUid } from '../../api/api.js';
+import { request, anonUid, imgUrl } from '../../api/api.js';
 import { submitFailPlan } from '../../exam/exam-policy.js';
 import { dayKey } from '../../home/checkin.js';
 import { splitMaterial, sameMaterial } from '../../utils/material.js';
@@ -178,7 +178,8 @@ export default {
     },
     optList() {
       const o = this.cur.options || {};
-      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+      const oi = this.cur.option_imgs || {};
+      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]), images: ((oi[k] || []).map(imgUrl)) }));
     },
     matInfo() {
       const q = this.cur;
