@@ -190,7 +190,7 @@ Props：`icon`, `title`, `desc?`, `ctaText?`, `ctaTo?`（url 或事件）, `seco
 三件套拆开是因为模考页不显示解析、分享页/错题详情不需要可点选项、申论只要题干。
 
 **`KgQuestionCard`**（`KgCard variant=flat`）
-- 头部 meta 行（新增，`research/03` 建议 P1 / 对标 `docs/design-benchmark/report.md` §2）：`KgTag module` + 考点 `--fs-sub --ink-3`（可点 → 同考点练习）+ 难度 ★×n `--warn` + 全站正确率 `.num --fs-sub`（`attempt_count ≥ 5` 才显示，`q-stat.js` 现有口径）+ 真题 `KgTag warn`。
+- 头部 meta 行（新增，`research/03` 建议 P1 / 对标 `docs/archive/design-benchmark/report.md` §2）：`KgTag module` + 考点 `--fs-sub --ink-3`（可点 → 同考点练习）+ 难度 ★×n `--warn` + 全站正确率 `.num --fs-sub`（`attempt_count ≥ 5` 才显示，`q-stat.js` 现有口径）+ 真题 `KgTag warn`。
 - 材料（资料分析/同材料题组）：`soft` 块可折叠，`同材料题组 i/K` tag（`.grp-tag` 现有）。
 - 题干：`--fs-body`×用户档（`font-size.js` 三档保留）、`--ink`、行高 1.7、`line-break: strict; overflow-wrap: anywhere`；题号 `.num --ink-3`。
 - 图片：`<image mode="widthFix">` 圆角 `--r-sm`，可点放大。

@@ -14,7 +14,7 @@
     python3 backend/scripts/rebalance_shizheng.py            # 生成新 jsonl + 审计 JSON
 输出：
     knowledge/shizheng_bank.jsonl        （原地重写）
-    docs/shizheng-rebalance-audit.json   （逐题前后对照，供人工核对）
+    docs/archive/shizheng-rebalance-audit.json   （逐题前后对照，供人工核对）
 """
 import json
 import os
@@ -24,7 +24,7 @@ from collections import Counter
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 BANK = os.path.join(ROOT, "knowledge", "shizheng_bank.jsonl")
-AUDIT = os.path.join(ROOT, "docs", "shizheng-rebalance-audit.json")
+AUDIT = os.path.join(ROOT, "docs", "archive", "shizheng-rebalance-audit.json")
 
 LETTERS = ["A", "B", "C", "D"]
 # 独立字母：前后均不是 ASCII 字母/数字

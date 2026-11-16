@@ -105,9 +105,9 @@ frontend-uni/      uni-app 源码 → 编译为网页版 H5（/app/）
 miniapp-native/    微信小程序源码（原生 TypeScript，内测中）
 landing/           官网落地页（纯静态单页 + lp-assets 品牌素材）
 knowledge/         花生十三方法库 + 复盘流程知识库
-data/              题库语料与审计账本（清洗脚本见 scripts/ 与 backend/scripts/）
+data/              题库语料与审计账本（本地保留，不入 git；shizheng_topics.json 除外）
 qimg/              题目配图（由 /qimg/* 接口直出）
-docs/              设计系统、架构文档、QA 报告（docs/qa/）、迭代簿记（docs/iter/）
+docs/              设计系统、架构文档、QA 报告（docs/qa/）；历史迭代文档在 docs/archive/
 tools/             设计 token 构建、API 类型生成、冒烟检查等开发工具
 scripts/           运维脚本（一次性修复脚本在 scripts/one-off/）
 deploy/            Dockerfile.runtime、docker-compose、CF Pages functions、部署脚本

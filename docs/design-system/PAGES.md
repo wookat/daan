@@ -52,7 +52,7 @@
 - 首屏必含：`KgStatRow`「今日待复习 N · 预计 M 分钟 · 累计 K」+ 主按钮「开始复习」；下方 `KgChipRow` 模块筛选 + 错题卡列表。空态：`KgEmptyState` 双 CTA（去刷题 primary / 拍题录入 secondary），并解释右下「＋」。
 - 留：待复习 banner（并入 StatRow）、模块/考点分组、chip 筛选、redo 重练、pid 筛选、批量操作、笔记、浮钮「＋」。
 - 删：批量操作 sheet 7 项平铺 → `KgSheet` 菜单分组（复习 / 整理 / 导出）；本页 16 个独占色值 → 错题状态只用 `ok/warn/bad` 三 tag。
-- 增：首屏数字行（竞品错题本标配，`docs/design-benchmark/report.md`）。
+- 增：首屏数字行（竞品错题本标配，`docs/archive/design-benchmark/report.md`）。
 - 组件：KgStatRow, KgChipRow, KgCard(selected), KgTag, KgEmptyState, KgSheet, KgActionBar(actions，多选时), KgQuestionCard(错题卡只读), KgAnalysisCard(详情)。
 - 导航：→ practice(redo/pid)、export-confirm、ask(拍题)。≥1024 辅栏：模块分布 + 遗忘曲线说明。
 
@@ -336,5 +336,5 @@ miniapp-native/miniprogram/utils/*.ts（除 module-meta.ts / toast.ts）
 - 页面清单：`frontend-uni/src/pages.json`（本轮读取：8 + 24 页，tabBar 5 项）、`miniapp-native/miniprogram/app.json`（14 页，tabBar 首页/错题本/模考/统计/我的）。
 - 逐页现状：`research/03-our-pages-audit.md` §2 表（32 行，`[生产]` 截图 `shots/*.jpg` 在该分支）与 §7 表（14 行，`[代码]`）。
 - 桌面壳现状：`frontend-uni/src/App.vue` L228–360（700/768/1280/1366 断点、208px 侧栏、1140/1280 壳宽）；页面内双栏 `@media (min-width: 1024px)` 24 处（`research/04` §3.1）。
-- 竞品 IA：`research/01-competitor-frontend.md` §借鉴 #8–#10（Khan 底部固定操作栏、华图 4 卡入口、粉笔卷列表行）；`docs/design-benchmark/report.md` §2（题面 meta、报告排名）。
-- v3 IA：`docs/design-v3/DESIGN.md` §2（五 Tab 树，本文沿用并按生产路径落实）。
+- 竞品 IA：`research/01-competitor-frontend.md` §借鉴 #8–#10（Khan 底部固定操作栏、华图 4 卡入口、粉笔卷列表行）；`docs/archive/design-benchmark/report.md` §2（题面 meta、报告排名）。
+- v3 IA：`docs/archive/design-v3/DESIGN.md` §2（五 Tab 树，本文沿用并按生产路径落实）。

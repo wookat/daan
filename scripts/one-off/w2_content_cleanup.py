@@ -9,7 +9,7 @@
 本脚本**不改写 question / options**（`quality.normalize_cjk_spaces` 保留为工具函数，任何调用方须先排除填空题型）：
   - 逻辑填空题的选项以空格分词（「履行 强化 改变」），题干用连续空格/\xa0 表示空位，去空格即毁题；
   - `db._seed_questions` 以题干原文 INSERT OR IGNORE 去重，题干一旦改写，下次重启会把种子题当新题重插一份。
-  存量「汉字间空格」问题（约 7700 题）归入重复簇/按题型治理，见 docs/iter/workflow/w2.md §5.1。
+  存量「汉字间空格」问题（约 7700 题）归入重复簇/按题型治理，见 docs/archive/iter/workflow/w2.md §5.1。
 
 不下线任何题、不改 question / options / answer / explanation、不改 hs 正文语义、不触发 LLM。
 默认 dry-run 只打印计数与样例 id；`--apply` 才写库（写前备份到 <db>.bak-w2，已存在则不覆盖）。

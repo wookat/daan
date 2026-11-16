@@ -1,4 +1,4 @@
-"""W17-C1：plan.today_plan 专项练习副标四档快照（样本见 docs/iter/workflow/w17c-content-human.md S63–S74）。"""
+"""W17-C1：plan.today_plan 专项练习副标四档快照（样本见 docs/archive/iter/workflow/w17c-content-human.md S63–S74）。"""
 from app.services import plan
 
 

@@ -56,7 +56,7 @@
 | 600 | `#1e44d9` | `$kg-primary-700` / `--brand-600` |
 | 700 | `#1735ab` | `--brand-700` |
 
-**决策：主色 `#2e5bff`，不是 `#3B6FF5`**。三端里 H5、小程序、`@zalize/brand` 都是 `#2e5bff`，只有 Flutter `theme.dart:5` 与 `docs/design-v3/DESIGN.md` §3.1、`docs/design/miniapp-v2/tokens.md` 写 `#3B6FF5`（`research/02` §2）。按「品牌 token 唯一来源是 zalize-brand 仓」规则取 `#2e5bff`；后续修 Flutter 与两份旧文档。这是 open question #1，但**不阻塞**：token 生成时颜色先按 `#2e5bff` 出。
+**决策：主色 `#2e5bff`，不是 `#3B6FF5`**。三端里 H5、小程序、`@zalize/brand` 都是 `#2e5bff`，只有 Flutter `theme.dart:5` 与 `docs/archive/design-v3/DESIGN.md` §3.1、`docs/archive/design/miniapp-v2/tokens.md` 写 `#3B6FF5`（`research/02` §2）。按「品牌 token 唯一来源是 zalize-brand 仓」规则取 `#2e5bff`；后续修 Flutter 与两份旧文档。这是 open question #1，但**不阻塞**：token 生成时颜色先按 `#2e5bff` 出。
 
 ### 2.2 语义色（semantic，页面唯一允许引用）
 
@@ -364,7 +364,7 @@ DTCG 格式（`$type/$value`），加两个约定：`$dark` 给深色值；`{a.b
 | F3 | `l-icon` 加 `tone`；小程序建 `components/l-icon`；`module-meta.js/.ts` 生成并让 home/practice/discuss/favorites 引用（删 4 份 COLORS） | 首页深色 `.mod-ico` 漏网 = 0 |
 | F4 | COMPONENTS.md §1–§2 的 Kg* 组件（含 `KgTwoCol` 桌面双栏布局与 `KgInviteInput`，PAGES.md §2/§5.5）、`toast.js` / `utils/toast.ts` 落到 `frontend-uni/src/components/` 与 `miniapp-native/miniprogram/components/` | 每个组件一个最小 demo 页（`pkgA/dev/kit`，仅 dev 构建）|
 | F5 | stylelint / lint-pages 接入 `lint`，对现存页面先 `warn` 不 `error`，页面组交付时改 `error` | lint 通过 |
-| F6 | 更新 `docs/handoff-context.md` 加 R384 节 | — |
+| F6 | 更新 `docs/archive/handoff-context.md` 加 R384 节 | — |
 
 回滚：F1–F2 只要删 import 行、恢复手写块即回到现状；生成文件不动业务代码。
 
@@ -407,4 +407,4 @@ DTCG 格式（`$type/$value`），加两个约定：`$dark` 给深色值；`{a.b
 - 库选型与 PoC：`research/02-library-selection.md` §1–§9；wot 1.14.0 组件目录（102 项）与 `variable.scss` 按钮尺寸、tdesign 1.9.7 目录（80 项）本轮经 unpkg/jsdelivr 核过。
 - 生产审计：`research/03-our-pages-audit.md` §2–§6（32 页 ×4、157 色值 / 29 字号 / 36 圆角、6 处深色漏网）。
 - 排版/动效/对比度：`research/04-spec-typography-motion-charts.md` §1–§6、附录 A。
-- 现状 token：`frontend-uni/src/uni.scss` L15–60、`frontend-uni/src/App.vue` L74–360、`miniapp-native/miniprogram/app.wxss` L1–101、`docs/design-v3/DESIGN.md` §3、`docs/design/miniapp-v2/tokens.md`、handoff R383（在 `origin/devin/1788633425-ui-type-scale`，**未在 main**）。
+- 现状 token：`frontend-uni/src/uni.scss` L15–60、`frontend-uni/src/App.vue` L74–360、`miniapp-native/miniprogram/app.wxss` L1–101、`docs/archive/design-v3/DESIGN.md` §3、`docs/archive/design/miniapp-v2/tokens.md`、handoff R383（在 `origin/devin/1788633425-ui-type-scale`，**未在 main**）。

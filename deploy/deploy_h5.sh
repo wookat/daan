@@ -98,7 +98,7 @@ fi
 
 # caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（新机 101.42.17.195 出口→AMS，老机曾为 ICN）的副本：
 # 保护的是重建窗口内 VPS 自身 cron/脚本的请求；引擎与真人所在机房的 stale-if-error 副本
-# 来自它们各自的历史访问，不受本步影响（取证见 docs/iter/round-3/r395-edge-swr-stale-evidence.md）。
+# 来自它们各自的历史访问，不受本步影响（取证见 docs/archive/iter/round-3/r395-edge-swr-stale-evidence.md）。
 step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，仅本机所在机房）"
 for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "/llms.txt" \
          "/tiku/yanyu/" "/tiku/changshi/" "/tiku/panduan/" "/tiku/shuliang/" \
