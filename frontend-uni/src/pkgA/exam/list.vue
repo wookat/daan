@@ -68,6 +68,8 @@
                 <kg-tag v-if="p.year" tone="neutral">{{ p.year }}年</kg-tag>
                 <kg-tag v-if="p.region" tone="neutral">{{ p.region }}</kg-tag>
                 <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' + (p.avg_score != null ? ' · 平均 ' + p.avg_score + ' 分' : '') : '' }}</text>
+                <kg-tag v-if="p.kind === 'zhenti' && p.n < 100" tone="warn">题量待补全</kg-tag>
+                <kg-tag v-else-if="p.kind === 'zhenti' && p.n > 160" tone="info">合卷收录</kg-tag>
               </view>
               <text v-if="p.best_score != null" class="pbest">我的最好成绩 <text class="num">{{ p.best_score }}</text> 分 · 已考 {{ p.attempt_count }} 次</text>
               <text v-else class="pbest none">还没考过，来挑战一下</text>

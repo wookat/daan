@@ -8,3 +8,17 @@
 
 /app/assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# tab 图标等未指纹化静态资源：日级缓存。
+# 缺省 max-age=0+must-revalidate 会让每次切 tab 的 -on.png 回源 revalidate（弱网数秒才亮）。
+/app/static/*
+  Cache-Control: public, max-age=86400
+
+# SW 更新链路必须即时（换版→激活→kg-sw-updated 自愈 reload），不可被上面的静态缓存困住。
+# CF Pages 同名 header 会拼接而非覆盖，必须先 ! 解除前条规则再重设（规则按文件顺序应用）。
+/app/sw.js
+  ! Cache-Control
+  Cache-Control: public, max-age=0, must-revalidate
+/app/static/sw.js
+  ! Cache-Control
+  Cache-Control: public, max-age=0, must-revalidate

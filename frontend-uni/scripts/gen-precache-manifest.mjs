@@ -36,6 +36,14 @@ if (process.argv[1] && process.argv[1].endsWith('gen-precache-manifest.mjs')) {
   if (!indexJs) throw new Error(`gen-precache-manifest: 产物中未找到 ${H5_BASE}assets/index-*.js`);
   const deps = parseRouteDeps(readFileSync(join(dist, indexJs.slice(H5_BASE.length)), 'utf8'), PRECACHE_FIRST_ROUTES);
   const list = orderPrecache(files, deps);
+  // tabbar 图标（含 -on 激活态）入清单末段：首次切 tab 时 HTTP 缓存已热，弱网下激活态即时亮
+  try {
+    const tabIcons = readdirSync(join(dist, 'static/tab'))
+      .filter((f) => f.endsWith('.png'))
+      .sort()
+      .map((f) => `${H5_BASE}static/tab/${f}`);
+    list.push(...tabIcons);
+  } catch {}
   writeFileSync(join(dist, 'precache.json'), JSON.stringify(list));
   const firstSet = new Set(PRECACHE_FIRST_ROUTES.flatMap((r) => deps[r] || []));
   const nFirst = list.filter((p) => firstSet.has(p)).length;

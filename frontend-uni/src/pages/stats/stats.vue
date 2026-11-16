@@ -39,7 +39,7 @@
         <kg-card v-if="(reco && reco.items.length) || dueN" class="sec">
           <kg-section-header title="今日待办" />
           <view v-if="dueN" class="todo-row">
-            <view class="todo-ico is-warn"><l-icon name="book-open" :size="20" tone="warn" /></view>
+            <view class="todo-ico is-warn"><l-icon name="book-open" :size="20" tone="on-brand" /></view>
             <view class="todo-main">
               <text class="todo-name">错题到期复习</text>
               <text class="todo-meta">{{ dueSynced ? dueN + ' 题今日待复习' : offlineView ? '到期数需网络恢复后同步' : '正在同步到期数…' }}</text>
@@ -47,7 +47,7 @@
             <kg-button variant="primary" size="sm" @click="goBook">去复习</kg-button>
           </view>
           <view v-for="(r, i) in (reco ? reco.items : [])" :key="i" class="todo-row">
-            <view class="todo-ico"><l-icon name="target" :size="20" tone="brand" /></view>
+            <view class="todo-ico"><l-icon name="target" :size="20" tone="on-brand" /></view>
             <view class="todo-main">
               <text class="todo-name">{{ r.label || r.submodule }}</text>
               <text class="todo-meta">{{ r.reason }} · 正确率 {{ Math.round(r.acc * 100) }}%（{{ r.n }}题）</text>
@@ -986,8 +986,9 @@ export default {
 /* 待办 */
 .todo-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 56px; border-bottom: 1px solid var(--line); }
 .todo-row:last-of-type { border-bottom: none; }
-.todo-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.todo-ico.is-warn { background: var(--warn-soft); }
+/* 待办行图标块实心化：#fffbeb/#eef3ff 浅底贴在白卡上几乎不可见，图标改 on-brand 白 */
+.todo-ico { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.todo-ico.is-warn { background: var(--warn); }
 .todo-main { flex: 1; min-width: 0; }
 .todo-name { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .todo-meta { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }

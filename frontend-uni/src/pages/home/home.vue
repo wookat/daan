@@ -95,7 +95,7 @@
         <kg-card v-if="todoRows.length" class="sec todo" variant="soft">
           <kg-section-header title="今日待办" />
           <view v-for="t in todoRows" :key="t.k" class="todo-row" role="button" @click="t.go()">
-            <view class="todo-ico"><l-icon :name="t.icon" :size="18" :tone="t.tone" /></view>
+            <view class="todo-ico" :class="'is-' + t.tone"><l-icon :name="t.icon" :size="18" tone="on-brand" /></view>
             <view class="grow">
               <text class="todo-t">{{ t.t }}</text>
               <text v-if="t.s" class="todo-s">{{ t.s }}</text>
@@ -1157,7 +1157,9 @@ export default {
 .todo { margin-top: var(--sp-12); }
 .todo-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
 .todo-row:first-of-type { border-top: 0; }
-.todo-ico { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--warn-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+/* 待办图标块实心化：--warn-soft #fffbeb 浅底贴在白卡上几乎不可见；按行语义 tone 出实心块 */
+.todo-ico { width: 36px; height: 36px; border-radius: var(--r-sm); background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.todo-ico.is-warn { background: var(--warn); }
 .todo-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .todo-s { font-size: var(--fs-sub); color: var(--ink-3); }
 .todo-x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
