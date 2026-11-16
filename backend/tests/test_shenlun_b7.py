@@ -86,7 +86,7 @@ def test_weekly_has_typical_and_plan(client):
     db._ensure_answer_log(conn)
     db._ensure_mistake_uid(conn)
     # 上周（东八区上一周一内）写 6 条作答 + 2 条错题
-    from app.insights import _week_start
+    from app.services.insights import _week_start
     ws = _week_start(time.time()) - 7 * 86400
     qid = None
     cur = conn.execute(
@@ -118,7 +118,7 @@ def test_weekly_has_typical_and_plan(client):
     conn.commit()
     conn.close()
 
-    from app.report import _build
+    from app.services.report import _build
     d = _build(uid, ws)
     assert d is not None
     assert d["typical"][0]["qid"] == qid

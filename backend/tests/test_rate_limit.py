@@ -3,8 +3,8 @@ import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
-from app import auth
-from app.deps import client_ip, rl
+from app.api import auth
+from app.api.deps import client_ip, rl
 
 
 def _req(headers: dict | None = None, client: tuple | None = ("10.0.0.1", 1234)) -> Request:
@@ -57,7 +57,7 @@ def test_rl_uid_bucket_kept():
 
 def test_interview_answer_uid_rotation_capped_by_ip_bucket():
     """R187：面试 LLM 端点接入 rl()，轮换 uid 由 IP 桶（3×20/600s）封顶。"""
-    from app.interview import _validate
+    from app.services.interview import _validate
 
     r = _req({"X-Kg-Ip": "5.5.5.5"})
     for i in range(60):
@@ -71,7 +71,7 @@ def test_interview_answer_uid_rotation_capped_by_ip_bucket():
 
 def test_team_create_uid_rotation_capped_by_ip_bucket():
     """R188：UGC DB 写端点接入 rl()，轮换 uid 由 IP 桶（3×5/3600s）封顶，不再无限插行。"""
-    from app.team import api_team_create
+    from app.services.team import api_team_create
 
     r = _req({"X-Kg-Ip": "8.8.8.8"})
     for i in range(15):
@@ -94,7 +94,7 @@ def test_auth_register_rate_per_real_ip():
 
 def test_answer_log_uid_rotation_capped_by_ip_bucket():
     """R189：零限速匿名写端点接入 rl()，answer_log 轮换 uid 由 IP 桶（3×600/3600s）封顶（R566 起逐题上送端点 600/h）。"""
-    from app.study_api import api_answer_log
+    from app.api.study import api_answer_log
 
     r = _req({"X-Kg-Ip": "9.9.9.9"})
     for i in range(1800):
@@ -108,7 +108,7 @@ def test_answer_log_uid_rotation_capped_by_ip_bucket():
 
 def test_rate_endpoint_per_ip_60_per_600s():
     """W3-A：/api/rate 匿名 IP 桶 60/600s，第 61 次 429；另一 IP 不受影响。"""
-    from app.ai_api import api_rate
+    from app.api.ai import api_rate
 
     a = _req({"X-Kg-Ip": "12.12.12.12"})
     for _ in range(60):
@@ -135,7 +135,7 @@ def test_rate_endpoint_http_429(client):
 
 def test_report_anonymous_per_ip():
     """R189：/api/report 匿名按真实 IP 20/3600，另一 IP 不受影响。"""
-    from app.study_api import api_report
+    from app.api.study import api_report
 
     a = _req({"X-Kg-Ip": "10.10.10.10"})
     for _ in range(20):

@@ -3,7 +3,8 @@
 错题联查题库 submodule 经 taxonomy 别名归一为 type_group；/api/mistakes/redo?sub= 按题型组（组名 + aliases）重练。"""
 import json
 
-from app import db, taxonomy
+from app import db
+from app.services import taxonomy
 
 PFX = "test-r545-tg-"
 

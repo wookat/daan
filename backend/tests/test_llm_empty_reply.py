@@ -7,7 +7,7 @@ import asyncio
 
 import pytest
 
-from app import llm
+from app.services import llm
 
 
 class _Resp:

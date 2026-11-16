@@ -3,7 +3,7 @@
 import json
 
 from app import db
-from app.pk import PK_MATCH_WINDOW_S
+from app.services.pk import PK_MATCH_WINDOW_S
 
 from .conftest import seed_questions
 

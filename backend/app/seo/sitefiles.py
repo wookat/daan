@@ -10,21 +10,10 @@ from urllib.parse import quote
 from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse, Response
 
-from .. import db, kb, taxonomy
-from .common import (
-    INDEXNOW_KEY,
-    SITE_BASE,
-    SITEMAP_SHARD,
-    _e,
-    _module_name,
-    _shenlun_paper_path,
-    _shenlun_sucai_path,
-    _sub_path,
-    _topic_path,
-    _url,
-    _year_path,
-    root_router,
-)
+from app import db
+from app.services import kb
+from app.services import taxonomy
+from .common import INDEXNOW_KEY, SITE_BASE, SITEMAP_SHARD, _e, _module_name, _shenlun_paper_path, _shenlun_sucai_path, _sub_path, _topic_path, _url, _year_path, root_router
 from .pages import _daily_archive_days
 
 

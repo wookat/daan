@@ -49,7 +49,7 @@ def test_submitted_pages_multi_page_scan(client, monkeypatch):
     db.save_paper_export("R532P60", qids, "R532 两页卷")
     uid = "r532-scan"
     answers = {q["id"]: q["answer"] for q in db.questions_by_ids(qids)}
-    monkeypatch.setattr("app.exam_api.omr.recognize", lambda raw: {"code": "R532P60", "page": 2, "picks": {0: answers[qids[50]]}})
+    monkeypatch.setattr("app.api.exam.omr.recognize", lambda raw: {"code": "R532P60", "page": 2, "picks": {0: answers[qids[50]]}})
     r = client.post("/api/scan_sheet", data={"uid": uid}, files={"image": ("s.png", b"fake", "image/png")}).json()
     assert r["page"] == 2 and r["saved"] is True
     sp = client.get(f"/api/paper/R532P60?uid={uid}").json()["submitted_pages"]

@@ -1,7 +1,8 @@
 """R551：mistakes / review_log 入库侧探针打标（与 answer_log.probe 同口径），本人列表/复习语义不变。"""
 import pytest
 
-from app import auth, db
+from app.api import auth
+from app import db
 from tests.conftest import seed_questions
 
 PFX = "test-r551-"

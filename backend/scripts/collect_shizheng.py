@@ -19,7 +19,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from app import llm
+from app.services import llm
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 TOPICS_PATH = os.path.join(ROOT, "data", "shizheng_topics.json")

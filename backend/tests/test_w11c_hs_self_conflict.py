@@ -1,7 +1,8 @@
 """W11-C：hs 讲解内部自相矛盾（比对句字母 / 选项引文贴错字母）扣分 + SEO 题页原解析被 hs 包含时不复读。"""
 import json
 
-from app import db, quality
+from app import db
+from app.services import quality
 
 _OPTS = json.dumps({"A": "长烟市", "B": "浊酒省", "C": "千嶂市", "D": "落日省"}, ensure_ascii=False)
 _FILL_OPTS = json.dumps({"A": "集中；贩卖", "B": "随意；抹去", "C": "粗略；重塑", "D": "逐一；存续"}, ensure_ascii=False)

@@ -1,6 +1,6 @@
 """R324：每日推送个性化 payload 构造分支。"""
 
-from app.push_api import build_push_payload
+from app.api.push import build_push_payload
 
 DAY = "2026-08-29"
 

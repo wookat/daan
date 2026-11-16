@@ -16,31 +16,29 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import (
-    admin_api,
-    ai_api,
-    auth,
-    db,
-    db_analytics,
-    exam_api,
-    insights,
-    interview,
-    migrate,
-    mock_event,
-    monitor,
-    pk,
-    push_api,
-    qbank_api,
-    report,
-    seo,
-    shenlun_api,
-    social,
-    study_api,
-    team,
-    zalize_sso,
-)
-from .deps import ACCESS_CODE
-from .storm_guard import ErrorStormGuard
+from app.api import admin as admin_api
+from app.api import ai as ai_api
+from app.api import auth
+from app import db
+from app.db import analytics as db_analytics
+from app.api import exam as exam_api
+from app.services import insights
+from app.services import interview
+from app.db import migrate
+from app.services import mock_event
+from app.services import monitor
+from app.services import pk
+from app.api import push as push_api
+from app.api import qbank as qbank_api
+from app.services import report
+from app import seo
+from app.api import shenlun as shenlun_api
+from app.services import social
+from app.api import study as study_api
+from app.services import team
+from app.api import zalize_sso
+from app.api.deps import ACCESS_CODE
+from app.services.storm_guard import ErrorStormGuard
 
 _DOCS_OFF = os.environ.get("DISABLE_API_DOCS") == "1"
 app = FastAPI(

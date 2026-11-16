@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """r348 内容治理：下线 hs 自检失败题 / 伪中文 yanyu AI 批次题，剥离 hs 管线括注。
 
-规则（口径与 backend/app/quality.py 共用同一常量/正则）：
+规则（口径与 backend/app/services/quality.py 共用同一常量/正则）：
   a. 在线题 hs_explanation 含自检失败词（SKIP:/官方解析有误/无法用给定/无法可靠得到 等，见 quality.HS_SELFCHECK_WORDS）
      → disabled=1，note 追加 r348:hs-selfcheck
   b. 在线题 hs_explanation 含「（通用解法，…不在库中）」括注 → 整体删除、空白归一、rescore_question
@@ -25,7 +25,8 @@ try:
 except NameError:  # 经 stdin 管道运行（容器内 cwd=/app/backend 可直接 import app）
     pass
 
-from app import db, quality
+from app import db
+from app.services import quality
 
 ONLINE = "(disabled IS NULL OR disabled=0)"
 YANYU_AI_BATCH_LIKE = "b2026%"

@@ -1,7 +1,8 @@
 """R373：后台重任务空闲门控 + 题目统计刷新不在写锁内翻冷页（只写变化行、分批 commit）。"""
 import json
 
-from app import db, main
+from app import db
+from app import main
 
 
 def _log(uid: str, qid: int, correct: int, picked: str = "B"):

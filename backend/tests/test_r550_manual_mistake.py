@@ -5,7 +5,7 @@ import time
 import pytest
 
 from app import db
-from app.manual_mistake import MANUAL_MODULES, normalize
+from app.services.manual_mistake import MANUAL_MODULES, normalize
 
 UID = "test-r550-manual-u1"
 

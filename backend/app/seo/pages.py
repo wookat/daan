@@ -8,26 +8,10 @@ from urllib.parse import quote
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .. import db, quality, taxonomy
-from .common import (
-    PAGE_SIZE,
-    SITE_BASE,
-    _breadcrumb_ld,
-    _collection_ld,
-    _crumb,
-    _e,
-    _module_name,
-    _not_found,
-    _page,
-    _pager,
-    _q_items,
-    _shenlun_sucai_path,
-    _sub_path,
-    _topic_path,
-    _url,
-    _year_path,
-    router,
-)
+from app import db
+from app.services import quality
+from app.services import taxonomy
+from .common import PAGE_SIZE, SITE_BASE, _breadcrumb_ld, _collection_ld, _crumb, _e, _module_name, _not_found, _page, _pager, _q_items, _shenlun_sucai_path, _sub_path, _topic_path, _url, _year_path, router
 from .shenlun import _render_shenlun_year
 
 

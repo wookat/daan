@@ -2,8 +2,9 @@
 import pytest
 from fastapi import HTTPException
 
-from app import db, interview
-from app.deps import as_int
+from app import db
+from app.services import interview
+from app.api.deps import as_int
 
 from .conftest import seed_questions, seed_share
 

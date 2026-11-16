@@ -1,7 +1,7 @@
 """R396 解析/题干贴合度与错位连续块检测（解析串题取证口径）。"""
 import json
 
-from app import quality
+from app.services import quality
 
 _OPTS = json.dumps({"A": "83", "B": "84", "C": "126", "D": "252"}, ensure_ascii=False)
 _Q_SKI = "滑雪和滑冰是冬奥会的两大项赛事，其中高山滑雪、自由式滑雪、单板滑雪、跳台滑雪、越野滑雪和北欧两项是滑雪大项中的6个分项，短道速滑、速度滑冰和花样滑冰是滑冰大项中的3个分项。从9个分项中选6项，滑雪滑冰各至少1项，有多少种选法？"

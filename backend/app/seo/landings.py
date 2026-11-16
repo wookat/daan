@@ -4,7 +4,7 @@ from urllib.parse import quote
 
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .. import db
+from app import db
 from .common import SITE_BASE, _e, _module_name, _url, root_router
 
 

@@ -6,7 +6,7 @@ random_questions 排除本 uid 答过的所有题，普通练习永远抽不到�
 import time
 
 from app import db
-from app.qbank_api import due_mix_slots, interleave_due
+from app.api.qbank import due_mix_slots, interleave_due
 from tests.conftest import seed_questions
 
 PFX = "test-r555-"

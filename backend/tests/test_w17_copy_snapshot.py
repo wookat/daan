@@ -1,5 +1,5 @@
 """W17-C1：plan.today_plan 专项练习副标四档快照（样本见 docs/iter/workflow/w17c-content-human.md S63–S74）。"""
-from app import plan
+from app.services import plan
 
 
 def test_practice_sub_low_acc_names_metric_once():

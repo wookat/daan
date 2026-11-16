@@ -7,7 +7,10 @@ import sys
 
 import pytest
 
-from app import content_gate, db, deps, quality
+from app.services import content_gate
+from app import db
+from app.api import deps
+from app.services import quality
 
 from .conftest import seed_questions
 

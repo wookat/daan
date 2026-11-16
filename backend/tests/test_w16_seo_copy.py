@@ -2,7 +2,8 @@
 import json
 import re
 
-from app import db, quality
+from app import db
+from app.services import quality
 from app.seo import pages
 
 _OPTS = json.dumps({"A": "21", "B": "22", "C": "23", "D": "24"}, ensure_ascii=False)

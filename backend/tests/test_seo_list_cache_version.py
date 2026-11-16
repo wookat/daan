@@ -115,7 +115,7 @@ def test_lastmod_not_masked_by_legacy_iso_text_updated_at(client):
 
 
 def test_legacy_iso_text_alone_still_yields_its_own_date(client):
-    from app import taxonomy
+    from app.services import taxonomy
 
     _reset_ttl_caches()
     counts = db.tag3_counts()

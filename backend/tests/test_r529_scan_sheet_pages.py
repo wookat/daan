@@ -1,6 +1,8 @@
 """R529：多页答题卡（PER_PAGE=50 分页）——scan_sheet 只判上传那一页，回包透出整卷答题卡页数 pages，
 paper/{code} 同样带 pages；页数公式与 pdf_export 出卡同一 omr.sheet_pages()。"""
-from app import db, exam_api, omr
+from app import db
+from app.api import exam as exam_api
+from app.services import omr
 from tests.conftest import seed_questions
 
 

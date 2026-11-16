@@ -8,7 +8,8 @@ import json
 
 import pytest
 
-from app import engine, llm
+from app.services import engine
+from app.services import llm
 
 
 class _Resp:

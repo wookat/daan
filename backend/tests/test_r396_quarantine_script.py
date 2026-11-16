@@ -4,7 +4,7 @@ import json
 import os
 import sqlite3
 
-from app import quality
+from app.services import quality
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r396_explanation_quarantine.py")
 _spec = importlib.util.spec_from_file_location("r396_quarantine", SCRIPT)

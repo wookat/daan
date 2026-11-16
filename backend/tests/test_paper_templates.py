@@ -2,7 +2,8 @@
 import json
 import time
 
-from app import db, paper_templates
+from app import db
+from app.services import paper_templates
 from tests.conftest import seed_questions
 
 PFX = "test-tpl-"

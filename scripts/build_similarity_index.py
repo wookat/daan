@@ -8,7 +8,8 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from app import db, similarity  # noqa: E402
+from app import db
+from app.services import similarity  # noqa: E402
 
 
 def main():

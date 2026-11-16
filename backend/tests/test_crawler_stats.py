@@ -4,7 +4,7 @@ import json
 import os
 import time
 
-from app.ops_status import parse_crawler_stats, parse_ops_status
+from app.services.ops_status import parse_crawler_stats, parse_ops_status
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "crawler_stats.py")
 _spec = importlib.util.spec_from_file_location("crawler_stats", SCRIPT)
@@ -301,7 +301,7 @@ def test_humans_exclude_devin_ua_explicit_probe_header_and_preview_host():
 
 def test_bot_generic_covers_backend_probe_ua_markers():
     """R393：后端 probe_request 的自动化 UA 签名，日报/周报的 BOT_GENERIC 必须全部能认出（两份清单不漂移）。"""
-    from app import auth
+    from app.api import auth
 
     for marker in auth.PROBE_UA_MARKERS:
         assert cs.is_generic_bot(f"Mozilla/5.0 {marker}1.0"), marker

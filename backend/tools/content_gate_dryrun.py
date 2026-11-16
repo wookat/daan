@@ -15,7 +15,8 @@ from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from app import qbank_api, quality
+from app.api import qbank as qbank_api
+from app.services import quality
 
 SAMPLE_N = 10
 # R10/R13 近似比对两两 O(n²)，同 submodule 组内最多取这么多条（超出部分只做精确 shell 比对），台账如实标注

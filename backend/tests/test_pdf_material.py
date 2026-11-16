@@ -1,5 +1,5 @@
 """PDF 导出资料分析同材料切分/去重（R147）与聚组（R148）。"""
-from app.pdf_export import _mat_key, _split_material, build_paper_pdf, group_by_material
+from app.services.pdf_export import _mat_key, _split_material, build_paper_pdf, group_by_material
 
 MAT = "2023年全国规模以上工业企业实现利润总额76858亿元，比上年下降2.3%。" * 4
 Q1 = MAT + "问题：2023年利润总额约为多少？"

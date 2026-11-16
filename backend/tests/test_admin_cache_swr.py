@@ -87,7 +87,7 @@ def test_cached_state_transitions():
 
 def test_admin_endpoints_expose_cache_state_header(client, monkeypatch):
     """R238：stats/dashboard/governance 响应带 X-Kg-Cache 头（origin 日志逐请求取证）。"""
-    from app import deps
+    from app.api import deps
 
     monkeypatch.setattr(deps, "ADMIN_TOKEN", "t0ken")
     for path, key in (

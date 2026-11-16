@@ -2,7 +2,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.storm_guard import ErrorStormGuard
+from app.services.storm_guard import ErrorStormGuard
 
 
 def test_guard_threshold_and_window():

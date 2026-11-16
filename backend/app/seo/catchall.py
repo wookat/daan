@@ -4,26 +4,9 @@ from urllib.parse import quote
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .. import db, taxonomy
-from .common import (
-    _EMPTY_MODULE_OUTLET,
-    SITE_BASE,
-    _collection_ld,
-    _count_questions,
-    _crumb,
-    _e,
-    _list_questions,
-    _module_name,
-    _not_found,
-    _page,
-    _pager,
-    _q_items,
-    _sub_path,
-    _topic_path,
-    _year_path,
-    root_router,
-    router,
-)
+from app import db
+from app.services import taxonomy
+from .common import _EMPTY_MODULE_OUTLET, SITE_BASE, _collection_ld, _count_questions, _crumb, _e, _list_questions, _module_name, _not_found, _page, _pager, _q_items, _sub_path, _topic_path, _year_path, root_router, router
 from .shenlun import _render_shenlun_qtype, _tiku_shenlun
 
 

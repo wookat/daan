@@ -6,11 +6,10 @@ import os
 from urllib.parse import quote
 
 from fastapi import APIRouter
-from fastapi.responses import (
-    HTMLResponse,
-)
+from fastapi.responses import HTMLResponse
 
-from .. import db, kb
+from app import db
+from app.services import kb
 
 SITE_BASE = os.environ.get("SITE_BASE_URL", "https://kaogong.zalize.com").rstrip("/")
 INDEXNOW_KEY = os.environ.get("INDEXNOW_KEY", "")

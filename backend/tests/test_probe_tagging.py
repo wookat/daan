@@ -5,7 +5,8 @@ import time
 
 import pytest
 
-from app import auth, db
+from app.api import auth
+from app import db
 from tests.conftest import seed_questions
 
 PFX = "test-r374-"
@@ -215,7 +216,7 @@ def test_dashboard_treats_legacy_null_probe_as_real(client):
 
 def test_question_stats_and_beat_pct_exclude_probe_rows(client, probe_nets):
     """R375：全站正确率/人次/易错项与分享「击败 X%」只算真人；旧行 NULL 照算。"""
-    from app import team
+    from app.services import team
 
     _cleanup()
     q1 = seed_questions(1, ("ziliao",))[0]

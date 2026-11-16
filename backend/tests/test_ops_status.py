@@ -1,7 +1,7 @@
 """R219：运维审计日志解析（parse_ops_status）三态回归。"""
 from datetime import datetime, timedelta, timezone
 
-from app.ops_status import parse_ops_status
+from app.services.ops_status import parse_ops_status
 
 CST = timezone(timedelta(hours=8))
 

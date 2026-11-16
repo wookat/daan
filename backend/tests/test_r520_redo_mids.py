@@ -1,6 +1,6 @@
 """R520：/api/mistakes/redo?mids=… 批量勾选重练——只取勾选行、仍按 uid 隔离与 mastered=0 约束、畸形/超限 400。"""
 from app import db
-from app.study_api import _REDO_MIDS_MAX
+from app.api.study import _REDO_MIDS_MAX
 
 from .conftest import seed_questions
 

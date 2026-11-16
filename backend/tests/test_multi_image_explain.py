@@ -9,7 +9,8 @@ import json
 
 from fastapi.testclient import TestClient
 
-from app import ai_api, engine
+from app.api import ai as ai_api
+from app.services import engine
 from app.main import app
 
 PNG = base64.b64decode(

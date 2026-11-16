@@ -6,7 +6,9 @@ import sqlite3
 import threading
 import time
 
-from app import db, deps, mock_event
+from app import db
+from app.api import deps
+from app.services import mock_event
 
 SCRIPT = os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "one-off", "r419_dedupe_mock_events.py")
 _spec = importlib.util.spec_from_file_location("r419_dedupe", SCRIPT)

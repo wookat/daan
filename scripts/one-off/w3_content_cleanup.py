@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """W3 内容清洗：在线题 explanation 抓取源统计前缀/「解析」标签 + 广告句剥离 + 汉字间空格归一。
 
-规则（口径与 backend/app/quality.py 共用同一常量/正则，整体经 quality.sanitize_explanation）：
+规则（口径与 backend/app/services/quality.py 共用同一常量/正则，整体经 quality.sanitize_explanation）：
   a. 开头「正确答案：B，全站正确率：24%，易错项：C。 解析 」统计前缀及只剩「解析 」标签的开头
      （quality.EXP_SRC_PREFIX_RE）→ 删除
   b. 句间广告「,一个上岸考生分享经验和答疑的平台。」（quality.EXP_AD_TAIL_RE）→ 删除
@@ -29,7 +29,8 @@ try:
 except NameError:  # 经 stdin 管道运行（容器内 cwd=/app/backend 可直接 import app）
     pass
 
-from app import db, quality
+from app import db
+from app.services import quality
 
 ONLINE = "(disabled IS NULL OR disabled=0)"
 SAMPLE_N = 10

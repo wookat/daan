@@ -1,6 +1,7 @@
 """R528：导出卷内无 id 的内联题（时政/手录）数 inline_n 落 paper_exports，并随
 paper/{code}、paper_answers、scan_sheet 回包——录入层/结果层能说明「卷有 N+M 题、只判 N 题」。"""
-from app import db, exam_api
+from app import db
+from app.api import exam as exam_api
 from tests.conftest import seed_questions
 
 SZ_ITEM = {"id": None, "module": "时政", "question": "R528：某会议的说法正确的是\nA.甲 B.乙 C.丙 D.丁", "options": {}, "answer": "C"}

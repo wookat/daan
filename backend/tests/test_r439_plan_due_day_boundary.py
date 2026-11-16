@@ -2,7 +2,8 @@
 今日新错题不入今日计划；_day_start 与 cn_day_start 同源。"""
 import time
 
-from app import db, plan
+from app import db
+from app.services import plan
 from tests.conftest import seed_questions
 
 PFX = "test-r439-"
@@ -44,7 +45,8 @@ def test_day_start_offsets_share_cn_day_start(monkeypatch):
 
 
 def test_week_and_saturday_windows_anchor_on_cn_day_start():
-    from app import insights, mock_event
+    from app.services import insights
+    from app.services import mock_event
 
     for ts in (LATE_YESTERDAY, LATE_YESTERDAY + 3 * 3600, LATE_YESTERDAY + 5 * 86400):
         day0 = db.cn_day_start(ts)

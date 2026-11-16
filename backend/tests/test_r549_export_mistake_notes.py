@@ -6,7 +6,7 @@ import pytest
 from pypdf import PdfReader  # pyright: ignore[reportMissingImports]
 
 from app import db
-from app.pdf_export import build_paper_pdf, mistake_note, note_text, parse_mistake_notes
+from app.services.pdf_export import build_paper_pdf, mistake_note, note_text, parse_mistake_notes
 from tests.conftest import seed_questions
 
 ORD = {"id": 110, "module": "changshi", "question": "下列节气中，白昼最长的是：", "options": {"A": "春分", "B": "夏至"}, "answer": "B", "analysis": "夏至日照最长"}

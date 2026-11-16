@@ -1,5 +1,5 @@
 """W3-A：/api/questions/export 与 import 同一导入令牌门禁，匿名不可整库拉取题干/答案/解析。"""
-from app import deps
+from app.api import deps
 
 from .conftest import seed_questions
 

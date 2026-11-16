@@ -1,5 +1,7 @@
 """R348 hs 导入口源头拦截：含自检失败词不落库、管线括注被剥离并重打分。"""
-from app import db, deps, quality
+from app import db
+from app.api import deps
+from app.services import quality
 
 from .conftest import seed_questions
 

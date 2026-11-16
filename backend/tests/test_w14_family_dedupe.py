@@ -1,7 +1,9 @@
 """W14-C1：题库分发互斥——quality.family_key 三分支 + qbank_api 过采去重回填（零 schema、不下架）。"""
 import json
 
-from app import db, qbank_api, quality
+from app import db
+from app.api import qbank as qbank_api
+from app.services import quality
 
 PFX = "W14FAM"
 _OPTS = json.dumps({"A": "21", "B": "22", "C": "23", "D": "24"}, ensure_ascii=False)

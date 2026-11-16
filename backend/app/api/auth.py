@@ -1,0 +1,499 @@
+"""账号体系 v1：邮箱（或手机号）+密码注册/登录，Bearer token 鉴权，匿名数据归并。
+
+验证码本期为预留桩（接口带 code 字段但不校验），见 SmsProvider。users.phone 是
+凭据标识列：存 11 位手机号、裸邮箱、wx:<openid>、za:<email> 四种形态。
+"""
+import hashlib
+import hmac
+import ipaddress
+import os
+import re
+import secrets
+import time
+
+import httpx
+from fastapi import APIRouter, Header, HTTPException, Request
+
+from app import db
+
+router = APIRouter(prefix="/api/auth")
+
+TOKEN_TTL = 90 * 86400
+PBKDF2_ITERS = 200_000
+
+_PHONE_RE = re.compile(r"^1\d{10}$")
+_EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,64}\.[^@\s]{2,}$")
+
+
+class SmsProvider:
+    """短信验证码 provider 抽象（预留桩）。
+
+    TODO: 接入真实短信服务（阿里云/腾讯云 SMS），实现 send(phone) 与 verify(phone, code)。
+    本期 verify 恒通过，注册接口的 code 字段仅占位。
+    """
+
+    def send(self, phone: str) -> None:  # pragma: no cover - 预留
+        raise NotImplementedError
+
+    def verify(self, phone: str, code: str | None) -> bool:
+        return True
+
+
+sms_provider = SmsProvider()
+
+
+# ---------- 密码哈希（pbkdf2，无额外依赖） ----------
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), PBKDF2_ITERS)
+    return f"pbkdf2${PBKDF2_ITERS}${salt}${dk.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    try:
+        _, iters, salt, expect = stored.split("$")
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), int(iters))
+        return hmac.compare_digest(dk.hex(), expect)
+    except (ValueError, AttributeError):
+        return False
+
+
+# ---------- 简单内存限速 ----------
+
+def client_ip(request: Request) -> str:
+    """真实客户端 IP：边缘代理透传的 X-Kg-Ip 优先（origin 域拒绝直连，头可信），回退 socket 对端。"""
+    return request.headers.get("x-kg-ip") or (request.client.host if request.client else "anon")
+
+
+def parse_cidrs(raw: str) -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    """逗号分隔的 CIDR/IP 清单 → 网段列表；非法项跳过（配置错误不拖垮服务）。"""
+    nets: list[ipaddress.IPv4Network | ipaddress.IPv6Network] = []
+    for part in raw.split(","):
+        s = part.strip()
+        if not s:
+            continue
+        try:
+            nets.append(ipaddress.ip_network(s, strict=False))
+        except ValueError:
+            continue
+    return nets
+
+
+# 探针出口网段（Devin 会话共享 NAT 等自动化流量）：命中的行为数据入库打 probe=1，运营看板剔除。
+# 默认空=不打标；生产由 KG_PROBE_CIDRS 配置，换网段改 .env 重启即可。
+PROBE_NETS = parse_cidrs(os.environ.get("KG_PROBE_CIDRS", ""))
+
+
+def ip_in_nets(ip: str, nets: list[ipaddress.IPv4Network | ipaddress.IPv6Network]) -> bool:
+    if not nets:
+        return False
+    try:
+        addr = ipaddress.ip_address(ip.strip())
+    except ValueError:
+        return False
+    return any(addr in n for n in nets)
+
+
+def probe_ip(request: Request) -> bool:
+    """请求是否来自探针出口网段（PROBE_NETS）。"""
+    return ip_in_nets(client_ip(request), PROBE_NETS)
+
+
+def client_ua(request: Request) -> str:
+    """真实客户端 UA：边缘透传的 X-Kg-Ua 优先（Workers 回源会改写 UA），回退 User-Agent。"""
+    return request.headers.get("x-kg-ua") or request.headers.get("user-agent") or ""
+
+
+# 自动化 UA 签名：脚本/无头浏览器不会是 H5/小程序真人。只收真人浏览器绝不会带的标识，
+# 桌面 Linux Chrome、iPhone 模拟 UA 等真人也可能有的不在此列。`devin/` 是 Devin 自动化
+# 驾驭的浏览器上下文自带的 UA 后缀（GUI 走查），与 scripts/access_log_report.BOT_GENERIC 同步。
+PROBE_UA_MARKERS = (
+    "python-urllib", "python-requests", "curl/", "wget/", "headlesschrome",
+    "playwright", "httpx/", "go-http-client", "devin/",
+)
+
+
+def probe_request(request: Request) -> bool:
+    """请求是否为探针：显式 X-Kg-Probe: 1 / 出口网段命中 / 自动化 UA 签名，三路任一。
+
+    网段是主路（GUI 测试会话 UA 与真人无异），显式头与 UA 签名不依赖 KG_PROBE_CIDRS 配置，
+    出口网段变更时兜底脚本类流量。
+    """
+    if request.headers.get("x-kg-probe") == "1":
+        return True
+    if probe_ip(request):
+        return True
+    ua = client_ua(request).lower()
+    return any(m in ua for m in PROBE_UA_MARKERS)
+
+
+_RATE: dict[str, list[float]] = {}
+_RATE_SWEEP_EVERY = 60.0
+_rate_sweep = {"at": 0.0, "window": 0}
+
+
+def _sweep_rate(now: float) -> None:
+    """每 60s 丢弃最近一次命中已超出最大窗口的键（login:/reg:<ip> 等随扫描 IP 无限增长）。"""
+    if now - _rate_sweep["at"] < _RATE_SWEEP_EVERY:
+        return
+    _rate_sweep["at"] = now
+    horizon = now - _rate_sweep["window"]
+    for k in [k for k, ts in _RATE.items() if not ts or ts[-1] < horizon]:
+        _RATE.pop(k, None)
+
+
+def rate_limit(key: str, limit: int = 10, window: int = 300):
+    now = time.time()
+    _rate_sweep["window"] = max(_rate_sweep["window"], window)
+    _sweep_rate(now)
+    hits = [t for t in _RATE.get(key, []) if now - t < window]
+    if len(hits) >= limit:
+        raise HTTPException(429, "操作过于频繁，请稍后再试")
+    hits.append(now)
+    _RATE[key] = hits
+
+
+# ---------- 表结构 ----------
+
+def init_auth_db():
+    conn = db.get_conn()
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            nickname TEXT,
+            created_at REAL NOT NULL,
+            last_login REAL
+        )"""
+    )
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS auth_tokens (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            created_at REAL NOT NULL,
+            expires_at REAL NOT NULL
+        )"""
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tok_user ON auth_tokens(user_id)")
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS merged_anon (
+            user_id INTEGER NOT NULL,
+            anon_uid TEXT NOT NULL,
+            merged_at REAL NOT NULL,
+            PRIMARY KEY (user_id, anon_uid)
+        )"""
+    )
+    conn.commit()
+    conn.close()
+
+
+def user_uid(user_id: int) -> str:
+    """登录用户的稳定 uid，与现有按 uid 隔离的数据兼容。"""
+    return f"u{user_id}"
+
+
+def _mask_phone(phone: str) -> str:
+    return phone[:3] + "****" + phone[-4:] if len(phone) == 11 else phone
+
+
+def _mask_email(email: str) -> str:
+    local, _, domain = email.partition("@")
+    return local[:1] + "***@" + domain
+
+
+def _user_payload(row) -> dict:
+    phone = str(row["phone"])
+    is_wx = phone.startswith("wx:")
+    is_za = phone.startswith("za:")  # Zalize 统一账号占位，不回显邮箱
+    is_mail = not is_wx and not is_za and "@" in phone  # 裸邮箱凭据：脱敏回显
+    nick = str(row["nickname"] or "").strip()[:20]
+    if nick.lower() in ("null", "undefined"):
+        nick = ""
+    if is_wx:
+        default_nick = "微信考友"
+    elif is_za:
+        default_nick = "Zalize 考友"
+    elif is_mail:
+        default_nick = "考友" + phone.split("@", 1)[0][:8]
+    else:
+        default_nick = "考友" + phone[-4:]
+    return {
+        "id": row["id"],
+        "uid": user_uid(row["id"]),
+        "phone": None if is_wx or is_za else (_mask_email(phone) if is_mail else _mask_phone(phone)),
+        "nickname": nick or default_nick,
+        "created_at": row["created_at"],
+    }
+
+
+def _issue_token(conn, user_id: int) -> str:
+    token = secrets.token_urlsafe(32)
+    now = time.time()
+    conn.execute(
+        "INSERT INTO auth_tokens (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+        (token, user_id, now, now + TOKEN_TTL),
+    )
+    conn.execute("UPDATE users SET last_login=? WHERE id=?", (now, user_id))
+    return token
+
+
+_REVOKED_CACHE: dict[str, tuple[float, float]] = {}
+_REVOKED_CACHE_TTL = 60.0
+
+
+def _central_revoked_before(email: str) -> float:
+    """中心「退出全部设备」时间戳（秒）；进程内缓存 60s，中心不可达时 fail-open。"""
+    now = time.time()
+    hit = _REVOKED_CACHE.get(email)
+    if hit and now - hit[1] < _REVOKED_CACHE_TTL:
+        return hit[0]
+    try:
+        r = httpx.get(
+            "https://account.zalize.com/api/revoked-before",
+            params={"email": email},
+            timeout=5,
+        )
+        value = float((r.json() or {}).get("revokedBefore") or 0) / 1000.0 if r.status_code == 200 else 0.0
+    except Exception:
+        value = 0.0
+    _REVOKED_CACHE[email] = (value, now)
+    return value
+
+
+def get_user_by_token(authorization: str | None):
+    """Bearer token -> user 行；无效返回 None。"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization[7:].strip()
+    if not token:
+        return None
+    conn = db.get_conn()
+    row = conn.execute(
+        """SELECT u.*, t.created_at AS token_created_at FROM auth_tokens t JOIN users u ON u.id=t.user_id
+           WHERE t.token=? AND t.expires_at>?""",
+        (token, time.time()),
+    ).fetchone()
+    if row:
+        binding = conn.execute(
+            "SELECT email FROM zalize_bindings WHERE user_id=?", (row["id"],)
+        ).fetchone() if _has_bindings_table(conn) else None
+        if binding and row["token_created_at"] < _central_revoked_before(binding["email"]):
+            conn.execute("DELETE FROM auth_tokens WHERE token=?", (token,))
+            conn.commit()
+            conn.close()
+            return None
+    conn.close()
+    return row
+
+
+def _has_bindings_table(conn) -> bool:
+    return bool(
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='zalize_bindings'"
+        ).fetchone()
+    )
+
+
+_ACCOUNT_UID_RE = re.compile(r"^u\d+$")
+
+
+def is_account_uid(uid: object) -> bool:
+    """账号态 uid（u<id>，可被枚举），区别于随机匿名 uid。非字符串（JSON body 里的数字/数组/对象）一律不是账号 uid。
+
+    与 handler 的 `uid.strip()[:64]` 同口径判定：前后空白不改变归属（' u1' 即 u1）。
+    """
+    return isinstance(uid, str) and bool(_ACCOUNT_UID_RE.match(uid.strip()))
+
+
+def owns_uid(uid: str, authorization: str | None) -> bool:
+    """请求方是否有权以该 uid 读写数据：匿名随机 uid 放行，账号 uid 需本人 token。"""
+    if not is_account_uid(uid):
+        return True
+    row = get_user_by_token(authorization)
+    return bool(row) and user_uid(row["id"]) == uid.strip()
+
+
+def require_user(authorization: str | None):
+    row = get_user_by_token(authorization)
+    if not row:
+        raise HTTPException(401, "未登录或登录已过期")
+    return row
+
+
+# ---------- 接口 ----------
+
+@router.post("/register")
+def api_register(body: dict, request: Request):
+    email = str(body.get("email") or "").strip().lower()
+    phone = str(body.get("phone") or "").strip()
+    identifier = email or phone
+    password = str(body.get("password") or "")
+    code = body.get("code")  # 验证码：本期预留，不校验
+    nickname = str(body.get("nickname") or "").strip()[:20] or None
+    if email:
+        if not _EMAIL_RE.match(email):
+            raise HTTPException(400, "邮箱格式不正确")
+    elif not _PHONE_RE.match(phone):
+        raise HTTPException(400, "手机号格式不正确")
+    if len(password) < 6 or len(password) > 64:
+        raise HTTPException(400, "密码长度需为 6-64 位")
+    rate_limit(f"reg:{client_ip(request)}", 10, 3600)
+    if not sms_provider.verify(identifier, code):  # TODO: 接入验证码后启用真实校验
+        raise HTTPException(400, "验证码错误")
+    conn = db.get_conn()
+    try:
+        cur = conn.execute(
+            "INSERT INTO users (phone, password_hash, nickname, created_at) VALUES (?,?,?,?)",
+            (identifier, hash_password(password), nickname, time.time()),
+        )
+    except Exception:
+        conn.close()
+        raise HTTPException(409, "该邮箱已注册，请直接登录" if email else "该手机号已注册，请直接登录") from None
+    uid = cur.lastrowid
+    token = _issue_token(conn, uid)
+    conn.commit()
+    row = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    conn.close()
+    return {"token": token, "user": _user_payload(row)}
+
+
+@router.post("/login")
+def api_login(body: dict, request: Request):
+    email = str(body.get("email") or "").strip().lower()
+    phone = str(body.get("phone") or "").strip()
+    identifier = email or phone
+    password = str(body.get("password") or "")
+    rate_limit(f"login:{client_ip(request)}:{identifier}", 10, 300)
+    conn = db.get_conn()
+    row = conn.execute("SELECT * FROM users WHERE phone=?", (identifier,)).fetchone()
+    if not row or not verify_password(password, row["password_hash"]):
+        conn.close()
+        raise HTTPException(401, "账号或密码错误")
+    token = _issue_token(conn, row["id"])
+    conn.commit()
+    conn.close()
+    return {"token": token, "user": _user_payload(row)}
+
+
+@router.post("/wxlogin")
+def api_wxlogin(body: dict, request: Request):
+    """微信小程序一键登录：wx.login code -> openid -> 找到/创建账号并发 token。"""
+    import os
+
+    import httpx
+
+    code = str(body.get("code") or "").strip()
+    nickname = str(body.get("nickname") or "").strip()[:20] or None
+    if not code:
+        raise HTTPException(400, "缺少微信登录 code")
+    appid = os.environ.get("WX_MINIAPP_APPID", "wx01f2f29cfe51baba")
+    secret = os.environ.get("WX_MINIAPP_SECRET", "")
+    if not secret:
+        raise HTTPException(503, "微信登录暂未开通（服务端未配置小程序密钥）")
+    rate_limit(f"wxlogin:{client_ip(request)}", 20, 300)
+    try:
+        r = httpx.get(
+            "https://api.weixin.qq.com/sns/jscode2session",
+            params={
+                "appid": appid,
+                "secret": secret,
+                "js_code": code,
+                "grant_type": "authorization_code",
+            },
+            timeout=10,
+        )
+        data = r.json()
+    except Exception:
+        raise HTTPException(502, "微信登录服务暂不可用，请稍后再试") from None
+    openid = data.get("openid")
+    if not openid:
+        raise HTTPException(401, f"微信登录失败：{data.get('errmsg') or '无效 code'}")
+    conn = db.get_conn()
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
+    placeholder = f"wx:{openid}"
+    row = conn.execute("SELECT * FROM users WHERE phone=?", (placeholder,)).fetchone()
+    if not row:
+        cur = conn.execute(
+            "INSERT INTO users (phone, password_hash, nickname, created_at) VALUES (?,?,?,?)",
+            (placeholder, hash_password(secrets.token_urlsafe(24)), nickname or "微信考友", time.time()),
+        )
+        row = conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+    token = _issue_token(conn, row["id"])
+    conn.commit()
+    conn.close()
+    return {"token": token, "user": _user_payload(row)}
+
+
+@router.post("/logout")
+def api_logout(authorization: str | None = Header(None)):
+    if authorization and authorization.startswith("Bearer "):
+        conn = db.get_conn()
+        conn.execute("DELETE FROM auth_tokens WHERE token=?", (authorization[7:].strip(),))
+        conn.commit()
+        conn.close()
+    return {"ok": True}
+
+
+@router.get("/me")
+def api_me(authorization: str | None = Header(None)):
+    row = require_user(authorization)
+    return {"user": _user_payload(row)}
+
+
+# 归并范围按 schema 自省：库内任何 uid / *_uid 列都归并，新增表无需登记；账号身份表除外
+_MERGE_SKIP_TABLES = frozenset({"merged_anon", "users", "auth_tokens", "zalize_bindings"})
+
+
+def _uid_columns(conn) -> list[tuple[str, str, bool]]:
+    """库内全部 (table, col, keyed)；keyed=该列参与主键或唯一索引，归并时目标 uid 同键行优先保留。"""
+    out: list[tuple[str, str, bool]] = []
+    names = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")]
+    for t in names:
+        if t in _MERGE_SKIP_TABLES or t.startswith("sqlite_"):
+            continue
+        cols = conn.execute(f'PRAGMA table_info("{t}")').fetchall()
+        uid_cols = [c["name"] for c in cols if c["name"] == "uid" or c["name"].endswith("_uid")]
+        if not uid_cols:
+            continue
+        keyed = {c["name"] for c in cols if c["pk"]}
+        for ix in conn.execute(f'PRAGMA index_list("{t}")').fetchall():
+            if ix["unique"]:
+                keyed.update(r["name"] for r in conn.execute(f'PRAGMA index_info("{ix["name"]}")'))
+        out.extend((t, c, c in keyed) for c in uid_cols)
+    return out
+
+
+def merge_uid_rows(conn, anon: str, target: str) -> dict[str, int]:
+    """把 anon 的行改写为 target；返回 {table.col: 改写行数}。键冲突时保留 target 原行并丢弃 anon 行。"""
+    merged: dict[str, int] = {}
+    for t, col, keyed in _uid_columns(conn):
+        if keyed:
+            cur = conn.execute(f'UPDATE OR IGNORE "{t}" SET "{col}"=? WHERE "{col}"=?', (target, anon))
+            conn.execute(f'DELETE FROM "{t}" WHERE "{col}"=?', (anon,))
+        else:
+            cur = conn.execute(f'UPDATE "{t}" SET "{col}"=? WHERE "{col}"=?', (target, anon))
+        merged[f"{t}.{col}"] = cur.rowcount
+    return merged
+
+
+@router.post("/merge_anon")
+def api_merge_anon(body: dict, authorization: str | None = Header(None)):
+    """把匿名 uid 的数据归并到当前账号 uid。幂等：重复调用不翻倍。"""
+    row = require_user(authorization)
+    anon = str(body.get("anon_uid") or "").strip()[:64]
+    target = user_uid(row["id"])
+    if not anon or anon == target:
+        return {"ok": True, "merged": {}, "skipped": True}
+    if re.fullmatch(r"u\d+", anon):
+        raise HTTPException(400, "无效的匿名 uid")
+    conn = db.get_conn()
+    merged = merge_uid_rows(conn, anon, target)
+    conn.execute(
+        "INSERT OR IGNORE INTO merged_anon (user_id, anon_uid, merged_at) VALUES (?,?,?)",
+        (row["id"], anon, time.time()),
+    )
+    conn.commit()
+    conn.close()
+    return {"ok": True, "uid": target, "merged": merged}

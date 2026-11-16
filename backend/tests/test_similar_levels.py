@@ -1,5 +1,5 @@
 """B6：同类题难度四档——engine.similar_level_clause 映射 + /api/similar difficulty 校验。"""
-from app import engine
+from app.services import engine
 
 
 def test_level_clause_mapping():

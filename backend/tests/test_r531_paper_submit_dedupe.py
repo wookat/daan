@@ -1,7 +1,8 @@
 """R531：同一 uid 对同一卷同一页提交完全相同的作答（重扫同一张答题卡 / 手动录入重复交卷）只落库一次：
 answer_log 不翻倍、mistakes.times 不递增、已推进的复习进度（review_streak/next_review）不被打回；
 回包 saved=False + dup=True + dup_at=首次时刻，items 仍照常返回。答案不同视为新一次作答；整卷模考不去重。"""
-from app import db, exam_api
+from app import db
+from app.api import exam as exam_api
 from tests.conftest import seed_questions
 
 

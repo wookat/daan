@@ -8,7 +8,11 @@ import json
 
 import pytest
 
-from app import ai_api, db, engine, kb, llm
+from app.api import ai as ai_api
+from app import db
+from app.services import engine
+from app.services import kb
+from app.services import llm
 
 from .conftest import seed_questions
 

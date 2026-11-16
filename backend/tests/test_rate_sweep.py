@@ -2,7 +2,7 @@
 import pytest
 from fastapi import HTTPException
 
-from app import auth
+from app.api import auth
 
 
 @pytest.fixture(autouse=True)

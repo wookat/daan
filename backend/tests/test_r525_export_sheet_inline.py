@@ -4,7 +4,7 @@ import io
 
 from pypdf import PdfReader  # pyright: ignore[reportMissingImports]
 
-from app.pdf_export import build_paper_pdf, sheet_questions
+from app.services.pdf_export import build_paper_pdf, sheet_questions
 
 ORD = {"id": 110, "module": "changshi", "question": "下列节气中，白昼最长的是：", "options": {"A": "春分", "B": "夏至"}, "answer": "B"}
 SZ = {"id": None, "module": "时政", "question": "R525：某会议的说法正确的是\nA.甲 B.乙 C.丙 D.丁", "options": {}, "answer": "C", "analysis": "本地解析"}

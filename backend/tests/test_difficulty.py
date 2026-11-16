@@ -1,7 +1,8 @@
 """B3：难度分档纯函数 + questions 序列化带 difficulty + mastery/map 两新键。"""
 import time
 
-from app import db, difficulty
+from app import db
+from app.services import difficulty
 from tests.conftest import seed_questions
 
 PFX = "test-diff-"

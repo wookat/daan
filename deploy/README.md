@@ -199,7 +199,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 - 搜索引擎侧入口：Google Search Console 资源 `sc-domain:kaogong.zalize.com`（DNS 自动验证）；
   Bing/Yandex 走 IndexNow（R89）；百度站长平台待账号。
 
-## LLM 模型通道（backend/app/llm.py，env 驱动，key 只在服务端 .env）
+## LLM 模型通道（backend/app/services/llm.py，env 驱动，key 只在服务端 .env）
 
 | env 组 | 用途 | 生产当前值（2026-11-14 起） |
 |---|---|---|

@@ -2,7 +2,12 @@
 import json
 import time
 
-from app import db, mock_event, pk, report, social, team
+from app import db
+from app.services import mock_event
+from app.services import pk
+from app.services import report
+from app.services import social
+from app.services import team
 
 from .conftest import seed_questions
 

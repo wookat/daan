@@ -1,8 +1,9 @@
 """R414：多选题（answer 多字母）导入/管理归一 + 模考判分/报告按字母集比较。"""
 import json
 
-from app import db, deps
-from app.exam_api import _grade
+from app import db
+from app.api import deps
+from app.api.exam import _grade
 
 from .conftest import seed_questions
 

@@ -11,7 +11,9 @@ import uuid
 
 from fastapi.testclient import TestClient
 
-from app import ai_api, db, engine
+from app.api import ai as ai_api
+from app import db
+from app.services import engine
 from app.main import app
 
 HOLD_SEC = 3.0

@@ -6,7 +6,7 @@ import os
 import sqlite3
 
 from app import db
-from app.mock_event import _score_pool
+from app.services.mock_event import _score_pool
 
 from .conftest import seed_questions
 

@@ -3,7 +3,7 @@ import pytest
 from fastapi import HTTPException
 
 from app import db
-from app.deps import clamp_limit
+from app.api.deps import clamp_limit
 
 from .conftest import seed_questions
 

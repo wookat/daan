@@ -5,7 +5,8 @@
    落库 qid 优先，其次请求带的深链 question_id，都没有回 None（客户端按 askQid(m.qid) || 本地 保留）。"""
 import json
 
-from app import ai_api, db
+from app.api import ai as ai_api
+from app import db
 
 from .conftest import seed_questions
 from .test_r421_explain_linked_thinking import _linked_text, _sse

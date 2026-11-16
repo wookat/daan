@@ -7,7 +7,9 @@ import asyncio
 
 import pytest
 
-from app import ai_api, db, llm
+from app.api import ai as ai_api
+from app import db
+from app.services import llm
 
 
 @pytest.fixture

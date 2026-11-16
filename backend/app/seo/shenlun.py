@@ -4,22 +4,8 @@ from urllib.parse import quote
 from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from .. import db
-from .common import (
-    _EMPTY_MODULE_OUTLET,
-    PAGE_SIZE,
-    _collection_ld,
-    _crumb,
-    _e,
-    _not_found,
-    _page,
-    _pager,
-    _shenlun_paper_path,
-    _shenlun_sucai_path,
-    _sub_path,
-    _year_path,
-    router,
-)
+from app import db
+from .common import _EMPTY_MODULE_OUTLET, PAGE_SIZE, _collection_ld, _crumb, _e, _not_found, _page, _pager, _shenlun_paper_path, _shenlun_sucai_path, _sub_path, _year_path, router
 
 
 def _shenlun_q_items(items) -> str:

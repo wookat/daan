@@ -6,7 +6,10 @@ import importlib.util
 import json
 import os
 
-from app import db, interview, llm, sse
+from app import db
+from app.services import interview
+from app.services import llm
+from app.services import sse
 
 from .conftest import seed_questions
 

@@ -5,7 +5,12 @@
 import asyncio
 import json
 
-from app import ai_api, db, engine, interview, llm, sse
+from app.api import ai as ai_api
+from app import db
+from app.services import engine
+from app.services import interview
+from app.services import llm
+from app.services import sse
 
 from .conftest import seed_questions
 

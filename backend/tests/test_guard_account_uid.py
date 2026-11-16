@@ -3,8 +3,10 @@ import json
 
 import pytest
 
-from app import auth as auth_mod
-from app import db, omr, push_api
+from app.api import auth as auth_mod
+from app import db
+from app.services import omr
+from app.api import push as push_api
 
 ACCOUNT_UID = "u999999"
 ANON_UID = "test-w1-guard-anon"

@@ -1,5 +1,5 @@
 """B1：review_fields.parse_explain —— explain 六段式 markdown → 结构化字段的纯函数契约。"""
-from app import review_fields as rf
+from app.services import review_fields as rf
 
 FULL = """【答案】B｜【方法】赋值法｜【一句话】给总量赋最小公倍数即可秒杀
 ## 题型识别

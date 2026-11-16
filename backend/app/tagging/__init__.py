@@ -4,8 +4,12 @@ tag_*.py 原样拷贝自 data/gov2/scripts/round1/（保留独立可执行），
 """
 import json
 
-from .. import taxonomy
-from . import tag_changshi, tag_panduan, tag_shuliang, tag_yanyu, tag_ziliao
+from app.services import taxonomy
+from app.tagging import tag_changshi
+from app.tagging import tag_panduan
+from app.tagging import tag_shuliang
+from app.tagging import tag_yanyu
+from app.tagging import tag_ziliao
 
 _ctx: dict | None = None
 

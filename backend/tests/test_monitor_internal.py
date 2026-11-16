@@ -2,7 +2,8 @@
 import pytest
 from fastapi.routing import APIRoute
 
-from app import auth, monitor
+from app.api import auth
+from app.services import monitor
 from app import main as app_main
 
 REAL_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_3 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1"

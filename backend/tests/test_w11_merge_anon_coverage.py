@@ -6,8 +6,9 @@ import re
 
 import pytest
 
-from app import auth as auth_mod
-from app import db, push_api
+from app.api import auth as auth_mod
+from app import db
+from app.api import push as push_api
 
 APP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app")
 ANON = "test-w11-merge-anon"

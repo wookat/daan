@@ -5,8 +5,9 @@ import time
 import httpx
 import pytest
 
-from app import db, llm
-from app.mock_event import init_mock_event_db
+from app import db
+from app.services import llm
+from app.services.mock_event import init_mock_event_db
 
 
 def test_report_dangling_attempt_returns_404(client):

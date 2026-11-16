@@ -1,7 +1,7 @@
 """R348 质量打分三类内容自证缺陷扣分 + sanitize_hs 剥离口径；W2 汉字间空格 / hs 元句清洗；W3-C explanation 清洗。"""
 import json
 
-from app import quality
+from app.services import quality
 
 _OPTS = json.dumps({"A": "甲", "B": "乙", "C": "丙", "D": "丁"}, ensure_ascii=False)
 _HS = "第一步：由题干可知总量为 120。第二步：代入选项排除 B、C。因此故选 A。" * 3

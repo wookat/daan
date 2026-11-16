@@ -3,7 +3,7 @@ from pathlib import Path
 
 BACKEND = Path(__file__).resolve().parents[1]
 REPO = BACKEND.parent
-TEAM_PY = BACKEND / "app" / "team.py"
+TEAM_PY = BACKEND / "app" / "services" / "team.py"
 FRONTEND_SRC = REPO / "frontend-uni" / "src"
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """W2 内容清洗：在线题 hs 管线元句剥离。
 
-规则（口径与 backend/app/quality.py 共用同一常量/正则）：
+规则（口径与 backend/app/services/quality.py 共用同一常量/正则）：
   a. 在线题 hs_explanation 含管线元句「该解法是花生十三体系中此类题型的标准套路，考场可直接套用。」
      及同义变体（quality.HS_META_RE）→ 经 quality.sanitize_hs 剥离并归一空白
   b. 改动题 db.rescore_question
@@ -29,7 +29,8 @@ try:
 except NameError:  # 经 stdin 管道运行（容器内 cwd=/app/backend 可直接 import app）
     pass
 
-from app import db, quality
+from app import db
+from app.services import quality
 
 ONLINE = "(disabled IS NULL OR disabled=0)"
 SAMPLE_N = 10

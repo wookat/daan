@@ -154,7 +154,8 @@ def test_module_page_topic_and_year_links(client):
 
 
 def test_home_truncated_topics_have_more_link(client):
-    from app import db, taxonomy
+    from app import db
+    from app.services import taxonomy
 
     seed_questions()
     db._TAG3_COUNTS_CACHE[1] = None

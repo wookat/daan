@@ -1,5 +1,6 @@
 """短关键词搜索回归（R152）：1–2 字查询走单字分词 FTS，不再全表 LIKE 扫描。"""
-from app import db, insights
+from app import db
+from app.services import insights
 from tests.conftest import seed_questions
 
 

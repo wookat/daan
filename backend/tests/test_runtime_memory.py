@@ -2,7 +2,8 @@
 import os
 import sqlite3
 
-from app import db, main
+from app import db
+from app import main
 
 
 def test_conn_pragmas_favor_shared_mmap_over_heap_cache():

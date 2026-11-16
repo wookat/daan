@@ -30,7 +30,7 @@ try:
 except NameError:  # 经 stdin 管道运行（容器内 cwd=/app/backend 可直接 import app）
     pass
 
-from app import quality
+from app.services import quality
 
 DEFAULT_FIT_MAX = 0.08
 REASON = "r396:cross-question-explanation"

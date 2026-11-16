@@ -8,7 +8,10 @@ import time
 
 import pytest
 
-from app import auth, db, exam_api, omr
+from app.api import auth
+from app import db
+from app.api import exam as exam_api
+from app.services import omr
 
 ANON_UID = "test-w9-async-anon"
 PNG = ("a.png", b"\x89PNG\r\n\x1a\nfake", "image/png")
