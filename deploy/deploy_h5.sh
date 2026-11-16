@@ -140,7 +140,7 @@ echo "  old-container-log: $SNAP"
 # 该子 shell 持有 ssh 的管道直到 compose 结束（本地 ssh 被拖住整个 build，ssh 掉线即 SIGHUP 波及）。
 COMPOSE_LOG="/tmp/kg-compose-${BUILD_REV}-$(date -u +%Y%m%dT%H%M%SZ).log"
 "${SSH_RUN[@]}" "$REMOTE" \
-  "cd $REMOTE_DIR/deploy && setsid -f nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null && ln -sfn $COMPOSE_LOG /tmp/kg-compose.log && echo compose-started log=$COMPOSE_LOG"
+  "cd $REMOTE_DIR/deploy && setsid -f nohup bash -c 'docker compose up -d --build; echo \"KG_COMPOSE_EXIT rc=\$? at \$(date -u +%Y-%m-%dT%H:%M:%SZ)\"' > $COMPOSE_LOG 2>&1 < /dev/null && echo compose-started log=$COMPOSE_LOG && { ln -sfn $COMPOSE_LOG /tmp/kg-compose.log 2>/dev/null || echo 'WARN: /tmp/kg-compose.log 更新失败（疑似他属主残留，sticky /tmp 不允许覆盖；真实日志见上方 log= 路径）'; }"
 WAIT_SECS="${DEPLOY_WAIT_SECS:-600}"
 DEADLINE=$((SECONDS + WAIT_SECS))
 REBUILT=0
@@ -276,13 +276,13 @@ retry_check() {
 
 step "5/6 线上 bundle hash 校验"
 check_bundle() {
-  ONLINE_INDEX_REF=$(curl -s "$SITE/" | grep -o 'index-[^"]*\.js' | head -1)
+  ONLINE_INDEX_REF=$(curl -s "$SITE/app/" | grep -o 'index-[^"]*\.js' | head -1)
   echo "线上 bundle: $ONLINE_INDEX_REF"
   [[ "$ONLINE_INDEX_REF" == "$LOCAL_INDEX_REF" ]]
 }
 retry_check 120 check_bundle \
   || { echo "FAIL: 线上 bundle ($ONLINE_INDEX_REF) != 本机构建 ($LOCAL_INDEX_REF)，部署未生效！"; exit 1; }
-ONLINE_HOME_CHUNK=$(curl -s --compressed "$SITE/assets/$ONLINE_INDEX_REF" | grep -o 'pages-home-home\.[^"]*\.js' | head -1 || true)
+ONLINE_HOME_CHUNK=$(curl -s --compressed "$SITE/app/assets/$ONLINE_INDEX_REF" | grep -o 'pages-home-home\.[^"]*\.js' | head -1 || true)
 if [[ -n "$ONLINE_HOME_CHUNK" && ! -f "$DIST/assets/$ONLINE_HOME_CHUNK" ]]; then
   echo "FAIL: 线上 home chunk $ONLINE_HOME_CHUNK 不在本机构建产物中！"
   exit 1
@@ -293,7 +293,7 @@ step "5b 线上 bundle 各 Accept-Encoding 变体校验（防 HTML 回退缓存�
 check_encodings() {
   local enc ct ok=0
   for enc in "identity" "gzip" "br" "gzip, deflate" "gzip, deflate, br" "gzip, deflate, br, zstd" "zstd"; do
-    ct=$(curl -s -o /dev/null -w "%{content_type}" -H "Accept-Encoding: $enc" "$SITE/assets/$ONLINE_INDEX_REF")
+    ct=$(curl -s -o /dev/null -w "%{content_type}" -H "Accept-Encoding: $enc" "$SITE/app/assets/$ONLINE_INDEX_REF")
     echo "encoding [$enc] -> $ct"
     [[ "$ct" == *javascript* ]] || ok=1
   done
