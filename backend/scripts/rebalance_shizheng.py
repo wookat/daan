@@ -45,7 +45,7 @@ def assign_targets(qs, rng):
     """为每题分配目标正确字母，使各字母数量均衡；尽量保留原字母以减少改动。"""
     n = len(qs)
     base, extra = divmod(n, 4)
-    quota = {l: base + (1 if i < extra else 0) for i, l in enumerate(LETTERS)}
+    quota = {letter: base + (1 if i < extra else 0) for i, letter in enumerate(LETTERS)}
     targets = [None] * len(qs)
     # 第一轮：配额允许时保留原字母
     order = list(range(len(qs)))
@@ -59,18 +59,18 @@ def assign_targets(qs, rng):
         else:
             remaining.append(i)
     # 第二轮：剩余题随机分配到还有配额的字母
-    pool = [l for l in LETTERS for _ in range(quota[l])]
+    pool = [letter for letter in LETTERS for _ in range(quota[letter])]
     rng.shuffle(pool)
-    for i, l in zip(remaining, pool):
-        targets[i] = l
+    for i, letter in zip(remaining, pool):
+        targets[i] = letter
     return targets
 
 
 def make_perm(old_correct, new_correct, rng):
     """构造 旧字母→新字母 的置换：正确项 old→new，其余项随机填充。"""
     perm = {old_correct: new_correct}
-    rest_old = [l for l in LETTERS if l != old_correct]
-    rest_new = [l for l in LETTERS if l != new_correct]
+    rest_old = [letter for letter in LETTERS if letter != old_correct]
+    rest_new = [letter for letter in LETTERS if letter != new_correct]
     rng.shuffle(rest_new)
     for o, nw in zip(rest_old, rest_new):
         perm[o] = nw
@@ -101,8 +101,8 @@ def main():
             audit.append(entry)
             continue
         perm = make_perm(old, target, rng)
-        new_options = {perm[l]: q["options"][l] for l in LETTERS}
-        new_options = {l: new_options[l] for l in LETTERS}  # 按 A-D 排序
+        new_options = {perm[letter]: q["options"][letter] for letter in LETTERS}
+        new_options = {letter: new_options[letter] for letter in LETTERS}  # 按 A-D 排序
         old_exp = q["explanation"]
         new_exp = rewrite_explanation(old_exp, perm)
         entry.update({

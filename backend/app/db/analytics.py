@@ -183,7 +183,8 @@ def usage_overview(days: int = 30) -> dict:
         uids_all.add(r["uid"])
 
     today_s, yday_s = _day(day0), _day(day0 - 86400)
-    act = lambda d: len(per_day[d]["uids"]) if d in per_day else 0
+    def act(d):
+        return len(per_day[d]["uids"]) if d in per_day else 0
     dau, dau_y = act(today_s), act(yday_s)
 
     def _act_between(a: float, b: float) -> set[str]:
@@ -645,7 +646,7 @@ def ai_quality(days: int = 30) -> dict:
     by_channel = [
         dict(r)
         for r in q(
-            f"""SELECT channel, COUNT(*) n,
+            """SELECT channel, COUNT(*) n,
                       ROUND(AVG(ok)*100,1) ok_pct,
                       ROUND(AVG(ms)) avg_ms,
                       SUM(img) imgs, SUM(stream) streams

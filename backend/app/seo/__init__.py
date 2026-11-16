@@ -6,7 +6,7 @@
 from app.seo import shenlun  # noqa: F401  # isort: skip
 from app.seo import pages  # noqa: F401  # isort: skip
 from app.seo import catchall  # noqa: F401  # isort: skip
-from app.seo import landings
+from app.seo import landings  # noqa: F401  # isort: skip
 from app.seo import sitefiles  # noqa: F401  # isort: skip
 from .common import PAGE_SIZE, _not_found, _pager, _url, root_router, router  # noqa: F401
 from .pages import _daily_archive_days

@@ -75,9 +75,12 @@ def real_user_report(days: int = 60) -> dict:
             or (days_active >= 2 and avg >= 5)
         )
         if real:
-            if avg >= 8: sigs.append("human_pace")
-            if max_gap >= 300: sigs.append("long_gaps")
-            if days_active >= 2: sigs.append("multi_day")
+            if avg >= 8:
+                sigs.append("human_pace")
+            if max_gap >= 300:
+                sigs.append("long_gaps")
+            if days_active >= 2:
+                sigs.append("multi_day")
             return {"verdict": "real", "signals": sigs}
         return {"verdict": "suspect", "signals": ["fast_pace" if avg < 5 else "single_short_session"]}
 

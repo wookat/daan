@@ -14,7 +14,7 @@ export default [
       // 构建时只保留一个分支；eslint 解析原始源码会报重复声明，且解析错误无法 disable，整文件豁免
       'src/api.js',
       'src/api/',
-      'src/native.js',
+      'src/services/native.js',
       'src/pkgA/social/poster.vue',
       'src/pkgA/stats/weekly-report.vue',
       // 从仓库根 base path（根 eslint.config.mjs 转发本配置）运行时的同一组豁免
@@ -25,7 +25,7 @@ export default [
       'frontend-uni/src/vendor/**',
       'frontend-uni/src/api.js',
       'frontend-uni/src/api/',
-      'frontend-uni/src/native.js',
+      'frontend-uni/src/services/native.js',
       'frontend-uni/src/pkgA/social/poster.vue',
       'frontend-uni/src/pkgA/stats/weekly-report.vue',
     ],

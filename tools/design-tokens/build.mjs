@@ -19,7 +19,7 @@ export const OUTPUTS = {
   scss: path.join(H5, 'styles/tokens.generated.scss'),
   css: path.join(H5, 'styles/tokens.generated.css'),
   wxss: path.join(MP, 'styles/tokens.generated.wxss'),
-  moduleMetaJs: path.join(H5, 'module-meta.js'),
+  moduleMetaJs: path.join(H5, 'utils/module-meta.js'),
   moduleMetaTs: path.join(MP, 'utils/module-meta.ts'),
   iconPathsTs: path.join(MP, 'components/l-icon/paths.ts'),
 };

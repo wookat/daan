@@ -12,5 +12,13 @@ ignore = [
     "DTZ007",   # 中国时区换算按 +8h 偏移显式处理，naive strptime 为既定用法
 ]
 
+[lint.per-file-ignores]
+# app/db/__init__.py 的尾部 star-import 是有意的扁平命名空间再导出
+#（兼容旧 `from app import db` / `db.<fn>` 调用面），E402/F403/F405 属设计行为
+"app/db/__init__.py" = ["E402", "F403", "F405"]
+# conftest.py / alembic env.py 必须先设环境变量/sys.path 再导入 app，E402 属设计行为
+"tests/conftest.py" = ["E402"]
+"alembic/env.py" = ["E402"]
+
 [lint.isort]
 known-first-party = ["app"]

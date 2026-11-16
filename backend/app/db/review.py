@@ -88,7 +88,8 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
                 if len(out) >= limit:
                     break
                 continue
-        esc = lambda s: s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        def esc(s):
+            return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
         cands = conn.execute(
             "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
             (esc(full) + "%",),
