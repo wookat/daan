@@ -22,6 +22,9 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt "ruff==0.15.20" pytest  # ruff 钉基线版本；pytest 不入生产 requirements
       - run: python -m ruff check .
+      # main.py 启动时挂载 frontend-uni/dist/build/h5（无则回退 frontend/）；
+      # API 测试不需要真实产物，只要求目录存在
+      - run: mkdir -p ../frontend-uni/dist/build/h5
       - run: python -m pytest tests/ -q
 
   frontend:
