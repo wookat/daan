@@ -19,3 +19,6 @@ miniapp-native/miniprogram_npm/
 coverage/
 .idea/
 .vscode/
+
+# 走查证据截图（本地）
+.audit-shots/
