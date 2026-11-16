@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports, @typescript-eslint/no-this-alias */
+// 豁免理由：echarts 为 vendor 无类型 js（require 引入）、微信 Component
+// lifetimes/observer 的 this 类型在 miniprogram-api-typings 下难以精确表达。
 // kg-ec：ECharts 容器组件（住 pkgGrow，与 ec-canvas/echarts.js 同分包可互相 require）。
 // 页面只传 JSON option（option 属性）+ 高度，图表构建/更新/事件都在此封装；
 // 跨分包页面经 componentPlaceholder 异步引用，option 到齐前 view 占位。
