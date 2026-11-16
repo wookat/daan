@@ -1,4 +1,6 @@
 data.db
+data/*
+!data/shizheng_topics.json
 __pycache__/
 *.pyc
 .env
