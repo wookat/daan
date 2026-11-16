@@ -11,7 +11,7 @@ const read = (p) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'ut
 const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
 const tpl = practice.slice(0, practice.indexOf('<script'));
 const script = practice.slice(practice.indexOf('<script'));
-const team = read('../../backend/app/team.py');
+const team = read('../../backend/app/services/team.py');
 
 const after = tpl.slice(tpl.indexOf('class="after"'), tpl.indexOf('<kg-action-bar'));
 const at = (s) => {

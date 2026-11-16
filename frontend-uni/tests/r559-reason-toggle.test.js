@@ -11,7 +11,7 @@ const chip = read('../src/components/kg-chip-row/kg-chip-row.vue');
 const practice = read('../src/pages/practice/practice.vue')+read('../src/practice/daily-ops.js')+read('../src/practice/session-ops.js');
 const book = read('../src/pages/book/book.vue')+read('../src/pages/book/review-ops.js');
 const report = read('../src/pkgA/exam/report.vue');
-const api = read('../../backend/app/study_api.py');
+const api = read('../../backend/app/api/study.py');
 
 describe('R559 错因 chip 取消语义', () => {
   it('KgChipRow：toggle prop 默认 false；开启时再点已选项发 ""，默认原值回发', () => {

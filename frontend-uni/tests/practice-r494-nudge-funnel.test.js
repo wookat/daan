@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 const SRC = readFileSync(new URL('../src/pages/practice/practice.vue', import.meta.url), 'utf8');
-const TEAM = readFileSync(new URL('../../backend/app/team.py', import.meta.url), 'utf8');
+const TEAM = readFileSync(new URL('../../backend/app/services/team.py', import.meta.url), 'utf8');
 
 function method(name) {
   const m = SRC.match(new RegExp(`\\n {4}(?:async )?${name}\\([^)]*\\) \\{[\\s\\S]*?\\n {4}\\},`));

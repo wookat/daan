@@ -25,11 +25,11 @@ describe('R551 列表卡错因标签', () => {
     expect(wxml).toContain('<text wx:if="{{item.error_reason}}" class="m-meta-warn">{{item.error_reason}}</text>');
   });
   it('后端：mistakes/review_log 入库侧探针打标，本人列表不外泄 probe 字段', () => {
-    const db = read('../../backend/app/db_review.py');
+    const db = read('../../backend/app/db/review.py');
     expect(db).toContain('def save_mistake(rec: dict, probe: bool = False) -> int:');
     expect(db).toContain('("probe", "ALTER TABLE review_log ADD COLUMN probe INTEGER")');
     expect(db).toContain('d.pop("probe", None)');
-    const api = read('../../backend/app/study_api.py');
+    const api = read('../../backend/app/api/study.py');
     expect(api).toContain('mid = db.save_mistake(rec, probe=auth.probe_request(request))');
     expect(api).toContain('def api_review_record(mid: int, body: dict, request: Request):');
   });

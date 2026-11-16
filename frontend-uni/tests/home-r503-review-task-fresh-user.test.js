@@ -22,12 +22,12 @@ describe('R503 首页「错题复习」：从未有过错题的新用户不得�
   });
   it('已制定计划态：任务行的 done 由服务端 plan_today.tasks[].done 决定，前端不自行判定复习完成', () => {
     expect(template).toMatch(/v-for="t in planToday\.tasks" :key="t\.key" class="task" :class="\{ 'is-done': t\.done \}"/);
-    const plan = readFileSync(fileURLToPath(new URL('../../backend/app/plan.py', import.meta.url)), 'utf8');
+    const plan = readFileSync(fileURLToPath(new URL('../../backend/app/services/plan.py', import.meta.url)), 'utf8');
     // 服务端只在 review_target>0（有到期/新错题）时才追加复习任务，无错题用户不会出现复习任务
     expect(plan).toMatch(/if review_target > 0:\s*tasks\.append\(\{\s*"key": "review"/);
   });
   it('后端 daily_plan 返回 mistakes_total（按 uid 隔离、含已掌握；小程序端/兼容口径保留）', () => {
-    const db = readFileSync(fileURLToPath(new URL('../../backend/app/db_stats.py', import.meta.url)), 'utf8');
+    const db = readFileSync(fileURLToPath(new URL('../../backend/app/db/stats.py', import.meta.url)), 'utf8');
     const fn = db.slice(db.indexOf('def daily_plan('), db.indexOf('def stats('));
     expect(fn).toMatch(/SELECT COUNT\(\*\) n FROM mistakes WHERE 1=1\{uc\}/);
     expect(fn).toMatch(/"mistakes_total": mtotal\["n"\]/);
