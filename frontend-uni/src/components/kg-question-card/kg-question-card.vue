@@ -22,7 +22,7 @@
       <slot name="stem"><text>{{ q.stem }}</text></slot>
     </view>
     <view v-if="q.images && q.images.length" class="kg-q__imgs">
-      <image v-for="(src, i) in q.images" :key="i" :src="src" mode="widthFix" class="kg-q__img" @click="preview(i)" />
+      <kg-fit-img v-for="(src, i) in q.images" :key="i" :src="src" class="kg-q__img" @click="preview(i)" />
     </view>
     <slot />
   </kg-card>
@@ -82,5 +82,5 @@ export default {
 .kg-q__stem { color: var(--ink); line-height: var(--lh-question); }
 .kg-q__idx { color: var(--ink-3); margin-right: var(--sp-4); }
 .kg-q__imgs { margin-top: var(--sp-12); display: flex; flex-direction: column; gap: var(--sp-8); }
-.kg-q__img { width: 100%; border-radius: var(--r-sm); }
+.kg-q__img { border-radius: var(--r-sm); }
 </style>

@@ -43,8 +43,8 @@
               <rich-text class="q-text stem" :nodes="hl(it.question)" />
               <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
               <view v-if="detail && detail.id === it.id" class="q-detail">
-                <image v-if="detail.image" :src="imgUrl(detail.image)" mode="widthFix" class="optimg" />
-                <view v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}<image v-for="(im, ii) in (detail.option_imgs && detail.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
+                <kg-fit-img v-if="detail.image" :src="imgUrl(detail.image)" mode="widthFix" class="optimg" />
+                <view v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}<kg-fit-img v-for="(im, ii) in (detail.option_imgs && detail.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" /></view>
                 <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
                 <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
                 <view class="d-acts">
@@ -86,8 +86,8 @@
           <rich-text class="q-text stem" :nodes="hl(result.code_hit.question)" />
           <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
           <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
-            <image v-if="detail.image" :src="imgUrl(detail.image)" mode="widthFix" class="optimg" />
-            <view v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}<image v-for="(im, ii) in (detail.option_imgs && detail.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
+            <kg-fit-img v-if="detail.image" :src="imgUrl(detail.image)" mode="widthFix" class="optimg" />
+            <view v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}<kg-fit-img v-for="(im, ii) in (detail.option_imgs && detail.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" /></view>
             <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
             <view class="d-acts">
@@ -403,7 +403,7 @@ export default {
 .q-detail { margin-top: var(--sp-12); padding-top: var(--sp-12); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--sp-4); }
 .q-opt { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
 .q-opt.ans { color: var(--ok-strong); font-weight: 600; }
-.optimg { width: 100%; max-width: 560rpx; margin-top: var(--sp-8); border-radius: var(--r-xs); display: block; }
+.optimg { max-width: 560rpx; margin: var(--sp-8) var(--sp-8) 0 0; border-radius: var(--r-xs); display: inline-block; vertical-align: middle; }
 .q-ans { margin-top: var(--sp-4); font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
 .q-exp { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
 .d-acts { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-8); }

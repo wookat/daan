@@ -153,8 +153,8 @@
               </view>
               <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
               <template v-if="f._open">
-                <image v-if="f.image" :src="imgUrl(f.image)" mode="widthFix" class="optimg" />
-                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><image v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
+                <kg-fit-img v-if="f.image" :src="imgUrl(f.image)" mode="widthFix" class="optimg" />
+                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><kg-fit-img v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" /></view>
                 <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
                 <template v-if="f.xp_explanation">
                   <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
@@ -239,14 +239,14 @@
               <text class="meta mtime">{{ fmt(m.created_at) }}</text>
             </view>
             <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
-            <image v-if="m.open && m.image" :src="imgUrl(m.image)" mode="widthFix" class="optimg" />
+            <kg-fit-img v-if="m.open && m.image" :src="imgUrl(m.image)" mode="widthFix" class="optimg" />
             <view v-if="m.open && m.options" class="mopts">
               <view v-for="(v, k) in m.options" :key="k" class="moptrow">
                 <text
                   class="mopt"
                   :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
                 >{{ k }}. {{ v }}</text>
-                <image v-for="(im, ii) in (m.option_imgs && m.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" />
+                <kg-fit-img v-for="(im, ii) in (m.option_imgs && m.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" />
               </view>
             </view>
             <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
@@ -2004,7 +2004,7 @@ export default {
 .mopt--bad { color: var(--bad-strong); }
 .anscmp { margin-top: var(--sp-8); font-size: var(--fs-sub); display: flex; gap: var(--sp-8); align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
-.optimg { width: 100%; max-width: 560rpx; margin-top: var(--sp-8); border-radius: var(--r-xs); display: block; }
+.optimg { max-width: 560rpx; margin: var(--sp-8) var(--sp-8) 0 0; border-radius: var(--r-xs); display: inline-block; vertical-align: middle; }
 .mstat { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
 .attempts { margin-top: var(--sp-8); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); }
 .att-h { font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-4); }

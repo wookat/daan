@@ -21,7 +21,7 @@
       </view>
       <view class="kg-opt__b">
         <text class="q-text">{{ o.text }}</text>
-        <image v-for="(src, si) in (o.images || (o.image ? [o.image] : []))" :key="si" :src="src" mode="widthFix" class="kg-opt__img" />
+        <kg-fit-img v-for="(src, si) in (o.images || (o.image ? [o.image] : []))" :key="si" :src="src" class="kg-opt__img" />
       </view>
     </view>
   </view>
@@ -92,7 +92,7 @@ export default {
   font-size: var(--fs-sub); font-weight: 600;
 }
 .kg-opt__b { flex: 1; min-width: 0; }
-.kg-opt__img { width: 100%; margin-top: var(--sp-8); border-radius: var(--r-xs); }
+.kg-opt__img { display: inline-block; vertical-align: middle; margin: var(--sp-8) var(--sp-8) 0 0; border-radius: var(--r-xs); }
 .kg-opt.is-selected { border-color: var(--brand); background: var(--brand-soft); }
 .kg-opt.is-selected .kg-opt__k { background: var(--brand); color: var(--on-brand); }
 .kg-opt.is-right { border-color: var(--ok); background: var(--ok-soft); }
