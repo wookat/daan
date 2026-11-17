@@ -8,4 +8,10 @@ export default defineConfig({
   plugins: [
     uni(),
   ],
+  server: {
+    proxy: {
+      '/api': { target: 'https://kaogong.zalize.com', changeOrigin: true },
+      '/qimg': { target: 'https://kaogong.zalize.com', changeOrigin: true },
+    },
+  },
 })
