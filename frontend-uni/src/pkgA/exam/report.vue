@@ -351,7 +351,7 @@ export default {
     detailMat() {
       const d = this.detail;
       if (!d || d.module !== 'ziliao') return null;
-      return splitMaterial(d.question);
+      return splitMaterial(d.question, d.material_hash);
     },
     /** 解析浮层 KgQuestionCard 入参（只读展示，图片走 imgUrl 补全域名） */
     detailQ() {

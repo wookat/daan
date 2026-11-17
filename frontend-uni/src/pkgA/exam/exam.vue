@@ -122,7 +122,7 @@
 import { request, anonUid, imgUrl } from '../../api/api.js';
 import { submitFailPlan } from '../../exam/exam-policy.js';
 import { dayKey } from '../../home/checkin.js';
-import { splitMaterial, sameMaterial } from '../../utils/material.js';
+import { splitMaterial } from '../../utils/material.js';
 import { crossedTimeAlert } from '../../exam/exam-alert.js';
 import { toggleExcl, pickWithExcl, togglePickLetter } from '../../exam/exam-excl.js';
 import { countAnswered, shouldPushProgress } from '../../exam/exam-resume.js';
@@ -183,10 +183,8 @@ export default {
     },
     matInfo() {
       const q = this.cur;
-      if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
-      const prev = this.items[this.idx - 1];
-      if (!prev || prev.module !== 'ziliao' || !sameMaterial(prev.question, q.question)) return null;
-      return splitMaterial(q.question);
+      if (!q || q.module !== 'ziliao') return null;
+      return splitMaterial(q.question, q.material_hash);
     },
     answeredCount() { return this.items.filter((q) => q._picked).length; },
     lowTime() { return this.leftSecs > 0 && this.leftSecs <= 300; },

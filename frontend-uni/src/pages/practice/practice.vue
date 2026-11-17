@@ -425,7 +425,7 @@ import { syncCloudFavs } from '../../fav/fav-sync.js';
 import { enqueueAnswers, enqueueMistake, drawOffline, flushOfflineQueue } from '../../services/offline.js';
 import { dayKey, loadSzDaily } from '../../home/checkin.js';
 import { dailySetLine, dailySetShareTail, percentileLine, percentileShareTail } from '../../exam/exam-copy.js';
-import { splitMaterial, sameMaterial } from '../../utils/material.js';
+import { splitMaterial } from '../../utils/material.js';
 import { normFontLv } from '../../services/font-size.js';
 import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
@@ -587,10 +587,8 @@ export default {
     },
     matInfo() {
       const q = this.cur;
-      if (!q || q.module !== 'ziliao' || this.idx === 0) return null;
-      const prev = this.items[this.idx - 1];
-      if (!prev || prev.module !== 'ziliao' || !sameMaterial(prev.question, q.question)) return null;
-      return splitMaterial(q.question);
+      if (!q || q.module !== 'ziliao') return null;
+      return splitMaterial(q.question, q.material_hash);
     },
     qSegs() {
       const q = this.cur;

@@ -322,7 +322,7 @@ def _clean_marks(raw, total: int) -> list[int]:
     return sorted(out)
 
 _EXAM_ITEM_FIELDS = ("id", "question", "options", "option_imgs", "module", "submodule", "image",
-                     "is_real", "exam_year", "exam_region")
+                     "is_real", "exam_year", "exam_region", "material_hash")
 
 
 def _exam_item(q: dict) -> dict:
