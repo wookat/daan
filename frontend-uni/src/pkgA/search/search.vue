@@ -43,6 +43,7 @@
               <rich-text class="q-text stem" :nodes="hl(it.question)" />
               <view v-if="detailWant === it.id && !(detail && detail.id === it.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
               <view v-if="detail && detail.id === it.id" class="q-detail">
+                <image v-if="detail.image" :src="imgUrl(detail.image)" mode="widthFix" class="optimg" />
                 <view v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}<image v-for="(im, ii) in (detail.option_imgs && detail.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
                 <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
                 <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>
@@ -85,6 +86,7 @@
           <rich-text class="q-text stem" :nodes="hl(result.code_hit.question)" />
           <view v-if="detailWant === result.code_hit.id && !(detail && detail.id === result.code_hit.id)" class="q-loading"><kg-skeleton preset="lines" /></view>
           <view v-if="detail && detail.id === result.code_hit.id" class="q-detail">
+            <image v-if="detail.image" :src="imgUrl(detail.image)" mode="widthFix" class="optimg" />
             <view v-for="(v, k) in detail.options" :key="k" class="q-opt" :class="{ ans: (detail.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}<image v-for="(im, ii) in (detail.option_imgs && detail.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
             <text class="q-ans">答案：<text class="num">{{ detail.answer }}</text></text>
             <text v-if="detail.explanation" class="q-exp">{{ detail.explanation }}</text>

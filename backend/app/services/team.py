@@ -343,6 +343,7 @@ def _sanitized_question(qid: int) -> dict | None:
         "question": q.get("question"),
         "options": q.get("options") or {},
         "image": q.get("image"),
+        "option_imgs": q.get("option_imgs") or {},
         # 多选题（答案多字母）：作答页先勾选再确认，不暴露答案本身
         "multi": len(db.normalize_answer(q.get("answer"))) > 1,
     }

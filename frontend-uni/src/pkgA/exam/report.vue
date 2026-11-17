@@ -692,7 +692,7 @@ export default {
     },
     fmtMin,
     imgUrl(p) {
-      return /^https?:/.test(p) ? p : (BASE_URL || '') + p;
+      return /^https?:/.test(p) ? p : (BASE_URL || location.origin) + p;
     },
     previewImg(p) {
       uni.previewImage({ urls: [this.imgUrl(p)] });

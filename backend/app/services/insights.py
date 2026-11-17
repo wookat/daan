@@ -459,7 +459,9 @@ def api_search_question(qid: int):
         raise HTTPException(404, "题目不存在")
     d = hit[0]
     return {**_q_brief(d), "question": d.get("question"), "options": d.get("options"),
-            "answer": d.get("answer"), "explanation": d.get("explanation"), "tag3": d.get("tag3")}
+            "answer": d.get("answer"), "explanation": d.get("explanation"), "tag3": d.get("tag3"),
+            "image": d.get("image"), "option_imgs": d.get("option_imgs"),
+            "material_hash": d.get("material_hash")}
 
 
 def _search_questions(q: str, limit: int, offset: int) -> dict:

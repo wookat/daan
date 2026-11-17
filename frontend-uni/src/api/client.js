@@ -14,9 +14,13 @@ export const BASE_URL = import.meta.env.VITE_API_BASE || '';
 export const BASE_URL = import.meta.env.VITE_API_BASE || REMOTE_BASE;
 // #endif
 
-/** 相对路径静态资源（/qimg/* 等）补全域名；H5 同源为空串、非 H5 补远端域。 */
+/** 相对路径静态资源（/qimg/* 等）补全域名；非 H5 补远端域，H5 补同源 origin——
+ * uni-image 会把 /path 解析到应用 base（/app/）下，必须给完整 URL 才能透传。 */
 export function imgUrl(p) {
-  return !p ? '' : (/^https?:/.test(p) ? p : (BASE_URL || '') + p);
+  if (!p) return '';
+  if (/^https?:/.test(p)) return p;
+  const base = BASE_URL || (typeof location !== 'undefined' ? location.origin : '');
+  return base + (p.charAt(0) === '/' ? p : '/' + p);
 }
 
 export function getAccessCode() {

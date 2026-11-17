@@ -153,6 +153,7 @@
               </view>
               <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
               <template v-if="f._open">
+                <image v-if="f.image" :src="imgUrl(f.image)" mode="widthFix" class="optimg" />
                 <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><image v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" /></view>
                 <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
                 <template v-if="f.xp_explanation">
@@ -238,13 +239,15 @@
               <text class="meta mtime">{{ fmt(m.created_at) }}</text>
             </view>
             <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
+            <image v-if="m.open && m.image" :src="imgUrl(m.image)" mode="widthFix" class="optimg" />
             <view v-if="m.open && m.options" class="mopts">
-              <text
-                v-for="(v, k) in m.options"
-                :key="k"
-                class="mopt"
-                :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
-              >{{ k }}. {{ v }}</text>
+              <view v-for="(v, k) in m.options" :key="k" class="moptrow">
+                <text
+                  class="mopt"
+                  :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
+                >{{ k }}. {{ v }}</text>
+                <image v-for="(im, ii) in (m.option_imgs && m.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" mode="widthFix" class="optimg" />
+              </view>
             </view>
             <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
               <kg-tag tone="bad">我选 {{ ansLetter(m.user_answer) }}</kg-tag>
@@ -1995,6 +1998,7 @@ export default {
 .q.clamp { max-height: calc(var(--fs-body) * var(--lh-body) * 3); overflow: hidden; }
 .meta { font-size: var(--fs-caption); color: var(--ink-3); }
 .mopts { margin-top: var(--sp-8); display: flex; flex-direction: column; gap: var(--sp-4); }
+.moptrow { display: flex; flex-direction: column; }
 .mopt { font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); }
 .mopt--ok { color: var(--ok-strong); }
 .mopt--bad { color: var(--bad-strong); }

@@ -124,7 +124,7 @@ export default {
     },
     qCard() {
       const q = this.d.question;
-      return { id: q.id, module: q.module, tag3: q.submodule || '', stem: String(q.question || '') };
+      return { id: q.id, module: q.module, tag3: q.submodule || '', stem: String(q.question || ''), images: q.image ? [imgUrl(q.image)] : [] };
     },
     optList() {
       const o = (this.d && this.d.question.options) || {};

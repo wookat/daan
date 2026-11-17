@@ -173,7 +173,7 @@ export default {
         module: q.module,
         stem: m ? m.stem : String(q.question || ''),
         material: m ? m.material : '',
-        images: q.image ? [q.image] : [],
+        images: q.image ? [imgUrl(q.image)] : [],
       };
     },
     optList() {
