@@ -85,15 +85,36 @@ if command -v rsync >/dev/null; then
     backend deploy knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
     --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
 else
-  echo "本机无 rsync，走 tar|ssh 兜底（远端先清同步目标、保留 deploy/.env，写后 chown 回目录属主）"
-  (cd "$REPO_DIR" && tar --exclude='.git' --exclude='__pycache__' --exclude='node_modules' --exclude='.env' \
-    -czf - backend deploy knowledge frontend-uni/dist) \
-    | "${SSH_RUN[@]}" "$REMOTE" \
-      "cd $REMOTE_DIR && rm -rf backend knowledge frontend-uni/dist \
-       && find deploy -mindepth 1 -maxdepth 1 ! -name .env -exec rm -rf {} + \
-       && tar -xzf - \
-       && chown -R \$(stat -c '%U:%G' .) backend deploy knowledge frontend-uni/dist" \
-    || { echo "FAIL: tar|ssh 同步失败"; exit 1; }
+  echo "本机无 rsync，走清单 diff 增量 tar|ssh（双端按 size+mtime 比对，只传差异文件，保留 deploy/.env）"
+  SYNC_DIRS=(backend deploy knowledge frontend-uni/dist)
+  MANIFEST_LOCAL=$(mktemp) MANIFEST_REMOTE=$(mktemp)
+  CHANGED=$(mktemp) DELETED=$(mktemp)
+  (cd "$REPO_DIR" && find "${SYNC_DIRS[@]}" -type f \
+     ! -name '.env' ! -path '*__pycache__*' ! -path '*/.pytest_cache/*' ! -path '*/.ruff_cache/*' \
+     ! -path '*/node_modules/*' ! -path '*/.git/*' \
+     -printf '%s %T@ %p\n' | sort -k3 > "$MANIFEST_LOCAL")
+  "${SSH_RUN[@]}" "$REMOTE" "cd $REMOTE_DIR && find ${SYNC_DIRS[*]} -type f \
+     ! -name '.env' ! -path '*__pycache__*' ! -path '*/.pytest_cache/*' ! -path '*/.ruff_cache/*' \
+     ! -path '*/node_modules/*' ! -path '*/.git/*' \
+     -printf '%s %T@ %p\n' 2>/dev/null | sort -k3" > "$MANIFEST_REMOTE" || true
+  awk -v chg="$CHANGED" -v del="$DELETED" '
+    NR==FNR { sig[$3]=$1" "int($2); next }
+    { if (!($3 in sig)) { print $3 > del; next }
+      if (sig[$3] != $1" "int($2)) print $3 > chg
+      seen[$3]=1 }
+    END { for (p in sig) if (!(p in seen)) print p > chg }' "$MANIFEST_LOCAL" "$MANIFEST_REMOTE"
+  echo "  差异: $(wc -l < "$CHANGED") 变更 / $(wc -l < "$DELETED") 删除（本地清单 $(wc -l < "$MANIFEST_LOCAL") 项）"
+  if [[ -s "$CHANGED" ]]; then
+    (cd "$REPO_DIR" && tar -czf - -T "$CHANGED") \
+      | "${SSH_RUN[@]}" "$REMOTE" "cd $REMOTE_DIR && tar -xzf -" \
+      || { echo "FAIL: 增量 tar|ssh 同步失败"; exit 1; }
+  fi
+  if [[ -s "$DELETED" ]]; then
+    "${SSH_RUN[@]}" "$REMOTE" "cd $REMOTE_DIR && xargs -d '\n' rm -f" < "$DELETED" \
+      || { echo "FAIL: 远端删除清单执行失败"; exit 1; }
+  fi
+  "${SSH_RUN[@]}" "$REMOTE" \
+    "cd $REMOTE_DIR && chown -R \$(stat -c '%U:%G' .) backend deploy knowledge frontend-uni/dist" || true
 fi
 
 # caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（新机 101.42.17.195 出口→AMS，老机曾为 ICN）的副本：
@@ -156,6 +177,10 @@ while (( SECONDS < DEADLINE )); do
   CUR_REV=$(curl -s --max-time 15 "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4 || true)
   echo "  poll: started=${CUR_STARTED:-?} rev=${CUR_REV:-?}${COMPOSE_RC:+ compose_rc=$COMPOSE_RC}"
   if [[ -n "$CUR_STARTED" && "$CUR_STARTED" != "$PREV_STARTED" && "$CUR_REV" == "$BUILD_REV" ]]; then
+    REBUILT=1; break
+  fi
+  # 同 rev 重复部署：镜像内容未变 → 容器不重建、StartedAt 不变，但线上 rev 已是目标值即视为收敛
+  if [[ "$COMPOSE_RC" == "0" && "$CUR_REV" == "$BUILD_REV" ]]; then
     REBUILT=1; break
   fi
   if [[ -n "$COMPOSE_RC" && "$COMPOSE_RC" != "0" ]]; then
