@@ -35,6 +35,11 @@ _QUOTA_CODES = (402, 403, 429)
 def _rescue_ok(messages: list) -> bool:
     return bool(RESCUE_BASE_URL and RESCUE_API_KEY)
 
+
+def _main_only() -> bool:
+    """LLM_MAIN_ONLY=1：批量生成等离线任务强制只用主模型——429/5xx 退避重试，不降级 rescue。"""
+    return os.environ.get("LLM_MAIN_ONLY") == "1"
+
 TIMEOUT = httpx.Timeout(float(os.environ.get("LLM_TIMEOUT", "180")), connect=15.0)
 
 
@@ -102,12 +107,32 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000,
     ok = False
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            for attempt in range(3):
-                resp = await client.post(
-                    f"{base}/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {key}"},
-                    json=_body(model, messages, temperature, max_tokens, think),
-                )
+            max_attempts = 12 if _main_only() else 3
+            for attempt in range(max_attempts):
+                try:
+                    resp = await client.post(
+                        f"{base}/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {key}"},
+                        json=_body(model, messages, temperature, max_tokens, think),
+                    )
+                except httpx.HTTPError as e:
+                    # 中转站偶发"挂起不回"：批量模式把网络异常也纳入退避重试
+                    if _main_only() and attempt < max_attempts - 1:
+                        wait = min(60.0, 5.0 * (attempt + 1))
+                        log.warning("[llm] %s %s, main-only retry %d/%d in %.0fs", model, type(e).__name__, attempt + 1, max_attempts, wait)
+                        await asyncio.sleep(wait)
+                        continue
+                    raise
+                if _main_only():
+                    if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and attempt < max_attempts - 1:
+                        wait = min(60.0, 5.0 * (attempt + 1))
+                        log.warning("[llm] %s status=%s, main-only retry %d/%d in %.0fs", model, resp.status_code, attempt + 1, max_attempts, wait)
+                        await asyncio.sleep(wait)
+                        continue
+                    resp.raise_for_status()
+                    text = _content(resp.json())
+                    ok = True
+                    return text
                 if resp.status_code >= 500 and attempt < 2:
                     await asyncio.sleep(2 * (attempt + 1))
                     continue

@@ -16,8 +16,14 @@ import argparse
 import asyncio
 import json
 import os
+import re
 import sys
 import time
+
+# 全部走主模型（grok-4.7）：429/5xx 退避重试，不降级 rescue；
+# grok 思考型模型 + 长讲解输出常超默认 180s 读超时，放宽到 360s
+os.environ.setdefault("LLM_MAIN_ONLY", "1")
+os.environ.setdefault("LLM_TIMEOUT", "300")
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -57,14 +63,32 @@ def fetch_batch(conn, ids):
     return qs
 
 
+def _accept(q: dict, text: str | None) -> str | None:
+    """质量闸：占位符未填/答案与已知答案不符/题目存疑 → 拒收。"""
+    if not text or "题目存疑" in text[:60]:
+        return None
+    if "【一句话】核心思路" in text:
+        return None
+    m = re.search(r"【答案】([A-E]+)", text)
+    norm = lambda s: "".join(sorted((s or "").upper()))
+    if m and q["known_answer"] and norm(m.group(1)) != norm(q["known_answer"].strip()):
+        print(f"[gen] q{q['id']} 答案不符 model={m.group(1)} truth={q['known_answer']}", file=sys.stderr)
+        return None
+    return text
+
+
 async def worker(sem: asyncio.Semaphore, q: dict, results: list):
     async with sem:
+        t0 = time.time()
         try:
-            text = await engine.explain(q)
-            if text and "题目存疑" not in text[:60]:
+            # 中转站有"挂起不回"模式（TCP 保持连接但永不完成）——httpx 读超时可能被
+            # 心跳字节不断重置，必须外层硬截止兜底
+            text = _accept(q, await asyncio.wait_for(engine.explain(q), timeout=420))
+            if text:
                 results.append({"id": q["id"], "hs_explanation": text})
         except Exception as e:  # noqa: BLE001 批量生成容错，失败题跳过
-            print(f"[gen] q{q['id']} err: {e}", file=sys.stderr)
+            print(f"[gen] q{q['id']} err: {type(e).__name__} {e!r}", file=sys.stderr)
+        print(f"[gen] q{q['id']} done in {time.time()-t0:.0f}s", flush=True)
 
 
 async def main_async(workers: int):
