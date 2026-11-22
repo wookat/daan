@@ -18,8 +18,13 @@ export const segResizeMixin = {
     this._segResize = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        const fn = segUpdater(this.$refs);
-        if (fn) fn();
+        const refs = this.$refs || {};
+        const names = Object.keys(refs).filter((k) => /^seg\d*$/.test(k));
+        if (!names.length) names.push('seg');
+        for (const n of names) {
+          const fn = segUpdater(refs, n);
+          if (fn) fn();
+        }
       }, SEG_RESIZE_DEBOUNCE_MS);
     };
     uni.onWindowResize(this._segResize);

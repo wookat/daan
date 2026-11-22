@@ -9,7 +9,7 @@
 
         <kg-card variant="flat" class="sec">
           <text class="h">选择模块</text>
-          <kg-chip-row :options="modOpts" :model-value="module || ''" @update:model-value="module = $event || null" />
+          <kg-chip-row :options="modOpts" :model-value="module || ''" wrap @update:model-value="module = $event || null" />
           <view class="acts">
             <kg-button block size="lg" icon="swords" @click="createMatch">发起好友挑战</kg-button>
             <kg-button block size="lg" variant="ghost" icon="shuffle" @click="randomMatch">随机匹配对手</kg-button>
@@ -135,7 +135,7 @@
 </template>
 
 <script>
-import { pkCreate, pkJoin, pkRandomMatch, pkMatch, pkSubmit, pkMine, pkLeaderboard, pkNickname, trackEvent } from '../../api/api.js';
+import { pkCreate, pkJoin, pkRandomMatch, pkMatch, pkSubmit, pkMine, pkLeaderboard, pkNickname, trackEvent, imgUrl } from '../../api/api.js';
 import { MODULES } from '../../utils/module-meta.js';
 
 const MODS = Object.fromEntries(Object.keys(MODULES).map((k) => [k, MODULES[k].label]));
@@ -184,11 +184,22 @@ export default {
     },
     quizQ() {
       const q = this.curQ;
-      return { id: q.id, module: q.module, tag3: q.submodule || '', stem: String(q.question || '') };
+      return {
+        id: q.id,
+        module: q.module,
+        tag3: q.submodule || '',
+        stem: String(q.question || ''),
+        images: q.image ? [imgUrl(q.image)] : [],
+      };
     },
     quizOpts() {
       const o = (this.curQ && this.curQ.options) || {};
-      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]) }));
+      const oi = (this.curQ && this.curQ.option_imgs) || {};
+      return Object.keys(o).map((k) => {
+        const raw = oi[k];
+        const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+        return { key: k, text: String(o[k] == null ? '' : o[k]), images: arr.filter(Boolean).map(imgUrl) };
+      });
     },
     streak() {
       return this.questions.map((q, i) => {
@@ -339,11 +350,20 @@ export default {
         clearInterval(this.timerId);
         this.timerId = null;
       }
+      if (this._pickDelay) {
+        clearTimeout(this._pickDelay);
+        this._pickDelay = null;
+      }
     },
     pick(k) {
       if (this.picked) return;
       this.picked = k;
-      setTimeout(() => this.lockAnswer(k), 350);
+      // 选答后立即停表，避免 350ms 延迟内倒计时到期用空答案覆写
+      this.stopTimer();
+      this._pickDelay = setTimeout(() => {
+        this._pickDelay = null;
+        this.lockAnswer(k);
+      }, 350);
     },
     lockAnswer(k) {
       if (this.answers.length > this.qIndex) return;

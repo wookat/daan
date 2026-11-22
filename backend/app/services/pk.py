@@ -99,6 +99,7 @@ def _sanitized_questions(qids: list[int]) -> list[dict]:
             "submodule": q.get("submodule"),
             "question": q.get("question"),
             "options": q.get("options") or {},
+            "option_imgs": q.get("option_imgs") or {},
             "image": q.get("image"),
         })
     return out
@@ -223,12 +224,17 @@ def api_pk_join(body: dict, request: Request):
         conn.close()
         raise HTTPException(409, "该挑战已被其他考友接受")
     if not m["opponent_uid"]:
-        conn.execute(
+        cur = conn.execute(
             "UPDATE pk_matches SET opponent_uid=?, opponent_name=?, probe=MAX(COALESCE(probe,0),?)"
             " WHERE id=? AND opponent_uid IS NULL",
             (uid, _clean_name(body.get("nickname")), 1 if probe_request(request) else 0, m["id"]),
         )
         conn.commit()
+        if cur.rowcount == 0:
+            row = conn.execute("SELECT opponent_uid FROM pk_matches WHERE id=?", (m["id"],)).fetchone()
+            if not row or row["opponent_uid"] != uid:
+                conn.close()
+                raise HTTPException(409, "该挑战已被其他考友接受")
     conn.close()
     qids = json.loads(m["question_ids"])
     return {"code": code, "module": m["module"], "questions": _sanitized_questions(qids)}
@@ -309,43 +315,56 @@ def api_pk_submit(body: dict):
     if not code or not isinstance(items, list):
         raise HTTPException(400, "缺少 code 或作答记录")
     conn = db.get_conn()
-    m = conn.execute("SELECT * FROM pk_matches WHERE code=?", (code,)).fetchone()
-    if not m:
+    try:
+        m = conn.execute("SELECT * FROM pk_matches WHERE code=?", (code,)).fetchone()
+        if not m:
+            raise HTTPException(404, "挑战不存在或已过期")
+        side = _side(m, uid)
+        if not side:
+            raise HTTPException(403, "请先加入该挑战")
+        if m[f"{side}_score"] is not None:
+            raise HTTPException(409, "你已提交过本局作答")
+        qids = json.loads(m["question_ids"])
+    finally:
         conn.close()
-        raise HTTPException(404, "挑战不存在或已过期")
-    side = _side(m, uid)
-    if not side:
-        conn.close()
-        raise HTTPException(403, "请先加入该挑战")
-    if m[f"{side}_score"] is not None:
-        conn.close()
-        raise HTTPException(409, "你已提交过本局作答")
-    qids = json.loads(m["question_ids"])
+    # 判分涉及读 questions，放在写事务外；写终局前用 BEGIN IMMEDIATE 重读防并发同时交卷卡死 waiting
     score, correct, total_ms, detail = _grade(qids, items[: PK_N_QUESTIONS * 2])
-    other = "opponent" if side == "creator" else "creator"
-    both_done = m[f"{other}_score"] is not None
-    winner = None
-    finished_at = None
-    status = m["status"]
-    if both_done:
-        status = "finished"
-        finished_at = time.time()
-        mine, theirs = (score, total_ms), (m[f"{other}_score"], m[f"{other}_time_ms"])
-        if mine[0] != theirs[0]:
-            winner = side if mine[0] > theirs[0] else other
-        elif mine[1] != theirs[1]:
-            winner = side if mine[1] < theirs[1] else other
-        else:
-            winner = "draw"
-    conn.execute(
-        f"""UPDATE pk_matches SET {side}_score=?, {side}_correct=?, {side}_time_ms=?, {side}_answers=?,
-            status=?, winner=?, finished_at=? WHERE id=?""",
-        (score, correct, total_ms, json.dumps(detail), status, winner, finished_at, m["id"]),
-    )
-    conn.commit()
-    m = conn.execute("SELECT * FROM pk_matches WHERE id=?", (m["id"],)).fetchone()
-    conn.close()
-    return {"match": _match_payload(m, uid, with_detail=True)}
+    conn = db.get_conn()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        m = conn.execute("SELECT * FROM pk_matches WHERE code=?", (code,)).fetchone()
+        if not m:
+            raise HTTPException(404, "挑战不存在或已过期")
+        side = _side(m, uid)
+        if not side:
+            raise HTTPException(403, "请先加入该挑战")
+        if m[f"{side}_score"] is not None:
+            raise HTTPException(409, "你已提交过本局作答")
+        other = "opponent" if side == "creator" else "creator"
+        both_done = m[f"{other}_score"] is not None
+        winner = None
+        finished_at = None
+        status = m["status"]
+        if both_done:
+            status = "finished"
+            finished_at = time.time()
+            mine, theirs = (score, total_ms), (m[f"{other}_score"], m[f"{other}_time_ms"])
+            if mine[0] != theirs[0]:
+                winner = side if mine[0] > theirs[0] else other
+            elif mine[1] != theirs[1]:
+                winner = side if mine[1] < theirs[1] else other
+            else:
+                winner = "draw"
+        conn.execute(
+            f"""UPDATE pk_matches SET {side}_score=?, {side}_correct=?, {side}_time_ms=?, {side}_answers=?,
+                status=?, winner=?, finished_at=? WHERE id=?""",
+            (score, correct, total_ms, json.dumps(detail), status, winner, finished_at, m["id"]),
+        )
+        conn.commit()
+        m = conn.execute("SELECT * FROM pk_matches WHERE id=?", (m["id"],)).fetchone()
+        return {"match": _match_payload(m, uid, with_detail=True)}
+    finally:
+        conn.close()
 
 
 @router.get("/mine")
@@ -355,7 +374,7 @@ def api_pk_mine(uid: str, limit: int = 20):
     rows = conn.execute(
         """SELECT * FROM pk_matches WHERE creator_uid=? OR opponent_uid=?
            ORDER BY created_at DESC LIMIT ?""",
-        (u, u, min(int(limit), 50)),
+        (u, u, max(0, min(int(limit), 50))),
     ).fetchall()
     conn.close()
     items = []

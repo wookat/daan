@@ -1,24 +1,18 @@
 <template>
   <view class="page team">
-    <!-- 我的小队列表 -->
-    <kg-two-col v-if="view === 'home'" aside-first>
-      <template #aside>
+    <!-- 我的小队列表（主栏放主 Hero + 列表，侧栏放邀请码加入，对齐 pk.vue 桌面双栏主次结构） -->
+    <kg-two-col v-if="view === 'home'">
+      <template #main>
         <kg-hero-card
           label="刷题小队 · 已加入"
           :value="teams.length"
           unit="队"
-          :primary="{ text: '创建小队' }"
+          :primary="teams.length ? { text: '创建小队' } : null"
           class="hero"
           @primary="showCreate = true"
         >
           <text class="hero-s">和队友一起打卡 · 看谁今天没刷题 · 互相催学</text>
         </kg-hero-card>
-        <kg-card class="join" :padding="12">
-          <text class="join-t">有邀请码？直接加入</text>
-          <kg-invite-input v-model="joinCode" placeholder="输入 6 位邀请码" :maxlength="8" :minlength="6" :error="joinErr" :loading="joining" @submit="joinByCode" />
-        </kg-card>
-      </template>
-      <template #main>
         <kg-skeleton v-if="!loaded" preset="cards" />
         <kg-empty-state
           v-else-if="loadErr"
@@ -44,6 +38,12 @@
             </view>
           </kg-card>
         </template>
+      </template>
+      <template #aside>
+        <kg-card class="join" :padding="12">
+          <text class="join-t">有邀请码？直接加入</text>
+          <kg-invite-input v-model="joinCode" placeholder="输入 6 位邀请码" :maxlength="8" :minlength="6" :error="joinErr" :loading="joining" @submit="joinByCode" />
+        </kg-card>
       </template>
     </kg-two-col>
 

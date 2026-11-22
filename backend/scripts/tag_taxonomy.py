@@ -21,7 +21,8 @@ import time
 
 sys.path.insert(0, ".")
 
-from backend.app import db, llm, taxonomy
+from backend.app import db
+from backend.app.services import llm, taxonomy
 
 CONF_THRESHOLD = 0.6
 

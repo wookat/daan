@@ -84,9 +84,10 @@ def tiku_index():
     total = sum(counts.values())
     body = (
         "<h1>公务员考试题库</h1>"
-        f"<p>收录 {total} 道行测题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。"
-        '· <a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
-        ' · <a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
+        f"<p>收录 {total} 道行测题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。</p>"
+        '<p class="meta" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:-4px">'
+        '<a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
+        '<a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
     )
@@ -738,7 +739,7 @@ def _similar_questions(conn, r, qid: int, limit: int = 8) -> list:
 def _render_question(qid: int, version: float | None = None) -> str:
     conn = db.get_conn()
     r = conn.execute(
-        "SELECT id, module, submodule, tag3, question, options, answer, explanation, hs_explanation, "
+        "SELECT id, module, submodule, tag3, question, options, option_imgs, answer, explanation, hs_explanation, "
         "is_real, exam_year, exam_region, image, image_credit, material_hash, source "
         "FROM questions WHERE id=? AND disabled=0",
         (qid,),
@@ -768,6 +769,10 @@ def _render_question(qid: int, version: float | None = None) -> str:
         options = json.loads(r["options"] or "{}")
     except ValueError:
         options = {}
+    try:
+        opt_imgs = json.loads(r["option_imgs"] or "{}")
+    except ValueError:
+        opt_imgs = {}
     img_html = ""
     if r["image"]:
         img_src = r["image"] if r["image"].startswith("http") else _url(r["image"])
@@ -782,11 +787,20 @@ def _render_question(qid: int, version: float | None = None) -> str:
         f'{"&tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
         f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo_q'
     )
-    opts_html = "".join(
-        f'<a class="opt" href="{practice_href}&pick={_e(k)}" rel="nofollow">'
-        f'<b>{_e(k)}.</b> {_e(v)}</a>'
-        for k, v in sorted(options.items())
-    )
+    opt_parts = []
+    for k, v in sorted(options.items()):
+        oimgs = opt_imgs.get(k) if isinstance(opt_imgs, dict) else None
+        if isinstance(oimgs, str):
+            oimgs = [oimgs]
+        oimg_html = "".join(
+            f'<img src="{_e(u if u.startswith("http") else _url(u))}" alt="选项{_e(k)}配图" style="max-width:100%;max-height:140px;vertical-align:middle;margin-left:6px;border-radius:4px" loading="lazy">'
+            for u in (oimgs or []) if isinstance(u, str) and u
+        )
+        opt_parts.append(
+            f'<a class="opt" href="{practice_href}&pick={_e(k)}" rel="nofollow">'
+            f'<b>{_e(k)}.</b> {_e(v)}{oimg_html}</a>'
+        )
+    opts_html = "".join(opt_parts)
     cta_label = "做这道题，再来五道同考点 ›" if r["tag3"] else "去练习页做这道题 ›"
     cta_html = f'<a class="cta cta-w" href="{practice_href}">{cta_label}</a>'
     hs = (r["hs_explanation"] or "").strip()
@@ -859,7 +873,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
         )
         + "<!--QCOMMENTS-->"
     )
-    title_head = qtext.replace("\n", " ")[:50]
+    title_head = qtext.replace("\n", " ")[:50].rstrip("_ ") or f"行测题 #{qid}"
     # 站方单一解析的练习题不是 Q&A 社区页（Google QAPage 内容准则明确列为无效用例），
     # 按 schema.org 教育资源建模：LearningResource ⊃ Question(选择题)，选项为 suggestedAnswer
     jsonld = {

@@ -3,7 +3,7 @@
 //   默认打本地 uvicorn http://127.0.0.1:8399；部署后对生产后端跑一次即可更新。
 // 产物：
 //   miniapp-native/miniprogram/api/openapi-types.ts（小程序端可直接 import type）
-//   frontend-uni/src/api-openapi.d.ts（H5 端，同一份）
+//   frontend-uni/src/api/api-openapi.d.ts（H5 端，同一份）
 // 注意：文件头是 GENERATED 标记，不要手改；改了会被下一次生成覆盖。
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -35,7 +35,7 @@ execFileSync('npx', ['-y', 'openapi-typescript@7', specPath, '-o', outPath], {
 const { readFileSync } = await import('node:fs');
 const gen = readFileSync(outPath, 'utf-8');
 const out1 = resolve(root, 'miniapp-native/miniprogram/api/openapi-types.ts');
-const out2 = resolve(root, 'frontend-uni/src/api-openapi.d.ts');
+const out2 = resolve(root, 'frontend-uni/src/api/api-openapi.d.ts');
 writeFileSync(out1, gen);
 writeFileSync(out2, gen);
 rmSync(tmp, { recursive: true, force: true });

@@ -1,7 +1,7 @@
 // AI 端点：拍题讲解（流式/上传）/ 答题卡扫描 / AI 面试陪练
-import { BASE_URL, request, rawRequest, anonUid, getAccessCode, authHeader, withAuthRetry } from './client';
+import { BASE_URL, request, rawRequest, anonUid, getAccessCode, authHeader, withAuthRetry, sessionId, clearAuth, getToken } from './client';
 import { fetchNet, readNet, feedSse, makeUtf8Decoder } from './net';
-import { netFailMessage } from './api-policy';
+import { netFailMessage, classifyHttpError } from './api-policy';
 
 // #ifdef H5
 // H5 流式讲解：onMeta(meta) 一次，onDelta(fullText) 增量；返回完整讲解文本。
@@ -131,13 +131,19 @@ export function scanSheet({ filePath, uid }) {
       url: BASE_URL + '/api/scan_sheet',
       filePath,
       name: 'image',
+      header: { 'X-Access-Code': getAccessCode(), 'X-Kg-Session': sessionId(), ...authHeader() },
       formData: { uid: uid || '' },
       timeout: 120000,
       success: (res) => {
         try {
-          const data = JSON.parse(res.data);
-          if (res.statusCode >= 200 && res.statusCode < 300) resolve(data);
-          else reject(new Error(data.detail || `HTTP ${res.statusCode}`));
+          const data = typeof res.data === 'string' ? JSON.parse(res.data || '{}') : (res.data || {});
+          if (res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(data);
+            return;
+          }
+          const err = classifyHttpError({ status: res.statusCode, detail: data.detail, path: '/api/scan_sheet' });
+          if (err.authExpired && (getToken() || res.statusCode === 403)) clearAuth();
+          reject(new Error(err.message));
         } catch (e) {
           reject(e);
         }
@@ -251,11 +257,12 @@ export function interviewSession(id) {
 
 // #ifdef H5
 // H5 流式点评：onMeta({scores,total,summary}) 一次，onThinking({secs,chars}) 推理中逐秒，onDelta(fullText) 增量，onDone({session_id})。
-export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta, onThinking }) {
+export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta, onThinking, signal }) {
   const resp = await fetchNet(BASE_URL + '/api/interview/answer/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
     body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
+    signal,
   });
   if (!resp.ok) {
     let detail = `HTTP ${resp.status}`;
@@ -275,11 +282,12 @@ export async function streamInterview({ questionId, answer, durationSec, onMeta,
 }
 
 // H5 中断 session 重新生成点评：onThinking({secs,chars}) 推理中，onDelta(fullText) 增量，完成返回 { review }。
-export async function streamInterviewReviewRegen({ sessionId, onDelta, onThinking }) {
+export async function streamInterviewReviewRegen({ sessionId, onDelta, onThinking, signal }) {
   const resp = await fetchNet(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
     body: JSON.stringify({ uid: anonUid() }),
+    signal,
   });
   if (!resp.ok) {
     let detail = `HTTP ${resp.status}`;

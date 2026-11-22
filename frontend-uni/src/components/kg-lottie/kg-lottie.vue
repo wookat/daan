@@ -28,10 +28,13 @@ export default {
   },
   // #ifdef H5
   mounted() {
+    this._destroyed = false;
     this._play();
   },
   beforeUnmount() {
+    this._destroyed = true;
     this._anim && this._anim.destroy();
+    this._anim = null;
   },
   // #endif
   methods: {
@@ -40,6 +43,7 @@ export default {
       if (typeof window === 'undefined' || !this.$refs.box) return;
       const el = this.$refs.box.$el || this.$refs.box;
       const { default: lottie } = await import('../../vendor/lottie/lottie_light.js');
+      if (this._destroyed || !this.$refs.box) return;
       this._anim = lottie.loadAnimation({
         container: el,
         renderer: 'svg',

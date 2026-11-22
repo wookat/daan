@@ -95,6 +95,9 @@ def api_admin_update_question(qid: int, body: dict, x_admin_token: str | None = 
         raise HTTPException(400, "无可更新字段或题目不存在")
     if "tag3" in body:
         db.tag3_review_close(qid)
+    if "question" in body or "options" in body:
+        from app.services import insights
+        insights.FTS_WAKE.set()
     return {"ok": True}
 
 @router.get("/api/admin/taxonomy/questions")
@@ -196,9 +199,9 @@ def api_admin_ops_status(x_admin_token: str | None = Header(None)):
 
 
 @router.get("/api/admin/governance")
-def api_admin_governance(response: Response, x_admin_token: str | None = Header(None)):
+def api_admin_governance(response: Response, refresh: bool = False, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    data, state = db.governance_scan_state()
+    data, state = db.governance_scan_state(refresh=refresh)
     response.headers["X-Kg-Cache"] = state
     return data
 
@@ -370,19 +373,19 @@ def _analytics_cached(response: Response, key: str, fn):
 @router.get("/api/admin/analytics/usage")
 def api_admin_analytics_usage(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return _analytics_cached(response, "an_usage", lambda: db_analytics.usage_overview(days))
+    return _analytics_cached(response, f"an_usage:{days}", lambda: db_analytics.usage_overview(days))
 
 
 @router.get("/api/admin/analytics/retention")
 def api_admin_analytics_retention(response: Response, days: int = 35, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return _analytics_cached(response, "an_retention", lambda: db_analytics.retention(days))
+    return _analytics_cached(response, f"an_retention:{days}", lambda: db_analytics.retention(days))
 
 
 @router.get("/api/admin/analytics/habits")
 def api_admin_analytics_habits(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return _analytics_cached(response, "an_habits", lambda: db_analytics.habits(days))
+    return _analytics_cached(response, f"an_habits:{days}", lambda: db_analytics.habits(days))
 
 
 @router.get("/api/admin/analytics/funnel")
@@ -395,16 +398,16 @@ def api_admin_analytics_funnel(response: Response, chain: str = "", days: int = 
 @router.get("/api/admin/analytics/team")
 def api_admin_analytics_team(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return _analytics_cached(response, "an_team", lambda: db_analytics.team_overview(days))
+    return _analytics_cached(response, f"an_team:{days}", lambda: db_analytics.team_overview(days))
 
 
 @router.get("/api/admin/analytics/ai")
 def api_admin_analytics_ai(response: Response, days: int = 30, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return _analytics_cached(response, "an_ai", lambda: db_analytics.ai_quality(days))
+    return _analytics_cached(response, f"an_ai:{days}", lambda: db_analytics.ai_quality(days))
 
 
 @router.get("/api/admin/analytics/exam")
 def api_admin_analytics_exam(response: Response, days: int = 90, x_admin_token: str | None = Header(None)):
     check_admin(x_admin_token)
-    return _analytics_cached(response, "an_exam", lambda: db_analytics.exam_overview(days))
+    return _analytics_cached(response, f"an_exam:{days}", lambda: db_analytics.exam_overview(days))

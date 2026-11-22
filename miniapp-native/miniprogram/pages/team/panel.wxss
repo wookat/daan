@@ -6,7 +6,7 @@
 .hero {
   padding: var(--card-pad);
   border-radius: var(--r-lg);
-  background: var(--brand-grad);
+  background: var(--brand);
   color: var(--on-brand);
   margin-bottom: var(--card-gap);
   display: flex;

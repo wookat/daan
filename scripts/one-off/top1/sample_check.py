@@ -10,7 +10,10 @@
 "category": 失败类别, "reason": 失败原因, "note": 备注}。未提供 --audit 时，
 清单中的核对结论输出为 PENDING（待人工审核），不会默认 PASS。
 """
-import argparse, collections, hashlib, json
+import argparse
+import collections
+import hashlib
+import json
 
 
 def pick(items, n, seed):
@@ -40,13 +43,13 @@ def main():
     ap.add_argument("--summary", help="输出审计汇总 JSON 路径")
     args = ap.parse_args()
 
-    items = [json.loads(l) for l in open(args.inp, encoding="utf-8")]
+    items = [json.loads(line) for line in open(args.inp, encoding="utf-8")]
     picked = pick(items, args.n, args.seed)
 
     audit = {}
     if args.audit:
-        for l in open(args.audit, encoding="utf-8"):
-            r = json.loads(l)
+        for line in open(args.audit, encoding="utf-8"):
+            r = json.loads(line)
             k = r["k"]
             if k in audit:
                 raise SystemExit(f"审核输入重复序号: k={k}")

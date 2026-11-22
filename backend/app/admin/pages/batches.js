@@ -78,7 +78,7 @@
         </div>
         <div class="q-text">${esc(q.question)}</div>
         <div style="display:grid;gap:8px">${opts.map(([k, v]) =>
-          `<div class="opt-row ${String(q.answer || '').toUpperCase().startsWith(k) ? 'ans' : ''}"><b>${k}.</b><span>${esc(v)}</span></div>`).join('')}</div>
+          `<div class="opt-row ${String(q.answer || '').toUpperCase().startsWith(k) ? 'ans' : ''}"><b>${esc(k)}.</b><span>${esc(v)}</span></div>`).join('')}</div>
         ${q.explanation ? `<div class="expl-box"><b>解析：</b>${esc(q.explanation)}</div>` : ''}
       </div>
       <div class="wb-foot">

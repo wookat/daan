@@ -9,20 +9,24 @@ import { normalizeDailyDeepLink } from "./services/deeplink.js";
 import { initKeyboardFocus } from "./a11y/a11y-focus.js";
 import { initA11yLive } from "./a11y/a11y-live.js";
 import { initRoutePrecache } from "./services/precache.js";
+import { applyTheme } from "./services/theme.js";
 import { createErrorReporter, describeRejection, installVueErrorHandler, isMaskedCrossOriginError } from "./services/monitor-client.js";
+import { BASE_URL } from "./api/client.js";
 initKeyboardFocus(); // 必须先于 app 挂载：拦截 Vue runtime 的 click addEventListener
 initA11yLive();
 initRoutePrecache();
+applyTheme(); // 先于 app 挂载：把 window.__uniConfig.tabBar 图标替换成内联 SVG，首帧即 0 PNG 请求且无暗色闪烁
 
-// 集中式错误监控（审计 P1-7）：未捕获 JS 错误同源上报 /api/monitor/report，由后端转发中心收集器
+// 集中式错误监控（审计 P1-7）：未捕获 JS 错误同源上报 /api/monitor/report（Capacitor 壳拼 BASE_URL），由后端转发中心收集器
 let mReport = () => false;
 if (typeof window !== 'undefined') {
+	const monitorUrl = (BASE_URL || '') + '/api/monitor/report';
 	mReport = createErrorReporter(({ message, stack }) => {
 		const body = JSON.stringify({ message, stack, url: location.href });
 		if (navigator.sendBeacon) {
-			navigator.sendBeacon('/api/monitor/report', new Blob([body], { type: 'application/json' }));
+			navigator.sendBeacon(monitorUrl, new Blob([body], { type: 'application/json' }));
 		} else {
-			fetch('/api/monitor/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+			fetch(monitorUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
 		}
 	});
 	window.addEventListener('error', (e) => {
@@ -55,8 +59,9 @@ if (typeof window !== 'undefined') {
 	});
 }
 
-// 离线壳：缓存静态资源，断网时仍能进入应用（离线做题依赖已下载题包）
-if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol !== 'file:') {
+// 离线壳：缓存静态资源，断网时仍能进入应用（离线做题依赖已下载题包）；Capacitor 原生壳内跳过 SW 注册
+const isNativeCap = typeof window !== 'undefined' && !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+if (!isNativeCap && typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol !== 'file:') {
 	window.addEventListener('load', () => {
 		navigator.serviceWorker.register('sw.js').then((reg) => {
 			// 主动校验 SW 更新：回前台即触发（浏览器自身校验最长间隔 24h，发版后存量用户尽快吃到新壳）
@@ -146,7 +151,8 @@ if (typeof window !== 'undefined') {
 				if (sessionStorage.getItem('kg_sh_reload')) return;
 				const cur = runningHash();
 				if (!cur) return;
-				fetch('/', { cache: 'no-store' })
+				const shellUrl = (import.meta.env && import.meta.env.BASE_URL) || location.pathname || '/app/';
+				fetch(shellUrl, { cache: 'no-store' })
 					.then((r) => (r.ok ? r.text() : ''))
 					.then((html) => {
 						const m = html && html.match(/assets\/index-([\w-]+)\.js/);

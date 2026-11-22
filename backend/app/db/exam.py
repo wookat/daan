@@ -8,7 +8,7 @@ import time
 
 import app.db as db
 
-__all__ = ["_answer_state", "_compose_paper", "_dominant_paper_source", "_ensure_exam_progress", "_ensure_exam_tables", "_list_exam_papers_base", "_paper_by_psource", "_paper_module_counts", "_refresh_papers_cache", "claim_paper_submit", "clear_exam_progress", "create_mock_paper", "create_template_paper", "exam_active_qids", "exam_paper_filters", "exam_paper_social", "finish_exam_attempt", "get_exam_attempt", "get_exam_paper", "get_paper_export", "latest_exam_progress", "list_exam_attempts", "list_exam_papers", "list_papers", "paper_picks_hash", "paper_questions", "paper_submitted_pages", "save_exam_progress", "save_paper_export", "start_exam_attempt", "upsert_exam_paper", "weak_tag3s"]
+__all__ = ["_answer_state", "_compose_paper", "_dominant_paper_source", "_ensure_exam_progress", "_ensure_exam_tables", "_list_exam_papers_base", "_paper_by_psource", "_paper_module_counts", "_refresh_papers_cache", "claim_exam_attempt", "claim_paper_submit", "clear_exam_progress", "create_mock_paper", "create_template_paper", "exam_active_qids", "exam_paper_filters", "exam_paper_social", "finish_exam_attempt", "get_exam_attempt", "get_exam_paper", "get_paper_export", "latest_exam_progress", "list_exam_attempts", "list_exam_papers", "list_papers", "paper_picks_hash", "paper_questions", "paper_submitted_pages", "save_exam_progress", "save_paper_export", "start_exam_attempt", "unclaim_exam_attempt", "upsert_exam_paper", "weak_tag3s"]
 
 
 def list_papers() -> list[dict]:
@@ -203,6 +203,8 @@ def _paper_by_psource(conn) -> dict[str, dict]:
 
 
 def _ensure_exam_tables(conn):
+    if db._is_ensured(conn, "exam_tables"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS exam_papers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -233,6 +235,18 @@ def _ensure_exam_tables(conn):
     db.add_column_if_missing(conn, "exam_attempts", "marks", "TEXT")
     db.add_column_if_missing(conn, "exam_attempts", "probe", "INTEGER")
     db.add_column_if_missing(conn, "exam_attempts", "question_ids", "TEXT")
+    # 一次性幂等回填：xt_zhenti_apply 早期把国考卷 region 置空，导致地区筛「国考」漏掉最新国考卷
+    if conn.execute(
+        "SELECT 1 FROM exam_papers WHERE (region IS NULL OR region='') "
+        "AND (title LIKE '%国考%' OR title LIKE '%国家%') LIMIT 1"
+    ).fetchone():
+        conn.execute(
+            "UPDATE exam_papers SET region='国考' "
+            "WHERE (region IS NULL OR region='') AND (title LIKE '%国考%' OR title LIKE '%国家%')"
+        )
+        conn.commit()
+        db._papers_cache.clear()
+    db._mark_ensured(conn, "exam_tables")
 
 
 def upsert_exam_paper(title: str, kind: str, year: int | None, region: str | None,
@@ -293,14 +307,14 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
     """uid 无关的卷列表（含活跃题数 n / takers），按筛选键 TTL 缓存；
     过期后返回旧值并起后台线程刷新（stale-while-revalidate）。"""
     key = (kind, year, region)
-    hit = db._papers_cache.get(key)
-    if hit and not force:
-        if time.time() - hit[0] >= db._PAPERS_CACHE_TTL:
-            with db._papers_lock:
-                if key not in db._papers_refreshing:
-                    db._papers_refreshing.add(key)
-                    threading.Thread(target=_refresh_papers_cache, args=(key,), daemon=True).start()
-        return hit[1]
+    with db._papers_lock:
+        hit = db._papers_cache.get(key)
+        if hit and not force:
+            db._papers_cache.move_to_end(key)
+            if time.time() - hit[0] >= db._PAPERS_CACHE_TTL and key not in db._papers_refreshing:
+                db._papers_refreshing.add(key)
+                threading.Thread(target=_refresh_papers_cache, args=(key,), daemon=True).start()
+            return hit[1]
     where = ["1=1"]
     args: list = []
     if kind:
@@ -364,7 +378,11 @@ def _list_exam_papers_base(conn, kind: str | None, year: int | None,
         else:
             d["takers"], d["avg_score"] = 0, None
         base.append(d)
-    db._papers_cache[key] = (time.time(), base)
+    with db._papers_lock:
+        db._papers_cache[key] = (time.time(), base)
+        db._papers_cache.move_to_end(key)
+        while len(db._papers_cache) > db._PAPERS_CACHE_MAX:
+            db._papers_cache.popitem(last=False)
     return base
 
 
@@ -562,18 +580,59 @@ def start_exam_attempt(uid: str, paper_id: int, probe: bool = False,
     return aid
 
 
+def claim_exam_attempt(attempt_id: int) -> float | None:
+    """原子占位：并发双提交仅首次拿到提交时间戳，避免重复写 answer_log 与错题次数。"""
+    ts = time.time()
+    conn = db.get_conn()
+    try:
+        _ensure_exam_tables(conn)
+        cur = conn.execute(
+            "UPDATE exam_attempts SET submitted_at=? WHERE id=? AND submitted_at IS NULL",
+            (ts, attempt_id),
+        )
+        conn.commit()
+        return ts if cur.rowcount > 0 else None
+    finally:
+        conn.close()
+
+
+def unclaim_exam_attempt(attempt_id: int, claimed_at: float) -> None:
+    """判分中途异常时回滚占位，允许用户重试交卷。"""
+    conn = db.get_conn()
+    try:
+        _ensure_exam_tables(conn)
+        conn.execute(
+            "UPDATE exam_attempts SET submitted_at=NULL WHERE id=? AND submitted_at=? AND score IS NULL",
+            (attempt_id, claimed_at),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def finish_exam_attempt(attempt_id: int, answers: dict, score: float, per_module: dict,
-                        secs: dict | None = None, marks: list | None = None) -> bool:
+                        secs: dict | None = None, marks: list | None = None,
+                        claimed_at: float | None = None) -> bool:
     conn = db.get_conn()
     _ensure_exam_tables(conn)
-    cur = conn.execute(
-        "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=?, secs=?, marks=? "
-        "WHERE id=? AND submitted_at IS NULL",
-        (time.time(), json.dumps(answers, ensure_ascii=False), score,
-         json.dumps(per_module, ensure_ascii=False),
-         json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None,
-         json.dumps(marks) if marks else None, attempt_id),
-    )
+    if claimed_at is not None:
+        cur = conn.execute(
+            "UPDATE exam_attempts SET answers=?, score=?, per_module=?, secs=?, marks=? "
+            "WHERE id=? AND submitted_at=?",
+            (json.dumps(answers, ensure_ascii=False), score,
+             json.dumps(per_module, ensure_ascii=False),
+             json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None,
+             json.dumps(marks) if marks else None, attempt_id, claimed_at),
+        )
+    else:
+        cur = conn.execute(
+            "UPDATE exam_attempts SET submitted_at=?, answers=?, score=?, per_module=?, secs=?, marks=? "
+            "WHERE id=? AND submitted_at IS NULL",
+            (time.time(), json.dumps(answers, ensure_ascii=False), score,
+             json.dumps(per_module, ensure_ascii=False),
+             json.dumps({str(k): v for k, v in (secs or {}).items()}) if secs else None,
+             json.dumps(marks) if marks else None, attempt_id),
+        )
     conn.commit()
     ok = cur.rowcount > 0
     conn.close()
@@ -597,6 +656,8 @@ def get_exam_attempt(attempt_id: int) -> dict | None:
 
 
 def _ensure_exam_progress(conn):
+    if db._is_ensured(conn, "exam_progress"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS exam_progress (
             attempt_id INTEGER PRIMARY KEY,
@@ -614,6 +675,7 @@ def _ensure_exam_progress(conn):
         conn.execute("ALTER TABLE exam_progress ADD COLUMN secs TEXT")
     if "excl" not in gcols:
         conn.execute("ALTER TABLE exam_progress ADD COLUMN excl TEXT")
+    db._mark_ensured(conn, "exam_progress")
 
 
 def save_exam_progress(attempt_id: int, uid: str, picks: dict, idx: int,
@@ -650,7 +712,7 @@ def latest_exam_progress(uid: str) -> dict | None:
     _ensure_exam_tables(conn)
     _ensure_exam_progress(conn)
     row = conn.execute(
-        """SELECT g.attempt_id, g.picks, g.idx, g.marks, g.secs, g.excl, a.paper_id, a.started_at, p.duration_min
+        """SELECT g.attempt_id, g.picks, g.idx, g.marks, g.secs, g.excl, a.paper_id, a.started_at, a.question_ids, p.duration_min
            FROM exam_progress g
            JOIN exam_attempts a ON a.id = g.attempt_id
            JOIN exam_papers p ON p.id = a.paper_id
@@ -663,6 +725,7 @@ def latest_exam_progress(uid: str) -> dict | None:
         return None
     d = dict(row)
     d["picks"] = json.loads(d["picks"] or "{}")
+    d["question_ids"] = json.loads(d.get("question_ids") or "[]")
     d["marks"] = json.loads(d.get("marks") or "[]")
     d["secs"] = json.loads(d.get("secs") or "{}")
     d["excl"] = json.loads(d.get("excl") or "{}")

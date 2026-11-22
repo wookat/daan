@@ -4,13 +4,14 @@
 
 ### 边缘层（Cloudflare 新账号）
 
-- 账号 `583090ace6fb9a02db3f2625487ed865`（2026-09-10 由旧账号迁入；zone `zalize.com`
-  id `d510abee5fa2986b76c8bb181477afb3`）。
+- 账号 `<CF_ACCOUNT_ID>`（2026-09-10 由旧账号迁入；zone `zalize.com`
+  id `<CF_ZONE_ID>`；部署时通过环境变量 `KG_CF_ACCOUNT_ID` / `KG_CF_ZONE_ID` 传入）。
 - `kaogong.zalize.com` DNS = CNAME `kaogong-h5-zalize.pages.dev`（proxied）。
   Pages 项目 `kaogong-h5-zalize` 建于新账号（旧账号项目 `kaogong-h5` 已弃用未删）。
-- 静态层（`/`、`/index.html`、`/app/*`、`/lp-assets/*`、`/assets/*`、`/static/*` 等
+- 静态层（`/`、`/index.html`、`/favicon.ico`、`/app`、`/app/*`、`/lp-assets/*`，即
   `_routes.json` exclude 的路径）由 Pages CDN 直出；`/app/assets/*` 长缓存 immutable，
-  跨部署 hash 资产叠加保留（deploy_h5.sh 4c 步），`_headers` 下发安全头。
+  跨部署 hash 资产叠加保留（deploy_h5.sh 4c 步），`_headers` 下发安全头；`/app/*` 缺失
+  资源由 `dist/app/404.html` 返回 404，`/assets/*` 遗留路径由 `functions/assets/[[path]].js` 守卫。
 - 其余全部路径（`/api/*`、`/admin`、`/tiku/*`、`/sw.js`、`/robots.txt`、`/sitemap.xml`、
   `/qimg/*`、`/s/*` …）由 Pages Functions 同源代理回源 `https://kaogong-origin.zalize.com`
   （`deploy/cf-pages/functions/[[path]].js` + `_routes.json`）。边缘缓存：TTL 内 HIT /
@@ -27,8 +28,8 @@
 ### 回源层：Cloudflare Tunnel（2026-09-19 起，替代原 A 记录直连）
 
 - `kaogong-origin.zalize.com` DNS = CNAME
-  `5d0dc2a0-2525-4f81-be69-9faee1002030.cfargotunnel.com`（proxied）。
-- Tunnel `kaogong-origin`（id `5d0dc2a0-…`）ingress 远程托管：
+  `<CF_TUNNEL_ID>.cfargotunnel.com`（proxied）。
+- Tunnel `kaogong-origin`（id `<CF_TUNNEL_ID>`）ingress 远程托管：
   `kaogong-origin.zalize.com` → `https://localhost:443`（originServerName 同域名）。
   由源站机容器 `cloudflared-kaogong`（`cloudflare/cloudflared`，token 注入）外连建立，
   **源站无需公网入站**；配置查询：CF API `GET /accounts/{id}/cfd_tunnel/{id}/configurations`。
@@ -42,11 +43,11 @@
 
 ### 源站服务器（2026-09-19 迁移后）
 
-- **新机 `101.42.17.195`**（腾讯云 VM-24-13-opencloudos，**4 vCPU / 3.7 GiB / 60G 盘，
+- **新机 `<VPS_HOST>`**（腾讯云 VM-24-13-opencloudos，**4 vCPU / 3.7 GiB / 60G 盘，
   kaogong 独享**——不再有多产品共用宿主的资源争抢）。
-  SSH：`root@101.42.17.195`（2026-11-15 实测 `ubuntu@` 公钥认证被拒，用 root；
+  SSH：`root@<VPS_HOST>`（2026-11-15 实测 `ubuntu@` 公钥认证被拒，用 root；
   文件同步后须 `chown -R ubuntu:ubuntu` 回写应用目录）；
-  密钥 `~/.ssh/wookat.pem`（`~/.ssh/config` 的 `Host *` 兜底自动尝试）。
+  密钥见运维私密仓库/环境变量（`~/.ssh/<SSH_KEY>`，不入库）。
 - 应用目录 `/home/ubuntu/kaogong-assistant`（`deploy_h5.sh` 的 `REMOTE_DIR` 不变）；
   compose 项目目录 `deploy/`，compose 项目名 `deploy`。
 - 容器：`deploy-kaogong-1`（FastAPI/uvicorn，`127.0.0.1:8300→8000`，镜像 `deploy-kaogong:latest`，
@@ -68,7 +69,7 @@
 - 审计/报表目录 `/home/ubuntu/kaogong-reports/`（`deploy-history.log`、`access-archive/`、
   `app-log/`、`kaogong-ops.log`、`crawler-stats.json`、`probe-ips.txt` 等），
   容器只读挂载 `/reports` 供 `/api/admin/ops_status` 外显。
-- **老机 `150.109.230.174`（VM-0-8-ubuntu）已不再承载 kaogong**：compose 项目已拆除、
+- **老机 `<OLD_VPS_HOST>`（VM-0-8-ubuntu）已不再承载 kaogong**：compose 项目已拆除、
   ubuntu crontab 无 kaogong 条目；`/home/ubuntu/kaogong-assistant`、`kaogong-reports`、
   `kaogong-ops.sh` 等残留文件仍在但不再生效（未清理）。旧「A 记录直连 + 独立 Caddy 站点块」
   回滚路径已不存在。
@@ -93,18 +94,19 @@
 `deploy/deploy_h5.sh`（用法不变）：本机构建 H5 → brotli 预压缩 → 线上 rev 谱系闸 →
 rsync `backend deploy knowledge frontend-uni/dist` 到 `REMOTE_DIR=/home/ubuntu/kaogong-assistant` →
 远端 `docker compose up -d --build` 重建 → 线上 rev 校验 → CF Pages 部署（wrangler@3）→
-`/app/` 前缀边缘缓存 purge → bundle hash + 接口回归 + Lighthouse 预算。
-SSH 凭证走 `TICKETS_VPS_SSH_{USER,HOST,CREDENTIAL}`（HOST 现为 `101.42.17.195`）。
+按显式 `files` 清单 purge 边缘缓存 → bundle hash + 接口回归 + Lighthouse 预算。
+SSH 凭证走 `TICKETS_VPS_SSH_{USER,HOST,CREDENTIAL}`（HOST 见运维凭证）。
 
 - **回滚**：后端 = 服务器 rsync 旧代码 + compose 重建（或指定旧镜像 tag）；
   前端 = CF Pages previous deployment（dashboard 或 `wrangler pages deployment list`）。
   **无「DNS 改回 A 记录」路径**（老机 Caddy 站点块已删、机器已腾空）。
 
 ## CSP 注意
-`script-src` 须包含 `https://career.zalize.com`（Zalize 统一顶栏）与
-`https://static.cloudflareinsights.com`（CF Web Analytics beacon），否则顶栏/统计脚本被
-浏览器拦截。口径在 `deploy/cf-pages/_headers`（静态层）与
-`deploy/cf-pages/functions/[[path]].js` 的 `SECURITY_HEADERS`（动态层）两处，改一处必改另一处。
+`script-src` 须包含 `https://static.cloudflareinsights.com`（CF Web Analytics beacon），
+`connect-src` 须包含 `https://cloudflareinsights.com`，否则统计脚本或回传被
+浏览器拦截（原 `https://career.zalize.com` 统一顶栏已下线并移出白名单）。口径在
+`deploy/cf-pages/_headers`（静态层）与 `deploy/cf-pages/functions/[[path]].js` 的
+`SECURITY_HEADERS`（动态层）两处，改一处必改另一处。
 
 ## SSE 讲解流不能过 gzip（源站 Caddyfile，R422 一手复现）
 Caddy `encode gzip` 默认对 `text/*` 生效且只在首个 flush ≥512 B 时才决定压缩，一旦压缩
@@ -127,7 +129,7 @@ SSE 端点：`/api/explain/stream`、`/api/interview/answer/stream`、
 ## 数据
 SQLite 存于 docker volume `deploy_kaogong-data`（`/data/data.db`，当前 ≈900 MB）。
 备份链路见「运维脚本」（2026-11-14 已恢复：本地 3 份 + R2 每日 + 周日 R2 回读校验）。
-手工只读查询：`ssh ubuntu@101.42.17.195 "docker exec deploy-kaogong-1 python -c \"import sqlite3; …\""`，
+手工只读查询：`ssh root@<VPS_HOST> "docker exec deploy-kaogong-1 python -c \"import sqlite3; …\""`，
 库文件用 `file:/data/data.db?mode=ro` URI 只读打开。
 
 ## 部署并行会话闸（deploy_h5.sh 2b 步，R378）
@@ -159,7 +161,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 - 部署位置：新机 `/home/ubuntu/kaogong-ops.sh`，cron `40 3 * * *`（ubuntu 用户）。
 - 每日 SQLite `.backup` → 本地 `~/kaogong-backups`（gz，保留 3 份）→ rclone 上传
   `r2:zalize-backups/kaogong-sqlite/`（保留 30 天，远端字节数校验）→ 健康巡检
-  （`/api/questions?limit=1` 非 200 时 `docker compose up -d` 自愈）→ VOLUME-SNAPSHOT 巡检
+  （`/api/questions?limit=1` 非 200 时 `docker restart deploy-kaogong-1` 自愈）→ VOLUME-SNAPSHOT 巡检
   （`/data` 顶层非 `data.db*` 的 >1MB 文件只报不删）→ MEM 记录。
 - R2 凭证：`/home/ubuntu/.env`（`R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ENDPOINT`，不入库）。
   2026-09-19～11-13 曾因 `/home/ubuntu` 属主错误致本地备份链断裂（见已知问题，已修复）；
@@ -174,7 +176,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
   archive/ 内对象统一 gzip 存，真回读校验后才删原件。
 
 ## 镜像 Python 依赖钉版（backend/requirements.txt，R435）
-- 两份 Dockerfile（根 `Dockerfile` 与 `deploy/Dockerfile.runtime`）只
+- 构建文件 `deploy/Dockerfile.runtime` 只
   `pip install --no-cache-dir -r backend/requirements.txt`，清单是生产容器 `pip freeze`
   的全量 `==` 钉版（含传递依赖），单测 `tests/test_requirements_pinned.py` 锁格式与装法。
 - 升级：改 `requirements.txt` → 本地 `pip install -r` + pytest 全绿 → 部署；部署后
@@ -193,7 +195,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
   `scp scripts/crawler_stats.py scripts/access_log_report.py` 到新机同路径；
   `deploy/cron_access_report.sh` 同理（不重建容器时也要 scp，md5 核对）。
 - 候选真人口径（R382/R388/R393）：逐层剔除探针网段（`probe-ips.txt`，含 VPS 自身出口——
-  **新机出口 IP 101.42.17.195 需确认已加入**）、引擎与通用 bot UA（`BOT_GENERIC` 含
+  **新机出口 IP `<VPS_HOST>` 需确认已加入**）、引擎与通用 bot UA（`BOT_GENERIC` 含
   `devin/`）、test- uid、源站直连（无边缘头，单列 `humans.direct`）、显式
   `X-Kg-Probe: 1`、非正式域名 `X-Forwarded-Host`（Pages 预览域名，单列 `humans.offhost`）。
 - 搜索引擎侧入口：Google Search Console 资源 `sc-domain:kaogong.zalize.com`（DNS 自动验证）；
@@ -203,7 +205,7 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 
 | env 组 | 用途 | 生产当前值（2026-11-14 起） |
 |---|---|---|
-| `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | 主通道；**凡含图片的请求必走此通道**（识题/拍照讲解） | `api.999555999.com` / `grok-4.7`（多模态） |
+| `LLM_BASE_URL` / `LLM_API_KEY` / `LLM_MODEL` | 主通道；**凡含图片的请求必走此通道**（识题/拍照讲解） | `<LLM_RELAY_HOST>` / `grok-4.7`（多模态，配置于服务端 `.env`） |
 | `LLM_TEXT_BASE_URL` / `LLM_TEXT_API_KEY` / `LLM_TEXT_MODEL` | 纯文本请求专用；任一留空即回落主通道对应值 | 已置空 → 与主通道相同 |
 | `LLM_FALLBACK_MODEL` | 主模型 5xx 时同中继换模型重试 | 猫肥网关仅售 `grok-4.7` → 代码默认已置空（跳过该死重试），`.env` 无需配置 |
 | `LLM_RESCUE_BASE_URL` / `LLM_RESCUE_API_KEY` / `LLM_RESCUE_MODEL` | 独立备用端点：主通道 402/403/429 或持续 5xx 时回落（含图请求亦可） | `api.deepseek.com`（DeepSeek 官方直连）/ `deepseek-flash`（V4.1-Flash，支持视觉） |
@@ -213,10 +215,10 @@ functions 代理层在回源请求上附加 `X-Kg-Ip`（真实客户端 IP）与
 - `think=False` 附加 `{"thinking":{"type":"disabled"}`（网关不识别则无副作用）；
   `chat_stream` 消费 OpenAI SSE `data:` 行，`reasoning_content`/`reasoning` 透传为
   Thinking 进度。
-- 历史：2026-09-19～11-14 生产用 `api.aicdks.com`（`swe-2-max`/`swe-2-high`），
+- 历史：2026-09-19～11-14 生产用 `<OLD_LLM_RELAY_HOST>`（`swe-2-max`/`swe-2-high`），
   该网关上游账号池耗尽（503 `no healthy upstream account` → 429），AI 功能全挂
   约 6 天（`explain_cache` 自 11-07 零新增、`shenlun/grade` 28×502）。
-  2026-11-14 切换 `api.999555999.com` `grok-4.7`，文/图/流式实测通过；
+  2026-11-14 切换 `<LLM_RELAY_HOST>` `grok-4.7`，文/图/流式实测通过；
   旧配置备份在服务器 `deploy/.env.bak-20261114`。
   2026-11-15 接入 DeepSeek 官方 `deepseek-flash` 为 rescue 通道（异地兜底，
   备份 `.env.bak-20261115-rescue`），并将 `_rescue_ok` 放开含图请求

@@ -49,26 +49,6 @@
           </view>
           <!-- #endif -->
 
-          <kg-card class="hubcard">
-            <kg-section-header title="更多 AI 能力" />
-            <view class="hub-row" role="button" @click="goBookAi">
-              <l-icon name="sparkles" :size="20" tone="brand" />
-              <view class="hub-main">
-                <text class="hub-t">错题 AI 分析</text>
-                <text class="hub-s">按你的错题分布生成诊断与复习建议</text>
-              </view>
-              <l-icon name="chevron-right" :size="18" tone="faint" />
-            </view>
-            <view class="hub-row" role="button" @click="goCoach">
-              <l-icon name="compass" :size="20" tone="brand" />
-              <view class="hub-main">
-                <text class="hub-t">AI 学习教练</text>
-                <text class="hub-s">读取做题数据，生成个性化备考建议</text>
-              </view>
-              <l-icon name="chevron-right" :size="18" tone="faint" />
-            </view>
-          </kg-card>
-
           <kg-card v-if="recent.length" class="reccard">
             <kg-section-header title="最近讲解" />
             <view v-for="r in recent" :key="r.ts" class="rec-row">
@@ -93,7 +73,7 @@
           </view>
           <!-- AI 消息 -->
           <view class="msg ai">
-            <kg-card variant="soft" class="bubble ab">
+            <kg-card variant="flat" class="bubble ab">
               <view v-if="r.module_name || r.question_type" class="tags">
                 <kg-tag v-if="r.module_name" tone="brand">{{ r.module_name }}</kg-tag>
                 <kg-tag v-if="r.question_type" tone="neutral">{{ r.question_type }}</kg-tag>
@@ -132,7 +112,7 @@
           </view>
           <!-- 举一反三 -->
           <view v-if="r.sim" class="msg ai">
-            <kg-card variant="soft" class="bubble ab">
+            <kg-card variant="flat" class="bubble ab">
               <view class="tags"><kg-tag tone="brand">举一反三</kg-tag></view>
               <rich-text :nodes="r.sim.qHtml" />
               <text class="label">先选你的答案再看解析：</text>
@@ -165,11 +145,11 @@
           <!-- 追问消息 -->
           <template v-for="(m, mi) in r.fu || []" :key="r.ts + '-fu-' + mi">
             <view class="msg" :class="m.role === 'ai' ? 'ai' : 'user'">
-              <kg-card v-if="m.role === 'ai'" variant="soft" class="bubble ab"><rich-text :nodes="m.html" /></kg-card>
+              <kg-card v-if="m.role === 'ai'" variant="flat" class="bubble ab"><rich-text :nodes="m.html" /></kg-card>
               <view v-else class="bubble ub"><text class="ub-t">{{ m.content }}</text></view>
             </view>
           </template>
-          <view v-if="r.fuLoading" class="msg ai"><kg-card variant="soft" class="bubble ab"><text class="spin">思考中…</text></kg-card></view>
+          <view v-if="r.fuLoading" class="msg ai"><kg-card variant="flat" class="bubble ab"><text class="spin">思考中…</text></kg-card></view>
         </view>
 
         <view v-if="loading" class="msgs">
@@ -179,7 +159,7 @@
               <text v-if="stagedText" class="ub-t">{{ stagedText }}</text>
             </view>
           </view>
-          <view class="msg ai"><kg-card variant="soft" class="bubble ab"><text class="spin">{{ loadingText }}</text><kg-skeleton preset="lines" /></kg-card></view>
+          <view class="msg ai"><kg-card variant="flat" class="bubble ab"><text class="spin">{{ loadingText }}</text><kg-skeleton preset="lines" /></kg-card></view>
         </view>
         <kg-banner v-if="error" tone="bad" icon="triangle-alert" :text="errorText" :closable="false" />
       </template>
@@ -198,6 +178,26 @@
             <l-icon name="chevron-right" :size="16" tone="faint" />
           </view>
           <kg-button v-if="sessions.length > 5" variant="text" size="md" block @click="openHistory">查看全部 {{ sessions.length }} 个会话 ›</kg-button>
+        </kg-card>
+
+        <kg-card class="hubcard">
+          <kg-section-header title="更多 AI 能力" />
+          <view class="hub-row" role="button" @click="goBookAi">
+            <l-icon name="sparkles" :size="20" tone="brand" />
+            <view class="hub-main">
+              <text class="hub-t">错题 AI 分析</text>
+              <text class="hub-s">按你的错题分布生成诊断与复习建议</text>
+            </view>
+            <l-icon name="chevron-right" :size="18" tone="faint" />
+          </view>
+          <view class="hub-row" role="button" @click="goCoach">
+            <l-icon name="compass" :size="20" tone="brand" />
+            <view class="hub-main">
+              <text class="hub-t">AI 学习教练</text>
+              <text class="hub-s">读取做题数据，生成个性化备考建议</text>
+            </view>
+            <l-icon name="chevron-right" :size="18" tone="faint" />
+          </view>
         </kg-card>
       </template>
     </kg-two-col>
@@ -365,6 +365,12 @@ export default {
   },
   onUnload() {
     this.removePaste();
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this._simTimers) {
+      this._simTimers.forEach((t) => clearInterval(t));
+      this._simTimers.clear();
+    }
+    this._revokeBlobs(this.imagePaths);
   },
   // #endif
   methods: {
@@ -436,8 +442,17 @@ export default {
             0.85
           );
         };
-        img.onerror = () => resolve(f);
+        img.onerror = () => {
+          URL.revokeObjectURL(img.src);
+          resolve(f);
+        };
         img.src = URL.createObjectURL(f);
+      });
+    },
+    _revokeBlobs(paths) {
+      if (typeof URL === 'undefined' || !URL.revokeObjectURL) return;
+      (paths || []).forEach((p) => {
+        if (typeof p === 'string' && p.startsWith('blob:')) URL.revokeObjectURL(p);
       });
     },
     // #endif
@@ -475,6 +490,9 @@ export default {
       if (path) add(path, file || null);
     },
     removeImage(i) {
+      // #ifdef H5
+      this._revokeBlobs([this.imagePaths[i]]);
+      // #endif
       this.imagePaths = this.imagePaths.filter((_, x) => x !== i);
       this.imageFiles = this.imageFiles.filter((_, x) => x !== i);
       if (!this.imagePaths.length) this.clearImage();
@@ -795,20 +813,24 @@ export default {
     },
     async save(r) {
       if (r.saved) return;
-      await request('/api/mistakes', {
-        method: 'POST',
-        data: {
-          uid: anonUid(),
-          question_id: askQid(r.qid) || null,
-          module: r.module,
-          question_type: r.question_type,
-          question_text: r.question_text,
-          user_answer: r.user_answer,
-          explanation: r.explanation,
-        },
-      });
-      r.saved = true;
-      this.persistSession();
+      try {
+        await request('/api/mistakes', {
+          method: 'POST',
+          data: {
+            uid: anonUid(),
+            question_id: askQid(r.qid) || null,
+            module: r.module,
+            question_type: r.question_type,
+            question_text: r.question_text,
+            user_answer: r.user_answer,
+            explanation: r.explanation,
+          },
+        });
+        r.saved = true;
+        this.persistSession();
+      } catch (e) {
+        uni.showToast({ title: '存入失败：' + ((e && e.message) || '请稍后重试'), icon: 'none' });
+      }
     },
     openSimSeed(seed) {
       const diffs = ['easier', 'same', 'harder', 'combo'];
@@ -843,6 +865,8 @@ export default {
       r.simLoading = true;
       r.simSecs = 0;
       const t = setInterval(() => { r.simSecs++; }, 1000);
+      if (!this._simTimers) this._simTimers = new Set();
+      this._simTimers.add(t);
       try {
         const d = await request('/api/similar', {
           method: 'POST',
@@ -1091,9 +1115,9 @@ export default {
 
 <style scoped>
 .wrap { padding: var(--sp-12) var(--page-x) var(--sp-24); min-height: calc(100vh - 120px); box-sizing: border-box; }
-.bottompad { height: calc(72px + env(safe-area-inset-bottom)); }
+.bottompad { height: calc(var(--tab-h) + 84px + env(safe-area-inset-bottom)); }
 
-.topbar { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); padding: var(--sp-8) 0 var(--sp-12); }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); padding: var(--sp-8) 0 var(--sp-12); margin-bottom: var(--sp-8); }
 .top-t { display: block; font-size: var(--fs-h2); font-weight: 600; color: var(--ink); }
 .top-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
 .top-acts { display: flex; gap: var(--sp-8); flex-shrink: 0; }
@@ -1162,8 +1186,8 @@ export default {
 .pgrid { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-4); }
 .pcell { position: relative; width: calc(50% - var(--sp-4)); aspect-ratio: 4 / 3; border-radius: var(--r-sm); overflow: hidden; background: var(--fill); }
 .pthumb { width: 100%; height: 100%; display: block; }
-.pdel { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: var(--r-full); background: rgba(255,255,255,.92); display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,.18); }
-.pno { position: absolute; left: 4px; bottom: 4px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-full); background: rgba(0,0,0,.55); color: #fff; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.pdel { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line-strong); display: flex; align-items: center; justify-content: center; }
+.pno { position: absolute; left: 4px; bottom: 4px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--r-full); background: var(--mask); color: var(--on-brand); font-size: 12px; display: flex; align-items: center; justify-content: center; }
 .padd { border: 2px dashed var(--line-strong); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-4); cursor: pointer; }
 .padd-t { font-size: var(--fs-caption); color: var(--ink-3); }
 .phint { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
@@ -1171,7 +1195,7 @@ export default {
 /* 底部固定输入条（H5 Tab 页需抬到 TabBar 之上） */
 .askbar { gap: var(--sp-8); }
 /* #ifdef H5 */
-.askbar { bottom: calc(50px + env(safe-area-inset-bottom)); padding-bottom: var(--sp-12); }
+.askbar { bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); padding-bottom: var(--sp-12); }
 /* #endif */
 .ib-tool { flex-shrink: 0; width: var(--hit-min); height: var(--hit-min); border-radius: var(--r-full); background: var(--fill); display: flex; align-items: center; justify-content: center; }
 .ib-inp { flex: 1; min-width: 0; height: var(--input-h); border: 1px solid var(--line); border-radius: var(--r-full); padding: 0 var(--sp-16); font-size: var(--fs-sub); color: var(--ink); background: var(--fill); box-sizing: border-box; }

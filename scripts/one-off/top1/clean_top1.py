@@ -12,7 +12,11 @@
       --existing untagged_*.jsonl questions_bank.jsonl \
       --out knowledge/imported/top1_xingce.jsonl
 """
-import argparse, json, re, collections, hashlib
+import argparse
+import collections
+import hashlib
+import json
+import re
 
 MOD_KEY = {"常识判断": "changshi", "言语理解": "yanyu", "数量关系": "shuliang",
            "判断推理": "panduan", "资料分析": "ziliao"}
@@ -258,7 +262,7 @@ def main():
                 existing.add(norm_text(t))
     print(f"参照库题干数: {len(existing)}")
 
-    items = [json.loads(l) for l in open(args.raw, encoding="utf-8")]
+    items = [json.loads(line) for line in open(args.raw, encoding="utf-8")]
     stats = collections.Counter()
 
 

@@ -18,6 +18,6 @@ Evidence: backend/app/main.py L60-97（POST /api/explain/stream，check_access �
 
 ## T4 访问码 401 拦截流式请求
 devtools console 将 localStorage.accessCode 置为 wrong123（说明性操作），提交文字题。
-- 断言 G：弹出"请输入访问码"可编辑 modal（流式请求同样被 401 拦截触发重输）；输入 kg2026 确认后自动重试并正常流式返回讲解。
+- 断言 G：弹出"请输入访问码"可编辑 modal（流式请求同样被 401 拦截触发重输）；输入 <ACCESS_CODE> 确认后自动重试并正常流式返回讲解。
 
 清理：删除 T2 存入的错题，恢复 DB 仅剩 id=6。更新 test-report.md（v10 置顶）。

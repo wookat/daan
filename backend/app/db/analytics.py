@@ -122,7 +122,8 @@ def record_llm(channel: str, model: str | None, ok: bool, ms: int, img: bool, st
 
 
 def _day(ts: float) -> str:
-    return time.strftime("%Y-%m-%d", time.localtime(ts))
+    """UTC+8 自然日（与 db._day_start() 口径一致，避免 UTC 容器内 DAU/留存错位 8 小时）。"""
+    return time.strftime("%Y-%m-%d", time.gmtime(ts + 8 * 3600))
 
 
 def _act_rows(conn, start: float, end: float | None = None) -> list[dict]:
@@ -146,20 +147,26 @@ def _act_rows(conn, start: float, end: float | None = None) -> list[dict]:
 
 
 def _first_seen(conn, uids: set[str]) -> dict[str, float]:
-    """uid 在两表的全局首现时刻（只在需要的 uid 集合上求值）。"""
+    """uid 在两表的全局首现时刻（只在需要的 uid 集合上求值；按 400 分批避免触达 SQLite 参数上限）。"""
     out: dict[str, float] = {}
     if not uids:
         return out
-    marks = ",".join("?" * len(uids))
-    for r in conn.execute(
-        f"""SELECT uid, MIN(t) first_t FROM (
-                SELECT uid, MIN(created_at) t FROM answer_log WHERE uid IN ({marks}) GROUP BY uid
-                UNION ALL
-                SELECT uid, MIN(created_at) t FROM growth_events WHERE uid IN ({marks}) GROUP BY uid
-            ) GROUP BY uid""",
-        list(uids) + list(uids),
-    ):
-        out[r["uid"]] = r["first_t"]
+    uid_list = list(uids)
+    chunk_size = 400
+    for i in range(0, len(uid_list), chunk_size):
+        chunk = uid_list[i:i + chunk_size]
+        marks = ",".join("?" * len(chunk))
+        for r in conn.execute(
+            f"""SELECT uid, MIN(t) first_t FROM (
+                    SELECT uid, MIN(created_at) t FROM answer_log WHERE uid IN ({marks}) GROUP BY uid
+                    UNION ALL
+                    SELECT uid, MIN(created_at) t FROM growth_events WHERE uid IN ({marks}) GROUP BY uid
+                ) GROUP BY uid""",
+            chunk + chunk,
+        ):
+            prev = out.get(r["uid"])
+            if prev is None or r["first_t"] < prev:
+                out[r["uid"]] = r["first_t"]
     return out
 
 
@@ -233,7 +240,7 @@ def usage_overview(days: int = 30) -> dict:
         f"SELECT COUNT(*) n FROM growth_events WHERE created_at>=? AND {_REAL}", (start,)
     ).fetchone()["n"]
 
-    # 功能渗透（30 天窗口内用过该功能的 uid 数 / 窗口活跃 uid 数）
+    # 功能渗透（窗口内用过该功能的 uid 数 / 窗口活跃 uid 数）
     feat_q = {
         "刷题作答": "SELECT COUNT(DISTINCT uid) n FROM answer_log WHERE created_at>=? AND " + _REAL,
         "错题复习": "SELECT COUNT(DISTINCT uid) n FROM review_log WHERE created_at>=? AND " + _REAL,
@@ -241,16 +248,22 @@ def usage_overview(days: int = 30) -> dict:
         "AI 问答": "SELECT COUNT(DISTINCT uid) n FROM ask_sessions WHERE updated_at>=?",
         "申论作答": "SELECT COUNT(DISTINCT uid) n FROM shenlun_answers WHERE created_at>=?",
         "面试练习": "SELECT COUNT(DISTINCT uid) n FROM interview_sessions WHERE created_at>=?",
-        "PK 对战": "SELECT COUNT(DISTINCT uid) n FROM (SELECT creator_uid uid FROM pk_matches UNION SELECT opponent_uid FROM pk_matches) WHERE uid IS NOT NULL",
-        "组队成员": "SELECT COUNT(DISTINCT uid) n FROM team_members",
+        "PK 对战": (
+            "SELECT COUNT(DISTINCT uid) n FROM ("
+            "SELECT creator_uid uid FROM pk_matches WHERE created_at>=? "
+            "UNION SELECT opponent_uid FROM pk_matches WHERE created_at>=?"
+            ") WHERE uid IS NOT NULL"
+        ),
+        "组队成员": "SELECT COUNT(DISTINCT uid) n FROM team_members WHERE joined_at>=?",
         "主动分享": "SELECT COUNT(DISTINCT from_uid) n FROM shared_questions WHERE created_at>=?",
-        "错题本": "SELECT COUNT(DISTINCT uid) n FROM mistakes",
+        "错题本": "SELECT COUNT(DISTINCT uid) n FROM mistakes WHERE created_at>=? AND uid IS NOT NULL",
     }
     base_n = max(1, len(uids_all))
     penetration = []
     for name, sql in feat_q.items():
         try:
-            n = q(sql, (start,)).fetchone()["n"]
+            params = (start,) * sql.count("?")
+            n = q(sql, params).fetchone()["n"]
         except Exception:
             n = 0
         penetration.append({"name": name, "users": n, "pct": round(n * 100 / base_n, 1)})

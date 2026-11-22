@@ -8,14 +8,14 @@ import os
 import random
 import time
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from app import db
 from app.services import llm
 from app.services import sse
-from app.api.deps import as_int, rl
+from app.api.deps import as_int, check_access, rl
 
 router = APIRouter(prefix="/api/interview")
 
@@ -235,8 +235,9 @@ def _friendly_ai_err(e: Exception) -> str:
 
 
 @router.post("/answer/stream")
-async def api_answer_stream(body: dict, request: Request):
+async def api_answer_stream(body: dict, request: Request, x_access_code: str | None = Header(None)):
     """SSE：event meta（scores/total/summary/session 占位）→ data 点评增量 → event done（session_id）。"""
+    check_access(x_access_code)
     uid, q, answer, duration = _validate(request, body)
 
     async def gen():
@@ -265,8 +266,9 @@ async def api_answer_stream(body: dict, request: Request):
 
 
 @router.post("/sessions/{sid}/review/stream")
-async def api_review_regen_stream(sid: int, body: dict, request: Request):
+async def api_review_regen_stream(sid: int, body: dict, request: Request, x_access_code: str | None = Header(None)):
     """为点评缺失的 session（流中断）重新生成考官点评：SSE data 增量 → done，完成后回填 DB。"""
+    check_access(x_access_code)
     uid = str(body.get("uid") or "").strip()
     if not uid:
         raise HTTPException(400, "缺少 uid")
@@ -302,8 +304,9 @@ async def api_review_regen_stream(sid: int, body: dict, request: Request):
 
 
 @router.post("/answer")
-async def api_answer(body: dict, request: Request):
+async def api_answer(body: dict, request: Request, x_access_code: str | None = Header(None)):
     """非流式版（小程序/App 用）：一次返回打分 + 点评。"""
+    check_access(x_access_code)
     uid, q, answer, duration = _validate(request, body)
     try:
         scores, total, summary = await _grade(q, answer)
@@ -325,7 +328,7 @@ def api_history(uid: str, limit: int = 50):
     rows = conn.execute(
         "SELECT id, question_id, category, question_text, total, duration_sec, created_at"
         " FROM interview_sessions WHERE uid=? ORDER BY created_at DESC LIMIT ?",
-        (uid, min(int(limit), 200)),
+        (uid, max(0, min(int(limit), 200))),
     ).fetchall()
     n = conn.execute("SELECT COUNT(*) n FROM interview_sessions WHERE uid=?", (uid,)).fetchone()["n"]
     best = conn.execute("SELECT MAX(total) m FROM interview_sessions WHERE uid=?", (uid,)).fetchone()["m"]

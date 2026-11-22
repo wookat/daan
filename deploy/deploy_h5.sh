@@ -13,7 +13,7 @@ SITE="https://kaogong.zalize.com"
 : "${TICKETS_VPS_SSH_USER:?need TICKETS_VPS_SSH_USER}"
 : "${TICKETS_VPS_SSH_HOST:?need TICKETS_VPS_SSH_HOST}"
 # 认证二选一：TICKETS_VPS_SSH_CREDENTIAL（sshpass 密码）或 TICKETS_VPS_SSH_KEY / ~/.ssh/config 里的私钥；
-# 本机无 sshpass 时走后者（生产 ubuntu@101.42.17.195 已配 wookat.pem 免密）。
+# 本机无 sshpass 时走后者（生产机已配置免密公钥）。
 SSH_OPTS=(-o StrictHostKeyChecking=no -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
 [[ -n "${TICKETS_VPS_SSH_KEY:-}" ]] && SSH_OPTS+=(-i "$TICKETS_VPS_SSH_KEY" -o IdentitiesOnly=yes)
 if [[ -n "${TICKETS_VPS_SSH_CREDENTIAL:-}" ]]; then
@@ -26,6 +26,14 @@ fi
 REMOTE="$TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST"
 
 step() { echo; echo "==> $*"; }
+
+TMP_FILES=()
+cleanup_tmp() {
+  for f in "${TMP_FILES[@]}"; do
+    [[ -n "$f" ]] && rm -rf "$f"
+  done
+}
+trap cleanup_tmp EXIT
 
 if [[ "${1:-}" != "--skip-build" ]]; then
   step "1/6 构建 H5"
@@ -84,11 +92,14 @@ if command -v rsync >/dev/null; then
   (cd "$REPO_DIR" && "${RSYNC_PREFIX[@]}" rsync -azR --delete -e "ssh ${SSH_OPTS[*]}" \
     backend deploy knowledge frontend-uni/dist "$REMOTE:$REMOTE_DIR/" \
     --exclude '.git' --exclude '__pycache__' --exclude 'node_modules' --exclude '.env')
+  "${SSH_RUN[@]}" "$REMOTE" \
+    "cd $REMOTE_DIR && chown -R \$(stat -c '%U:%G' .) backend deploy knowledge frontend-uni/dist" || true
 else
   echo "本机无 rsync，走清单 diff 增量 tar|ssh（双端按 size+mtime 比对，只传差异文件，保留 deploy/.env）"
   SYNC_DIRS=(backend deploy knowledge frontend-uni/dist)
   MANIFEST_LOCAL=$(mktemp) MANIFEST_REMOTE=$(mktemp)
   CHANGED=$(mktemp) DELETED=$(mktemp)
+  TMP_FILES+=("$MANIFEST_LOCAL" "$MANIFEST_REMOTE" "$CHANGED" "$DELETED")
   (cd "$REPO_DIR" && find "${SYNC_DIRS[@]}" -type f \
      ! -name '.env' ! -path '*__pycache__*' ! -path '*/.pytest_cache/*' ! -path '*/.ruff_cache/*' \
      ! -path '*/node_modules/*' ! -path '*/.git/*' \
@@ -117,7 +128,7 @@ else
     "cd $REMOTE_DIR && chown -R \$(stat -c '%U:%G' .) backend deploy knowledge frontend-uni/dist" || true
 fi
 
-# caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房（新机 101.42.17.195 出口→AMS，老机曾为 ICN）的副本：
+# caches.default 按机房独立（不跨机房复制），本步只刷本机所在机房的副本：
 # 保护的是重建窗口内 VPS 自身 cron/脚本的请求；引擎与真人所在机房的 stale-if-error 副本
 # 来自它们各自的历史访问，不受本步影响（取证见 docs/archive/iter/round-3/r395-edge-swr-stale-evidence.md）。
 step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，仅本机所在机房）"
@@ -136,7 +147,7 @@ done
 
 step "4/6 重建容器（远端后台执行 + rev/StartedAt 轮询收敛，防高负载宿主 ssh 通道挂起）"
 # 4-pre 宿主快照 + 让行：老机曾多产品共用 dockerd/buildkit（别家 build/prune 会拖慢或打断本家，R430b/R467）；
-# 新机 101.42.17.195 已独享，host_probe/让行逻辑保留作防御（prunes 恒为 0，快照仍供审计）。
+# 新机已独享，host_probe/让行逻辑保留作防御（prunes 恒为 0，快照仍供审计）。
 host_probe() { "${SSH_RUN[@]}" "$REMOTE" bash -s < "$REPO_DIR/deploy/host_probe.sh" 2>/dev/null || echo "probe-failed"; }
 WAIT_DEADLINE=$((SECONDS + 300))
 while :; do
@@ -214,7 +225,7 @@ fi
 # ---- DEPLOY_RESUME 跳过段结束 ----
 
 step "4a 线上后端 rev 校验"
-ONLINE_REV=$(curl -s "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4)
+ONLINE_REV=$(curl -s --max-time 15 "$SITE/api/health" | grep -o '"rev":"[^"]*"' | cut -d'"' -f4 || true)
 echo "线上后端 rev: $ONLINE_REV"
 if [[ "$ONLINE_REV" != "$BUILD_REV" ]]; then
   echo "FAIL: 线上后端 rev ($ONLINE_REV) != 本机 ($BUILD_REV)，容器未用新代码重建！"
@@ -239,18 +250,20 @@ for u in "/api/stats" \
          "/api/questions?limit=10&tag3=CS-LS-01&module=changshi" \
          "/api/exam/papers" \
          "/api/papers"; do
-  t=$(curl -s -o /dev/null -w "%{time_total}" "$SITE$u")
+  t=$(curl -s --max-time 30 -o /dev/null -w "%{time_total}" "$SITE$u" || echo "fail")
   echo "warm $u ${t}s"
 done
 
 step "4c CF Pages 部署（kaogong.zalize.com 静态层；动态路由经 functions 代理回源 kaogong-origin）"
-# 2026-09-10 起 zalize.com 与 Pages 项目在新 Cloudflare 账号（583090ac…，项目 kaogong-h5-zalize），
-# 凭证为账号 Global API Key + 邮箱（org secrets CLOUDFLARE_NEW_GLOBAL_API_KEY / CLOUDFLARE_NEW_ACCOUNT_EMAIL）；
-# 旧账号的 CLOUDFLARE_API_TOKEN 对新账号无权限，须显式 unset 否则 wrangler 优先用它而报错
-: "${CLOUDFLARE_NEW_GLOBAL_API_KEY:?need CLOUDFLARE_NEW_GLOBAL_API_KEY (new CF account, Pages deploy)}"
-: "${CLOUDFLARE_NEW_ACCOUNT_EMAIL:?need CLOUDFLARE_NEW_ACCOUNT_EMAIL (new CF account, Pages deploy)}"
+# 2026-09-10 起 zalize.com 与 Pages 项目在目标 Cloudflare 账号（项目 kaogong-h5-zalize），
+# 凭证与账号/区域 ID 均由环境变量显式注入，不在脚本内硬编码默认值；
+# 旧账号的 CLOUDFLARE_API_TOKEN 无权限，须显式 unset 否则 wrangler 优先用它而报错
+: "${CLOUDFLARE_NEW_GLOBAL_API_KEY:?need CLOUDFLARE_NEW_GLOBAL_API_KEY (CF account, Pages deploy)}"
+: "${CLOUDFLARE_NEW_ACCOUNT_EMAIL:?need CLOUDFLARE_NEW_ACCOUNT_EMAIL (CF account, Pages deploy)}"
+: "${KG_CF_ACCOUNT_ID:?need KG_CF_ACCOUNT_ID (CF account ID)}"
+: "${KG_CF_ZONE_ID:?need KG_CF_ZONE_ID (CF zone ID for cache purge)}"
 export CLOUDFLARE_API_KEY="$CLOUDFLARE_NEW_GLOBAL_API_KEY" CLOUDFLARE_EMAIL="$CLOUDFLARE_NEW_ACCOUNT_EMAIL"
-export CLOUDFLARE_ACCOUNT_ID="${KG_CF_ACCOUNT_ID:-583090ace6fb9a02db3f2625487ed865}"
+export CLOUDFLARE_ACCOUNT_ID="$KG_CF_ACCOUNT_ID"
 unset CLOUDFLARE_API_TOKEN
 PAGES_PROJECT="${KG_PAGES_PROJECT:-kaogong-h5-zalize}"
 # wrangler@3 兼容 Node ≥18；升级到 wrangler@4 时需 Node ≥22（shell 默认 Node 20 时切 nvm 22）
@@ -261,19 +274,23 @@ echo "node $(node -v)"
 # 站点布局：/ = landing 落地页（landing/），/app/ = H5 主程序（dist/build/h5 全部内容），
 # _routes.json exclude 已把 /app/*、/lp-assets/* 划给静态层，其余路径走 functions 代理回源
 PAGES_DIR=$(mktemp -d)
+TMP_FILES+=("$PAGES_DIR")
 mkdir -p "$PAGES_DIR/dist/app" "$PAGES_DIR/functions"
 cp -r "$REPO_DIR/landing/." "$PAGES_DIR/dist/"
+rm -f "$PAGES_DIR/dist/DESIGN.md"  # 内部设计文档不随官网发布
 cp -r "$DIST/." "$PAGES_DIR/dist/app/"
+find "$PAGES_DIR/dist/app/assets" -type f -name '*.br' -delete  # CF Pages 实时压缩，不上传无用 .br
+cp "$REPO_DIR/deploy/cf-pages/app-404.html" "$PAGES_DIR/dist/404.html"      # 根静态路径 miss → 真 404
 cp "$REPO_DIR/deploy/cf-pages/app-404.html" "$PAGES_DIR/dist/app/404.html"  # /app/* miss → 真 404，不再回退 index.html
-# 注册路径 /app/sw.js：main.js register('sw.js') 相对 /app/ 解析；构建产物只在
-# static/ 下，必须显式补拷，否则该 URL 滞留旧部署副本、存量 SW 永不更新（2026-10-10 踩坑）
+if [[ -f "$REPO_DIR/landing/lp-assets/favicon.png" && ! -f "$PAGES_DIR/dist/favicon.ico" ]]; then
+  cp "$REPO_DIR/landing/lp-assets/favicon.png" "$PAGES_DIR/dist/favicon.ico"
+fi
+# 注册路径 /app/sw.js：main.js register('sw.js') 相对 /app/ 解析；确保产物根有最新 sw.js
 cp "$PAGES_DIR/dist/app/static/sw.js" "$PAGES_DIR/dist/app/sw.js"
-# assets 增量叠加：跨部署保留旧 hash 文件。Pages 部署非原子——index.html 已切而
-# 新 chunk 未传播时，对旧 hash 的请求命中 Pages HTML 回退，且被 _headers 里
-# /app/assets/* 的 immutable(1y) 规则在边缘/浏览器缓存成 text/html（2026-10-08 踩坑：
-# Origin 变体下整站模块加载全灭）。保留旧资产即可让任何时点的 index 都能解析。
+# assets 增量叠加：跨部署保留旧 hash 文件（排除 .br，避免撞 Pages 文件数上限）
 ASSETS_KEEP="$REPO_DIR/deploy/.pages-assets-keep"
 mkdir -p "$ASSETS_KEEP"
+find "$ASSETS_KEEP" -type f -name '*.br' -delete 2>/dev/null || true
 cp -rn "$ASSETS_KEEP/." "$PAGES_DIR/dist/app/assets/" 2>/dev/null || true
 cp -rn "$PAGES_DIR/dist/app/assets/." "$ASSETS_KEEP/" 2>/dev/null || true
 find "$ASSETS_KEEP" -type f -mtime +90 -delete 2>/dev/null || true
@@ -282,11 +299,18 @@ cp "$REPO_DIR/deploy/cf-pages/_routes.json" "$REPO_DIR/deploy/cf-pages/_headers"
 (cd "$PAGES_DIR" && npx -y wrangler@3 pages deploy dist --project-name "$PAGES_PROJECT" --branch main --commit-dirty=true)
 rm -rf "$PAGES_DIR"
 
-# 部署窗口内（alias 已切、资产未传播完）对缺失 hash 的请求会把 404/HTML 回退
-# 以 immutable 一年期写进边缘缓存；部署完成后立即按前缀清一次，窗口残留归零。
-ZONE_ID="${KG_CF_ZONE_ID:-d510abee5fa2986b76c8bb181477afb3}"
-curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache"   -H "X-Auth-Email: $CLOUDFLARE_EMAIL" -H "X-Auth-Key: $CLOUDFLARE_API_KEY"   -H "Content-Type: application/json"   -d '{"prefixes":["kaogong.zalize.com/app/"]}' >/dev/null   && echo 'edge purge: kaogong.zalize.com/app/ ok' || echo 'WARN: edge purge 失败（非阻塞）'
-rm -rf "$PAGES_DIR"
+# 部署完成后按显式 files 清单清关键入口边缘缓存（兼容非 Enterprise 套餐；校验 JSON .success == true）
+ZONE_ID="$KG_CF_ZONE_ID"
+PURGE_PAYLOAD=$(printf '{"files":["%s/","%s/index.html","%s/app/","%s/app/index.html","%s/app/sw.js","%s/app/precache.json"]}' \
+  "$SITE" "$SITE" "$SITE" "$SITE" "$SITE" "$SITE")
+PURGE_RESP=$(curl -sS --max-time 20 -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
+  -H "X-Auth-Email: $CLOUDFLARE_EMAIL" -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
+  -H "Content-Type: application/json" -d "$PURGE_PAYLOAD" || true)
+if python3 -c 'import json,sys; d=json.loads(sys.argv[1]); sys.exit(0 if d.get("success") is True else 1)' "$PURGE_RESP" 2>/dev/null; then
+  echo "edge purge: ok"
+else
+  echo "WARN: edge purge 失败（非阻塞）resp=${PURGE_RESP:0:200}"
+fi
 
 # Pages 新部署发布后别名域切换存在数秒~数十秒传播窗口，校验采用窗口内轮询而非单次探测
 retry_check() {
@@ -301,13 +325,13 @@ retry_check() {
 
 step "5/6 线上 bundle hash 校验"
 check_bundle() {
-  ONLINE_INDEX_REF=$(curl -s "$SITE/app/" | grep -o 'index-[^"]*\.js' | head -1)
+  ONLINE_INDEX_REF=$(curl -s --max-time 15 "$SITE/app/" | grep -o 'index-[^"]*\.js' | head -1 || true)
   echo "线上 bundle: $ONLINE_INDEX_REF"
   [[ "$ONLINE_INDEX_REF" == "$LOCAL_INDEX_REF" ]]
 }
 retry_check 120 check_bundle \
   || { echo "FAIL: 线上 bundle ($ONLINE_INDEX_REF) != 本机构建 ($LOCAL_INDEX_REF)，部署未生效！"; exit 1; }
-ONLINE_HOME_CHUNK=$(curl -s --compressed "$SITE/app/assets/$ONLINE_INDEX_REF" | grep -o 'pages-home-home\.[^"]*\.js' | head -1 || true)
+ONLINE_HOME_CHUNK=$(curl -s --max-time 15 --compressed "$SITE/app/assets/$ONLINE_INDEX_REF" | grep -o 'pages-home-home\.[^"]*\.js' | head -1 || true)
 if [[ -n "$ONLINE_HOME_CHUNK" && ! -f "$DIST/assets/$ONLINE_HOME_CHUNK" ]]; then
   echo "FAIL: 线上 home chunk $ONLINE_HOME_CHUNK 不在本机构建产物中！"
   exit 1
@@ -318,7 +342,7 @@ step "5b 线上 bundle 各 Accept-Encoding 变体校验（防 HTML 回退缓存�
 check_encodings() {
   local enc ct ok=0
   for enc in "identity" "gzip" "br" "gzip, deflate" "gzip, deflate, br" "gzip, deflate, br, zstd" "zstd"; do
-    ct=$(curl -s -o /dev/null -w "%{content_type}" -H "Accept-Encoding: $enc" "$SITE/app/assets/$ONLINE_INDEX_REF")
+    ct=$(curl -s --max-time 15 -o /dev/null -w "%{content_type}" -H "Accept-Encoding: $enc" "$SITE/app/assets/$ONLINE_INDEX_REF" || true)
     echo "encoding [$enc] -> $ct"
     [[ "$ct" == *javascript* ]] || ok=1
   done
@@ -330,13 +354,13 @@ retry_check 120 check_encodings \
 step "6/6 接口回归"
 FAIL=0
 for u in "/api/stats" \
-         "/api/questions?module=yanyu&count=5" \
-         "/api/questions?module=changshi&count=5" \
+         "/api/questions?module=yanyu&limit=5" \
+         "/api/questions?module=changshi&limit=5" \
          "/tiku/" \
          "/robots.txt" \
          "/indexnow-key.txt" \
          "/admin"; do
-  code=$(curl -s -o /dev/null -w "%{http_code}" "$SITE$u")
+  code=$(curl -s --max-time 15 -o /dev/null -w "%{http_code}" "$SITE$u" || echo "000")
   echo "$u -> $code"
   [[ "$code" == "200" ]] || FAIL=1
 done

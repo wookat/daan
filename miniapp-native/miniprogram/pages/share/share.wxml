@@ -27,13 +27,15 @@
         <view class="q-tags">
           <kg-tag tone="module" module="{{d.question.module}}">{{modLabel}}</kg-tag>
           <kg-tag wx:if="{{d.question.submodule}}" tone="neutral">{{d.question.submodule}}</kg-tag>
+          <kg-tag wx:if="{{isMulti}}" tone="brand">多选</kg-tag>
         </view>
         <text class="stem" user-select>{{d.question.question}}</text>
+        <image wx:if="{{qImg}}" class="q-img" src="{{qImg}}" mode="widthFix" data-src="{{qImg}}" bind:tap="onPreviewImg" />
         <view class="opts">
           <view
             wx:for="{{optList}}"
             wx:key="k"
-            class="opt {{!revealed ? (picked === item.k ? 'pick' : '') : item.k === d.question.answer ? 'right' : (myResult && item.k === myResult.picked ? 'wrong' : '')}}"
+            class="opt {{item.cls}}"
             hover-class="{{revealed ? '' : 'opt--hover'}}"
             role="button"
             aria-label="选项 {{item.k}}"
@@ -41,8 +43,15 @@
             bind:tap="onPick"
           >
             <text class="okey">{{item.k}}</text>
-            <text class="otext">{{item.v}}</text>
+            <view class="otext">
+              <text wx:if="{{item.v}}">{{item.v}}</text>
+              <image wx:if="{{item.img}}" class="opt-img" src="{{item.img}}" mode="widthFix" />
+            </view>
           </view>
+        </view>
+        <view wx:if="{{isMulti && !revealed}}" class="multi-bar">
+          <text class="multi-hint">多选题：选完所有正确项后确认</text>
+          <kg-button variant="primary" size="lg" block disabled="{{!multiSel || submitting}}" bind:click="onConfirmMulti">确认答案{{multiSel ? '（' + multiSel.length + '）' : ''}}</kg-button>
         </view>
       </kg-card>
 

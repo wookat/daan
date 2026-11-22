@@ -177,7 +177,7 @@ describe('R561-fix 对账不吃 apiSnap 快照（生产 E3：POST 后阻断 GET�
     const req = API.slice(API.indexOf('export function request('), API.indexOf('export function anonUid('));
     const direct = req.indexOf('if (opts.timeout != null) return withAuthRetry(() => rawRequest(path, opts).then((d) => guardStaleUid(path, d)));');
     expect(direct).toBeGreaterThan(-1);
-    expect(req.indexOf('const snap = snapLoad(path);')).toBeGreaterThan(direct);
+    expect(req.indexOf('const snap = snapLoad(key);')).toBeGreaterThan(direct);
     expect(req.indexOf('getCache\n      .run(')).toBeGreaterThan(direct);
   });
 });

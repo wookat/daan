@@ -779,6 +779,8 @@ export default {
     },
   },
   onLoad(query) {
+    const rawCnt = query && query.count ? parseInt(query.count, 10) : 0;
+    const urlCount = rawCnt >= 1 && rawCnt <= 50 ? rawCnt : null;
     // SEO 题目页「做这道题」直链：/practice?qid=N[&tag3=xx][&module=xx]，该题领跑其后接同考点/模块题包
     const leadQid = leadQidOf(query);
     if (leadQid) {
@@ -790,7 +792,7 @@ export default {
       } catch (e) {
         /* 保留原值 */
       }
-      this._urlLaunch = { tag3, module, qid: leadQid, pick: leadPickOf(query), source: query.source || 'seo_q' };
+      this._urlLaunch = { tag3, module, count: urlCount, qid: leadQid, pick: leadPickOf(query), source: query.source || 'seo_q' };
     } else if (query && query.tag3) {
       // SEO 详情页「在线练习此考点」直链：/practice?tag3=xx&module=xx 自动开练
       let tag3 = query.tag3;
@@ -801,7 +803,7 @@ export default {
       } catch (e) {
         /* 保留原值 */
       }
-      this._urlLaunch = { tag3, module, source: query.source || 'seo' };
+      this._urlLaunch = { tag3, module, count: urlCount, source: query.source || 'seo' };
     } else if (query && query.year && query.module) {
       // SEO 年份真题页直链：/practice?module=xx&real=1&year=xxxx 自动开练该年真题
       let module = query.module;
@@ -810,7 +812,7 @@ export default {
       } catch (e) {
         /* 保留原值 */
       }
-      this._urlLaunch = { module, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
+      this._urlLaunch = { module, count: urlCount, year: parseInt(query.year, 10) || null, source: query.source || 'seo' };
     } else if (query && query.daily) {
       // 每日一练直达深链（同题挑战分享/SEO 页 CTA），date 可选指向往期题组
       this._urlLaunch = { daily: true, date: query.date || '', src: query.src || 'link' };
@@ -822,7 +824,7 @@ export default {
       } catch (e) {
         /* 保留原值 */
       }
-      this._urlLaunch = { module, source: query.source || 'link' };
+      this._urlLaunch = { module, count: urlCount, source: query.source || 'link' };
     }
   },
   onShow() {
@@ -855,7 +857,7 @@ export default {
       }
       this._leadQid = q.qid || null;
       this._leadPick = q.pick || null;
-      this.start(q.module, null, null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
+      this.start(q.module, null, q.count || null, false, q.year ? true : undefined, q.tag3, q.source, q.year);
       return;
     }
     const launch = uni.getStorageSync('practiceLaunch');
@@ -951,6 +953,14 @@ export default {
   onUnload() {
     // 顶栏/浏览器返回不经 quit()：全部答完就视同完成
     this.finalizeIfAnswered();
+    if (this.autoTimer) { clearTimeout(this.autoTimer); this.autoTimer = null; }
+    if (this._loadTick) { clearInterval(this._loadTick); this._loadTick = null; }
+    if (this.examTimer) { clearInterval(this.examTimer); this.examTimer = null; }
+    this.stopQTimer();
+    if (this._actx && typeof this._actx.close === 'function') {
+      try { this._actx.close(); } catch (e) { /* ignore */ }
+      this._actx = null;
+    }
     // #ifdef H5
     if (this._pkHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._pkHandler);
@@ -2578,7 +2588,7 @@ export default {
 .acard-n.ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-strong); }
 .acard-n.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad-strong); }
 .acard-n.skip { background: var(--fill); color: var(--ink-3); }
-.acard-n.cur { box-shadow: 0 0 0 2px var(--brand-soft-2); border-color: var(--brand); color: var(--brand-text); }
+.acard-n.cur { outline: 2px solid var(--brand-soft-2); border-color: var(--brand); color: var(--brand-text); }
 .acard-foot { display: block; font-size: var(--fs-sub); color: var(--ink-3); padding: var(--sp-4) 0 var(--sp-12); }
 
 /* 工具 / 纠错 sheet */

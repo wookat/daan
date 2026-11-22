@@ -34,7 +34,7 @@
         <kg-skeleton v-else preset="cards" />
       </template>
       <template #aside>
-        <kg-card v-if="items.length" variant="soft" class="aside-card">
+        <kg-card v-if="items.length" variant="flat" class="aside-card">
           <text class="aside-t">继续练习</text>
           <text class="aside-d">随机抽一题模拟面试，AI 即时点评</text>
           <kg-button variant="primary" size="lg" block icon="mic" @click="goPractice">去练一题</kg-button>

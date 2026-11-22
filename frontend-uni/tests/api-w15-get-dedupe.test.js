@@ -164,8 +164,8 @@ describe('api.js request() 接线源锁', () => {
     const run = reqBody.indexOf('.run(');
     const retry = reqBody.indexOf('timeout: 20000');
     const guard = reqBody.indexOf('guardStaleUid(path, data)');
-    const save = reqBody.indexOf('snapSave(path, data)');
-    const fallback = reqBody.indexOf('snapLoad(path)');
+    const save = reqBody.indexOf('snapSave(key, data)');
+    const fallback = reqBody.indexOf('snapLoad(key)');
     expect(run).toBeGreaterThan(0);
     expect(retry).toBeGreaterThan(run);
     expect(guard).toBeGreaterThan(retry);
@@ -174,7 +174,7 @@ describe('api.js request() 接线源锁', () => {
   });
 
   it('快照回退仍在合并层之外、仅网络错误触发', () => {
-    expect(reqBody).toMatch(/\.catch\(\(e\) => \{\s*\/\/[^\n]*\n\s*if \(!isNetErr\(e\) \|\| !snapCacheable\(path\)\) throw e;\s*const snap = snapLoad\(path\);/);
+    expect(reqBody).toMatch(/\.catch\(\(e\) => \{\s*\/\/[^\n]*\n\s*if \(!isNetErr\(e\) \|\| !snapCacheable\(path\)\) throw e;\s*const snap = snapLoad\(key\);/);
     expect(api).toMatch(/import \{ createGetCache, getTtl, isTrackPath \} from '\.\.?\/api-get-cache'/);
   });
 });

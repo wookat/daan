@@ -17,7 +17,7 @@ describe('pkgExam 页面滚动容器口径', () => {
   it('pkgExam 每个页面 wxml 都有 <scroll-view class="page-scroll" scroll-y>', () => {
     const pages = pagesOf('pkgExam');
     expect(pages.length).toBeGreaterThan(3);
-    const missing = pages.filter((p) => !/<scroll-view[^>]*class="page-scroll"[^>]*scroll-y/.test(read(`pkgExam/${p}/${p}.wxml`)));
+    const missing = pages.filter((p) => !/<scroll-view[^>]*class="[^"]*\bpage-scroll\b[^"]*"[^>]*scroll-y/.test(read(`pkgExam/${p}/${p}.wxml`)));
     expect(missing).toEqual([]);
   });
 
@@ -28,7 +28,7 @@ describe('pkgExam 页面滚动容器口径', () => {
   it('申论页 scroll-view 绑定 scrollTop 且 ts 不再调用 wx.pageScrollTo（对 scroll-view 无效）', () => {
     const wxml = read('pkgExam/shenlun/shenlun.wxml');
     const ts = read('pkgExam/shenlun/shenlun.ts');
-    expect(wxml).toMatch(/<scroll-view class="page-scroll" scroll-y[^>]*scroll-top="\{\{scrollTop\}\}"/);
+    expect(wxml).toMatch(/<scroll-view[^>]*class="[^"]*\bpage-scroll\b[^"]*"[^>]*scroll-y[^>]*scroll-top="\{\{scrollTop\}\}"/);
     expect((wxml.match(/<scroll-view/g) || []).length).toBe((wxml.match(/<\/scroll-view>/g) || []).length);
     expect(ts).not.toMatch(/wx\.pageScrollTo\(/);
     expect(ts).toContain('scrollToTop()');

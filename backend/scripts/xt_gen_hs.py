@@ -70,8 +70,11 @@ def _accept(q: dict, text: str | None) -> str | None:
     if "【一句话】核心思路" in text:
         return None
     m = re.search(r"【答案】([A-E]+)", text)
-    norm = lambda s: "".join(sorted((s or "").upper()))
-    if m and q["known_answer"] and norm(m.group(1)) != norm(q["known_answer"].strip()):
+
+    def _norm(s: str | None) -> str:
+        return "".join(sorted((s or "").upper()))
+
+    if m and q["known_answer"] and _norm(m.group(1)) != _norm(q["known_answer"].strip()):
         print(f"[gen] q{q['id']} 答案不符 model={m.group(1)} truth={q['known_answer']}", file=sys.stderr)
         return None
     return text

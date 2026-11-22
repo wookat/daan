@@ -248,10 +248,10 @@ def admin_search_questions(
     else:
         order = "id DESC"
     rows = conn.execute(
-        f"SELECT id, module, submodule, question, options, answer, explanation, hs_explanation, "
+        f"SELECT id, module, submodule, question, options, option_imgs, answer, explanation, hs_explanation, "
         f"hs_up, hs_down, is_real, exam_year, exam_region, source, disabled, tag3, quality_score "
         f"FROM questions {clause} ORDER BY {order} LIMIT ? OFFSET ?",
-        (*args, min(max(limit, 0), 50), offset),
+        (*args, min(max(limit, 0), 50), max(int(offset), 0)),
     ).fetchall()
     conn.close()
     out = []
@@ -277,6 +277,8 @@ def admin_update_question(qid: int, fields: dict) -> bool:
     sets = {k: v for k, v in fields.items() if k in db.ADMIN_EDITABLE}
     if not sets:
         return False
+    if "hs_explanation" in sets:
+        sets["has_hs"] = 1 if str(sets["hs_explanation"] or "").strip() else 0
     conn = db.get_conn()
     assignments = ", ".join(f"{k}=?" for k in sets)
     cur = conn.execute(
@@ -286,6 +288,14 @@ def admin_update_question(qid: int, fields: dict) -> bool:
     rescore_question(conn, qid)
     conn.commit()
     conn.close()
+    if cur.rowcount > 0:
+        with db._pick_lock:
+            db._pick_cache.clear()
+        db._QCOUNTS_CACHE[1] = None
+        db._SUBMOD_COUNTS_CACHE.clear()
+        db._REAL_FILTERS_CACHE[1] = None
+        db._TAG3_COUNTS_CACHE[1] = None
+        db._YEAR_MODULE_CACHE[1] = None
     return cur.rowcount > 0
 
 
@@ -594,7 +604,12 @@ def governance_scan() -> dict:
     return db._cached("governance", 600, _governance_scan_uncached)
 
 
-def governance_scan_state() -> tuple[dict, str]:
+def governance_scan_state(refresh: bool = False) -> tuple[dict, str]:
+    if refresh:
+        data = _governance_scan_uncached()
+        with db._admin_cache_lock:
+            db._ADMIN_CACHE["governance"] = (time.time(), data)
+        return data, "refresh"
     return db._cached_state("governance", 600, _governance_scan_uncached)
 
 
@@ -630,11 +645,9 @@ def _governance_scan_uncached() -> dict:
             problems.append("缺答案")
         elif ans:
             dist_all[ans] = dist_all.get(ans, 0) + 1
-        if problems:
+        if problems and len(broken) < 100:
             broken.append({"id": r["id"], "module": r["module"],
                            "question": text[:80], "problems": problems})
-        if len(broken) >= 100:
-            break
     clones = [
         dict(r)
         for r in q(

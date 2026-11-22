@@ -11,8 +11,9 @@
       <span style="font-size:11px;color:var(--t3)">${['A', 'B', 'C', 'D'].map((k) => `${k} ${(100 * (dist[k] || 0) / total).toFixed(0)}%`).join(' / ')}</span></div>`;
   }
 
-  async function render(el) {
-    const g = await api('/api/admin/governance');
+  async function render(el, params) {
+    const force = params === true || (params && typeof params.get === 'function' && params.get('refresh') === '1');
+    const g = await api(force ? '/api/admin/governance?refresh=1' : '/api/admin/governance');
     const skewed = g.answer_dist.batches.filter((b) => {
       const t = Object.values(b.dist).reduce((a, x) => a + x, 0);
       return t >= 20 && Math.max(0, ...Object.values(b.dist)) / t > 0.4;
@@ -78,13 +79,17 @@
       box.querySelectorAll('[data-del]').forEach((a) => {
         a.onclick = async () => {
           if (!confirm('删除该缓存解析？')) return;
-          await api('/api/admin/cache/' + encodeURIComponent(a.dataset.del), { method: 'DELETE' });
-          toast('已删除');
-          a.closest('tr').remove();
+          try {
+            await api('/api/admin/cache/' + encodeURIComponent(a.dataset.del), { method: 'DELETE' });
+            toast('已删除');
+            a.closest('tr').remove();
+          } catch (e) {
+            toast('删除失败：' + (e.message || '请稍后重试'));
+          }
         };
       });
     });
-    el.querySelector('#gov-rescan').onclick = () => { toast('重新扫描中…'); render(el); };
+    el.querySelector('#gov-rescan').onclick = () => { toast('重新扫描中…'); render(el, true); };
   }
 
   Admin.registerPage('governance', { title: '内容治理', crumb: '内容 / 内容治理', render });

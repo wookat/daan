@@ -17,6 +17,14 @@ from .common import INDEXNOW_KEY, SITE_BASE, SITEMAP_SHARD, _e, _module_name, _s
 from .pages import _daily_archive_days
 
 
+def _question_count() -> int:
+    conn = db.get_conn()
+    try:
+        return conn.execute("SELECT COUNT(*) FROM questions WHERE disabled=0").fetchone()[0]
+    finally:
+        conn.close()
+
+
 def _question_ids() -> list[int]:
     conn = db.get_conn()
     ids = [r["id"] for r in conn.execute(
@@ -54,7 +62,7 @@ def _urlset(urls: list[tuple[str, float | None]]) -> Response:
 
 @root_router.get("/sitemap.xml", include_in_schema=False)
 def sitemap_index():
-    n_shards = max(1, math.ceil(len(_question_ids()) / SITEMAP_SHARD))
+    n_shards = max(1, math.ceil(_question_count() / SITEMAP_SHARD))
     maps = (
         [_url("/sitemap-pages.xml"), _url("/sitemap-topics.xml"), _url("/sitemap-years.xml")]
         + [_url(f"/sitemap-questions-{i}.xml") for i in range(1, n_shards + 1)]

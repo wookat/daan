@@ -57,7 +57,7 @@ describe('api.js request() GET 回包统一过旧身份守卫', () => {
     expect(req).not.toBeNull();
     const body = req[1];
     const g = body.indexOf('guardStaleUid(path, data);');
-    const s = body.indexOf('if (snapCacheable(path)) snapSave(path, data);');
+    const s = body.indexOf('if (snapCacheable(path)) snapSave(key, data);');
     expect(g).toBeGreaterThan(-1);
     expect(s).toBeGreaterThan(g);
     expect(body).toMatch(/if \(opts\.timeout != null\) return withAuthRetry\(\(\) => rawRequest\(path, opts\)\.then\(\(d\) => guardStaleUid\(path, d\)\)\);/);

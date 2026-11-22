@@ -153,9 +153,9 @@
         cta-text="重试"
         @cta="loadMats()"
       />
-      <!-- 热点：内涵/角度/金句 三段式 -->
-      <template v-if="mtype === '热点'">
-        <kg-empty-state v-if="!loading && !hots.length" icon="book-open" title="暂无热点素材" desc="按「内涵/角度/金句」整理的热点将陆续上线" />
+      <!-- 热点：内涵/角度/金句 三段式（归入 loading/mErr 之后的同一条件链，防止加载中骨架屏与「暂无素材」同屏渲染） -->
+      <template v-else-if="mtype === '热点'">
+        <kg-empty-state v-if="!hots.length" icon="book-open" title="暂无热点素材" desc="按「内涵/角度/金句」整理的热点将陆续上线" />
         <view v-else class="mgrid kg-cards">
           <kg-card v-for="g in hots" :key="g.topic" class="m-item">
             <view class="q-top" role="button" @click="expanded = expanded === 'h' + g.topic ? 0 : 'h' + g.topic">
@@ -186,12 +186,12 @@
             </template>
           </kg-card>
         </view>
-        <kg-button v-if="!loading && !mErr && !hotEnd && hots.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
+        <kg-button v-if="!hotEnd && hots.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
       </template>
 
       <!-- 我的笔记 -->
       <template v-else-if="mtype === '我的笔记'">
-        <kg-empty-state v-if="!loading && !notes.length" icon="square-pen" title="还没有笔记" desc="自己的金句、案例、写作框架记在这里，和素材库放在一起" cta-text="写一条" @cta="openNoteForm()" />
+        <kg-empty-state v-if="!notes.length" icon="square-pen" title="还没有笔记" desc="自己的金句、案例、写作框架记在这里，和素材库放在一起" cta-text="写一条" @cta="openNoteForm()" />
         <view v-else class="mgrid kg-cards">
           <kg-card v-for="n in notes" :key="n.id" class="m-item">
             <view class="q-top">
@@ -217,29 +217,31 @@
         :cta-text="favOnly || mtype !== '全部' ? '查看全部素材' : ''"
         @cta="setMtype('全部')"
       />
-      <view v-else-if="mtype !== '热点' && mtype !== '我的笔记'" class="mgrid kg-cards">
-        <kg-card v-for="m in shownMats" :key="m.id" class="m-item">
-          <view class="q-top">
-            <view class="q-tags">
-              <text class="m-topic">{{ m.topic }}</text>
-              <kg-tag v-if="m.id === hitMid" tone="warn">搜索命中</kg-tag>
-            </view>
-            <view class="q-top-r">
-              <kg-tag tone="neutral">{{ m.type }}</kg-tag>
-              <view class="star-btn" role="button" :aria-label="favIds.includes(m.id) ? '取消收藏' : '收藏素材'" @click="toggleFav(m)">
-                <l-icon name="star" :size="20" :tone="favIds.includes(m.id) ? 'warn' : 'faint'" :fill="favIds.includes(m.id) ? 'currentColor' : 'none'" />
+      <template v-else>
+        <view class="mgrid kg-cards">
+          <kg-card v-for="m in shownMats" :key="m.id" class="m-item">
+            <view class="q-top">
+              <view class="q-tags">
+                <text class="m-topic">{{ m.topic }}</text>
+                <kg-tag v-if="m.id === hitMid" tone="warn">搜索命中</kg-tag>
+              </view>
+              <view class="q-top-r">
+                <kg-tag tone="neutral">{{ m.type }}</kg-tag>
+                <view class="star-btn" role="button" :aria-label="favIds.includes(m.id) ? '取消收藏' : '收藏素材'" @click="toggleFav(m)">
+                  <l-icon name="star" :size="20" :tone="favIds.includes(m.id) ? 'warn' : 'faint'" :fill="favIds.includes(m.id) ? 'currentColor' : 'none'" />
+                </view>
               </view>
             </view>
-          </view>
-          <text class="m-content" :class="{ ellip3: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
-          <view class="m-foot">
-            <text v-if="m.source" class="m-src ellip">出处：{{ m.source }}</text>
-            <view class="grow"></view>
-            <kg-button variant="text" size="sm" icon="copy" :aria-label="'复制素材链接：' + m.topic" @click="copyMatLink(m)">复制链接</kg-button>
-          </view>
-        </kg-card>
-      </view>
-      <kg-button v-if="!loading && !mErr && !favOnly && !mEnd && mats.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
+            <text class="m-content" :class="{ ellip3: expanded !== m.id }" @click="expanded = expanded === m.id ? 0 : m.id">{{ m.content }}</text>
+            <view class="m-foot">
+              <text v-if="m.source" class="m-src ellip">出处：{{ m.source }}</text>
+              <view class="grow"></view>
+              <kg-button variant="text" size="sm" icon="copy" :aria-label="'复制素材链接：' + m.topic" @click="copyMatLink(m)">复制链接</kg-button>
+            </view>
+          </kg-card>
+        </view>
+        <kg-button v-if="!favOnly && !mEnd && mats.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
+      </template>
     </template>
 
     <!-- 作答记录 -->
@@ -297,6 +299,7 @@ import { qNavState } from '../../shenlun/shenlun-qnav.js';
 import { parseWordLimit, wordState } from '../../shenlun/shenlun-words.js';
 import { adoptServerDraft } from '../../shenlun/shenlun-draft.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
+import { withBasePath } from '../../utils/hash-url.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '热点', '金句', '案例', '政策理论', '范文', '我的笔记'];
@@ -365,7 +368,7 @@ export default {
     detail(v) {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', v && v.id ? buildShenlunUrl(v.id) : this.filterUrl());
+        window.history.replaceState(window.history.state, '', withBasePath(v && v.id ? buildShenlunUrl(v.id) : this.filterUrl()));
       }
       // #endif
       if (v) this.measureSplit();
@@ -548,7 +551,7 @@ export default {
     syncFilterUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history && !this.detail) {
-        window.history.replaceState(null, '', this.filterUrl());
+        window.history.replaceState(window.history.state, '', withBasePath(this.filterUrl()));
       }
       // #endif
     },
@@ -1007,7 +1010,7 @@ export default {
 .chips { margin-bottom: var(--sp-12); }
 .grow { flex: 1; min-width: 0; }
 .fltbar { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
-.fltbar .chips { margin-bottom: 0; }
+.fltbar .chips { flex: 1; min-width: 0; margin-bottom: 0; }
 .paper-tag { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tappable { cursor: pointer; position: relative; }
 .tappable::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 40px; transform: translateY(-50%); }

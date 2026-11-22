@@ -69,9 +69,9 @@ def duration_for(n: int) -> int:
 
 
 def region_of(title: str, region_field: str):
-    """exam_papers.region：国考→None，省考→省名（去后缀）。"""
+    """exam_papers.region：国考→'国考'（与历史库口径统一，防地区筛选漏掉国考卷），省考→省名（去后缀）。"""
     if re.search(r"国家|国考", title):
-        return None
+        return "国考"
     for p in PROVINCES:
         if p in title or p in (region_field or ""):
             return p
@@ -186,7 +186,7 @@ def main():
         return
 
     batch = f"xt-{__import__('time').strftime('%Y%m%d')}"
-    inserted = reused = skipped = imgs_copied = imgs_missing = 0
+    inserted = skipped = imgs_copied = imgs_missing = 0
     updated_papers = new_ids = 0
     missing_img_files: set[str] = set()
 

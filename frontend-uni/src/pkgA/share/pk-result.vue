@@ -143,7 +143,7 @@ export default {
 .crown { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); }
 .av { width: 48px; height: 48px; border-radius: var(--r-full); background: var(--brand-soft); color: var(--brand-text); display: flex; align-items: center; justify-content: center; font-size: var(--fs-h3); font-weight: 600; }
 .av.rival { background: var(--warn-soft); color: var(--warn-strong); }
-.p.win .av { box-shadow: 0 0 0 3px var(--warn); }
+.p.win .av { outline: 3px solid var(--warn); }
 .nm { font-size: var(--fs-sub); color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sc { font-size: var(--fs-display); font-weight: 600; color: var(--ink); line-height: var(--lh-display); }
 .p.win .sc { color: var(--brand-text); }

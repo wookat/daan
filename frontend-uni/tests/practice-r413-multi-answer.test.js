@@ -26,10 +26,10 @@ describe('R413 多选题（answer 多字母）可作答（源文件锁）', () =
 
 describe('R413 复习页作答后「下一题/确认答案」吸底（源文件锁）', () => {
   const book = readFileSync(fileURLToPath(new URL('../src/pages/book/book.vue', import.meta.url)), 'utf8')+readFileSync(fileURLToPath(new URL('../src/pages/book/review-ops.js', import.meta.url)), 'utf8');
-  it('next-btn sticky 且让出 H5 TabBar 50px', () => {
+  it('next-btn sticky 且让出 H5 TabBar --tab-h', () => {
     const rule = (book.match(/\n\.next-btn \{([^}]*)\}/) || [])[1] || '';
     expect(rule).toMatch(/position:\s*sticky/);
-    expect(rule).toMatch(/bottom:\s*calc\(50px \+ env\(safe-area-inset-bottom\)/);
+    expect(rule).toMatch(/bottom:\s*calc\(var\(--tab-h\) \+ env\(safe-area-inset-bottom\)/);
   });
   it('收藏/搜索/错题本收藏展示的正确项按字母包含标绿（多选全部标）', () => {
     for (const p of ['../src/pages/book/book.vue', '../src/pkgA/social/favorites.vue', '../src/pkgA/search/search.vue']) {

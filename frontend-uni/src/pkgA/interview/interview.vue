@@ -68,7 +68,7 @@
         </kg-card>
         <text class="cnt"><text v-if="answer" class="cnt-save">已自动保存 · </text><text class="num">{{ answer.length }}</text> / 5000</text>
         <view class="btn-row">
-          <kg-button variant="ghost" size="lg" icon="mic" @click="voiceStub">语音（即将上线）</kg-button>
+          <kg-button variant="ghost" size="lg" icon="mic" disabled @click="voiceStub">语音（即将上线）</kg-button>
           <kg-button variant="primary" size="lg" class="grow" :disabled="answer.trim().length < 20 || submitting" :loading="submitting" @click="submit">
             {{ submitting ? '考官点评中…' : '提交作答' }}
           </kg-button>
@@ -178,6 +178,10 @@ export default {
   },
   onUnload() {
     this.stopTimer();
+    if (this._streamAc) {
+      this._streamAc.abort();
+      this._streamAc = null;
+    }
   },
   methods: {
     fmtDur(s) {
@@ -245,13 +249,20 @@ export default {
       try {
         this.report = { scores: {}, total: 0, summary: '', duration, answerLen: ans.length, category: this.question.category };
         this.review = '';
+        this.reviewMissing = false;
         this.thinkSecs = 0;
         this.streaming = true;
+        // #ifdef H5
+        if (this._streamAc) this._streamAc.abort();
+        this._streamAc = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        // #endif
         const res = await streamInterview({
           questionId: this.question.id,
           answer: ans,
           durationSec: duration,
+          signal: this._streamAc ? this._streamAc.signal : undefined,
           onMeta: (m) => {
+            if (m && m.session_id) this._sid = m.session_id;
             this.report = { ...this.report, scores: m.scores || {}, total: m.total || 0, summary: m.summary || '' };
             this.step = 'report';
           },
@@ -259,12 +270,22 @@ export default {
           onThinking: (t) => { this.thinkSecs = thinkingSecs(t); },
         });
         this.review = res.review || this.review;
+        this.reviewMissing = this.review.trim().length < 300;
         uni.removeStorageSync('ivDraft');
-        if (res.session_id) this.loadPoints(res.session_id);
+        if (res.session_id) {
+          this._sid = res.session_id;
+          this.loadPoints(res.session_id);
+        }
       } catch (e) {
+        if (e && e.name === 'AbortError') return;
         uni.showToast({ title: e.message || '点评失败，请重试', icon: 'none' });
-        if (this.step !== 'report') this.startTimer();
+        if (this.step === 'report' && this.review.trim().length < 300) {
+          this.reviewMissing = true;
+        } else if (this.step !== 'report') {
+          this.startTimer();
+        }
       } finally {
+        this._streamAc = null;
         this.submitting = false;
         this.streaming = false;
       }
@@ -302,19 +323,28 @@ export default {
     // #ifdef H5
     async regenReview() {
       if (this.streaming) return;
+      if (!this._sid) {
+        this.submit();
+        return;
+      }
       this.streaming = true;
       this.thinkSecs = 0;
+      if (this._streamAc) this._streamAc.abort();
+      this._streamAc = typeof AbortController !== 'undefined' ? new AbortController() : null;
       try {
         const sid = this._sid;
         await streamInterviewReviewRegen({
           sessionId: sid,
+          signal: this._streamAc ? this._streamAc.signal : undefined,
           onDelta: (full) => { this.review = full; },
           onThinking: (t) => { this.thinkSecs = thinkingSecs(t); },
         });
         this.reviewMissing = this.review.trim().length < 300;
       } catch (e) {
+        if (e && e.name === 'AbortError') return;
         uni.showToast({ title: e.message || '点评生成失败，请重试', icon: 'none' });
       } finally {
+        this._streamAc = null;
         this.streaming = false;
       }
     },

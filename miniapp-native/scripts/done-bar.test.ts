@@ -31,7 +31,7 @@ describe('practice 页接线', () => {
   const ts = read('../miniprogram/pages/practice/practice.ts');
   it('底栏文案/动作来自 doneBar；卡内不再有独立的重练小按钮', () => {
     expect(wxml).toMatch(
-      /<kg-action-bar wx:if="\{\{finished\}\}" layout="actions" primaryText="\{\{doneBar\.primary\}\}" secondaryText="\{\{doneBar\.secondary\}\}" bind:primary="onDonePrimary" bind:secondary="onDoneSecondary" \/>/
+      /<kg-action-bar\b[^>]*wx:if="\{\{finished\}\}"[^>]*layout="actions"[^>]*primaryText="\{\{doneBar\.primary\}\}"[^>]*secondaryText="\{\{doneBar\.secondary\}\}"[^>]*bind:primary="onDonePrimary"[^>]*bind:secondary="onDoneSecondary" \/>/
     );
     expect(wxml).not.toMatch(/bind:click="onRedoWrong"/);
     expect(wxml).not.toMatch(/primaryText="再来一组"/);

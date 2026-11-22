@@ -4,16 +4,20 @@
 发送线程不启动，对零配置环境零影响。
 """
 
+import ipaddress
 import json
 import logging
 import os
+import socket
 import threading
 import time
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.api import auth
+from app.api.deps import rl
 from app import db
 
 log = logging.getLogger("kg.push")
@@ -24,6 +28,50 @@ VAPID_PRIVATE = os.environ.get("KG_VAPID_PRIVATE", "")
 VAPID_PUBLIC = os.environ.get("KG_VAPID_PUBLIC", "")
 VAPID_SUB = os.environ.get("KG_VAPID_SUB", "mailto:support@zalize.com")
 PUSH_HOUR = int(os.environ.get("KG_PUSH_HOUR", "8"))
+_MAX_SUB_JSON = 4096
+
+
+def _is_forbidden_ip(ip_str: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
+
+
+def _validate_push_endpoint(endpoint: str, *, resolve_dns: bool = False) -> bool:
+    """校验推送 endpoint 为合法公网 HTTPS URL，阻断 SSRF（环回/私网/链路本地/内网域）。"""
+    if not endpoint or len(endpoint) > 1024:
+        return False
+    try:
+        u = urlparse(endpoint)
+    except ValueError:
+        return False
+    if u.scheme != "https" or not u.hostname or u.username or u.password:
+        return False
+    host = u.hostname.lower().rstrip(".")
+    if host in ("localhost", "localhost.localdomain") or host.endswith((".local", ".internal", ".localhost")):
+        return False
+    if _is_forbidden_ip(host):
+        return False
+    if resolve_dns:
+        try:
+            infos = socket.getaddrinfo(host, u.port or 443, type=socket.SOCK_STREAM)
+        except OSError:
+            return False
+        if not infos:
+            return False
+        for info in infos:
+            if _is_forbidden_ip(info[4][0]):
+                return False
+    return True
 
 
 def _ensure_table(conn):
@@ -43,24 +91,35 @@ def push_pubkey():
 
 
 @router.post("/subscribe")
-def push_subscribe(body: dict, authorization: str | None = Header(default=None)):
+def push_subscribe(
+    body: dict,
+    authorization: str | None = Header(default=None),
+    request: Request = None,
+):
     if not (VAPID_PRIVATE and VAPID_PUBLIC):
         raise HTTPException(503, "推送未配置")
+    if request is not None:
+        rl(request, "push_sub", 20, 600)
     uid = (body.get("uid") or "").strip()[:64]
     if not auth.owns_uid(uid, authorization):
         raise HTTPException(403, "无权访问该账号数据，请重新登录")
     sub = body.get("sub") or {}
     endpoint = (sub.get("endpoint") or "").strip()
-    if not uid or not endpoint.startswith("https://") or not sub.get("keys"):
-        raise HTTPException(400, "参数不完整")
+    if not uid or not _validate_push_endpoint(endpoint) or not isinstance(sub.get("keys"), dict) or not sub.get("keys"):
+        raise HTTPException(400, "参数不完整或推送地址无效")
+    sub_json = json.dumps(sub, ensure_ascii=False)
+    if len(sub_json) > _MAX_SUB_JSON:
+        raise HTTPException(400, "订阅数据过大")
     conn = db.get_conn()
-    _ensure_table(conn)
-    conn.execute(
-        "INSERT OR REPLACE INTO push_subs (endpoint, uid, sub_json, created_at) VALUES (?,?,?,?)",
-        (endpoint[:1024], uid, json.dumps(sub)[:4096], time.time()),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        _ensure_table(conn)
+        conn.execute(
+            "INSERT OR REPLACE INTO push_subs (endpoint, uid, sub_json, created_at) VALUES (?,?,?,?)",
+            (endpoint, uid, sub_json, time.time()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
     return {"ok": True}
 
 
@@ -105,17 +164,28 @@ def _send_daily(only_endpoint: str | None = None):
     from pywebpush import WebPushException, webpush
 
     conn = db.get_conn()
-    _ensure_table(conn)
-    conn.execute("CREATE TABLE IF NOT EXISTS seo_meta (key TEXT PRIMARY KEY, value TEXT)")
-    day = datetime.now(CN_TZ).strftime("%Y-%m-%d")
-    done = {
-        r[0]
-        for r in conn.execute("SELECT uid FROM daily_set_entries WHERE day=?", (day,)).fetchall()
-    }
-    subs = conn.execute("SELECT endpoint, uid, sub_json FROM push_subs").fetchall()
-    sent = gone = 0
+    try:
+        _ensure_table(conn)
+        conn.execute("CREATE TABLE IF NOT EXISTS seo_meta (key TEXT PRIMARY KEY, value TEXT)")
+        day = datetime.now(CN_TZ).strftime("%Y-%m-%d")
+        try:
+            done = {
+                r[0]
+                for r in conn.execute("SELECT uid FROM daily_set_entries WHERE day=?", (day,)).fetchall()
+            }
+        except Exception:
+            done = set()
+        subs = conn.execute("SELECT endpoint, uid, sub_json FROM push_subs").fetchall()
+    finally:
+        conn.close()
+
+    sent = 0
+    gone_endpoints: list[str] = []
     for endpoint, uid, sub_json in subs:
         if only_endpoint is not None and endpoint != only_endpoint:
+            continue
+        if not _validate_push_endpoint(endpoint, resolve_dns=True):
+            log.warning("push 拦截非法/内网 endpoint: %s", endpoint[:120])
             continue
         try:
             due_n = db.due_review_count(uid)
@@ -136,21 +206,26 @@ def _send_daily(only_endpoint: str | None = None):
         except WebPushException as e:
             code = getattr(e.response, "status_code", 0)
             if code in (404, 410):
-                conn.execute("DELETE FROM push_subs WHERE endpoint=?", (endpoint,))
-                gone += 1
+                gone_endpoints.append(endpoint)
             else:
                 log.warning("push 发送失败 %s: %s", code, e)
         except Exception as e:
             log.warning("push 发送异常: %s", e)
-    if only_endpoint is None:
-        conn.execute(
-            "INSERT INTO seo_meta (key, value) VALUES ('push_last_day', ?) "
-            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-            (day,),
-        )
-    conn.commit()
-    conn.close()
-    log.info("push 日推完成 day=%s sent=%d gone=%d subs=%d", day, sent, gone, len(subs))
+
+    conn = db.get_conn()
+    try:
+        for ep in gone_endpoints:
+            conn.execute("DELETE FROM push_subs WHERE endpoint=?", (ep,))
+        if only_endpoint is None:
+            conn.execute(
+                "INSERT INTO seo_meta (key, value) VALUES ('push_last_day', ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                (day,),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    log.info("push 日推完成 day=%s sent=%d gone=%d subs=%d", day, sent, len(gone_endpoints), len(subs))
 
 
 def _push_loop():

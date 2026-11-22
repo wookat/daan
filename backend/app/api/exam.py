@@ -362,6 +362,7 @@ def api_exam_start(body: dict, request: Request):
     uid = (body.get("uid") or "").strip()[:64]
     if not uid:
         raise HTTPException(400, "缺少 uid")
+    rl(request, "exam_start", 30, 300, uid)
     template_id = (body.get("template_id") or "").strip()[:24]
     if template_id:
         tpl = paper_templates.get(template_id)
@@ -388,8 +389,8 @@ def api_exam_start(body: dict, request: Request):
     return {"attempt_id": attempt_id, "paper": pinfo, "items": ordered}
 
 
-def _exam_paper_payload(paper: dict) -> tuple[dict, list[dict]]:
-    qids = db.exam_active_qids(paper["question_ids"])
+def _exam_paper_payload(paper: dict, qids_override: list[int] | None = None) -> tuple[dict, list[dict]]:
+    qids = qids_override if qids_override else db.exam_active_qids(paper["question_ids"])
     items = {q["id"]: q for q in db.questions_by_ids(qids)}
     ordered = [_exam_item(items[i]) for i in qids if i in items]
     pinfo = {
@@ -493,7 +494,7 @@ def api_exam_resume(uid: str):
     paper = db.get_exam_paper(prog["paper_id"])
     if not paper:
         return {}
-    pinfo, ordered = _exam_paper_payload(paper)
+    pinfo, ordered = _exam_paper_payload(paper, qids_override=prog.get("question_ids") or None)
     if len(ordered) < 5:
         return {}
     return {
@@ -527,23 +528,30 @@ def api_exam_submit(body: dict, request: Request):
     secs = _clean_int_map(body.get("secs"))
     qids = attempt.get("question_ids") or db.exam_active_qids(paper["question_ids"])
     marks = _clean_marks(body.get("marks"), len(qids))
-    judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": qids}, picks, secs,
-                          probe=auth.probe_request(request),
-                          session_id=(request.headers.get("x-kg-session") or "")[:48] or None)
-    per_module: dict = {}
-    for r in judged["items"]:
-        m = r.get("module") or "other"
-        pm = per_module.setdefault(m, {"n": 0, "answered": 0, "correct": 0, "secs": 0})
-        pm["n"] += 1
-        if r["status"] == "ok":
-            pm["answered"] += 1
-            if r["correct"]:
-                pm["correct"] += 1
-        pm["secs"] += r.get("secs") or 0
-    total = judged["total"] or 1
-    score = round(100.0 * judged["correct"] / total, 1)
-    db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module,
-                           secs, marks)
+    claimed_at = db.claim_exam_attempt(int(attempt_id))
+    if claimed_at is None:
+        raise HTTPException(400, "该次模考已交卷")
+    try:
+        judged = _judge_paper(uid, {"code": None, "title": paper["title"], "question_ids": qids}, picks, secs,
+                              probe=auth.probe_request(request),
+                              session_id=(request.headers.get("x-kg-session") or "")[:48] or None)
+        per_module: dict = {}
+        for r in judged["items"]:
+            m = r.get("module") or "other"
+            pm = per_module.setdefault(m, {"n": 0, "answered": 0, "correct": 0, "secs": 0})
+            pm["n"] += 1
+            if r["status"] == "ok":
+                pm["answered"] += 1
+                if r["correct"]:
+                    pm["correct"] += 1
+            pm["secs"] += r.get("secs") or 0
+        total = judged["total"] or 1
+        score = round(100.0 * judged["correct"] / total, 1)
+        db.finish_exam_attempt(int(attempt_id), {str(k): v for k, v in picks.items()}, score, per_module,
+                               secs, marks, claimed_at=claimed_at)
+    except Exception:
+        db.unclaim_exam_attempt(int(attempt_id), claimed_at)
+        raise
     db.clear_exam_progress(int(attempt_id))
     return {
         "attempt_id": int(attempt_id),

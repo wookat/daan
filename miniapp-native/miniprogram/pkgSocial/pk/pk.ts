@@ -14,6 +14,7 @@ import type { PkLeaderboardResp, PkMatch, PkPlayer, PkQuestion } from '../../api
 import { pkNickname } from '../../utils/auth';
 import { SITE_URL } from '../../utils/config';
 import { MODULE_KEYS, MODULES } from '../../utils/module-meta';
+import { imgUrl } from '../../utils/request';
 import { toastInfo } from '../../utils/toast';
 
 type Side = 'creator' | 'opponent';
@@ -112,7 +113,8 @@ Page({
     qIndex: 0,
     total: 0,
     curQ: null as PkQuestion | null,
-    curOpts: [] as { k: string; v: string }[],
+    curImg: '',
+    curOpts: [] as { k: string; v: string; img: string }[],
     curTag: '',
     picked: '',
     answered: 0,
@@ -139,6 +141,7 @@ Page({
   match: null as PkMatch | null,
   qStart: 0,
   timerId: 0 as ReturnType<typeof setInterval> | 0,
+  pickDelayId: 0 as ReturnType<typeof setTimeout> | 0,
   waitTimerId: 0 as ReturnType<typeof setTimeout> | 0,
   waitPollId: 0 as ReturnType<typeof setInterval> | 0,
   fromRandom: false,
@@ -308,11 +311,13 @@ Page({
   beginQ() {
     const q = this.questions[this.data.qIndex] || null;
     const o = (q && q.options) || {};
+    const oImgs = (q && q.option_imgs) || {};
     this.qStart = Date.now();
     this.setData({
       curQ: q,
+      curImg: imgUrl(q && q.image),
       curTag: q ? [modLabel(q.module), q.submodule || ''].filter(Boolean).join(' · ') : '',
-      curOpts: Object.keys(o).map((k) => ({ k, v: String(o[k] == null ? '' : o[k]) })),
+      curOpts: Object.keys(o).map((k) => ({ k, v: String(o[k] == null ? '' : o[k]), img: imgUrl(oImgs[k]) })),
       picked: '',
       timeLeft: PER_Q_SEC,
       streak: this.questions.map((_q: PkQuestion, i: number) => (i < this.answers.length ? 'ok' : i === this.data.qIndex ? 'cur' : '')),
@@ -328,13 +333,25 @@ Page({
   stopTimer() {
     if (this.timerId) clearInterval(this.timerId);
     this.timerId = 0;
+    if (this.pickDelayId) clearTimeout(this.pickDelayId);
+    this.pickDelayId = 0;
   },
 
   onPick(e: WechatMiniprogram.TouchEvent) {
     if (this.data.picked) return;
     const k = String(e.currentTarget.dataset.k || '');
+    // 选答瞬间立即停表，避免 350ms 延迟内倒计时归零按空答案覆盖
+    this.stopTimer();
     this.setData({ picked: k });
-    setTimeout(() => this.lockAnswer(k), 350);
+    this.pickDelayId = setTimeout(() => {
+      this.pickDelayId = 0;
+      this.lockAnswer(k);
+    }, 350);
+  },
+
+  onPreviewImg(e: WechatMiniprogram.TouchEvent) {
+    const src = String(e.currentTarget.dataset.src || '');
+    if (src) wx.previewImage({ current: src, urls: [src] });
   },
 
   lockAnswer(k: string) {
@@ -471,8 +488,9 @@ Page({
   },
   rematch() {
     this.stopWaitWatch();
-    this.setData({ module: (this.match && this.match.module) || '', view: 'home', noOppHint: false });
-    this.loadHome();
+    const mod = (this.match && this.match.module) || '';
+    this.setData({ module: mod, noOppHint: false });
+    this.createMatch();
   },
   backHome() {
     this.stopWaitWatch();

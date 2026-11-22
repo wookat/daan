@@ -2,6 +2,9 @@
 // H5 / App(Capacitor) 生效；小程序端由 utils/theme.ts 独立实现同口径逻辑。
 
 import { anonUid, request } from '../api/api.js';
+// #ifdef H5
+import { syncH5TabBarIcons } from '../utils/tabbar-icons.js';
+// #endif
 
 export const THEME_MODES = ['system', 'light', 'dark'];
 export const THEME_LABELS = { system: '跟随系统', light: '浅色', dark: '深色' };
@@ -46,6 +49,7 @@ export function applyTheme() {
 
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', dark ? '#15161c' : '#eef3ff');
+  syncH5TabBarIcons({ dark, accent: getThemeAccent() });
   // #endif
 }
 

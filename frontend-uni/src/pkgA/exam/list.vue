@@ -35,7 +35,17 @@
         </view>
 
         <view v-if="filters.years.length || filters.regions.length" class="filters">
-          <wd-segmented ref="seg" :value="stLabel" :options="ST_LABELS" size="small" @change="onSt" />
+          <view class="flt-top">
+            <wd-segmented ref="seg2" :value="stLabel" :options="ST_LABELS" size="small" class="flt-seg" @change="onSt" />
+            <view
+              v-if="completeCount > 0 && completeCount < items.length"
+              class="flt-comp"
+              :class="{ on: onlyComplete }"
+              role="switch"
+              :aria-checked="onlyComplete ? 'true' : 'false'"
+              @click="toggleComplete"
+            >只看完整卷</view>
+          </view>
           <kg-chip-row v-if="filters.years.length" :options="yearOpts" :model-value="year == null ? '' : year" @update:model-value="setYear($event === '' ? null : $event)" />
           <kg-chip-row v-if="filters.regions.length" class="region-row" :options="regionOpts" :model-value="region || ''" :scroll-to-selected="false" @update:model-value="setRegion($event || null)" />
         </view>
@@ -68,8 +78,7 @@
                 <kg-tag v-if="p.year" tone="neutral">{{ p.year }}年</kg-tag>
                 <kg-tag v-if="p.region" tone="neutral">{{ p.region }}</kg-tag>
                 <text class="pmeta">{{ p.n }} 题 · {{ p.duration_min }} 分钟{{ p.takers ? ' · ' + p.takers + ' 人考过' + (p.avg_score != null ? ' · 平均 ' + p.avg_score + ' 分' : '') : '' }}</text>
-                <kg-tag v-if="p.kind === 'zhenti' && p.n < 100" tone="warn">题量待补全</kg-tag>
-                <kg-tag v-else-if="p.kind === 'zhenti' && p.n > 160" tone="info">合卷收录</kg-tag>
+                <kg-tag v-if="paperBadge(p).tagText" :tone="paperBadge(p).tagTone">{{ paperBadge(p).tagText }}</kg-tag>
               </view>
               <text v-if="p.best_score != null" class="pbest">我的最好成绩 <text class="num">{{ p.best_score }}</text> 分 · 已考 {{ p.attempt_count }} 次</text>
               <text v-else class="pbest none">还没考过，来挑战一下</text>
@@ -193,7 +202,9 @@ import { paperProgress } from '../../exam/exam-list-progress.js';
 import { adoptServerExamProgress } from '../../exam/exam-progress-sync.js';
 import { paperPracticedState } from '../../exam/paper-continue.js';
 import { paperModsText } from '../../exam/exam-paper-mods.js';
+import { paperCompleteness, sortPapersCompleteFirst } from '../../exam/exam-paper-quality.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
+import { withBasePath } from '../../utils/hash-url.js';
 
 const PAGE = 20;
 const ST_LABELS = ['全部', '没考过', '考过的'];
@@ -212,6 +223,7 @@ export default {
       year: null,
       region: null,
       st: '',
+      onlyComplete: false,
       loading: true,
       loadErr: '',
       exportingId: null,
@@ -233,8 +245,13 @@ export default {
     this._starting = false;
   },
   computed: {
+    completeCount() {
+      return this.items.filter((p) => paperCompleteness(p).complete).length;
+    },
     shown() {
-      return filterPapersByStatus(this.items, this.st);
+      const bySt = filterPapersByStatus(this.items, this.st);
+      const filtered = this.onlyComplete ? bySt.filter((p) => paperCompleteness(p).complete) : bySt;
+      return sortPapersCompleteFirst(filtered);
     },
     prog() {
       return paperProgress(this.items);
@@ -381,9 +398,16 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildExamListUrl({ year: this.year, region: this.region, st: this.st, kind: this.kind }));
+        window.history.replaceState(window.history.state, '', withBasePath(buildExamListUrl({ year: this.year, region: this.region, st: this.st, kind: this.kind })));
       }
       // #endif
+    },
+    toggleComplete() {
+      this.onlyComplete = !this.onlyComplete;
+      this.pageN = 1;
+    },
+    paperBadge(p) {
+      return paperCompleteness(p);
     },
     setYear(y) { this.year = y; this.pinnedId = 0; this.pageN = 1; this.syncUrl(); this.load(); },
     setRegion(r) { this.region = r; this.pinnedId = 0; this.pageN = 1; this.syncUrl(); this.load(); },
@@ -407,6 +431,7 @@ export default {
     },
     clearFilters() {
       this.st = '';
+      this.onlyComplete = false;
       this.year = null;
       this.region = null;
       this.pinnedId = 0;
@@ -519,12 +544,17 @@ export default {
 .mini-l { flex: 1; min-width: 0; }
 .mini-t { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .mini-s { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin-top: var(--sp-4); }
-.progrow { padding: var(--sp-4) 0 var(--sp-16); }
-.kinds { margin-bottom: var(--sp-16); }
+.progrow { padding-top: var(--sp-4); margin-bottom: var(--sp-16); }
+.kinds { margin-bottom: var(--sp-12); }
 .prog-txt { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-8); }
 .prog-t { font-size: var(--fs-sub); font-weight: 500; color: var(--ink); }
 .prog-p { font-size: var(--fs-sub); color: var(--brand-text); }
 .filters { display: flex; flex-direction: column; gap: var(--sp-12); margin-bottom: var(--sp-16); }
+.flt-top { display: flex; align-items: center; gap: var(--sp-8); }
+.flt-seg { flex: 1; min-width: 0; }
+.flt-comp { position: relative; flex-shrink: 0; display: inline-flex; align-items: center; height: 32px; padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--fs-sub); font-weight: 500; white-space: nowrap; }
+.flt-comp::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--hit-min); transform: translateY(-50%); }
+.flt-comp.on { background: var(--brand-soft); border-color: var(--brand); color: var(--brand-text); }
 .plist .paper + .paper { margin-top: 0; }
 .paper-top { min-height: var(--hit-min); display: flex; flex-direction: column; gap: var(--sp-8); align-items: flex-start; }
 .paper-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: var(--lh-body); }
@@ -573,7 +603,7 @@ export default {
 .done-t { font-size: var(--fs-sub); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .done-code { display: flex; align-items: baseline; gap: var(--sp-8); }
 .done-k { font-size: var(--fs-sub); color: var(--ink-3); }
-.done-c { font-size: var(--fs-h1); font-weight: 700; color: var(--brand-text); letter-spacing: var(--ls-num); }
+.done-c { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); letter-spacing: 0.08em; }
 .done-s { font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */

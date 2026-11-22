@@ -104,13 +104,44 @@ def _saturday_window(now: float) -> tuple[float, float]:
 
 
 def _pick_paper_id(conn) -> int:
+    """为每周全站模考大赛选卷：
+    1) 优先选完整真题卷（100 <= 活跃题数 <= 150 且行测五模块齐全），并避开已考过的场次；
+    2) 小样本/测试库无百题完整卷时退回 >=60 题真题卷；
+    3) 仍无则即时生成 30 题迷你模考兜底。
+    """
     rows = conn.execute(
-        "SELECT id, question_ids FROM exam_papers WHERE kind='zhenti' ORDER BY id DESC LIMIT 50"
+        "SELECT id, year, question_ids FROM exam_papers WHERE kind='zhenti' ORDER BY year DESC, id DESC LIMIT 200"
     ).fetchall()
-    ok = [r["id"] for r in rows
-          if len(db.exam_active_qids(json.loads(r["question_ids"] or "[]"))) >= 60]
-    if ok:
-        return random.choice(ok)
+    used_pids: set[int] = set()
+    try:
+        used_pids = {
+            r["paper_id"] for r in conn.execute("SELECT DISTINCT paper_id FROM mock_events").fetchall()
+        }
+    except sqlite3.OperationalError:
+        pass
+    complete_fresh: list[int] = []
+    complete_all: list[int] = []
+    fallback_60: list[int] = []
+    for r in rows:
+        qids = json.loads(r["question_ids"] or "[]")
+        active = db.exam_active_qids(qids)
+        n = len(active)
+        if n < 60:
+            continue
+        fallback_60.append(r["id"])
+        if 100 <= n <= 150:
+            qs = db.questions_by_ids(active)
+            mods = {q.get("module") for q in qs if not q.get("disabled") and q.get("module") in db.MODULE_ORDER}
+            if len(mods) == len(db.MODULE_ORDER):
+                complete_all.append(r["id"])
+                if r["id"] not in used_pids:
+                    complete_fresh.append(r["id"])
+    if complete_fresh:
+        return random.choice(complete_fresh)
+    if complete_all:
+        return random.choice(complete_all)
+    if fallback_60:
+        return random.choice(fallback_60)
     return db.create_mock_paper(n=30, duration_min=30)
 
 
@@ -327,14 +358,20 @@ def api_event_attach(event_id: int, body: dict):
             if entry.get("attempt_id") == int(attempt_id):
                 return {"ok": True, "score": entry["score"], "first": False}
             raise HTTPException(400, "已有比赛成绩，以首次交卷为准")
-        conn.execute(
+        cur = conn.execute(
             """INSERT INTO mock_event_entries(event_id, uid, registered_at, attempt_id, score)
                VALUES(?,?,?,?,?)
                ON CONFLICT(event_id, uid) DO UPDATE SET
-                 attempt_id=excluded.attempt_id, score=excluded.score""",
+                 attempt_id=excluded.attempt_id, score=excluded.score
+               WHERE mock_event_entries.score IS NULL""",
             (event_id, uid, attempt["submitted_at"], int(attempt_id), attempt["score"]),
         )
         conn.commit()
+        if cur.rowcount == 0:
+            entry2 = _entry(conn, event_id, uid)
+            if entry2 and entry2.get("attempt_id") == int(attempt_id):
+                return {"ok": True, "score": entry2["score"], "first": False}
+            raise HTTPException(400, "已有比赛成绩，以首次交卷为准")
         return {"ok": True, "score": attempt["score"], "first": True}
     finally:
         conn.close()
@@ -495,7 +532,7 @@ def api_event_report(event_id: int, uid: str = ""):
             })
         # 弱项三级考点 top5（本卷错题聚合）
         picks = {int(k): v for k, v in (attempt.get("answers") or {}).items()}
-        qids = db.exam_active_qids(paper["question_ids"])
+        qids = attempt.get("question_ids") or db.exam_active_qids(paper["question_ids"])
         qmap = {q["id"]: q for q in db.questions_by_ids(qids)}
         tag_wrong: dict[str, list[int]] = {}
         for i, qid in enumerate(qids):

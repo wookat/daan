@@ -79,10 +79,13 @@
       <kg-card wx:if="{{curQ}}" variant="raised" class="sec">
         <view class="tags"><kg-tag tone="module" module="{{curQ.module || ''}}">{{curTag}}</kg-tag><kg-tag tone="neutral">第 {{qIndex + 1}}/{{total}} 题</kg-tag></view>
         <text class="q-stem q-text" user-select>{{curQ.question}}</text>
-        <image wx:if="{{curQ.image}}" class="q-img" src="{{curQ.image}}" mode="widthFix" />
+        <image wx:if="{{curImg}}" class="q-img" src="{{curImg}}" mode="widthFix" data-src="{{curImg}}" bind:tap="onPreviewImg" />
         <view wx:for="{{curOpts}}" wx:key="k" class="opt {{picked === item.k ? 'on' : ''}}" hover-class="{{picked ? '' : 'opt--hover'}}" data-k="{{item.k}}" bind:tap="onPick">
           <text class="opt-k">{{item.k}}</text>
-          <text class="opt-v">{{item.v}}</text>
+          <view class="opt-v">
+            <text wx:if="{{item.v}}">{{item.v}}</text>
+            <image wx:if="{{item.img}}" class="opt-img" src="{{item.img}}" mode="widthFix" />
+          </view>
         </view>
       </kg-card>
 

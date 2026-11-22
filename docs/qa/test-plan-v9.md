@@ -1,6 +1,6 @@
 # 测试计划 v9（UI/UX 视觉升级回归，H5）
 
-Evidence: App.vue（page 渐变背景 #eef2ff→#f6f7fb、品牌变量 --brand:#4f46e5、H5 @media(min-width:700px) .wrap max-width:680px 居中）；pages.json L18 tabBar selectedColor #4f46e5、L27-29 导航栏靛蓝底白字；ask.vue L3-5 hero"花生十三错题助手"+副标题"拍题即得你学的方法体系讲解"；构建产物 assets/ask-CEU-BZHP.css 已含 hero/渐变按钮 linear-gradient(135deg,#6366f1,#4f46e5)/胶囊 tag（border-radius 31.2rem）。服务 :8000 已运行（ACCESS_CODE=kg2026）。
+Evidence: App.vue（page 渐变背景 #eef2ff→#f6f7fb、品牌变量 --brand:#4f46e5、H5 @media(min-width:700px) .wrap max-width:680px 居中）；pages.json L18 tabBar selectedColor #4f46e5、L27-29 导航栏靛蓝底白字；ask.vue L3-5 hero"花生十三错题助手"+副标题"拍题即得你学的方法体系讲解"；构建产物 assets/ask-CEU-BZHP.css 已含 hero/渐变按钮 linear-gradient(135deg,#6366f1,#4f46e5)/胶囊 tag（border-radius 31.2rem）。服务 :8000 已运行（ACCESS_CODE=<ACCESS_CODE>）。
 
 ## T1 400px 移动视口三页视觉
 窗口设为 400×700，硬刷新 http://localhost:8000。
@@ -13,7 +13,7 @@ Evidence: App.vue（page 渐变背景 #eef2ff→#f6f7fb、品牌变量 --brand:#
 - 断言 D：内容列（.wrap）居中且宽度约 680px，两侧留大片渐变背景空白，不满屏拉伸（若破坏则内容拉满 1200px——视觉上明显可区分）。
 
 ## T3 冒烟：文字题讲解一次跑通
-回 400px 视口，拍题讲解页粘贴一道资料分析题（如 2023 年收入 4800 亿元、同比增长 20%，求 2022 年基期 → 4000），点"讲解这道题"（访问码已存 storage，如弹框输 kg2026）。
+回 400px 视口，拍题讲解页粘贴一道资料分析题（如 2023 年收入 4800 亿元、同比增长 20%，求 2022 年基期 → 4000），点"讲解这道题"（访问码已存 storage，如弹框输 <ACCESS_CODE>）。
 - 断言 E：加载态计秒提示出现→讲解卡片渲染，模块 tag 靛蓝胶囊、rich-text 正常、答案含 4000；无 JS 报错破坏功能。
 
 同时记录任何 P1/P2 视觉问题（对比度、间距、按钮态）。更新 test-report.md（v9 置顶）。

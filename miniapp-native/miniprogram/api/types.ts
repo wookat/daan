@@ -199,6 +199,9 @@ export interface ShareQuestion {
   submodule?: string | null;
   question: string;
   options: Record<string, string>;
+  image?: string | null;
+  option_imgs?: Record<string, string> | null;
+  multi?: boolean;
   answer?: string;
   explanation?: string | null;
 }

@@ -1,5 +1,6 @@
 """错题本存储（SQLite）。"""
 
+from collections import OrderedDict
 import hashlib
 import json
 import math
@@ -14,15 +15,33 @@ from app.services import similarity
 DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), "..", "..", "..", "data.db"))
 
 _local = threading.local()
+_ENSURED_LOCK = threading.Lock()
+_ENSURED_TABLES: set[tuple[str, str]] = set()
+
+
+def _is_ensured(conn, name: str) -> bool:
+    p = getattr(conn, "_db_path", None)
+    if not p or p == ":memory:":
+        return False
+    return (p, name) in _ENSURED_TABLES
+
+
+def _mark_ensured(conn, name: str) -> None:
+    p = getattr(conn, "_db_path", None)
+    if p and p != ":memory:":
+        with _ENSURED_LOCK:
+            _ENSURED_TABLES.add((p, name))
+
 
 class _ConnProxy:
     """线程内复用底层连接：close() 仅回滚未提交事务（与真实 close 语义一致），
     连接与其堆内页缓存常驻，避免同机邻居 I/O 挤出 OS 页缓存后每请求重读索引。"""
 
-    __slots__ = ("_conn",)
+    __slots__ = ("_conn", "_db_path")
 
-    def __init__(self, conn):
+    def __init__(self, conn, db_path: str | None = None):
         self._conn = conn
+        self._db_path = db_path
 
     def close(self):
         try:
@@ -82,7 +101,7 @@ def get_conn():
     elif conn.in_transaction:
         # 上一请求在语句之间抛出（Python 层异常）未走到 close()，事务残留会持写锁；复用前兜底回滚
         conn.rollback()
-    return _ConnProxy(conn)
+    return _ConnProxy(conn, str(DB_PATH))
 
 def init_db():
     conn = get_conn()
@@ -317,6 +336,7 @@ def init_db():
             updated_at REAL NOT NULL
         )"""
     )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_shenlun_notes_uid ON shenlun_notes(uid, updated_at)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shizheng_questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -638,7 +658,9 @@ MODULE_ORDER = ["changshi", "yanyu", "shuliang", "panduan", "ziliao"]
 
 _PAPERS_CACHE_TTL = 300
 
-_papers_cache: dict[tuple, tuple[float, list[dict]]] = {}
+_PAPERS_CACHE_MAX = 128
+
+_papers_cache: OrderedDict[tuple, tuple[float, list[dict]]] = OrderedDict()
 
 _papers_refreshing: set[tuple] = set()
 
@@ -728,7 +750,11 @@ MASTERY_LEVELS = [
     ("jingtong", "精通", 1.01),
 ]
 
-_MASTERY_CACHE: dict = {}
+_MASTERY_CACHE: OrderedDict = OrderedDict()
+
+_MASTERY_CACHE_MAX = 512
+
+_mastery_cache_lock = threading.Lock()
 
 MASTERY_CACHE_TTL = 60
 

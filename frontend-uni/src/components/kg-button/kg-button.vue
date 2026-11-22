@@ -78,7 +78,8 @@ export default {
 .kg-btn.kg-btn--tone-bad.kg-btn--text { color: var(--bad-strong) !important; }
 .kg-btn.kg-btn--tone-inverse.kg-btn--primary { background: var(--on-brand) !important; color: var(--brand) !important; }
 .kg-btn.kg-btn--tone-inverse.kg-btn--ghost { background: rgba(255, 255, 255, 0.16) !important; color: var(--on-brand) !important; border-color: transparent !important; }
-.kg-btn.is-disabled, .kg-btn[disabled] { opacity: 0.4 !important; pointer-events: none; }
+.kg-btn.is-disabled, .kg-btn[disabled] { opacity: 0.45 !important; pointer-events: none; }
+.kg-btn.kg-btn--primary.is-disabled, .kg-btn.kg-btn--primary[disabled] { background: var(--fill) !important; color: var(--ink-3) !important; border: 1px solid var(--line) !important; opacity: 1 !important; }
 .kg-btn__in { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); height: 100%; }
 /* wd-button__text 是块级容器，纯图标按钮的内容只有图标高会贴顶、与并排文字按钮中线不齐；
    scoped 样式触不到子组件内部，须 :deep；改 flex 后图标与文字垂直居中同线 */

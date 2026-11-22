@@ -19,6 +19,6 @@ describe('pkgGrow/daily 顶栏标题', () => {
     expect(body).toContain("subTitle: (past ? '往期补练 · ' : '') + date,");
   });
   it('navbar 绑 data.title', () => {
-    expect(WXML).toContain('<navbar title="{{title}}" back />');
+    expect(WXML).toMatch(/<navbar\b[^>]*title="\{\{title\}\}"[^>]*back \/>/);
   });
 });

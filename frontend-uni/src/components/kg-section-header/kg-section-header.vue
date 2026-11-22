@@ -34,6 +34,6 @@ export default {
 <style scoped>
 .kg-sec { display: flex; align-items: center; justify-content: space-between; margin: var(--sp-24) 0 var(--sp-12); min-height: var(--sp-24); }
 .kg-sec__t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); line-height: var(--lh-h1); }
-.kg-sec__more { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: var(--hit-min); padding: 0 var(--sp-4); font-size: var(--fs-sub); color: var(--ink-3); }
+.kg-sec__more { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: var(--hit-min); margin: -10px 0; padding: 0 var(--sp-4); font-size: var(--fs-sub); color: var(--ink-3); }
 .kg-sec__more--hover { color: var(--ink-2); }
 </style>

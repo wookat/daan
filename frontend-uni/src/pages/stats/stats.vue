@@ -270,7 +270,7 @@
 
         <kg-card class="sec" clickable chevron @click="goPlanSetup">
           <view class="km-entry">
-            <view class="todo-ico"><l-icon name="calendar" :size="20" tone="brand" /></view>
+            <view class="todo-ico"><l-icon name="calendar" :size="20" tone="on-brand" /></view>
             <view class="grow">
               <text class="km-entry-t">学习计划</text>
               <text class="km-entry-s">报考画像与每日任务，可随时重新制定</text>
@@ -296,7 +296,7 @@
 
         <kg-card class="sec" clickable chevron @click="goCalendar">
           <view class="km-entry">
-            <view class="todo-ico"><l-icon name="calendar-check" :size="20" tone="brand" /></view>
+            <view class="todo-ico"><l-icon name="calendar-check" :size="20" tone="on-brand" /></view>
             <view class="grow">
               <text class="km-entry-t">学习日历</text>
               <text class="km-entry-s">连续打卡 {{ streakDays }} 天 · 里程碑与打卡海报</text>
@@ -306,7 +306,7 @@
 
         <kg-card class="sec" clickable chevron @click="goPomo">
           <view class="km-entry">
-            <view class="todo-ico"><l-icon name="clock" :size="20" tone="brand" /></view>
+            <view class="todo-ico"><l-icon name="clock" :size="20" tone="on-brand" /></view>
             <view class="grow">
               <text class="km-entry-t">番茄专注</text>
               <text class="km-entry-s">25 分钟专注 + 5 分钟休息，今日番茄数本地累计</text>
@@ -954,7 +954,7 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + var(--tab-h) + env(safe-area-inset-bottom)); }
 .strip { margin-bottom: var(--card-gap); }
 .strip :deep(.kg-banner) { min-height: var(--hit-min); }
 .offbar { margin-bottom: var(--sp-12); }

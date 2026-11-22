@@ -3061,19 +3061,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 如实：H5 端到端未录屏（未授权 testing agent）；小程序未上真机（R536-1）；快照恢复只有纯函数 + 源锁。登记 R541-1（P2：完成弹层是否需「已掌握」直达/「恢复复习」入口，等首个自然 mastered 样本）。取证：`docs/iter/round-3/r541-review-mastered-verdict.md`。环境蓝图无需更新。
 - 下一步 R542：到期项（09-09 日界后簇是否接续 / Caddy 6 h 窗满 / redo 自然首样本 / `explain_cache.qid` 首个非空行 / 首个自然 `mastered` 回包）+ 主循环下一实现候选（练习页答对曾错题 R371 服务端推进 SRS 后的「已掌握」反馈是否同样缺失 / 错题本列表项 streak 进度可视 / 小程序复习快照 `streak` 恢复运行时）→ 有一手即实修→发版→复采。
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-=======
-=======
-=======
 ### R586（2026-09-11，研究 + H5/小程序布局小修 + 生产复验 + R585-2 究因工具修；学习日历月份标题 375/360 折行；0 后端）：分支 `devin/1789055923-r586-calendar-head-wrap`（从 #763 分支开，链含 #742–#763）→ PR #764；取证 `docs/iter/round-3/r586-calendar-head-wrap.md`
 - 研究：宿主只读 load 14.7–16.6 / mem_avail 186MB / disk 88.7% / health 1.18s `ec8206e5`；167.3h 自然 `POST /api/practice_result` 200×4、非 2xx/status 0 **0** → R580-1 继续不实施。375 七路由走查（`~/r586/walk586.py`，路由取自 `pages.json`）唯一一手缺陷：学习日历「2026 年 9 月」在 360/375 折两行（`.cal-ym` 可用 92.5/100.6 < 文案 104.4px；`kg-tag`「本月打卡 N 天」91.3px 与 `‹ 年月 ›` 同 flex 行两端对齐抢宽；`.cal-btn` 无 `flex-shrink:0` 被压到 39.6/43.1 <44）；390/1440 单行。错题本 375 空态首屏（`~/r586/book586.py`）4 请求同 tick、API 全 200、无横向溢出、console 0，无 P0/P1。
 - 论证：候选 (a) 缩字号治标、(b) tag 缩文案丢信息、**(c) tag 下移到「本月共练 N 题」同行两端对齐**（同「本月」口径成组，标题行只剩 `‹ 年月 ›` 按内容取宽 198.8 够到「12 月」211.5）选 (c)；不动数据/箭头语义/a11y/网格；小程序同结构一起改。
@@ -3084,7 +3071,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未验证：小程序日历运行时/真机（R536-1）、「12 月」真实渲染（推算单行）、登录态日历、其它浏览器。登记 R586-1（P3 工具：digest 全表读 `questions`/`answer_log` 是 ro 慢主因）、R586-2（P3 观测：uni-h5 切 tab `static/tab/*.png` `ERR_ABORTED` 非缺陷）。
 - 下一步 R587：① 375 生产截图走查每日一练完成页 / 我的页择一小改；② R586-1 清理 digest 提速；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）；④ R584-2/-3、R585-1 等样本不主动改。
 
->>>>>>> a002bdb4 (docs: R586 取证（日历标题折行量测/论证/复验 + R585-2 究因）+ handoff/状态.md + 测试 SKILL)
 ### R585（2026-09-11，研究 + H5 实修 + 生产复验 + R584-1 清账；统计页冷加载同步错题本角标 + AI 问答 placeholder 收短；H5 only 0 后端）：分支 `devin/1789053641-r585-stats-badge-ask-placeholder`（从 #762 分支开，链含 #742–#762）→ PR #763；取证 `docs/iter/round-3/r585-stats-badge-ask-placeholder.md`
 - 研究：宿主只读 load 10.6–15 / mem_avail 173MB / disk 88.6% / health 0.37s `ec8206e5`；167.8h 自然 `POST /api/practice_result` 200×4、非 2xx/status 0 **0**（非 2xx 全 harness）→ R580-1 继续不实施。375 走查（`~/r585/walk585.py`）命中两条一手小缺陷：① 统计页 `loadReco()` 拿到 `/api/review` 真实回包只写 `dueN` 不 `setBookBadge()`（首页/错题本/问答页都刷）→ 冷进统计页底栏无角标；② 问答页底部输入条可用宽 360/375/390 = 99/114/129px，原 placeholder「先拍题或粘贴题目开始」130px /「对讲解有疑问？追问 AI…」147px 三档全截断。
 - 实修（`9454e24e`）：`stats.vue` 引 `setBookBadge`，review 分支 `if (this.dueSynced) setBookBadge(this.dueN)`（只在真实回包后；旧快照 / 失败不碰；0 允许清）；`ask.vue` 两条 placeholder → 「拍题或粘贴题目」91px /「有疑问？追问 AI」95px；测试 `tests/r585-stats-badge-ask-placeholder.test.js`。第一版把 badge 写进 `if` 块内撞 R572 源锁 → 改块后调用。
@@ -3094,7 +3080,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 未验证：追问态 placeholder 真实渲染（仅同字体 canvas）、360 真机、登录态统计页、小程序端未改、小程序真机（R536-1）、真 SW/offline、其它浏览器、跨设备。
 - 下一步 R586：① 375 生产截图走查每日一练完成页 / 错题本首屏择一小改；② R585-2 清理脚本回执；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）；④ R584-2/-3 等样本不主动改。
 
->>>>>>> fc53d276 (docs(R585): 生产复验回填（tCexIcFM 375/1440 A–D 全 PASS）+ R584-1 37 uid 清账取证 + handoff + 状态.md + SKILL)
 ### R584（2026-09-11，研究/设计轮·不立项；全站加载器串行链只读枚举 + 375/1440 错题本·复习模式走查 + 自然样本 + 测试残留清账；0 代码 0 发版）：文档随 #762 分支提交；取证 `docs/iter/round-3/r584-loader-chain-audit.md`
 - 枚举（源码逐读，`await request` + `api.js` 导出包装两遍搜）：R582/R583 后 H5 已无「互不依赖却串行」的首屏链；剩余串行全是真依赖（`home.setFocus` POST→GET、`profile.getCoach` stats→coach、`book.unfavCloud` fetchFavs→removeFav）、条件回退（`practice.start` 4 级、`startDaily`）、浏览器 API 链（`pushNudgeGo`）或仅 `home_bundle` 失败回退才进入的 `home.loadBadges`（全文件唯一调用点、7d 0 次进入）。唯一「请求不依赖、应用依赖」的后置是 `book.load()` 的 `/api/mastery/map`（375 慢窗 mistakes 5.08s 回后才发、5.63s 回），但掌握度只在「按模块查看」侧卡（375 第 8 卡后、1440 右栏第 4 卡）非首屏 → 登记 R584-3 不改。**不做全站重构。**
 - 走查（`~/r584/walk584.py`，uid `test-r584-shots` 10 答 8 错）：**生产无 `/pages/review/review`**，复习 = `pages/book/book` 页内模式（storage `autoStartReview=1`），脚本第一版走错路由已改；375 慢窗 favs/review/cur/mistakes/review 同 tick 0.0 发、2.56–5.08s 回，快窗 0.61–0.63s；1440 0.97–1.05s；API 84 + 20 全 2xx、requestfailed 0、console/pageerror 0；首屏无 P0/P1。顺带：0 答离开复习会留 `rIdx=0 answered=false` 零进度快照（本机 + `review/cur`）→ 下次显「上次复习中断在第 1/8 题 · 进度已保留」，生产 `review_cur` 自然仅 1 行且非零进度 → 登记 R584-2（P3，无样本不改）。
@@ -3103,7 +3088,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 如实：实修/本地门/PR/发版/复验 **N/A**（无一手缺陷证据不下整改令）；枚举未覆盖 `.then` 链 / `components/` / 小程序；375 慢快窗各一次。
 - 下一步 R585：① R584-1 旧测试残留分批清账（提议即默认方案，无异议即清）；② 375 生产截图走查每日一练 / 首页首屏择一小改；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）；④ R584-2/-3 等样本，不主动改。
 
->>>>>>> 78f51f0e (docs(R584): 研究/设计轮不立项——全站加载器串行链只读枚举（R582/R583 后无剩余互不依赖串行）+ 375/1440 错题本·复习模式走查无 P0/P1 + 自然 practice_result 非 2xx 0 + 测试残留清账（R584-1 登记）+ handoff + 状态.md + SKILL)
 ### R583（2026-09-11，H5 实修 + 生产复验；统计页 `loadReco` recommend/review 并发；首页 `loadHome` 回退论证不立项；宿主慢三段分账；0 后端）：分支 `devin/1789050787-r583-stats-reco-parallel`（从 #761 分支开，链含 #742–#761）→ PR #762；取证 `docs/iter/round-3/r583-stats-reco-parallel-load.md`
 - 研究（一手）：375 生产冷加载 `~/r583/timing.py /pages/stats/stats … 375`（修前 `B90Wn8n0`）——统计页 8 个加载器同 tick 0.0 发出，`/api/review` 恰在 `/api/recommend` 回包 0.75s 那一刻才发；极慢窗八条挂满 12s 内建重试再发一轮、review ≥12s 没发。`stats.vue` `loadReco()` 两个 `try { await request(…) }` 串行是唯一原因（两端点互不依赖；R582 我的页同型）。到期行三态由 `dueSynced` 驱动、只在 review 真实回包置位 → 「正在同步到期数…」时长 = recommend 往返 + review 往返。7d Caddy 自然 recommend p50 0.04 / review 0.01；8 并发探针 recommend Caddy 0.64–1.33s vs review 0.03s（轻的排在重的后面）。
 - 实修：`loadReco()` 快照即显不变，两请求改 `await Promise.all([...])` 两个各自 `try/catch` 的 async 分支，分支体逐字不变（R572 旧快照口径不变）。测试 `tests/r583-stats-reco-parallel-load.test.js`（源锁 + `new Function` 装载方法体运行时：同 tick、review 先落即 `dueN/dueSynced`、recommend reject 不影响、review 旧快照 → `dueSynced=false`）；`r572-stats-stale-snapshot.test.js` 两处源锁只跟随缩进。本地门 H5 lint 0 error / vitest 201 文件 1565 / build:h5 `index-DEX103Q0` / diff --check 空。
@@ -3116,11 +3100,7 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - UNTESTED：极慢窗（八条挂 12s）修后对照、登录态统计页 `loadReco`、`loadHome` 回退真实进入、小程序统计页（未改）、真机/真 SW/其它浏览器/跨设备。
 - 下一步 R584：① 375 生产截图走查错题本 / 复习页首屏择一小改；② 全站 `snapPeek + request` 加载器还有没有内部串行链（只读枚举相邻 `await request` 再论证）；③ 自然样本回看（`practice_result` 自然非 2xx 首例即触发 R580-1）。
 
->>>>>>> 200c5384 (docs(R583): 生产复验回填（DEX103Q0 375/1440 同 tick、到期行 0.63s 落地）+ handoff + 状态.md + SKILL)
 ### R582（2026-09-11，H5 实修 + 生产复验 + 1440 R580 C/D 补测；我的页 `loadRemote` 三端点并发；0 后端）：分支 `devin/1789048590-r582-profile-parallel-load`（从 #760 分支开，链含 #742–#760）→ PR #761；取证 `docs/iter/round-3/r582-profile-parallel-load.md`
-=======
-### R582（2026-09-11，H5 实修 + 生产复验 + 1440 R580 C/D 补测；我的页 `loadRemote` 三端点并发；0 后端）：分支 `devin/1789048590-r582-profile-parallel-load`（从 #760 分支开，链含 #742–#760）；取证 `docs/iter/round-3/r582-profile-parallel-load.md`
->>>>>>> 7ae34902 (docs(R582): 取证 + handoff + 状态.md + SKILL（我的页并发 / 1440 C/D 17/17 / 自然样本 / 清理 75 行）)
 - 研究（一手）：375 生产冷加载 `~/r582/timing.py`（修前 `eO1hqVT6`）——`/api/growth` 等 `/api/profile` 5.32s 回包后 5.4s 才发、8.29s 才回，`/api/announcement` 8.29s 才发；`profile.vue` `loadRemote()` 三个 `try { await request(…) }` 串行是唯一原因（三端点互不依赖；`stats.vue` 早已 `Promise.all`）。「错题本」格子 `mistakeN == null → '—'` 期间一直是 `—`。375 每日一练完成页 / 我的页截图走查（`~/r582/shots.py`，91 API 全 2xx、console 0）无其他 P0/P1。
 - 实修：`loadRemote()` 快照即显不变，三请求改 `await Promise.all([...])` 三个各自 `try/catch` 的 async 分支，分支体（`adoptServerDailyGoal` / `applyGrowth` / `announce`）逐字不变。测试 `tests/r582-profile-parallel-load.test.js`（源锁 + `new Function` 装载方法体的运行时同 tick / 慢 profile 不拖 growth / profile 失败不影响其余）。本地门：H5 eslint 0 / vitest 200 文件 1561 / `build:h5` `index-B90Wn8n0` / diff --check 空。
 - 发版：`~/r580/pages_deploy.sh` 复用，Pages `eO1hqVT6 → B90Wn8n0`，health 全程 `ec8206e5`。生产复验：修后 375 五请求同 tick 1.94s 发出（宿主快窗 2.3s）；1440 同 tick 0.0s 发出、慢窗 profile 4.55s / growth 5.68s（不再叠加）；`STATS_TEXT 10 累计做题 | 8 错题本 | 1 天` 修前后一致。
@@ -3144,7 +3124,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 清理 `~/r580/clean580.py`（stdin 经 SSH `sudo python3 - ro|clean`）两批：研究+fin…fin10 20 uid 428 行、fin11–13 9 uid 218 行（`mistakes 88 / answer_log 90 / growth_events 24 / practice_results 8 / daily_set_entries 8`）回执逐表相等；独立只读 41 表 0 残留、前缀 0、共享 42、10 张保护表计数/digest 前后一致。
 - 登记：**R579-2 论证不改**；**R580-1**（P3 既有设计）`practice_result` 发后即忘无 pending 重投，宿主慢 + 用户随即刷新会丢成绩，补重投需服务端幂等键（fin11 E 证明客户端 abort 服务端已处理）；**R580-2**（观察）`practice_results.uid` 历史空 + 09-07 同秒 NULL/有 uid 双行疑双写。UNTESTED：小程序端全答完离页（`practice.ts` 未改，R536-1）、1440 C/D、真实跨设备、模考/背题/时政排除分支（仅源锁）、真 SW/offline、其它浏览器。
 
->>>>>>> f520c3b5 (docs(R582): 回填 PR #761)
 ### R579（2026-09-11，研究+实现轮·练习中途退出后「继续」落在其后第一道未答题 + 首页 hero 题号与落地同源 + `merge_anon` 前后 `answer_log` 一手定性；H5+小程序 0 后端）：分支 `devin/1789037263-r579-resume-next-unanswered` 从 #757 分支开；取证 `docs/iter/round-3/r579-resume-next-unanswered.md`；PR #758
 - 研究（一手 `~/r579/q579.sh` `q579m.sh` `journey.py`，375 真实链路：匿名 `test-r579-m1` 答 3 题 → 注册 `19900000579` → `u34` → `/api/merge_anon`）：合并前匿名 `answer_log` 3 / 目标 0 → 合并后 0 / 3，三 qid 不变、总数 3 不变，`practice_progress`/`growth_events`/`mistakes` 同迁、`merged_anon` +1；三个时点 `/api/growth total.n == COUNT(answer_log)` → **R577-1 未复现**；`merge_uid_rows` keyed 表 `UPDATE OR IGNORE` + `DELETE` 的键冲突分支本实验未触发（UNTESTED）。页面文本「15 / 累计做题 / 10 / 错题本」——15 是累计作答、10 是错题本（初版解析读反，已更正）。同一走查坐实缺陷：首页 hero「继续今日一练 · 第 4/10 题」（`done+1`）而恢复落点 3/10 且第 3 题反馈已可见（本机 `idx=2` 指向已答题）。
 - 实修：`practice-progress.js` 新 `resumeIndex(items, idx, picked=_picked)`——当前题未答保持；已答则其后第一道未答；其后没有则从头找；全答完保留有效 idx；非法/负 idx → 0。`parsePendingPractice()` 出 `next`；`parseRemotePractice()` 用服务端 `picks` 判已答算 `done`/`next`；`adoptPracticeResume()` 用 `resumeIndex`；`practice.vue` 本机恢复 `this.idx = resumeIndex(s.items, s.idx)`（继续 toast 本就按落地 idx 报）；`home.vue` hero 用 `r.next`。小程序 `utils/practice-progress.ts` 同实现 `resumeIndex`，`practice.ts` 本机/远端恢复同口径；首页续练卡只显「已做 n/N」不加题号。单测 `tests/r579-resume-next-unanswered.test.js`（H5/小程序 parity + 源锁）；三处既有精确对象断言补 `next` 字段。
@@ -3160,8 +3139,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 本地门：H5 vitest 196/1530、lint 0、build `index-Cjpb2IwU`、diff --check 空。发版 PR #757：只跑 Pages 静态层 `index-Cf9A4ts2 → Cjpb2IwU`（health 前后 `ec8206e5`）。生产复验 375/1440 同 fixture：领跑场横幅 + 「专项练习」应有 PASS → 练同考点首题 `.lead-tag` null + 顶栏「资料分析 · 强化练习」 PASS → 答完「只重练本组错题」首题无横幅 PASS（顶栏仍「强化练习」属 `retryWrong` 保留本场来源的 R553 设计，非缺陷）；API 52 全 200、console 0；两 uid 各 22 行精确清 0 残留、`reinforce_log` `4→3→2`。
 - UNTESTED：R577-1 `merge_anon` 计数（未走登录链路，挂 R579）；子名 ≠ `submodule` 条目；`module|submodule` 分桶（仅单测）；小程序真机（R536-1）、真 offline/SW、跨设备。
 
-=======
->>>>>>> b28d35fc (docs: R577 研究/设计轮（不立项）——后端 module+submodule 强化回退生产一手验证（ZL-JQ-04 2+3 题全 ziliao/比重）+ ec8206e5 后自然样本窗内 0 + 375 登录态我的/统计走查无 P0/P1 + 生产 SQLite 索引探测教训入 SKILL + handoff/状态.md)
 ### R577（2026-09-11，研究/设计轮·**不立项、0 代码 0 发版**——后端 `module+submodule` 强化回退生产一手验证 + ec8206e5 后自然样本回看 + 375 登录态「我的」/统计页走查）：取证 `docs/iter/round-3/r577-reinforce-fallback-probe.md`；分支仍 `devin/1789031058-r576-weak-spot-submodule`（只加文档）
 - 回退验证（一手 `~/r577/q577b.sh`）：`idx_q_reinforce` 窄查 17 个 `n<10` 的 tag3（1.3s；第一版全表 group by 200s 超时，教训：生产 SQLite 必须走已有索引 + 分组后点查）；同一 tag3 内 `submodule` 多为异值、`question_type` 大量 NULL。选 `ZL-JQ-04`（2 题 `ziliao/比重`）以新 uid 真实请求 `mode=reinforce&limit=5&module=ziliao&submodule=比重&tag3=ZL-JQ-04` → 200/3.58s，5 题 = 2 道 `ZL-JQ-04` + 3 道 `ZL-BZ-01/02`，**全部 `ziliao/比重`** → 第二级回退按题库 `submodule` 列过滤在生产真实生效（R576 UNTESTED 项关闭）；第三级 `module` 回退因池够未触发。满额写 `reinforce_log` 1 行 → 精确删（`3→2`）→ 独立只读 0 残留。
 - 自然样本：宿主 load 16–20 / mem_avail 74–173MB / disk 89% / health 0.22–0.49s；ec8206e5 后 `practice_progress`（daily/redo）0、`stale_fallback` 0、`question_favs` 0、`reinforce_log` 0 新增（全表 2 行 08-09/08-31）；24h 事件 `boot 39 · heatmap_view 1 · slow_load 1`。只能说「窗内无合格自然样本」。题库 tag3 156 个（`n<5` 6 / `5–9` 11 / `≥10` 139）；真实用户错题 259 条中 `question_type` 空 115（R576 退 `submodule` 分支对真实用户有覆盖面）。
@@ -3184,8 +3161,6 @@ FastAPI + SQLite / uni-app（H5+小程序）/ 微信原生小程序 / Flutter Ap
 - 复验（`~/r575/prod/report.md`，375 主 + 1440 A/C）：A 每次恰 1 DELETE 200、响应后下一 RAF 3→2 卡 / chips 隐藏 / 夹 3→2、23 样本 `.kg-skel` 最大 0、对账与原生 F5 仍 2 卡 / B 阻断 DELETE toast 三方不变 / C 阻断 GET 取消 → 2 卡 + 横幅、旧快照不铺回、重试恢复；冷 F5 即阻断 → 旧快照铺屏 + 横幅 / D 云+本机同题 1 卡取消恰 1 DELETE → 空态、异题 Y 保留 / E R574 回归 / F 匿名首页 CTA 进每日一练 UX **全 PASS**。API 153 = 141×200 + 8 abort + 4 环境 12s 超时；应用 console 0、1 exception + 1 rejection 为 harness CSP 谓词；清 24 + 1 行、41 表 0 残留、共享 42 行保持。
 - 登记 **R575-1**（P3）：删到最后一张（0 卡）时 `loading = !items.length` 为 true → ≈175ms 一帧骨架再到空态（设计边界，有剩余卡时无骨架）。复验口径纠正：骨架计数选择器是 `.kg-skel` 非 `.kg-skeleton`。UNTESTED：登录态每日一练、小程序运行时/真机（R536-1）、真 offline/SW、DELETE 业务 HTTP 错误、1440 B/D/E、每日完整作答。
 
-=======
->>>>>>> cd7d8926 (docs: R574 两轮生产复验回填（C1NhelQ3 A–E PASS + F 两条既有 FAIL → 热修 BmUQ_r2w F1–F5 PASS，时序纠正）+ handoff + 测试 SKILL)
 ### R574（2026-09-11，研究+实现轮·收藏与笔记页模块筛选 chips 只列本人有收藏的模块——新纯函数 `favModulePlan(items, modFilter, MOD_KEYS, label)`（H5 `fav-module-opts.js` / 小程序 `utils/fav-module-opts.ts` 同实现）：按**全部已加载 items**（非当前夹）派生 present 集、按 `MOD_KEYS` 顺序输出、深链 `?mod=` 0 条仍保留可选、`opts.length > 2 || (modFilter && !present)` 才显示行；热修 `09e72974`：`unfav` 云条目 `removeFav` **成功后**清本机 `favQuestions` 同题（`question` 或 `id`）、`syncUrl` 保留 `history.state` + `onShow` 在 `load()` 后回写地址栏（`_pendingFolder` 让位）；小程序 `onUnfav` 同口径；0 后端）：分支 `devin/1789019269-r574-fav-module-chips` 从 #753 分支开，PR #754；取证 `docs/iter/round-3/r574-fav-module-chips.md`
 - 研究（一手）：生产 `question_favs` 有收藏用户 8/8 全单模块（常识/言语居多）、`/api/favs` 30 天 `stale_fallback` 0；375 收藏页静态 6 枚 chip 占一行首屏（研究 uid `test-r574-shots` 截图），单模块用户 5 枚永远点了空。候选「我的页」走查无 P0/P1。设计：不改 URL 语法/`favorites-url.js`、不改本地/云合并/排序/`shownItems`、不做后端。
 - 发版：Pages 4c/5/5b/6（`~/r574/pages_deploy.sh`）`index-D0Aywqly → C1NhelQ3 →（热修）BmUQ_r2w`，favorites chunk `CHuIoHvV → oBB9a3Dt`，health 全程 `ec8206e5`。宿主 load 15.6 / mem_avail 228MB / disk 89%。

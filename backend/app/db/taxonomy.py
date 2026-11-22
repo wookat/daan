@@ -61,9 +61,9 @@ def tag3_lastmod() -> dict:
 def questions_by_tag3(code: str, offset: int = 0, limit: int = 20) -> list[dict]:
     conn = db.get_conn()
     rows = conn.execute(
-        "SELECT id, module, submodule, tag3, question, options, answer, explanation, is_real, exam_year, exam_region "
+        "SELECT id, module, submodule, tag3, question, options, option_imgs, answer, explanation, is_real, exam_year, exam_region "
         "FROM questions WHERE tag3=? AND disabled=0 ORDER BY id DESC LIMIT ? OFFSET ?",
-        (code, min(max(limit, 0), 50), offset),
+        (code, min(max(limit, 0), 50), max(0, int(offset))),
     ).fetchall()
     conn.close()
     out = []

@@ -138,6 +138,7 @@ import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { dropFavItem } from '../../fav/fav-list.js';
 import { favModulePlan } from '../../fav/fav-module-opts.js';
 import { buildFavoritesUrl, parseFavoritesOpts } from '../../fav/favorites-url.js';
+import { withBasePath } from '../../utils/hash-url.js';
 import { MODULES, MODULE_KEYS, moduleLabel } from '../../utils/module-meta.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
 import { snapshotViewMixin } from '../../practice/snapshot-view.js';
@@ -223,7 +224,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(window.history.state, '', buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId }));
+        window.history.replaceState(window.history.state, '', withBasePath(buildFavoritesUrl({ tab: this.tab === 'note' ? 'note' : '', mod: this.modFilter, folder: this.folderId })));
       }
       // #endif
     },

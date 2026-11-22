@@ -67,7 +67,7 @@ export default {
   },
   created() {
     this._timer = null;
-    this._leftAt = 0;
+    this._endAt = 0;
   },
   computed: {
     phaseText() {
@@ -92,15 +92,13 @@ export default {
     this._stopTick();
   },
   onHide() {
-    this._leftAt = Date.now();
+    if (this.running) this._stopTick();
   },
   onShow() {
-    if (this._leftAt && this.running) {
-      const gone = Math.floor((Date.now() - this._leftAt) / 1000);
-      this.left = Math.max(0, this.left - gone);
-      if (this.left <= 0) this.finishPhase();
+    if (this.running && this._endAt) {
+      this._syncLeft();
+      if (this.running && !this._timer) this._tick();
     }
-    this._leftAt = 0;
   },
   methods: {
     _stopTick() {
@@ -109,30 +107,38 @@ export default {
         this._timer = null;
       }
     },
+    _syncLeft() {
+      if (!this._endAt) return;
+      this.left = Math.max(0, Math.ceil((this._endAt - Date.now()) / 1000));
+      if (this.left <= 0) this.finishPhase();
+    },
     _tick() {
-      this._timer = setInterval(() => {
-        this.left -= 1;
-        if (this.left <= 0) this.finishPhase();
-      }, 1000);
+      this._stopTick();
+      this._timer = setInterval(() => this._syncLeft(), 1000);
     },
     start(phase) {
       this._stopTick();
       this.phase = phase;
       this.left = (phase === 'break' ? BREAK_MIN : FOCUS_MIN) * 60;
+      this._endAt = Date.now() + this.left * 1000;
       this.running = true;
       this._tick();
     },
     pause() {
+      this._syncLeft();
       this._stopTick();
+      this._endAt = 0;
       this.running = false;
     },
     resume() {
       if (!this.left) return;
+      this._endAt = Date.now() + this.left * 1000;
       this.running = true;
       this._tick();
     },
     finishPhase() {
       this._stopTick();
+      this._endAt = 0;
       if (this.phase === 'focus') {
         const st = loadStore();
         st.done += 1;
@@ -152,11 +158,13 @@ export default {
     },
     skipBreak() {
       this._stopTick();
+      this._endAt = 0;
       this.phase = 'done';
       this.running = false;
     },
     reset() {
       this._stopTick();
+      this._endAt = 0;
       this.phase = 'idle';
       this.running = false;
       this.left = FOCUS_MIN * 60;
@@ -167,6 +175,7 @@ export default {
 </script>
 
 <style scoped>
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); }
 .sec { margin-bottom: var(--card-gap); }
 .dial { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-16) 0; }
 .dial-phase { font-size: var(--fs-caption); color: var(--ink-3); }

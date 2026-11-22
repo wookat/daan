@@ -582,7 +582,7 @@ def score_all(conn, log=None) -> dict:
 
     t0 = time.time()
     rows = conn.execute(
-        "SELECT id, module, question, options, answer, explanation, hs_explanation, "
+        "SELECT id, module, question, options, option_imgs, answer, explanation, hs_explanation, "
         "source, is_real, exam_year, exam_region, hs_down, hs_up, image FROM questions"
     ).fetchall()
     updates = []

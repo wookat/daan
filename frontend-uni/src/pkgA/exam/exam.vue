@@ -584,7 +584,7 @@ export default {
 }
 .acard-n.done { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .acard-n.mark { border-color: var(--warn); }
-.acard-n.cur { box-shadow: 0 0 0 2px var(--brand-soft-2); border-color: var(--brand); }
+.acard-n.cur { outline: 2px solid var(--brand-soft-2); border-color: var(--brand); }
 .acard-foot { display: block; text-align: center; font-size: var(--fs-sub); color: var(--ink-3); padding: var(--sp-4) 0 var(--sp-12); }
 
 .multi-tip { font-size: var(--fs-caption); line-height: 1.5; color: var(--brand-text); background: var(--brand-soft); border-radius: var(--r-xs); padding: var(--sp-4) var(--sp-8); margin-bottom: var(--sp-8); }

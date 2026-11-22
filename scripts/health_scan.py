@@ -4,7 +4,10 @@
 hs 答案一致性（多选字母集合口径）、空 hs（预期仅 2 条台账题）、
 OCR 推广文案残留（r84 清理后防回流）、卷内重复引用、近7天活跃、growth 台账。
 """
-import sqlite3, re, json, time
+import json
+import re
+import sqlite3
+import time
 
 DB = "/data/data.db"
 INTENTIONAL_EMPTY_HS = {"changshi:655861", "panduan:334296"}
@@ -18,7 +21,10 @@ SPAM_PATTERNS = [
 
 c = sqlite3.connect(DB)
 c.row_factory = sqlite3.Row
-q = lambda s, *a: c.execute(s, a).fetchall()
+
+
+def q(s, *a):
+    return c.execute(s, a).fetchall()
 
 print("active", q("SELECT COUNT(*) n FROM questions WHERE disabled IS NULL OR disabled=0")[0]["n"])
 print("full", q("SELECT COUNT(*) n FROM questions")[0]["n"])

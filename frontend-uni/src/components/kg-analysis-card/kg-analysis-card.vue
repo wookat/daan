@@ -44,7 +44,12 @@ export default {
   computed: {
     answerText() { return Array.isArray(this.answer) ? this.answer.join('') : this.answer; },
     pickedText() { return Array.isArray(this.picked) ? this.picked.join('') : this.picked; },
-    isRight() { return this.pickedText === this.answerText; },
+    isRight() {
+      const norm = (s) => String(s || '').toUpperCase().replace(/[^A-D]/g, '').split('').sort().join('');
+      const a = norm(this.answerText);
+      const p = norm(this.pickedText);
+      return a ? p === a : this.pickedText === this.answerText;
+    },
     html() { return md(this.analysis || '暂无解析'); },
     isCollapsed() { return this.collapsed && !this.open; },
     sourceText() { return qSourceText(this.source); },

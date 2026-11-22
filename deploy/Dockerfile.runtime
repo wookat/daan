@@ -1,15 +1,22 @@
 # Runtime-only image: expects frontend-uni/dist/build/h5 prebuilt (low-RAM servers)
 FROM python:3.12-slim
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends fonts-wqy-zenhei fonts-arphic-uming libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+# pdf_export.py uses bundled SimSun.ttf + SimHei.ttf directly (no apt CJK font packages needed);
+# libglib2.0-0 is required by opencv-python-headless at import time.
+RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 && rm -rf /var/lib/apt/lists/* \
+ && groupadd -g 1000 appuser \
+ && useradd -u 1000 -g 1000 -m -s /usr/sbin/nologin appuser
 COPY backend/requirements.txt backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
-COPY backend backend
-COPY knowledge knowledge
-COPY frontend-uni/dist/build/h5 frontend-uni/dist/build/h5
+COPY --chown=1000:1000 backend backend
+COPY --chown=1000:1000 knowledge knowledge
+COPY --chown=1000:1000 frontend-uni/dist/build/h5 frontend-uni/dist/build/h5
+COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh && mkdir -p /data && chown 1000:1000 /data
 ENV DB_PATH=/data/data.db
 VOLUME /data
 EXPOSE 8000
 WORKDIR /app/backend
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 # keep-alive 空闲时限须大于反代连接池 idle 上限（Caddy 默认 2min），避免复用陈旧连接 reset 即时 502
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "130"]

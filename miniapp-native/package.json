@@ -2,10 +2,11 @@
   "name": "kaogong-miniapp-native",
   "version": "0.1.0",
   "private": true,
-  "description": "答岸（原岸上见）微信原生小程序（TypeScript + TDesign）",
+  "description": "答岸微信原生小程序（TypeScript + TDesign）",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "lint": "node ../tools/design-tokens/build.mjs --check && node ../tools/design-tokens/lint-pages.mjs --quiet && ESLINT_USE_FLAT_CONFIG=false eslint miniprogram --ext .ts"
+    "lint": "node ../tools/design-tokens/build.mjs --check && node ../tools/design-tokens/lint-pages.mjs --strict && node -e \"process.env.ESLINT_USE_FLAT_CONFIG='false'; require('child_process').execFileSync(process.execPath,['node_modules/eslint/bin/eslint.js','miniprogram','--ext','.ts'],{stdio:'inherit'})\"",
+    "test": "node ../frontend-uni/node_modules/vitest/vitest.mjs run --config scripts/vitest.config.mts"
   },
   "dependencies": {
     "tdesign-miniprogram": "~1.9.7"

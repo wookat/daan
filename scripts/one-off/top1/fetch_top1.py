@@ -10,7 +10,13 @@
 
 用法: python3 fetch_top1.py --workdir /tmp/top1_src --out top1_raw.jsonl
 """
-import argparse, json, glob, os, re, subprocess, collections
+import argparse
+import collections
+import glob
+import json
+import os
+import re
+import subprocess
 
 REPOS = [
     ("https://github.com/SGHCN0762/civil-country-exam-xingce-json.git", "src_country", "国考"),

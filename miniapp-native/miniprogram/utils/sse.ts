@@ -76,10 +76,11 @@ export interface SseState<M> {
 export interface SseHandlers<M> {
   onMeta?: (meta: M) => void;
   onDelta?: (full: string) => void;
+  onThinking?: (data: Record<string, unknown>) => void;
   errMsg?: string;
 }
 
-// 把一段解码文本喂给状态机：meta / message{d} / done / error
+// 把一段解码文本喂给状态机：meta / thinking / message{d} / done / error
 export function feedSse<M>(chunkText: string, state: SseState<M>, h: SseHandlers<M>): void {
   const { rest, events } = parseSseEvents(state.buf + chunkText);
   state.buf = rest;
@@ -87,6 +88,8 @@ export function feedSse<M>(chunkText: string, state: SseState<M>, h: SseHandlers
     if (type === 'meta') {
       state.meta = data as M;
       if (h.onMeta) h.onMeta(state.meta);
+    } else if (type === 'thinking') {
+      if (h.onThinking) h.onThinking(data);
     } else if (type === 'done') {
       state.done = data;
     } else if (type === 'error') {

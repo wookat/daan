@@ -309,15 +309,16 @@ export function request(path, opts = {}) {
           })
           .then((data) => {
             guardStaleUid(path, data);
-            if (snapCacheable(path)) snapSave(path, data);
+            if (snapCacheable(path)) snapSave(key, data);
             return data;
           })
       )
       .catch((e) => {
         // 最后一跳：仅超时/网络错误回退最近成功快照，HTTP 业务错误（401/422 等）必须透出
         if (!isNetErr(e) || !snapCacheable(path)) throw e;
-        const snap = snapLoad(path);
+        const snap = snapLoad(key);
         if (!snap) throw e;
+        guardStaleUid(path, snap.d);
         trackEvent('stale_fallback', 'h5', path.slice(0, 120));
         return markStale(snap.d, snap.t);
       })

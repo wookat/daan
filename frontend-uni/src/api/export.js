@@ -87,7 +87,7 @@ export async function exportPdf(body) {
 export async function exportPdf(body) {
   const resp = await fetchNet(BASE_URL + '/api/export/pdf', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
     body: JSON.stringify(body),
   });
   if (!resp.ok) {

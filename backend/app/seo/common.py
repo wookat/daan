@@ -72,7 +72,7 @@ _CSS = (
     ".hdr-s input:focus{border-color:var(--link)}"
     ":focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:4px}"
     ".hdr-s input:focus:not(:focus-visible){outline:none}"
-    "@media(max-width:480px){.hdr-s input{max-width:none}}"
+    "@media(max-width:480px){.hdr .brand{font-size:15px;white-space:nowrap}.hdr-s{margin:0 8px}.hdr-s input{max-width:none;padding:6px 10px;font-size:13px}.hdr-cta{padding:6px 12px;font-size:13px;white-space:nowrap}}"
     ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
     "box-shadow:var(--shadow)}"
     ".crumb{font-size:13px;color:var(--muted);margin:10px 0}.crumb a{color:var(--muted)}"
@@ -110,6 +110,16 @@ _CSS = (
 BAIDU_ADAPT_META = '<meta name="applicable-device" content="pc,mobile">'
 
 
+def _safe_jsonld(data) -> str:
+    """转义可逃逸 <script> 标签的字符，防止题干/标题含 </script> 触发存储型 XSS。"""
+    return (
+        json.dumps(data, ensure_ascii=False)
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
 def _page(
     title: str,
     description: str,
@@ -119,7 +129,7 @@ def _page(
     noindex: bool = False,
 ) -> str:
     ld = (
-        '<script type="application/ld+json">' + json.dumps(jsonld, ensure_ascii=False) + "</script>"
+        '<script type="application/ld+json">' + _safe_jsonld(jsonld) + "</script>"
         if jsonld
         else ""
     )
@@ -149,7 +159,7 @@ def _page(
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">答岸 · 考公题库</a>'
         f'<form class="hdr-s" action="/tiku/search" method="get" role="search">'
-        f'<input name="q" type="search" placeholder="搜题目 / 考点 / 试卷" aria-label="搜索题库"></form>'
+        f'<input name="q" type="search" placeholder="搜题目/考点/卷" aria-label="搜索题库"></form>'
         f'<a class="hdr-cta" href="/app/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">答岸</a> · 10万+ 行测题 · 1.5万+ 历年真题'

@@ -74,7 +74,7 @@
 
 ## 增量测试 R115（AI 讲解修复复测 + 申论 chips 单行 + 快速回归）— 2026-08-03
 
-- 测试环境：**线上 https://kaogong.zalize.com**，Ctrl+Shift+R 强刷后确认新 bundle `assets/index-BYLlip32.js`。视口实测 `innerWidth=500`（Chrome 最小窗宽限制，无法到 375；rpx 换算按 500/375≈1.333，72rpx@500=48px 即 36px@375）。讲解触发时被要求输入访问码，输入 `kg2026` 通过。
+- 测试环境：**线上 https://kaogong.zalize.com**，Ctrl+Shift+R 强刷后确认新 bundle `assets/index-BYLlip32.js`。视口实测 `innerWidth=500`（Chrome 最小窗宽限制，无法到 375；rpx 换算按 500/375≈1.333，72rpx@500=48px 即 36px@375）。讲解触发时被要求输入访问码，输入 `<ACCESS_CODE>` 通过。
 - 结论：**三组测试全部通过，无失败断言**；1 条说明项（anscard 未渲染，见下）。
 - 生产数据：零创建零删除（讲解不产生错题，未点「存入错题本」）。
 
@@ -910,7 +910,7 @@ UI 确认删除本轮新条目 → `/api/mistakes` 恢复 **[5, 3, 2]**（截图
 
 ### ④ 访问码 401 拦截流式请求
 
-🟢 将 storage 中 accessCode 置为 wrong123（devtools console，说明性操作）后提交 → 弹可编辑 modal"请输入访问码"（流式请求同样被 401 拦截）；输入 kg2026 确认后自动重试并正常流式返回讲解：
+🟢 将 storage 中 accessCode 置为 wrong123（devtools console，说明性操作）后提交 → 弹可编辑 modal"请输入访问码"（流式请求同样被 401 拦截）；输入 <ACCESS_CODE> 确认后自动重试并正常流式返回讲解：
 
 | 401 弹框 | 输正确码后流式成功 |
 |---|---|
@@ -927,7 +927,7 @@ UI 确认删除本轮新条目 → `/api/mistakes` 恢复 **[5, 3, 2]**（截图
 
 - 结论：**三项测试全部通过**（400px 移动视口三页视觉 / 1200px 桌面限宽居中 / 讲解冒烟）
 - 录屏：`/home/ubuntu/screencasts/rec-2a9eb27b-04e0-4aa9-ae26-126f477063fc/rec-2a9eb27b-04e0-4aa9-ae26-126f477063fc-edited.mp4`
-- ⚠️ 环境问题复发（非本轮代码问题）：服务器再次以字面 `secret:personal:...` 字符串作为 LLM_BASE_URL 启动，冒烟首次讲解 502 "Request URL is missing an 'http://' or 'https://' protocol."。我已用真实 env 值重启 uvicorn（ACCESS_CODE=kg2026 不变）后通过。**启动脚本仍需修复 secret 绑定方式（v7 已报过一次）**。
+- ⚠️ 环境问题复发（非本轮代码问题）：服务器再次以字面 `secret:personal:...` 字符串作为 LLM_BASE_URL 启动，冒烟首次讲解 502 "Request URL is missing an 'http://' or 'https://' protocol."。我已用真实 env 值重启 uvicorn（ACCESS_CODE=<ACCESS_CODE> 不变）后通过。**启动脚本仍需修复 secret 绑定方式（v7 已报过一次）**。
 
 ### ① 400px 移动视口三页视觉
 
@@ -1026,9 +1026,9 @@ UI 确认删除本轮新条目 → `/api/mistakes` 恢复 **[5, 3, 2]**（截图
 |---|---|
 | ![访问码弹框](https://app.devin.ai/attachments/d9608a12-9911-4233-bcde-da3713b5ae7f/ss_f7a2f906.png) | ![错误码报错](https://app.devin.ai/attachments/782d0814-cba7-4cab-864f-43ac19d08b38/ss_66b99134.png) |
 
-### ② 清 storage 后输入正确码 kg2026 → 自动重试成功
+### ② 清 storage 后输入正确码 <ACCESS_CODE> → 自动重试成功
 
-| 🟢 modal 再次弹出并输入 kg2026 | 🟢 确认后自动重试，讲解卡片正常渲染（4800÷1.2=4000，答案 B 自算正确） |
+| 🟢 modal 再次弹出并输入 <ACCESS_CODE> | 🟢 确认后自动重试，讲解卡片正常渲染（4800÷1.2=4000，答案 B 自算正确） |
 |---|---|
 | ![输入正确码](https://app.devin.ai/attachments/694ae5a0-090c-4643-81fe-74ec3df208e7/ss_ab438818.png) | ![讲解成功](https://app.devin.ai/attachments/9c3c80df-ef83-49f0-b6e2-fc55a2d4201d/ss_2ff82a25.png) |
 
@@ -1040,7 +1040,7 @@ UI 确认删除本轮新条目 → `/api/mistakes` 恢复 **[5, 3, 2]**（截图
 
 ### 环境问题（测试中发现并修复，非代码 bug）
 
-首次输入正确码 kg2026 时后端返回 502"解析失败：Request URL is missing an 'http://' or 'https://' protocol."。排查发现服务器启动命令把 `LLM_BASE_URL` 设成了**字面字符串** `secret:personal:LLM_RELAY_BASE_URL`（secret 引用未被替换）。我已用真实环境变量值重启 uvicorn（ACCESS_CODE=kg2026 不变）后全部通过。**部署/启动脚本需确保 secret 引用被真正解析**。
+首次输入正确码 <ACCESS_CODE> 时后端返回 502"解析失败：Request URL is missing an 'http://' or 'https://' protocol."。排查发现服务器启动命令把 `LLM_BASE_URL` 设成了**字面字符串** `secret:personal:LLM_RELAY_BASE_URL`（secret 引用未被替换）。我已用真实环境变量值重启 uvicorn（ACCESS_CODE=<ACCESS_CODE> 不变）后全部通过。**部署/启动脚本需确保 secret 引用被真正解析**。
 
 ---
 

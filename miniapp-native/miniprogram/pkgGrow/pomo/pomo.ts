@@ -59,26 +59,38 @@ Page({
     this._stopTick();
   },
   onHide() {
-    // 退后台按时间差结算：不清计时，记录锚点
-    this._leftAt = Date.now();
+    if (this.data.running) this._stopTick();
   },
   onShow() {
-    if (this._leftAt && this.data.running) {
-      const gone = Math.floor((Date.now() - this._leftAt) / 1000);
-      const left = Math.max(0, this.data.left - gone);
-      this.setData({ left });
-      if (left <= 0) this._finishPhase();
-      else this._paint();
+    if (this.data.running && this._endAt) {
+      this._syncLeft();
+      if (this.data.running && !this._timer) this._startTick();
     }
-    this._leftAt = 0;
   },
-  _leftAt: 0,
+  _endAt: 0,
 
   _stopTick() {
     if (this._timer) {
       clearInterval(this._timer);
       this._timer = 0;
     }
+  },
+
+  _syncLeft() {
+    if (!this._endAt) return;
+    const left = Math.max(0, Math.ceil((this._endAt - Date.now()) / 1000));
+    if (left <= 0) {
+      this.setData({ left: 0 });
+      this._finishPhase();
+      return;
+    }
+    this.setData({ left });
+    this._paint();
+  },
+
+  _startTick() {
+    this._stopTick();
+    this._timer = setInterval(() => this._syncLeft(), 1000);
   },
 
   _paint() {
@@ -94,21 +106,16 @@ Page({
 
   _startPhase(phase: 'focus' | 'break') {
     this._stopTick();
-    this.setData({ phase, running: true, left: (phase === 'break' ? BREAK_MIN : FOCUS_MIN) * 60 });
+    const secs = (phase === 'break' ? BREAK_MIN : FOCUS_MIN) * 60;
+    this._endAt = Date.now() + secs * 1000;
+    this.setData({ phase, running: true, left: secs });
     this._paint();
-    this._timer = setInterval(() => {
-      const left = this.data.left - 1;
-      if (left <= 0) {
-        this._finishPhase();
-        return;
-      }
-      this.setData({ left });
-      this._paint();
-    }, 1000);
+    this._startTick();
   },
 
   _finishPhase() {
     this._stopTick();
+    this._endAt = 0;
     wx.vibrateShort({ type: 'medium' }).catch(() => {});
     if (this.data.phase === 'focus') {
       const st = this._store || loadStore();
@@ -129,28 +136,25 @@ Page({
     this._startPhase('focus');
   },
   onPause() {
+    this._syncLeft();
     this._stopTick();
+    this._endAt = 0;
     this.setData({ running: false });
   },
   onResume() {
     if (!this.data.left) return;
+    this._endAt = Date.now() + this.data.left * 1000;
     this.setData({ running: true });
-    this._timer = setInterval(() => {
-      const left = this.data.left - 1;
-      if (left <= 0) {
-        this._finishPhase();
-        return;
-      }
-      this.setData({ left });
-      this._paint();
-    }, 1000);
+    this._startTick();
   },
   onSkipBreak() {
     this._stopTick();
+    this._endAt = 0;
     this.setData({ phase: 'done', running: false });
   },
   onReset() {
     this._stopTick();
+    this._endAt = 0;
     this.setData({ phase: 'idle', running: false, left: FOCUS_MIN * 60, round: 0 });
     this._paint();
   },

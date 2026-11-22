@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 性能预算回归护栏：对生产 URL 集跑 Lighthouse，按预算断言分数与核心指标。
-# 用法: ./deploy/perf-budget.sh [url ...]   （默认 / 与 /tiku/）
+# 用法: ./deploy/perf-budget.sh [url ...]   （默认 /、/app/ 与 /tiku/）
 # 环境: SITE 站点基址；CHROME_PATH 无头 Chrome 路径；违例 exit 1。
 set -euo pipefail
 
@@ -39,7 +39,7 @@ if [[ -f "$DIST/index.html" ]]; then
 fi
 
 URLS=("$@")
-[[ ${#URLS[@]} -gt 0 ]] || URLS=("/" "/tiku/")
+[[ ${#URLS[@]} -gt 0 ]] || URLS=("/" "/app/" "/tiku/")
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
@@ -48,7 +48,7 @@ for u in "${URLS[@]}"; do
   out="$TMP/$(echo "$u" | tr '/?' '__').json"
   err="${out%.json}.err"
   echo "==> Lighthouse $SITE$u"
-  CHROME_PATH="$CHROME" npx --yes lighthouse "$SITE$u" \
+  CHROME_PATH="$CHROME" npx --yes lighthouse@12.6.1 "$SITE$u" \
     --quiet --output=json --output-path="$out" \
     --chrome-flags="--headless=new --no-sandbox" >/dev/null 2>"$err" \
     || { rc=$?
@@ -59,27 +59,35 @@ for u in "${URLS[@]}"; do
 import json, sys
 p, u, mperf, ma11y, mbp, mseo, mlcp, mcls, mbench = sys.argv[1:10]
 r = json.load(open(p))
-cats = r["categories"]
-lcp = r["audits"]["largest-contentful-paint"]["numericValue"]
-cls = r["audits"]["cumulative-layout-shift"]["numericValue"]
-env = r.get("environment", {})
+cats = r.get("categories") or {}
+audits = r.get("audits") or {}
+lcp = (audits.get("largest-contentful-paint") or {}).get("numericValue")
+cls = (audits.get("cumulative-layout-shift") or {}).get("numericValue")
+ttfb = (audits.get("server-response-time") or {}).get("numericValue")
+env = r.get("environment") or {}
 bench = float(env.get("benchmarkIndex") or 0)
-metrics = (r["audits"].get("metrics", {}).get("details", {}).get("items") or [{}])[0]
-print(f"INFO {u} benchmarkIndex={bench:.0f} observedLCP={metrics.get('observedLargestContentfulPaint')}ms "
-      f"observedFCP={metrics.get('observedFirstContentfulPaint')}ms TTFB={r['audits']['server-response-time']['numericValue']:.0f}ms")
+metrics = ((audits.get("metrics") or {}).get("details") or {}).get("items") or [{}]
+m0 = metrics[0] if metrics else {}
+ttfb_s = f"{ttfb:.0f}ms" if isinstance(ttfb, (int, float)) else "N/A"
+print(f"INFO {u} benchmarkIndex={bench:.0f} observedLCP={m0.get('observedLargestContentfulPaint')}ms "
+      f"observedFCP={m0.get('observedFirstContentfulPaint')}ms TTFB={ttfb_s}")
 if bench and bench < float(mbench):
     print(f"WARN {u} 本机 benchmarkIndex {bench:.0f} < {mbench}：Lantern 模拟的 performance/LCP 随本机 CPU 空闲度漂移，"
           f"本次分数不可作回归结论（R562 实测：空闲 ~2600 → LCP ~1.0–1.4s；双核占满 ~1230 → LCP 2.3s），请空闲后重跑")
 rows = [
-    ("performance", cats["performance"]["score"], float(mperf), ">="),
-    ("accessibility", cats["accessibility"]["score"], float(ma11y), ">="),
-    ("best-practices", cats["best-practices"]["score"], float(mbp), ">="),
-    ("seo", cats["seo"]["score"], float(mseo), ">="),
+    ("performance", (cats.get("performance") or {}).get("score"), float(mperf), ">="),
+    ("accessibility", (cats.get("accessibility") or {}).get("score"), float(ma11y), ">="),
+    ("best-practices", (cats.get("best-practices") or {}).get("score"), float(mbp), ">="),
+    ("seo", (cats.get("seo") or {}).get("score"), float(mseo), ">="),
     ("LCP(ms)", lcp, float(mlcp), "<="),
     ("CLS", cls, float(mcls), "<="),
 ]
 bad = 0
 for name, val, budget, op in rows:
+    if not isinstance(val, (int, float)):
+        print(f"FAIL {u} {name}=None 预算{op}{budget}")
+        bad = 1
+        continue
     ok = val >= budget if op == ">=" else val <= budget
     print(f"{'OK  ' if ok else 'FAIL'} {u} {name}={val:.2f} 预算{op}{budget}")
     bad |= not ok

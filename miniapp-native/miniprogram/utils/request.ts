@@ -80,8 +80,8 @@ function rawRequest<T>(path: string, opts: RequestOptions = {}): Promise<T> {
           resolve(res.data as T);
           return;
         }
-        const body = res.data as { detail?: string } | undefined;
-        const detail = (body && body.detail) || '';
+        const body = res.data as { detail?: unknown } | undefined;
+        const detail = typeof body?.detail === 'string' ? body.detail : '';
         // 仅登录态本身失效才清登录（访问码等 401 不应踢登录）
         const authExpired =
           (res.statusCode === 401 &&

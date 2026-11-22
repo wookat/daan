@@ -3,7 +3,7 @@
     <kg-two-col>
       <template #main>
         <!-- 账号卡 -->
-        <kg-card class="acct" :clickable="!user" @click="goLogin">
+        <kg-card class="acct" :clickable="!user" @click="!user && goLogin()">
           <view class="acct-row">
             <view class="avatar">
               <text v-if="user" class="avatar-t">{{ (user.nickname || user.phone || 'U').slice(0, 1) }}</text>
@@ -64,8 +64,10 @@
             <template #icon><view class="cell-ico"><l-icon name="save" :size="20" tone="brand" /></view></template>
           </wd-cell>
         </wd-cell-group>
+      </template>
 
-        <!-- 偏好设置 -->
+      <template #aside>
+        <!-- 偏好设置（桌面双栏放到右栏平衡高度，移动端自然顺排在「学习」下方） -->
         <kg-section-header title="偏好设置" />
         <wd-cell-group custom-class="cellcard" border>
           <wd-cell title="每日目标" :value="dailyGoal + ' 题/天'" is-link clickable @click="cycleGoal">
@@ -81,7 +83,7 @@
           <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
             <template #icon><view class="cell-ico"><l-icon name="moon" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell title="主题色">
+          <wd-cell title="主题色" custom-class="acc-cell">
             <template #icon><view class="cell-ico"><l-icon name="palette" :size="20" tone="info" /></view></template>
             <view class="acc-row">
               <view
@@ -112,9 +114,7 @@
             <template #icon><view class="cell-ico"><l-icon name="bell" :size="20" tone="info" /></view></template>
           </wd-cell>
         </wd-cell-group>
-      </template>
 
-      <template #aside>
         <!-- 其他 -->
         <kg-section-header title="其他" />
         <wd-cell-group custom-class="cellcard" border>
@@ -516,6 +516,7 @@ export default {
       this.bkLoading = false;
     },
     doRestore() {
+      const RESTORE_ALLOW = new Set(['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode', 'favQuestions', 'practiceHistory', 'coachAdvice', 'backupCode']);
       uni.showModal({
         title: '输入恢复码',
         editable: true,
@@ -524,7 +525,10 @@ export default {
           if (!res.confirm || !res.content) return;
           try {
             const d = await request('/api/backup?code=' + encodeURIComponent(res.content.trim()));
-            Object.entries(d.data || {}).forEach(([k, v]) => uni.setStorageSync(k, v));
+            Object.entries(d.data || {}).forEach(([k, v]) => {
+              if (!RESTORE_ALLOW.has(k)) return;
+              uni.setStorageSync(k, k === 'coachAdvice' ? cleanCoach(typeof v === 'string' ? v : '') : v);
+            });
             uni.setStorageSync('favQuestions', favsLocalOnly(uni.getStorageSync('favQuestions') || []));
             uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
             this.backupCode = res.content.trim().toUpperCase();
@@ -643,12 +647,12 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.wrap { padding: var(--sp-16) var(--page-x) calc(var(--sp-40) + var(--tab-h) + env(safe-area-inset-bottom)); }
 
 /* 账号卡 */
 .acct { margin-bottom: var(--card-gap); }
 .acct-row { display: flex; align-items: center; gap: var(--sp-12); }
-.avatar { width: 48px; height: 48px; border-radius: var(--r-full); background: var(--brand-grad); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.avatar { width: 48px; height: 48px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-t { color: var(--on-brand); font-size: var(--fs-h2); font-weight: 600; }
 .grow { flex: 1; min-width: 0; }
 .acct-name { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); line-height: var(--lh-h3); }
@@ -658,8 +662,9 @@ export default {
 /* 连签一行 */
 .streak { margin-bottom: var(--sp-4); }
 .streak-row { display: flex; align-items: center; gap: var(--sp-8); min-height: 24px; padding-right: var(--sp-24); }
-.streak-t { font-size: var(--fs-body); font-weight: 500; color: var(--ink); }
+.streak-t { font-size: var(--fs-body); font-weight: 500; color: var(--ink); flex-shrink: 0; white-space: nowrap; }
 .streak-best { flex: 1; min-width: 0; font-size: var(--fs-caption); color: var(--ink-3); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.streak-best :deep(uni-text), .streak-best text { white-space: nowrap; }
 
 /* cell 组：作为 cell 规范样板 */
 :deep(.cellcard) { display: block; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); margin-bottom: var(--sp-4); }
@@ -672,12 +677,13 @@ export default {
 :deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 
-/* 主题色 chips */
-.acc-row { display: flex; gap: var(--sp-8); }
-.acc-chip { display: flex; align-items: center; gap: 6px; padding: 0 var(--sp-12); height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2); }
-.acc-chip.on { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); font-weight: var(--fw-medium); }
-.acc-dot { width: 10px; height: 10px; border-radius: var(--r-full); }
-.acc-t { font-size: var(--fs-sub); }
+/* 主题色 chips（375px 下三颗胶囊单行完整呈现，防 uni-text pre-line 折行裁切） */
+:deep(.acc-cell .wd-cell__value) { overflow: visible; }
+.acc-row { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; }
+.acc-chip { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 9px; height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; }
+.acc-chip.on { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); font-weight: var(--fw-medium); }
+.acc-dot { width: 10px; height: 10px; border-radius: var(--r-full); flex-shrink: 0; }
+.acc-t { font-size: var(--fs-sub); line-height: 1; white-space: nowrap; }
 
 .logout { margin-top: var(--sp-24); }
 

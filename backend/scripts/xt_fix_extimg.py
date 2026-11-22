@@ -54,7 +54,7 @@ def fetch_one(url: str):
     if not ext:
         # 从 URL 路径猜扩展名
         m = re.search(r"\.(png|jpe?g|gif|webp|svg)(?:\?|$)", url)
-        ext = m.group(0).split("?")[0].replace("jpeg", ".jpg") if m else ".png"
+        ext = m.group(0).split("?")[0].replace("jpeg", "jpg") if m else ".png"
         if not ext.startswith("."):
             ext = "." + ext
     fname = name + ext

@@ -4,7 +4,7 @@
 # 「过去 24h 应用日志」实际只剩当前容器存活的几十分钟，事后无法归因（R437 一手：22 次/日重建）。
 # 用法（远端执行，deploy_h5.sh 以 `bash -s <rev>` 注入）：app_log_snapshot.sh [old_rev]
 # 输出一行：snapshot=<path> lines=<n> bytes=<gz> | snapshot=skipped reason=<...>
-set -u
+set -euo pipefail
 CONTAINER=deploy-kaogong-1
 DIR=/home/ubuntu/kaogong-reports/app-log
 KEEP_DAYS=14

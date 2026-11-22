@@ -13,9 +13,9 @@ describe('R467 组件层命中规则', () => {
 });
 
 describe('R467 错题本 book.vue 可点元素 40px', () => {
-  it('待掌握/已掌握/收藏 分段页签 .seg-i 40px，.seg 内边距 4px 保持工具行不撑高', () => {
+  it('待掌握/已掌握/易错/收藏 Underline 切换栏 .seg-i 保持 40px 命中高度，.seg 用清晰底线不再用糊灰轨道', () => {
     expect(rule(bookCss, '.seg-i')).toMatch(/min-height:\s*40px/);
-    expect(rule(bookCss, '.seg')).toMatch(/padding:\s*var\(--sp-4\)/);
+    expect(rule(bookCss, '.seg')).toMatch(/border-bottom:\s*1px solid var\(--line\)/);
   });
   it('卷源徽标 kg-tag.pbadge 外包 .pbadge-hit 40px 负外边距（徽标视觉不变、保留 ellipsis）', () => {
     expect(book).toMatch(/<view v-if="mistakePaper\(m\)" class="pbadge-hit" role="button" @click\.stop=[^>]*><kg-tag tone="neutral" class="pbadge">/);

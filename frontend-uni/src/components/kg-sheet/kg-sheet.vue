@@ -4,7 +4,7 @@
     :position="position"
     :safe-area-inset-bottom="position === 'bottom'"
     :z-index="zIndex"
-    custom-class="kg-sheet"
+    :custom-class="cls"
     :custom-style="sheetStyle"
     @update:model-value="$emit('update:modelValue', $event)"
     @close="$emit('close')"
@@ -47,19 +47,29 @@ export default {
     size: { type: String, default: 'md' },  // md=480px 表单类；lg=640px 长文阅读型（仅桌面 center 生效）
   },
   emits: ['update:modelValue', 'close'],
-  data() { return { wide: false, zIndex: readZOverlay() }; },
+  data() { return { wide: false, zIndex: readZOverlay(), settled: false }; },
   computed: {
     position() { return this.wide ? 'center' : 'bottom'; },
+    cls() { return this.settled ? 'kg-sheet is-settled' : 'kg-sheet'; },
     /** wd-popup 把 #fff 写死在 .wd-popup-wrapper[scoped] .wd-popup 上、深色只认 .wot-theme-dark，且 custom-class 挂在非根节点拿不到本组件 scope 属性；用内联 custom-style 让面板底色跟 --card */
     sheetStyle() {
       const base = 'background:var(--card);';
-      if (this.position !== 'center') return base + 'border-radius:var(--r-lg) var(--r-lg) 0 0';
+      if (this.position !== 'center') {
+        const lock = this.settled ? ';top:auto;bottom:0;left:0;right:0;transform:translate3d(0, 0, 0)' : '';
+        return base + 'border-radius:var(--r-lg) var(--r-lg) 0 0' + lock;
+      }
       const w = this.size === 'lg' ? 640 : 480;
       return base + `width:min(${w}px,92vw);border-radius:var(--r-lg)`;
     },
   },
   watch: {
     modelValue(v) {
+      if (this._settleT) { clearTimeout(this._settleT); this._settleT = null; }
+      if (v) {
+        this._settleT = setTimeout(() => { this.settled = true; }, 80);
+      } else {
+        this.settled = false;
+      }
       // #ifdef H5
       if (v) {
         if (this._histTok == null) this._histTok = sheetOpened(() => this.$emit('update:modelValue', false));
@@ -71,10 +81,12 @@ export default {
     },
   },
   mounted() {
+    if (this.modelValue) this.settled = true;
     // #ifdef H5
     if (this.modelValue) this._histTok = sheetOpened(() => this.$emit('update:modelValue', false));
     const mq = window.matchMedia && window.matchMedia('(min-width: 1024px)');
     if (mq) {
+      this._mq = mq;
       this.wide = mq.matches;
       this._mqOff = () => { this.wide = mq.matches; };
       mq.addEventListener ? mq.addEventListener('change', this._mqOff) : mq.addListener(this._mqOff);
@@ -82,13 +94,19 @@ export default {
     // #endif
   },
   beforeUnmount() {
+    if (this._settleT) { clearTimeout(this._settleT); this._settleT = null; }
     // #ifdef H5
     if (this._histTok != null) {
       sheetClosed(this._histTok);
       this._histTok = null;
     }
-    const mq = window.matchMedia && window.matchMedia('(min-width: 1024px)');
-    if (mq && this._mqOff) mq.removeEventListener ? mq.removeEventListener('change', this._mqOff) : mq.removeListener(this._mqOff);
+    if (this._mq && this._mqOff) {
+      this._mq.removeEventListener
+        ? this._mq.removeEventListener('change', this._mqOff)
+        : this._mq.removeListener(this._mqOff);
+    }
+    this._mq = null;
+    this._mqOff = null;
     // #endif
   },
 };

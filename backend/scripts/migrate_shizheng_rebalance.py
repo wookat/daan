@@ -18,8 +18,9 @@ BANK = os.path.join(ROOT, "knowledge", "shizheng_bank.jsonl")
 
 
 def main():
-    db_path = sys.argv[1] if len(sys.argv) > 1 else os.environ.get(
-        "KAOGONG_DB", os.path.join(ROOT, "backend", "kaogong.db"))
+    db_path = sys.argv[1] if len(sys.argv) > 1 else (
+        os.environ.get("DB_PATH") or os.environ.get("KAOGONG_DB") or os.path.join(ROOT, "data.db")
+    )
     if not os.path.exists(db_path):
         print(f"db not found: {db_path}")
         sys.exit(1)

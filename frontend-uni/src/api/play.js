@@ -106,14 +106,16 @@ export function qShareText(mod, sid, correct) {
 }
 
 // 把分享落地页地址栏回写为服务端短链（/s/{sid}、/p/{rid}），地址栏转发/浏览器原生分享
-// 不再携带聊天应用会截断的 #/? hash 路由；站内一旦导航即把 path 还原为 /，避免刷新误落分享页
+// 不再携带聊天应用会截断的 #/? hash 路由；站内一旦导航即把 path 还原为原 SPA base（如 /app/），
+// 且全程透传 window.history.state 不破坏 vue-router 位置栈与 KgSheet 返回拦截
 export function canonicalizeSharePath(path) {
   // #ifdef H5
   try {
-    window.history.replaceState(null, '', path);
+    const basePath = window.location.pathname || '/app/';
+    window.history.replaceState(window.history.state, '', path);
     window.addEventListener(
       'hashchange',
-      () => window.history.replaceState(null, '', '/' + window.location.hash),
+      () => window.history.replaceState(window.history.state, '', basePath + window.location.hash),
       { once: true }
     );
   } catch (e) {

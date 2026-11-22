@@ -56,7 +56,6 @@ def parse_file(path: str):
                 m = re.match(r"(\S+?)\s*[:：]\s*\"?(.+?)\"?\s*$", ln)
                 if m:
                     meta[m.group(1)] = m.group(2)
-    body = text
     # 切块：材料/题头驱动状态机
     cur_mat_txt: list[str] = []  # 当前材料原文片段
     material = ""                # 已完成的当前材料文本

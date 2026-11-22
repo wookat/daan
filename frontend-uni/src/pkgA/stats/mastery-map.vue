@@ -136,6 +136,7 @@
 import { request, snapPeek, anonUid } from '../../api/api.js';
 import { buildMasteryUrl, parseMasteryOpts } from '../../utils/mastery-url.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
+import { withBasePath } from '../../utils/hash-url.js';
 
 const LEVELS = [
   { key: 'untouched', label: '未接触' },
@@ -225,7 +226,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(null, '', buildMasteryUrl({ mod: this.curMod }));
+        window.history.replaceState(window.history.state, '', withBasePath(buildMasteryUrl({ mod: this.curMod })));
       }
       // #endif
     },
@@ -266,7 +267,7 @@ export default {
 .head-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .head-s { font-size: var(--fs-caption); color: var(--ink-2); margin: var(--sp-4) 0 var(--sp-8); }
 .legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
-.lg { font-size: var(--fs-caption); line-height: var(--lh-caption); padding: 0 var(--sp-8); border-radius: var(--r-xs); }
+.lg { font-size: var(--fs-caption); line-height: var(--lh-caption); padding: 0 6px; border-radius: var(--r-xs); white-space: nowrap; }
 
 /* 掌握度 5 级色轨：lv-* 专属语义 token（未接触灰→入门琥珀→巩固蓝→熟练紫→精通绿，Khan 式进阶） */
 .untouched { background: var(--lv-untouched-soft); color: var(--ink-3); }

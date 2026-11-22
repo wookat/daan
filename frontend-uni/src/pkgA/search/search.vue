@@ -166,6 +166,7 @@
 <script>
 import { request, trackEvent, imgUrl } from '../../api/api.js';
 import { buildSearchUrl, buildTikuQPath } from '../../utils/search-url.js';
+import { withBasePath } from '../../utils/hash-url.js';
 import { askPrefill } from '../../ask/ask-prefill.js';
 import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { MODULES } from '../../utils/module-meta.js';
@@ -197,7 +198,9 @@ export default {
     };
   },
   onLoad(options) {
-    const q = decodeURIComponent(options && options.q ? options.q : '').trim();
+    let raw = options && options.q ? options.q : '';
+    try { raw = decodeURIComponent(raw); } catch (e) { /* 畸形百分比编码原样保留 */ }
+    const q = raw.trim();
     if (!q) return;
     if (options.tab && this.TABS.some((t) => t.k === options.tab)) this.tab = options.tab;
     if (/^\d+$/.test(options.qid || '')) this._urlQid = Number(options.qid);
@@ -273,7 +276,7 @@ export default {
     syncUrl() {
       // #ifdef H5
       if (typeof window === 'undefined' || !window.history) return;
-      window.history.replaceState(null, '', buildSearchUrl(this.kw, this.tab, this.detail && this.detail.id));
+      window.history.replaceState(window.history.state, '', withBasePath(buildSearchUrl(this.kw, this.tab, this.detail && this.detail.id)));
       // #endif
     },
     clearHist() {

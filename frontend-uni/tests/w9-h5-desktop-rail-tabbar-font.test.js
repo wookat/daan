@@ -41,9 +41,9 @@ describe('W9-B 桌面非 tab 页 208px 让位 / tabbar 字阶 / 焦点环 token'
     expect(app).toMatch(/\.uni-tabbar \{\s*top: 0 !important;[\s\S]*?width: 208px !important;/);
   });
 
-  it('pages.json tabBar.fontSize === "12px"（W5 字阶下限），高度不另配（保持 uni 默认 50）', () => {
+  it('pages.json tabBar.fontSize === "12px"（W5 字阶下限），高度与 --tab-h 对齐为 56px', () => {
     expect(pages.tabBar.fontSize).toBe('12px');
-    expect(pages.tabBar.height).toBeUndefined();
+    expect(pages.tabBar.height).toBe('56px');
     expect(pages.tabBar.list.map((t) => t.text)).toEqual(['刷题', '错题本', 'AI问答', '统计', '我的']);
     for (const t of pages.tabBar.list) expect(t.text.length).toBeLessThanOrEqual(4);
   });

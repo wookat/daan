@@ -337,7 +337,12 @@ def api_comment_create(body: dict, authorization: str | None = Header(None)):
             raise HTTPException(404, "回复的评论不存在")
         # 只允许一层嵌套：回复楼中楼时挂到顶层楼
         parent_id = p["parent_id"] or p["id"]
-    nickname = _clean_name(user["nickname"], "考友" + str(user["phone"])[-4:])
+    raw_id = str(user["phone"] or "")
+    if raw_id.startswith(("wx:", "za:")) or "@" in raw_id:
+        fallback_name = f"考友{user['id']}"
+    else:
+        fallback_name = "考友" + raw_id[-4:]
+    nickname = _clean_name(user["nickname"], fallback_name)
     cur = conn.execute(
         """INSERT INTO question_comments (question_id, user_id, uid, nickname, content, parent_id, created_at)
            VALUES (?,?,?,?,?,?,?)""",
@@ -356,28 +361,33 @@ def api_comment_like(cid: int, authorization: str | None = Header(None)):
     user = require_user(authorization)
     uid = user_uid(user["id"])
     conn = db.get_conn()
-    row = conn.execute(
-        "SELECT id FROM question_comments WHERE id=? AND status='ok'", (cid,)
-    ).fetchone()
-    if not row:
+    try:
+        row = conn.execute(
+            "SELECT id FROM question_comments WHERE id=? AND status='ok'", (cid,)
+        ).fetchone()
+        if not row:
+            raise HTTPException(404, "评论不存在")
+        liked = conn.execute(
+            "SELECT 1 FROM comment_likes WHERE comment_id=? AND uid=?", (cid, uid)
+        ).fetchone()
+        if liked:
+            cur = conn.execute("DELETE FROM comment_likes WHERE comment_id=? AND uid=?", (cid, uid))
+            if cur.rowcount:
+                conn.execute("UPDATE question_comments SET likes=MAX(likes-1,0) WHERE id=?", (cid,))
+            now_liked = False
+        else:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO comment_likes (comment_id, uid, created_at) VALUES (?,?,?)",
+                (cid, uid, time.time()),
+            )
+            if cur.rowcount:
+                conn.execute("UPDATE question_comments SET likes=likes+1 WHERE id=?", (cid,))
+            now_liked = True
+        conn.commit()
+        n = conn.execute("SELECT likes FROM question_comments WHERE id=?", (cid,)).fetchone()[0]
+        return {"liked": now_liked, "likes": n}
+    finally:
         conn.close()
-        raise HTTPException(404, "评论不存在")
-    liked = conn.execute(
-        "SELECT 1 FROM comment_likes WHERE comment_id=? AND uid=?", (cid, uid)
-    ).fetchone()
-    if liked:
-        conn.execute("DELETE FROM comment_likes WHERE comment_id=? AND uid=?", (cid, uid))
-        conn.execute("UPDATE question_comments SET likes=MAX(likes-1,0) WHERE id=?", (cid,))
-    else:
-        conn.execute(
-            "INSERT INTO comment_likes (comment_id, uid, created_at) VALUES (?,?,?)",
-            (cid, uid, time.time()),
-        )
-        conn.execute("UPDATE question_comments SET likes=likes+1 WHERE id=?", (cid,))
-    conn.commit()
-    n = conn.execute("SELECT likes FROM question_comments WHERE id=?", (cid,)).fetchone()[0]
-    conn.close()
-    return {"liked": not liked, "likes": n}
 
 
 @router.delete("/comments/{cid}")
@@ -450,7 +460,7 @@ def api_admin_comments(
         args.append(question_id)
     rows = conn.execute(
         f"SELECT * FROM question_comments WHERE {' AND '.join(where)} ORDER BY id DESC LIMIT ? OFFSET ?",
-        [*args, min(int(limit), 500), max(int(offset), 0)],
+        [*args, max(0, min(int(limit), 500)), max(int(offset), 0)],
     ).fetchall()
     conn.close()
     return {"items": [dict(r) for r in rows]}
@@ -466,7 +476,7 @@ def api_admin_comment_reports(limit: int = 100, x_admin_token: str | None = Head
                   c.content, c.status, c.question_id, c.nickname
            FROM comment_reports r JOIN question_comments c ON c.id = r.comment_id
            GROUP BY r.comment_id ORDER BY last_at DESC LIMIT ?""",
-        (min(int(limit), 500),),
+        (max(0, min(int(limit), 500)),),
     ).fetchall()
     conn.close()
     return {"items": [dict(r) for r in rows]}
@@ -592,7 +602,7 @@ def api_favs(uid: str, folder_id: int | None = None, module: str | None = None, 
     rows = conn.execute(
         f"SELECT question_id, COALESCE(folder_id, 0) AS folder_id, created_at FROM question_favs "
         f"WHERE {' AND '.join(where)} ORDER BY created_at DESC LIMIT ?",
-        [*args, min(int(limit), 500)],
+        [*args, max(0, min(int(limit), 500))],
     ).fetchall()
     notes = {
         r["question_id"]: r["content"]
@@ -689,7 +699,7 @@ def api_notes(uid: str, question_id: int | None = None, limit: int = 200):
         return {"item": dict(row) if row else None}
     rows = conn.execute(
         "SELECT question_id, content, updated_at FROM question_notes WHERE uid=? ORDER BY updated_at DESC LIMIT ?",
-        (u, min(int(limit), 500)),
+        (u, max(0, min(int(limit), 500))),
     ).fetchall()
     conn.close()
     questions = {q["id"]: q for q in db.questions_by_ids([r["question_id"] for r in rows])}

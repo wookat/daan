@@ -54,7 +54,7 @@
           ${q.disabled === 1 ? '<span class="tag tag-gray">已下架</span>' : '<span class="tag tag-ok">上架中</span>'}</div>
         <div class="q-text" style="font-size:13px">${esc(q.question)}</div>
         <div style="display:grid;gap:6px;margin-bottom:10px">${Object.entries(q.options || {}).map(([k, v]) =>
-          `<div class="opt-row ${String(q.answer || '').toUpperCase().startsWith(k) ? 'ans' : ''}" style="padding:6px 10px;font-size:12px"><b>${k}.</b><span>${esc(v)}</span></div>`).join('')}</div>
+          `<div class="opt-row ${String(q.answer || '').toUpperCase().startsWith(k) ? 'ans' : ''}" style="padding:6px 10px;font-size:12px"><b>${esc(k)}.</b><span>${esc(v)}</span></div>`).join('')}</div>
         ${q.explanation ? `<div class="expl-box" style="font-size:12px">${esc(q.explanation)}</div>` : ''}
         <div class="row" style="gap:8px;margin:12px 0">
           <a class="btn btn-ghost" href="#/questions?id=${q.id}">编辑此题 →</a>

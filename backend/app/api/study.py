@@ -205,12 +205,16 @@ def api_backup_save(body: dict, request: Request):
     data = body.get("data")
     if not isinstance(data, dict):
         raise HTTPException(400, "缺少备份数据")
-    code = db.save_backup(body.get("code"), data)
+    try:
+        code = db.save_backup(body.get("code"), data)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
     return {"code": code}
 
 
 @router.get("/api/backup")
-def api_backup_get(code: str):
+def api_backup_get(code: str, request: Request):
+    rl(request, "backup_get", 20, 600)
     data = db.get_backup(code.strip().upper())
     if data is None:
         raise HTTPException(404, "恢复码不存在")

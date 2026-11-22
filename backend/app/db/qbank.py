@@ -459,8 +459,8 @@ def export_questions(offset: int = 0, limit: int = 200, module: str | None = Non
         where.append("(hs_explanation IS NULL OR hs_explanation='')")
     clause = ("WHERE " + " AND ".join(where)) if where else ""
     rows = conn.execute(
-        f"SELECT id, module, submodule, question_type, question, options, answer, explanation FROM questions {clause} ORDER BY id LIMIT ? OFFSET ?",
-        (*args, limit, offset),
+        f"SELECT id, module, submodule, question_type, question, options, option_imgs, answer, explanation FROM questions {clause} ORDER BY id LIMIT ? OFFSET ?",
+        (*args, max(0, int(limit)), max(0, int(offset))),
     ).fetchall()
     conn.close()
     out = []

@@ -33,11 +33,11 @@ export default {
 </script>
 
 <style scoped>
-.kg-banner { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-sm); font-size: var(--fs-sub); line-height: var(--lh-sub); }
-.kg-banner--info { background: var(--info-soft); color: var(--info-strong); }
-.kg-banner--warn { background: var(--warn-soft); color: var(--warn-strong); }
-.kg-banner--ok { background: var(--ok-soft); color: var(--ok-strong); }
-.kg-banner--bad { background: var(--bad-soft); color: var(--bad-strong); }
+.kg-banner { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-sm); border: 1px solid transparent; font-size: var(--fs-sub); line-height: var(--lh-sub); }
+.kg-banner--info { background: var(--info-soft); color: var(--info-strong); border-color: var(--info-line); }
+.kg-banner--warn { background: var(--warn-soft); color: var(--warn-strong); border-color: var(--warn-line); }
+.kg-banner--ok { background: var(--ok-soft); color: var(--ok-strong); border-color: var(--ok-line); }
+.kg-banner--bad { background: var(--bad-soft); color: var(--bad-strong); border-color: var(--bad-line); }
 .kg-banner__t { flex: 1; min-width: 0; }
 .kg-banner__x { display: flex; align-items: center; justify-content: center; width: var(--hit-min); height: var(--hit-min); margin: calc(-1 * var(--sp-8)) calc(-1 * var(--sp-8)) calc(-1 * var(--sp-8)) 0; flex-shrink: 0; } /* 命中 44，吃掉 banner 自身 padding，不改外观 */
 </style>

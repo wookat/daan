@@ -235,6 +235,8 @@ def mistake_analysis_stats(uid: str) -> dict:
 
 
 def _ensure_mistake_uid(conn):
+    if db._is_ensured(conn, "mistake_uid"):
+        return
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(mistakes)")}
     if "uid" not in cols:
         conn.execute("ALTER TABLE mistakes ADD COLUMN uid TEXT")
@@ -243,6 +245,7 @@ def _ensure_mistake_uid(conn):
     # 探针打标（与 answer_log.probe 同口径）：跨用户研究/看板剔除内部测试流量；本人列表/复习不受影响
     if "probe" not in cols:
         conn.execute("ALTER TABLE mistakes ADD COLUMN probe INTEGER")
+    db._mark_ensured(conn, "mistake_uid")
 
 
 def save_mistake(rec: dict, probe: bool = False) -> int:
@@ -394,10 +397,14 @@ def update_mistake(mid: int, fields: dict, uid: str | None = None) -> bool:
     vals = list(sets.values())
     if "mastered" in sets:
         if sets["mastered"]:
-            clause += ", mastered_at=COALESCE(mastered_at, ?)"
+            clause += ", mastered_at=COALESCE(mastered_at, ?), mastery_state='mastered'"
             vals.append(time.time())
         else:
-            clause += ", mastered_at=NULL"
+            clause += (
+                ", mastered_at=NULL, mastery_state=CASE "
+                "WHEN COALESCE(wrong_review_count,0)>=2 AND COALESCE(review_streak,0)=0 THEN 'sticky_wrong' "
+                "WHEN COALESCE(review_count,0)>0 THEN 'reviewing' ELSE 'new' END"
+            )
     cl, args = db._uid_clause(uid)
     cur = conn.execute(
         f"UPDATE mistakes SET {clause} WHERE id=?{cl}", (*vals, mid, *args)
@@ -535,6 +542,8 @@ def _hydrate_mistake(d: dict) -> None:
 
 
 def _ensure_review_log(conn):
+    if db._is_ensured(conn, "review_log"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS review_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -550,6 +559,7 @@ def _ensure_review_log(conn):
     ]:
         if col not in cols:
             conn.execute(ddl)
+    db._mark_ensured(conn, "review_log")
 
 
 def _advance_review(

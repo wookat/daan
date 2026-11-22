@@ -72,6 +72,12 @@ describe('netFailMessage（对齐 H5 api-policy）', () => {
     await expect(request('/api/exam/papers')).rejects.toThrow(NET_TIMEOUT_TEXT);
   });
 
+  it('request() 遇到 FastAPI 422 数组型 detail 不抛 TypeError、正常 reject HTTP 422', async () => {
+    requestImpl = (o) =>
+      o.success({ statusCode: 422, data: { detail: [{ loc: ['body', 'uid'], msg: 'field required' }] } });
+    await expect(request('/api/mistakes', { method: 'POST', data: {} })).rejects.toThrow('HTTP 422');
+  });
+
   it('streamPost fail 回调同口径', async () => {
     requestImpl = (o) => {
       o.fail({ errMsg: 'request:fail' });
@@ -82,7 +88,7 @@ describe('netFailMessage（对齐 H5 api-policy）', () => {
 
 describe('login 合并失败反馈', () => {
   const MERGE_FAIL_TIP = '已登录，但本机记录合并失败；退出后重新登录会再次合并';
-  const account = { uid: 'u42', phone: '13800000000' };
+  const account = { uid: 'u42', email: 'u42@example.com' };
 
   const withApi = (mergeStatus: number) => {
     requestImpl = (o) => {
@@ -98,7 +104,7 @@ describe('login 合并失败反馈', () => {
   const login = async () => {
     vi.useFakeTimers();
     await import('../miniprogram/pages/login/login');
-    const page = { data: { ...(pageCfg.data as object), mode: 'login', phone: '13800000000', password: '123456' } } as {
+    const page = { data: { ...(pageCfg.data as object), mode: 'login', email: 'u42@example.com', password: '123456' } } as {
       data: Record<string, unknown>;
       setData: (d: Record<string, unknown>) => void;
       onSubmit: () => Promise<void>;

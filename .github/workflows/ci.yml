@@ -7,6 +7,31 @@ on:
   workflow_dispatch:
 
 jobs:
+  hygiene:
+    name: repo hygiene (conflicts + shell + design tokens + spec)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check merge conflict markers
+        run: |
+          if git grep -I -n -E '^(<<<<<<<|=======|>>>>>>>)' -- '*.md' '*.py' '*.js' '*.ts' '*.vue' '*.sh' '*.yml' '*.json'; then
+            echo "Unresolved git conflict markers found!"
+            exit 1
+          fi
+      - name: Bash syntax check on deploy scripts
+        run: |
+          for f in deploy/*.sh; do
+            bash -n "$f"
+          done
+      - name: Design tokens strict lint & kg-spec contract
+        run: |
+          node tools/design-tokens/build.mjs --check
+          node tools/design-tokens/lint-pages.mjs --strict
+          node tools/check_kg_spec.mjs
+
   backend:
     name: backend (pytest + ruff)
     runs-on: ubuntu-latest
@@ -21,14 +46,14 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt "ruff==0.15.20" pytest  # ruff 钉基线版本；pytest 不入生产 requirements
-      - run: python -m ruff check .
+      - run: python -m ruff check . ../scripts
       # main.py 启动时挂载 frontend-uni/dist/build/h5（无则回退 frontend/）；
       # API 测试不需要真实产物，只要求目录存在
       - run: mkdir -p ../frontend-uni/dist/build/h5
       - run: python -m pytest tests/ -q
 
   frontend:
-    name: frontend (vitest + lint)
+    name: frontend (vitest + lint + build:h5)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -43,9 +68,10 @@ jobs:
       - run: npm ci
       - run: npx vitest run
       - run: npm run lint
+      - run: npm run build:h5
 
   miniapp:
-    name: miniapp (tsc + lint)
+    name: miniapp (tsc + lint + vitest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -60,3 +86,4 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
+      - run: npx --yes vitest@4.1.11 run --config scripts/vitest.config.mts

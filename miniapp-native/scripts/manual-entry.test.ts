@@ -79,8 +79,8 @@ describe('book 页接入', () => {
   it('工具格「手录错题」开自由录入 sheet；卷码录入改为次级入口', () => {
     expect(ts).toContain("{ key: 'manual', icon: 'pencil-line', label: '手录错题' }");
     expect(ts).toContain("else if (k === 'manual') this.onEntryOpen();");
-    expect(wxml).toContain('<kg-sheet visible="{{entryOpen}}" title="手录错题" bind:close="onEntryClose">');
-    expect(wxml).toContain('<kg-sheet visible="{{manualOpen}}" title="按卷码录入答案" bind:close="onManualClose">');
+    expect(wxml).toMatch(/<kg-sheet\b[^>]*visible="\{\{entryOpen\}\}" title="手录错题" bind:close="onEntryClose">/);
+    expect(wxml).toMatch(/<kg-sheet\b[^>]*visible="\{\{manualOpen\}\}" title="按卷码录入答案" bind:close="onManualClose">/);
     expect(wxml).toContain('bind:click="onEntryToPaper">有纸质试卷？按卷码录入答题卡 ›</kg-button>');
     expect(ts).toContain("import { emptyManualEntry, letterRow, MANUAL_MODULES, manualEntryBody, manualEntryError, manualSavedToast, toggleLetter } from '../../utils/manual-entry';");
   });

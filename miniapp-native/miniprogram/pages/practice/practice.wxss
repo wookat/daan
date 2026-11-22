@@ -686,7 +686,7 @@
 
 .rr-v {
   font-size: var(--fs-h2);
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }

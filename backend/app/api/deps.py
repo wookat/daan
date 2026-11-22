@@ -14,7 +14,8 @@ ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "") or IMPORT_TOKEN
 
 
 def check_access(x_access_code: str | None):
-    if ACCESS_CODE and x_access_code != ACCESS_CODE:
+    if ACCESS_CODE and not hmac.compare_digest(x_access_code or "", ACCESS_CODE):
+        auth.rate_limit("access_code_fail", 40, 300)
         raise HTTPException(401, "访问码错误")
 
 
@@ -28,7 +29,9 @@ def check_admin(x_admin_token: str | None):
 
 
 def check_import_token(x_import_token: str | None):
-    if not IMPORT_TOKEN or x_import_token != IMPORT_TOKEN:
+    if not IMPORT_TOKEN or not hmac.compare_digest(x_import_token or "", IMPORT_TOKEN):
+        # ADMIN_TOKEN 未单配时会回落 IMPORT_TOKEN，共享失败限速防止旁路爆破
+        auth.rate_limit("admin_token_fail", 20, 300)
         raise HTTPException(401, "无效导入令牌")
 
 
@@ -71,7 +74,10 @@ def friendly_ai_err(e: Exception) -> str:
         return "AI 服务暂时不可用，请稍后再试"
     if isinstance(e, httpx.HTTPError):
         return "AI 服务连接失败，请稍后再试"
-    return str(e)
+    msg = str(e)
+    if msg in ("AI 服务未配置", "AI 未返回内容，请稍后再试") or msg.startswith("AI 回复被截断"):
+        return msg
+    return "AI 服务处理失败，请稍后再试"
 
 
 def cache_key(question_text: str | None, user_answer: str | None) -> str:

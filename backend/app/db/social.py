@@ -64,20 +64,28 @@ def get_reminder_prefs(uid: str) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+_BACKUP_MAX_CHARS = 500_000
+_BACKUP_CODE_RE = __import__("re").compile(r"^[A-Z0-9]{8,16}$")
+
+
 def save_backup(code: str | None, data: dict) -> str:
+    payload = json.dumps(data, ensure_ascii=False)
+    if len(payload) > _BACKUP_MAX_CHARS:
+        raise ValueError("备份数据过大（上限 500KB）")
+    raw_code = str(code).strip().upper()[:16] if code else ""
+    if not _BACKUP_CODE_RE.match(raw_code):
+        raw_code = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(8))
     conn = db.get_conn()
-    if not code:
-        code = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(8))
-    else:
-        code = str(code).strip().upper()[:16]
-    conn.execute(
-        "INSERT INTO backups (code, data, updated_at) VALUES (?,?,?) "
-        "ON CONFLICT(code) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
-        (code, json.dumps(data, ensure_ascii=False)[:500000], time.time()),
-    )
-    conn.commit()
-    conn.close()
-    return code
+    try:
+        conn.execute(
+            "INSERT INTO backups (code, data, updated_at) VALUES (?,?,?) "
+            "ON CONFLICT(code) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at",
+            (raw_code, payload, time.time()),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return raw_code
 
 
 def get_backup(code: str) -> dict | None:

@@ -319,6 +319,7 @@ export interface PkQuestion {
   question: string;
   options: Record<string, string>;
   image?: string | null;
+  option_imgs?: Record<string, string> | null;
 }
 
 export interface PkJoinResp {
@@ -481,7 +482,7 @@ export async function streamInterview(args: InterviewStreamArgs): Promise<Interv
       onDelta,
       errMsg: '点评生成失败',
     });
-    const meta = st.meta as InterviewMeta;
+    const meta = (st.meta || {}) as InterviewMeta;
     const sid = Number((st.done && st.done.session_id) || meta.session_id || 0);
     return { ...meta, session_id: sid, review: st.full };
   } catch (e) {

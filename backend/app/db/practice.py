@@ -44,6 +44,8 @@ def save_practice_result(
 
 
 def _ensure_answer_log(conn):
+    if db._is_ensured(conn, "answer_log"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS answer_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +72,7 @@ def _ensure_answer_log(conn):
         "CREATE INDEX IF NOT EXISTS idx_al_uid_qid ON answer_log(uid, question_id) "
         "WHERE question_id IS NOT NULL"
     )
+    db._mark_ensured(conn, "answer_log")
 
 
 def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False, session_id: str | None = None) -> dict:
@@ -98,6 +101,10 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False, ses
                 module = qrow["module"] or module
                 sub = qrow["submodule"] or sub
         sub = db.merge_submodule(module, sub)
+        try:
+            secs_v = max(0, min(int(it.get("secs") or 0), 7200))
+        except (TypeError, ValueError):
+            secs_v = 0
         conn.execute(
             "INSERT INTO answer_log (uid, created_at, question_id, module, submodule, correct, secs, picked, source, probe, session_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
@@ -107,7 +114,7 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False, ses
                 module,
                 sub,
                 1 if it.get("correct") else 0,
-                int(it.get("secs") or 0),
+                secs_v,
                 db.normalize_answer(it.get("picked"))[:8] or None,
                 (str(it.get("source") or "")[:32] or None),
                 1 if probe else 0,
@@ -179,30 +186,33 @@ def practice_history_detail(uid: str, start: float, end: float) -> list[dict]:
            ORDER BY a.created_at LIMIT 100""",
         (uid, start - 0.001, end + 0.001),
     ).fetchall()
+    qids = sorted({r["qid"] for r in rows if r["qid"]})
+    qmap: dict[int, dict] = {}
+    if qids:
+        marks = ",".join("?" * len(qids))
+        for qrow in conn.execute(f"SELECT * FROM questions WHERE id IN ({marks})", qids).fetchall():
+            d = dict(qrow)
+            d["options"] = json.loads(d.get("options") or "{}")
+            d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
+            qmap[d["id"]] = d
     out = []
     for r in rows:
-        item = {
+        out.append({
             "created_at": r["created_at"],
             "module": r["module"],
             "submodule": r["submodule"],
             "correct": bool(r["correct"]),
             "secs": r["secs"],
             "picked": r["picked"],
-            "question": None,
-        }
-        if r["qid"]:
-            qrow = conn.execute("SELECT * FROM questions WHERE id=?", (r["qid"],)).fetchone()
-            if qrow:
-                d = dict(qrow)
-                d["options"] = json.loads(d.get("options") or "{}")
-                d["option_imgs"] = json.loads(d.get("option_imgs") or "{}")
-                item["question"] = d
-        out.append(item)
+            "question": qmap.get(r["qid"]) if r["qid"] else None,
+        })
     conn.close()
     return out
 
 
 def _ensure_question_stat_cols(conn) -> None:
+    if db._is_ensured(conn, "question_stat_cols"):
+        return
     qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
     for col, ddl in [
         ("attempt_count", "ALTER TABLE questions ADD COLUMN attempt_count INTEGER"),
@@ -211,6 +221,10 @@ def _ensure_question_stat_cols(conn) -> None:
     ]:
         if col not in qcols:
             conn.execute(ddl)
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_questions_attempt_count ON questions(id) WHERE attempt_count IS NOT NULL"
+    )
+    db._mark_ensured(conn, "question_stat_cols")
 
 
 def refresh_question_stats() -> int:
@@ -310,6 +324,8 @@ def question_attempts(uid: str, question_id: int, limit: int = 20) -> list[dict]
 
 
 def _ensure_practice_progress(conn):
+    if db._is_ensured(conn, "practice_progress"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS practice_progress (
             uid TEXT PRIMARY KEY,
@@ -332,6 +348,7 @@ def _ensure_practice_progress(conn):
         conn.execute("ALTER TABLE practice_progress ADD COLUMN ptitle TEXT")
     if "daily" not in pcols:
         conn.execute("ALTER TABLE practice_progress ADD COLUMN daily TEXT")
+    db._mark_ensured(conn, "practice_progress")
 
 
 def save_practice_progress(uid: str, qids: list[int], picks: dict, excl: dict, idx: int,

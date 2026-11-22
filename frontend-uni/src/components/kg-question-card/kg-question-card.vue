@@ -19,7 +19,7 @@
     </view>
     <view class="kg-q__stem q-text" :style="{ fontSize: stemSize }">
       <text v-if="total" class="kg-q__idx num">{{ index + 1 }}.</text>
-      <slot name="stem"><text>{{ q.stem }}</text></slot>
+      <slot name="stem"><text>{{ displayStem }}</text></slot>
     </view>
     <view v-if="q.images && q.images.length" class="kg-q__imgs">
       <kg-fit-img v-for="(src, i) in q.images" :key="i" :src="src" class="kg-q__img" @click="preview(i)" />
@@ -64,6 +64,11 @@ export default {
       return d >= 5 ? 'bad' : d === 4 ? 'warn' : d === 3 ? 'neutral' : 'info';
     },
     stemSize() { return fontSizes(this.fontLevel).q; },
+    displayStem() {
+      const raw = String((this.q && this.q.stem) || '');
+      const blankRe = /([^\s])(?:[ \t\u00a0]{3,}|\u3000{2,})([^\s])/g;
+      return raw.replace(blankRe, '$1 ____ $2').replace(blankRe, '$1 ____ $2');
+    },
   },
   methods: {
     preview(i) { uni.previewImage({ current: i, urls: this.q.images }); },

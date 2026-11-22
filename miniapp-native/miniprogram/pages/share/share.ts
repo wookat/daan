@@ -1,9 +1,43 @@
 import { shareAnswer, shareDetail, teamJoin, trackEvent } from '../../api/index';
 import type { QStats, ShareAnswerRow, ShareDetailResp, TeamInvite } from '../../api/types';
 import { getToken } from '../../utils/auth';
+import { imgUrl } from '../../utils/request';
 import { modName } from '../../utils/stats';
 
 const SITE = 'https://kaogong.zalize.com';
+
+interface ShareOptRow {
+  k: string;
+  v: string;
+  img: string;
+  cls: string;
+}
+
+function buildOpts(
+  opts: Record<string, string>,
+  optImgs: Record<string, string> | null | undefined,
+  revealed: boolean,
+  picked: string,
+  answer: string,
+  myPicked: string
+): ShareOptRow[] {
+  return Object.keys(opts)
+    .sort()
+    .map((k) => {
+      let cls = '';
+      if (!revealed) cls = picked.includes(k) ? 'pick' : '';
+      else if (answer.includes(k)) cls = 'right';
+      else if (myPicked.includes(k)) cls = 'wrong';
+      return { k, v: opts[k], img: imgUrl(optImgs && optImgs[k]), cls };
+    });
+}
+
+function toggleLetter(cur: string, k: string): string {
+  const set = new Set(cur.split('').filter(Boolean));
+  if (set.has(k)) set.delete(k);
+  else set.add(k);
+  return Array.from(set).sort().join('');
+}
 
 function beatText(s: QStats | null, myResult: { correct: boolean } | null): string {
   if (!s || !s.total || !myResult) return '';
@@ -21,8 +55,11 @@ Page({
     errMsg: '',
     d: null as ShareDetailResp | null,
     modLabel: '',
-    optList: [] as Array<{ k: string; v: string }>,
+    qImg: '',
+    isMulti: false,
+    optList: [] as ShareOptRow[],
     picked: '',
+    multiSel: '',
     myResult: null as { picked: string; correct: boolean } | null,
     answers: [] as ShareAnswerRow[],
     revealed: false,
@@ -55,16 +92,26 @@ Page({
     try {
       const d = await shareDetail(sid);
       const myResult = d.my_answer || null;
+      const revealed = !!(d.is_sharer || d.answered || myResult);
+      const isMulti = !!(d.question.multi || (d.question.answer && d.question.answer.length > 1));
       this._qStats = d.q_stats || null;
       this.setData({
         d,
         modLabel: modName(d.question.module || ''),
-        optList: Object.keys(d.question.options)
-          .sort()
-          .map((k) => ({ k, v: d.question.options[k] })),
+        qImg: imgUrl(d.question.image),
+        isMulti,
+        multiSel: '',
+        optList: buildOpts(
+          d.question.options || {},
+          d.question.option_imgs,
+          revealed,
+          '',
+          String(d.question.answer || ''),
+          String((myResult && myResult.picked) || '')
+        ),
         answers: d.answers || [],
         myResult,
-        revealed: !!(d.is_sharer || d.answered || myResult),
+        revealed,
         fromAv: (d.from_name || '?').slice(0, 1),
         beatText: beatText(this._qStats, myResult),
         teamInvite: d.team_invite || null,
@@ -76,11 +123,41 @@ Page({
     this.setData({ loading: false });
   },
 
-  async onPick(e: WechatMiniprogram.TouchEvent) {
-    const { revealed, submitting, sid, d } = this.data;
+  onPreviewImg(e: WechatMiniprogram.TouchEvent) {
+    const src = String(e.currentTarget.dataset.src || '');
+    if (src) wx.previewImage({ current: src, urls: [src] });
+  },
+
+  onPick(e: WechatMiniprogram.TouchEvent) {
+    const { revealed, submitting, d, isMulti, multiSel } = this.data;
     if (revealed || submitting || !d) return;
-    const k = String(e.currentTarget.dataset.key);
-    this.setData({ picked: k, submitting: true });
+    const k = String(e.currentTarget.dataset.key || '');
+    if (!k) return;
+    if (isMulti) {
+      const next = toggleLetter(multiSel, k);
+      this.setData({
+        multiSel: next,
+        optList: buildOpts(d.question.options || {}, d.question.option_imgs, false, next, '', ''),
+      });
+      return;
+    }
+    this._submitPick(k);
+  },
+
+  onConfirmMulti() {
+    const { revealed, submitting, multiSel } = this.data;
+    if (revealed || submitting || !multiSel) return;
+    this._submitPick(multiSel);
+  },
+
+  async _submitPick(k: string) {
+    const { sid, d } = this.data;
+    if (!d) return;
+    this.setData({
+      picked: k,
+      submitting: true,
+      optList: buildOpts(d.question.options || {}, d.question.option_imgs, false, k, '', ''),
+    });
     try {
       const secs = Math.round((Date.now() - this._startTs) / 1000);
       const r = await shareAnswer(sid, k, secs);
@@ -90,6 +167,7 @@ Page({
         myResult,
         'd.question.answer': r.answer,
         'd.question.explanation': r.explanation,
+        optList: buildOpts(d.question.options || {}, d.question.option_imgs, true, k, String(r.answer || ''), k),
         answers: r.answers || [],
         revealed: true,
         beatText: beatText(this._qStats, myResult),
@@ -97,7 +175,10 @@ Page({
       });
       trackEvent('share_answer', 'share', sid);
     } catch (err) {
-      this.setData({ picked: '' });
+      this.setData({
+        picked: '',
+        optList: buildOpts(d.question.options || {}, d.question.option_imgs, false, this.data.multiSel, '', ''),
+      });
       wx.showToast({ title: (err as Error).message || '提交失败', icon: 'none' });
     }
     this.setData({ submitting: false });

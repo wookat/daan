@@ -7,6 +7,8 @@ set -u
 STATE=/home/ubuntu/kaogong-reports/.kaogong-lifecycle-state
 LOG=/home/ubuntu/kaogong-reports/container-events.log
 mkdir -p /home/ubuntu/kaogong-reports
+exec 9>/home/ubuntu/kaogong-reports/.kaogong-lifecycle-watch.lock
+flock -n 9 || exit 0
 CUR=$(docker inspect deploy-kaogong-1 --format '{{.Id}} {{.State.StartedAt}} {{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}} {{.State.ExitCode}} oom={{.State.OOMKilled}}' 2>/dev/null) || CUR="MISSING"
 PREV=$(cat "$STATE" 2>/dev/null || echo "")
 if [ "$CUR" != "$PREV" ]; then

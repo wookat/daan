@@ -77,8 +77,8 @@ describe('favorites.vue 取消收藏与 URL 回写（R574 生产 F 既有缺陷�
     expect(unfav.indexOf('await removeFav(it.id)')).toBeLessThan(unfav.indexOf("uni.setStorageSync('favQuestions', locals)"));
     expect(unfav).not.toContain('} else {\n              await removeFav(it.id);');
   });
-  it('syncUrl 保留 history.state；onShow 在 load() 后重写地址栏，深链 ?folder= 尚未落地时让位', () => {
-    expect(method('syncUrl')).toContain("window.history.replaceState(window.history.state, '', buildFavoritesUrl(");
+  it('syncUrl 保留 history.state 与 /app/ 前缀；onShow 在 load() 后重写地址栏，深链 ?folder= 尚未落地时让位', () => {
+    expect(method('syncUrl')).toContain("window.history.replaceState(window.history.state, '', withBasePath(buildFavoritesUrl(");
     const m = VUE.match(/\n {2}onShow\(\) \{([\s\S]*?)\n {2}\},/);
     expect(m).toBeTruthy();
     const onShow = m[1];

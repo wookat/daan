@@ -177,30 +177,26 @@ def api_team_join(body: dict, request: Request):
     if not code:
         raise HTTPException(400, "缺少邀请码")
     conn = db.get_conn()
-    t = conn.execute("SELECT * FROM teams WHERE invite_code=?", (code,)).fetchone()
-    if not t:
+    try:
+        t = conn.execute("SELECT * FROM teams WHERE invite_code=?", (code,)).fetchone()
+        if not t:
+            raise HTTPException(404, "邀请码无效或小队不存在")
+        if _member(conn, t["id"], uid):
+            return {"team": _team_payload(conn, t, uid), "already": True}
+        n = conn.execute("SELECT COUNT(*) FROM team_members WHERE team_id=?", (t["id"],)).fetchone()[0]
+        if n >= TEAM_MAX_MEMBERS:
+            raise HTTPException(400, f"该小队已满（上限 {TEAM_MAX_MEMBERS} 人）")
+        joined = conn.execute("SELECT COUNT(*) FROM team_members WHERE uid=?", (uid,)).fetchone()[0]
+        if joined >= TEAM_MAX_JOINED:
+            raise HTTPException(400, f"最多同时加入 {TEAM_MAX_JOINED} 个小队")
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO team_members (team_id, uid, nickname, joined_at) VALUES (?,?,?,?)",
+            (t["id"], uid, _clean_name(body.get("nickname")), time.time()),
+        )
+        conn.commit()
+        return {"team": _team_payload(conn, t, uid), "already": cur.rowcount == 0}
+    finally:
         conn.close()
-        raise HTTPException(404, "邀请码无效或小队不存在")
-    if _member(conn, t["id"], uid):
-        out = _team_payload(conn, t, uid)
-        conn.close()
-        return {"team": out, "already": True}
-    n = conn.execute("SELECT COUNT(*) FROM team_members WHERE team_id=?", (t["id"],)).fetchone()[0]
-    if n >= TEAM_MAX_MEMBERS:
-        conn.close()
-        raise HTTPException(400, f"该小队已满（上限 {TEAM_MAX_MEMBERS} 人）")
-    joined = conn.execute("SELECT COUNT(*) FROM team_members WHERE uid=?", (uid,)).fetchone()[0]
-    if joined >= TEAM_MAX_JOINED:
-        conn.close()
-        raise HTTPException(400, f"最多同时加入 {TEAM_MAX_JOINED} 个小队")
-    conn.execute(
-        "INSERT INTO team_members (team_id, uid, nickname, joined_at) VALUES (?,?,?,?)",
-        (t["id"], uid, _clean_name(body.get("nickname")), time.time()),
-    )
-    conn.commit()
-    out = _team_payload(conn, t, uid)
-    conn.close()
-    return {"team": out, "already": False}
 
 
 @router.post("/team/leave")
@@ -445,46 +441,47 @@ def api_share_create(body: dict, request: Request):
 
 
 @router.get("/share/{sid}")
-def api_share_detail(sid: str, uid: str = ""):
+def api_share_detail(sid: str, request: Request, uid: str = ""):
     u = (uid or "").strip()[:64] or None
     conn = db.get_conn()
-    s = conn.execute("SELECT * FROM shared_questions WHERE sid=?", (sid.strip()[:16],)).fetchone()
-    if not s:
+    try:
+        s = conn.execute("SELECT * FROM shared_questions WHERE sid=?", (sid.strip()[:16],)).fetchone()
+        if not s:
+            raise HTTPException(404, "分享不存在或已过期")
+        if request.method != "HEAD":
+            conn.execute("UPDATE shared_questions SET open_count=open_count+1 WHERE id=?", (s["id"],))
+            conn.commit()
+        my = conn.execute(
+            "SELECT * FROM shared_answers WHERE share_id=? AND uid=?", (s["id"], u or "")
+        ).fetchone() if u else None
+        is_sharer = bool(u) and s["from_uid"] == u
+        answered = bool(my)
+        q = _sanitized_question(s["question_id"])
+        if not q:
+            raise HTTPException(404, "题目不存在")
+        out = {
+            "sid": s["sid"],
+            "from_name": s["from_name"] or "匿名考友",
+            "is_sharer": is_sharer,
+            "answered": answered,
+            "n_answered": conn.execute(
+                "SELECT COUNT(*) FROM shared_answers WHERE share_id=?", (s["id"],)
+            ).fetchone()[0],
+            "question": q,
+            "created_at": s["created_at"],
+        }
+        out["team_invite"] = _sharer_invite(conn, s, u)
+        if is_sharer or answered:
+            full = _full_question(s["question_id"]) or {}
+            out["question"] = {**q, "answer": full.get("answer"), "explanation": full.get("explanation")}
+            out["answers"] = _answers_payload(conn, s["id"])
+            db._ensure_answer_log(conn)
+            out["q_stats"] = _question_stats(conn, s["question_id"])
+            if my:
+                out["my_answer"] = {"picked": my["picked"], "correct": bool(my["correct"])}
+        return out
+    finally:
         conn.close()
-        raise HTTPException(404, "分享不存在或已过期")
-    conn.execute("UPDATE shared_questions SET open_count=open_count+1 WHERE id=?", (s["id"],))
-    conn.commit()
-    my = conn.execute(
-        "SELECT * FROM shared_answers WHERE share_id=? AND uid=?", (s["id"], u or "")
-    ).fetchone() if u else None
-    is_sharer = bool(u) and s["from_uid"] == u
-    answered = bool(my)
-    q = _sanitized_question(s["question_id"])
-    if not q:
-        conn.close()
-        raise HTTPException(404, "题目不存在")
-    out = {
-        "sid": s["sid"],
-        "from_name": s["from_name"] or "匿名考友",
-        "is_sharer": is_sharer,
-        "answered": answered,
-        "n_answered": conn.execute(
-            "SELECT COUNT(*) FROM shared_answers WHERE share_id=?", (s["id"],)
-        ).fetchone()[0],
-        "question": q,
-        "created_at": s["created_at"],
-    }
-    out["team_invite"] = _sharer_invite(conn, s, u)
-    if is_sharer or answered:
-        full = _full_question(s["question_id"]) or {}
-        out["question"] = {**q, "answer": full.get("answer"), "explanation": full.get("explanation")}
-        out["answers"] = _answers_payload(conn, s["id"])
-        db._ensure_answer_log(conn)
-        out["q_stats"] = _question_stats(conn, s["question_id"])
-        if my:
-            out["my_answer"] = {"picked": my["picked"], "correct": bool(my["correct"])}
-    conn.close()
-    return out
 
 
 @router.post("/share/{sid}/answer")
@@ -496,31 +493,31 @@ def api_share_answer(sid: str, body: dict, request: Request):
         raise HTTPException(400, "缺少作答选项")
     secs = as_int(body.get("secs"))
     conn = db.get_conn()
-    s = conn.execute("SELECT * FROM shared_questions WHERE sid=?", (sid.strip()[:16],)).fetchone()
-    if not s:
+    try:
+        s = conn.execute("SELECT * FROM shared_questions WHERE sid=?", (sid.strip()[:16],)).fetchone()
+        if not s:
+            raise HTTPException(404, "分享不存在或已过期")
+        if s["from_uid"] == uid:
+            raise HTTPException(400, "不能作答自己分享的题")
+        if conn.execute(
+            "SELECT 1 FROM shared_answers WHERE share_id=? AND uid=?", (s["id"], uid)
+        ).fetchone():
+            raise HTTPException(409, "你已作答过这道分享题")
+        full = _full_question(s["question_id"])
+        if not full:
+            raise HTTPException(404, "题目不存在")
+        correct = picked == db.normalize_answer(full.get("answer"))
+        cur = conn.execute(
+            "INSERT OR IGNORE INTO shared_answers (share_id, uid, nickname, picked, correct, created_at) VALUES (?,?,?,?,?,?)",
+            (s["id"], uid, _clean_name(body.get("nickname")), picked, 1 if correct else 0, time.time()),
+        )
+        if cur.rowcount == 0:
+            raise HTTPException(409, "你已作答过这道分享题")
+        conn.commit()
+        answers = _answers_payload(conn, s["id"])
+        team_invite = _sharer_invite(conn, s, uid)
+    finally:
         conn.close()
-        raise HTTPException(404, "分享不存在或已过期")
-    if s["from_uid"] == uid:
-        conn.close()
-        raise HTTPException(400, "不能作答自己分享的题")
-    if conn.execute(
-        "SELECT 1 FROM shared_answers WHERE share_id=? AND uid=?", (s["id"], uid)
-    ).fetchone():
-        conn.close()
-        raise HTTPException(409, "你已作答过这道分享题")
-    full = _full_question(s["question_id"])
-    if not full:
-        conn.close()
-        raise HTTPException(404, "题目不存在")
-    correct = picked == db.normalize_answer(full.get("answer"))
-    conn.execute(
-        "INSERT INTO shared_answers (share_id, uid, nickname, picked, correct, created_at) VALUES (?,?,?,?,?,?)",
-        (s["id"], uid, _clean_name(body.get("nickname")), picked, 1 if correct else 0, time.time()),
-    )
-    conn.commit()
-    answers = _answers_payload(conn, s["id"])
-    team_invite = _sharer_invite(conn, s, uid)
-    conn.close()
     # 裂变埋点：分享作答同步写 answer_log（source=share）
     db.save_answer_log(uid, [{
         "qid": s["question_id"],
@@ -585,7 +582,10 @@ def api_track(body: dict, request: Request):
     }:
         raise HTTPException(400, "无效事件")
     uid = str(body.get("uid") or "").strip()[:64] or None
-    rate_limit(f"track:{uid or client_ip(request)}", 60, 300)
+    ip = client_ip(request)
+    rate_limit(f"track:ip:{ip}", 180, 300)
+    if uid:
+        rate_limit(f"track:{uid}", 60, 300)
     ref = str(body.get("ref") or "")[:200 if event in {"slow_load", "lp_view"} else 32]
     if event == "slow_load":
         # 慢载事件服务端补 UA：旧 bundle 客户端不会自报，只有入库侧追加才能全量归因

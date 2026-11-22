@@ -89,18 +89,21 @@ export function trackQueuePush(q, item, max = 30) {
 // 重放载荷：携带 ago_ms 让服务端还原真实发生时刻；缺 t/时钟回拨按 0 处理。
 export function trackReplayPayload(item, now) {
   const t = item && typeof item.t === 'number' ? item.t : now;
-  return {
+  const out = {
     uid: item.uid,
     event: item.event,
     source: item.source || null,
     ref: item.ref || null,
     ago_ms: Math.max(0, Math.round(now - t)),
   };
+  if (item && item.platform) out.platform = item.platform;
+  if (item && item.session_id) out.session_id = item.session_id;
+  return out;
 }
 
 // ---------- SSE 解析 ----------
 
-// 按空行切分事件，尾部不完整片段留在 rest 供下一 chunk 续接；无 data 行的事件忽略。
+// 按空行切分事件，尾部不完整片段留在 rest 供下一 chunk 续接；无 data 行或损坏 JSON 忽略。
 export function parseSseEvents(buf) {
   const parts = buf.split('\n\n');
   const rest = parts.pop();
@@ -109,7 +112,11 @@ export function parseSseEvents(buf) {
     const typeM = ev.match(/^event: (\w+)/m);
     const dataM = ev.match(/^data: (.*)$/m);
     if (!dataM) continue;
-    events.push({ type: typeM ? typeM[1] : 'message', data: JSON.parse(dataM[1]) });
+    try {
+      events.push({ type: typeM ? typeM[1] : 'message', data: JSON.parse(dataM[1]) });
+    } catch (e) {
+      /* 忽略畸形 SSE JSON 行，防止单条坏块中断整条流 */
+    }
   }
   return { rest, events };
 }

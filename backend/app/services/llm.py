@@ -60,8 +60,12 @@ class TruncatedReply(EmptyReply):
 
 
 def _content(data: dict, reject_truncated: bool = False) -> str:
-    choice = data["choices"][0]
-    text = choice["message"].get("content") or ""
+    choices = data.get("choices") if isinstance(data, dict) else None
+    if not choices or not isinstance(choices, list):
+        raise EmptyReply("AI 未返回内容，请稍后再试")
+    choice = choices[0] or {}
+    msg = choice.get("message") or {}
+    text = msg.get("content") or ""
     if not text.strip():
         raise EmptyReply("AI 未返回内容，请稍后再试")
     if choice.get("finish_reason") == "length":
@@ -116,12 +120,24 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000,
                         json=_body(model, messages, temperature, max_tokens, think),
                     )
                 except httpx.HTTPError as e:
-                    # 中转站偶发"挂起不回"：批量模式把网络异常也纳入退避重试
+                    # 中转站偶发"挂起不回"：批量模式退避重试；普通模式网络/超时异常回落 rescue
                     if _main_only() and attempt < max_attempts - 1:
                         wait = min(60.0, 5.0 * (attempt + 1))
                         log.warning("[llm] %s %s, main-only retry %d/%d in %.0fs", model, type(e).__name__, attempt + 1, max_attempts, wait)
                         await asyncio.sleep(wait)
                         continue
+                    if not _main_only() and _rescue_ok(messages) and channel != "rescue":
+                        log.warning("[llm] main %s %s, fallback to rescue %s", model, type(e).__name__, RESCUE_MODEL)
+                        channel, used_model = "rescue", RESCUE_MODEL
+                        resp = await client.post(
+                            f"{RESCUE_BASE_URL}/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {RESCUE_API_KEY}"},
+                            json=_body(RESCUE_MODEL, messages, temperature, max_tokens, think),
+                        )
+                        resp.raise_for_status()
+                        text = _content(resp.json())
+                        ok = True
+                        return text
                     raise
                 if _main_only():
                     if (resp.status_code >= 500 or resp.status_code in _QUOTA_CODES) and attempt < max_attempts - 1:
@@ -250,8 +266,15 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
                             "[llm] stream %s finish=%s content=%d reasoning_chars=%d max_tokens=%d",
                             m, finish, content_chars, thinking_chars, max_tokens,
                         )
-                    attempt_ok = True
+                    if not content_chars and i < len(tries) - 1:
+                        continue
+                    attempt_ok = bool(content_chars)
                     return
+            except httpx.HTTPError as e:
+                if i < len(tries) - 1:
+                    log.warning("[llm] stream %s %s, fallback to next channel", m, type(e).__name__)
+                    continue
+                raise
             finally:
                 from app.db.analytics import record_llm
                 record_llm(ch, m, attempt_ok, (time.perf_counter() - t0) * 1000, img, True)
@@ -284,5 +307,10 @@ async def chat_json(messages: list, fast: bool = False, **kw) -> dict:
     raw = await (chat_fast(messages, **kw) if fast else chat(messages, **kw))
     text = raw.strip()
     if text.startswith("```"):
-        text = text.split("\n", 1)[1].rsplit("```", 1)[0]
+        if "\n" in text:
+            text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        else:
+            text = text.strip("`").strip()
+            if text.lower().startswith("json"):
+                text = text[4:].strip()
     return json.loads(text)

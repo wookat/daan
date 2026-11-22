@@ -5,14 +5,15 @@
 按邮箱找到/创建本地账号并签发本站 Bearer token。原手机号+密码登录不受影响。
 """
 import secrets
+import sqlite3
 import time
 
 import httpx
 import jwt as pyjwt
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Request
 
 from app import db
-from app.api.auth import _issue_token, _user_payload, hash_password, require_user
+from app.api.auth import _issue_token, _user_payload, client_ip, hash_password, rate_limit, require_user
 
 router = APIRouter(prefix="/api/auth")
 
@@ -69,47 +70,62 @@ def _central_email(cookie: str | None) -> str:
 
 
 @router.post("/sso")
-def api_sso(cookie: str | None = Header(None)):
+def api_sso(request: Request, cookie: str | None = Header(None)):
     """Zalize 统一账号登录：已绑定/曾 SSO 的邮箱命中原账号，否则创建新账号。"""
+    rate_limit(f"sso:{client_ip(request)}", 20, 300)
     email = _central_email(cookie)
     conn = db.get_conn()
-    _init_binding_table(conn)
-    row = None
-    b = conn.execute("SELECT user_id FROM zalize_bindings WHERE email=?", (email,)).fetchone()
-    if b:
-        row = conn.execute("SELECT * FROM users WHERE id=?", (b["user_id"],)).fetchone()
-    if not row:
-        nickname = "考友" + email.split("@")[0][:8]
-        cur = conn.execute(
-            "INSERT INTO users (phone, password_hash, nickname, created_at) VALUES (?,?,?,?)",
-            (f"za:{email}", hash_password(secrets.token_urlsafe(24)), nickname, time.time()),
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO zalize_bindings (email, user_id, created_at) VALUES (?,?,?)",
-            (email, cur.lastrowid, time.time()),
-        )
-        row = conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
-    token = _issue_token(conn, row["id"])
-    conn.commit()
-    conn.close()
+    try:
+        _init_binding_table(conn)
+        row = None
+        b = conn.execute("SELECT user_id FROM zalize_bindings WHERE email=?", (email,)).fetchone()
+        if b:
+            row = conn.execute("SELECT * FROM users WHERE id=?", (b["user_id"],)).fetchone()
+        if not row:
+            nickname = "考友" + email.split("@")[0][:8]
+            try:
+                cur = conn.execute(
+                    "INSERT INTO users (phone, password_hash, nickname, created_at) VALUES (?,?,?,?)",
+                    (f"za:{email}", hash_password(secrets.token_urlsafe(24)), nickname, time.time()),
+                )
+                conn.execute(
+                    "INSERT OR REPLACE INTO zalize_bindings (email, user_id, created_at) VALUES (?,?,?)",
+                    (email, cur.lastrowid, time.time()),
+                )
+                row = conn.execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+            except sqlite3.IntegrityError:
+                conn.rollback()
+                b = conn.execute("SELECT user_id FROM zalize_bindings WHERE email=?", (email,)).fetchone()
+                if b:
+                    row = conn.execute("SELECT * FROM users WHERE id=?", (b["user_id"],)).fetchone()
+                if not row:
+                    row = conn.execute("SELECT * FROM users WHERE phone=?", (f"za:{email}",)).fetchone()
+                if not row:
+                    raise HTTPException(409, "账号并发初始化冲突，请重试") from None
+        token = _issue_token(conn, row["id"])
+        conn.commit()
+    finally:
+        conn.close()
     return {"token": token, "user": _user_payload(row)}
 
 
 @router.post("/bind-zalize")
-def api_bind_zalize(cookie: str | None = Header(None), authorization: str | None = Header(None)):
+def api_bind_zalize(request: Request, cookie: str | None = Header(None), authorization: str | None = Header(None)):
     """把 Zalize 统一账号绑定到当前已登录的账号（可选绑定，幂等）。"""
+    rate_limit(f"sso:{client_ip(request)}", 20, 300)
     user = require_user(authorization)
     email = _central_email(cookie)
     conn = db.get_conn()
-    _init_binding_table(conn)
-    b = conn.execute("SELECT user_id FROM zalize_bindings WHERE email=?", (email,)).fetchone()
-    if b and b["user_id"] != user["id"]:
+    try:
+        _init_binding_table(conn)
+        b = conn.execute("SELECT user_id FROM zalize_bindings WHERE email=?", (email,)).fetchone()
+        if b and b["user_id"] != user["id"]:
+            raise HTTPException(409, "该 Zalize 账号已绑定其他账号")
+        conn.execute(
+            "INSERT OR REPLACE INTO zalize_bindings (email, user_id, created_at) VALUES (?,?,?)",
+            (email, user["id"], time.time()),
+        )
+        conn.commit()
+    finally:
         conn.close()
-        raise HTTPException(409, "该 Zalize 账号已绑定其他账号")
-    conn.execute(
-        "INSERT OR REPLACE INTO zalize_bindings (email, user_id, created_at) VALUES (?,?,?)",
-        (email, user["id"], time.time()),
-    )
-    conn.commit()
-    conn.close()
     return {"ok": True, "email": email}

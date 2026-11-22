@@ -123,9 +123,11 @@ def mastery_snapshot(uid: str, fresh: bool = False) -> dict:
     未接触（n==0）不参与上级均值。60s 进程内缓存。
     """
     now = time.time()
-    hit = db._MASTERY_CACHE.get(uid)
-    if hit and not fresh and now - hit[0] < db.MASTERY_CACHE_TTL:
-        return hit[1]
+    with db._mastery_cache_lock:
+        hit = db._MASTERY_CACHE.get(uid)
+        if hit and not fresh and now - hit[0] < db.MASTERY_CACHE_TTL:
+            db._MASTERY_CACHE.move_to_end(uid)
+            return hit[1]
     conn = db.get_conn()
     db._ensure_answer_log(conn)
     rows = conn.execute(
@@ -261,7 +263,11 @@ def mastery_snapshot(uid: str, fresh: bool = False) -> dict:
         },
         "modules": modules,
     }
-    db._MASTERY_CACHE[uid] = (now, out)
+    with db._mastery_cache_lock:
+        db._MASTERY_CACHE[uid] = (now, out)
+        db._MASTERY_CACHE.move_to_end(uid)
+        while len(db._MASTERY_CACHE) > db._MASTERY_CACHE_MAX:
+            db._MASTERY_CACHE.popitem(last=False)
     return out
 
 

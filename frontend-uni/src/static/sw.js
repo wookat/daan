@@ -3,14 +3,22 @@
 // 缓存名独立 kg-app-*：根 /sw.js 的退役脚本会清掉旧 kg-shell-*，不可撞名被误删
 // 发版需要踢醒存量旧标签页时 bump 版本号：字节变化 → SW 重装 → activate 广播
 // kg-sw-updated → 页面 staleShellHeal 比对 bundle hash 自动 reload（main.js 另有前台补检兜底）
-const CACHE = 'kg-app-v2';
+const CACHE = 'kg-app-v3';
+const SHELL_PATH = (() => {
+  try {
+    if (self.registration && self.registration.scope) {
+      return new URL('./', self.registration.scope).pathname;
+    }
+  } catch (e) { /* fallback */ }
+  return '/app/';
+})();
 
 self.addEventListener('install', (e) => {
   // cache:'reload' 绕过 HTTP 缓存，保证入库的壳是最新 HTML
   e.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.add(new Request('/app/', { cache: 'reload' })))
+      .then((c) => c.add(new Request(SHELL_PATH, { cache: 'reload' })))
       .then(() => self.skipWaiting())
   );
 });
@@ -50,12 +58,12 @@ self.addEventListener('fetch', (e) => {
           // 仅 2xx 回写壳缓存：错误页（故障窗口 5xx 等）直出给页面但不得污染离线兜底壳
           if (res.ok) {
             const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put('/app/', copy));
+            caches.open(CACHE).then((c) => c.put(SHELL_PATH, copy));
           }
           return res;
         }),
         new Promise((_, rej) => setTimeout(() => rej(new Error('sw-nav-timeout')), 8000)),
-      ]).catch(() => caches.match('/app/').then((hit) => hit || fetch(req)))
+      ]).catch(() => caches.match(SHELL_PATH).then((hit) => hit || fetch(req)))
     );
     return;
   }
@@ -75,16 +83,16 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(d.title || '答岸', {
       body: d.body || '',
-      icon: '/app/static/logo.png',
-      badge: '/app/static/logo.png',
-      data: { url: d.url || '/app/' },
+      icon: SHELL_PATH + 'static/logo.png',
+      badge: SHELL_PATH + 'static/logo.png',
+      data: { url: d.url || SHELL_PATH },
     })
   );
 });
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || '/app/';
+  const url = (e.notification.data && e.notification.data.url) || SHELL_PATH;
   e.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cs) => {
       for (const c of cs) {

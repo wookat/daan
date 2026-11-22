@@ -9,6 +9,7 @@ import time
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from app.services import content_gate
+from app.services import insights
 from app import db
 from app.services import quality
 from app.services import taxonomy
@@ -94,7 +95,7 @@ def api_shizheng_daily(date: str | None = None, limit: int = 10):
     """按日期取当日一组时政题（同一天所有人相同，用日期作随机种子从底池抽）。"""
     day = (date or "").strip()
     if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day or ""):
-        day = time.strftime("%Y-%m-%d")
+        day = db.cn_day()
     items = db.shizheng_daily(day, min(max(limit, 1), 20))
     return {"date": day, "items": items, "total": db.shizheng_count()}
 
@@ -157,6 +158,8 @@ def api_questions_import(body: dict, x_import_token: str | None = Header(None)):
     if receipt["batch_rejected"]:
         raise HTTPException(422, {"error": "batch_rejected", "receipt": receipt})
     result = db.import_questions(accepted, batch=batch)
+    if result.get("inserted"):
+        insights.FTS_WAKE.set()
     result["receipt"] = receipt
     return result
 

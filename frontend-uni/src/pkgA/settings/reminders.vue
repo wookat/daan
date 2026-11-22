@@ -65,7 +65,7 @@
 
         <kg-card class="tip" :padding="12">
           <l-icon name="lightbulb" :size="16" tone="brand-text" />
-          <text class="tip-t">提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励；H5 端需保持页面打开才能收到通知。</text>
+          <text class="tip-t">提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励。注：上方「每日刷题提醒」为页内定时，H5 需保持页面打开；如需关闭页面仍能收到，请开启「每日一练离线推送」。</text>
         </kg-card>
       </template>
     </kg-two-col>

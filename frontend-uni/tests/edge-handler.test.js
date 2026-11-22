@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { onRequest } from '../../deploy/cf-pages/functions/[[path]].js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { onRequest, SECURITY_HEADERS } from '../../deploy/cf-pages/functions/[[path]].js';
+import { isEdgeCacheable, isUpstreamCacheable } from '../../deploy/cf-pages/functions/edge-policy.js';
 
 // onRequest 集成级回归：桩 caches.default / fetch / waitUntil，
 // 覆盖 HIT / SWR / stale-if-error / 无副本重试 / 边缘 304 / 爬虫拦截 / 安全头。
@@ -360,5 +363,101 @@ describe('onRequest 边缘条件请求 304', () => {
     await a.flush();
     const copy = cachesStub.store.get(`${EDGE}/tiku/`);
     expect(await copy.clone().text()).toBe('<html>v1</html>');
+  });
+});
+
+describe('审计 P0/P1 边缘安全头、CORS 与故障响应回归', () => {
+  it('_headers 与 [[path]].js SECURITY_HEADERS 的 CSP 完全一致且无 career.zalize.com', () => {
+    const raw = readFileSync(
+      fileURLToPath(new URL('../../deploy/cf-pages/_headers', import.meta.url)),
+      'utf8'
+    );
+    const m = raw.match(/Content-Security-Policy:\s*(.+)/);
+    expect(m).toBeTruthy();
+    const staticCsp = m[1].trim();
+    const dynamicCsp = SECURITY_HEADERS['Content-Security-Policy'];
+    expect(dynamicCsp).toBe(staticCsp);
+    expect(staticCsp).not.toContain('career.zalize.com');
+    expect(staticCsp).toContain('https://static.cloudflareinsights.com');
+    expect(staticCsp).toContain('https://cloudflareinsights.com');
+  });
+
+  it('带 Origin 头的跨源 /api 请求绕过公共缓存且透传 Origin（Capacitor CORS 不污染）', async () => {
+    const q = queueFetch(
+      new Response('{"ok":1}', {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'Access-Control-Allow-Origin': 'https://localhost',
+        },
+      })
+    );
+    const a = ctx(
+      new Request(`${EDGE}/api/question_counts`, { headers: { Origin: 'https://localhost' } })
+    );
+    const resp = await run(onRequest(a.args));
+    await a.flush();
+    expect(resp.status).toBe(200);
+    expect(resp.headers.get('X-Edge-Cache')).toBeNull();
+    expect(q.calls[0].headers.get('Origin')).toBe('https://localhost');
+    expect(cachesStub.store.size).toBe(0);
+  });
+
+  it('非缓存路径 /qimg/1.png 保留客户端 If-None-Match 条件头回源', async () => {
+    const q = queueFetch(new Response(null, { status: 304, headers: { ETag: '"img1"' } }));
+    const a = ctx(
+      new Request(`${EDGE}/qimg/1.png`, { headers: { 'If-None-Match': '"img1"' } })
+    );
+    const resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(304);
+    expect(q.calls[0].headers.get('If-None-Match')).toBe('"img1"');
+  });
+
+  it('/api/* 网络异常返回 JSON 503（而非未捕获 Worker 1101）', async () => {
+    queueFetch(new Error('origin down'), new Error('origin down'));
+    const a = ctx(new Request(`${EDGE}/api/question_counts`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(503);
+    expect(resp.headers.get('Content-Type')).toContain('application/json');
+    expect(resp.headers.get('Retry-After')).toBe('5');
+    const body = await resp.json();
+    expect(body.detail).toBeTruthy();
+
+    queueFetch(new Error('origin down'));
+    const b = ctx(new Request(`${EDGE}/api/track`, { method: 'POST', body: '{}' }));
+    const resp2 = await run(onRequest(b.args));
+    expect(resp2.status).toBe(503);
+    expect(resp2.headers.get('Content-Type')).toContain('application/json');
+  });
+
+  it('上游显式 Cache-Control: private / no-store 或 Vary: Cookie 时不写入公共缓存', async () => {
+    expect(isUpstreamCacheable('private, max-age=60', '')).toBe(false);
+    expect(isUpstreamCacheable('no-store', '')).toBe(false);
+    expect(isUpstreamCacheable('public, max-age=60', 'Cookie')).toBe(false);
+    expect(isUpstreamCacheable('public, max-age=60', 'Accept-Encoding')).toBe(true);
+
+    queueFetch(originOk('<html>secret</html>', { 'Cache-Control': 'private, no-store' }));
+    const a = ctx(new Request(`${EDGE}/tiku/`));
+    const resp = await run(onRequest(a.args));
+    expect(resp.status).toBe(200);
+    await a.flush();
+    expect(cachesStub.store.has(`${EDGE}/tiku/`)).toBe(false);
+  });
+
+  it('路径参数型 API 仅允许纯数字 ID 入缓存', () => {
+    expect(isEdgeCacheable('GET', '/api/search/question/12345', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/search/question/mine', false, false)).toBe(false);
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions/99', false, false)).toBe(true);
+    expect(isEdgeCacheable('GET', '/api/shenlun/questions/99/draft', false, false)).toBe(false);
+  });
+
+  it('503 降级页品牌为答岸且含 noindex', async () => {
+    queueFetch(new Error('down'), new Error('down'));
+    const a = ctx(new Request(`${EDGE}/tiku/`));
+    const resp = await run(onRequest(a.args));
+    const html = await resp.text();
+    expect(html).toContain('答岸');
+    expect(html).not.toContain('考公助手');
+    expect(html).toContain('<meta name="robots" content="noindex">');
   });
 });

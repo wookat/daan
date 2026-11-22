@@ -1,0 +1,47 @@
+# Docker build context exclusions (keeps backend/, knowledge/ runtime & seed files, deploy/entrypoint.sh, frontend-uni/dist/build/h5)
+.git
+.github
+.agents
+.audit-shots
+.miniapp
+.idea
+.vscode
+.ruff_cache
+.pytest_cache
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.log
+
+# Local DB & secrets
+data.db
+data.db-*
+backend/data.db*
+data/
+.env
+.env.*
+deploy/.env*
+private.*.key
+
+# Non-runtime directories
+docs/
+landing/
+miniapp-native/
+tools/
+scripts/
+backend/tests/
+backend/scripts/
+deploy/cf-pages/
+deploy/.pages-assets-keep/
+
+# Frontend: only prebuilt H5 dist is needed by Dockerfile.runtime
+frontend-uni/*
+!frontend-uni/dist
+frontend-uni/dist/*
+!frontend-uni/dist/build
+frontend-uni/dist/build/*
+!frontend-uni/dist/build/h5
+
+# Unused large assets in image (pdf_export uses SimSun/SimHei first; knowledge/imported is offline staging)
+backend/app/fonts/Noto*.ttf
+knowledge/imported/

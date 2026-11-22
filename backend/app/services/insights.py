@@ -5,6 +5,7 @@
 import json
 import re
 import sqlite3
+import threading
 import time
 
 from fastapi import APIRouter, HTTPException
@@ -297,44 +298,56 @@ def api_exam_rank(attempt_id: int, uid: str = ""):
 # 增量同步（导入/更新/下架题目自动维护），首次建表在后台线程分批回填，避免阻塞启动。
 
 _FTS_OK: bool | None = None
+_FTS_READY_PATHS: set[str] = set()
+_FTS_LOCK = threading.Lock()
+FTS_WAKE = threading.Event()
 
 
 def _fts_ready(conn) -> bool:
     global _FTS_OK
     if _FTS_OK is False:
         return False
-    try:
-        conn.execute(
-            "CREATE VIRTUAL TABLE IF NOT EXISTS question_fts USING fts5("
-            "question, content='questions', content_rowid='id', tokenize='trigram')"
-        )
-        # 注意：外部内容表的非 MATCH 查询（COUNT/MAX(rowid)）读的是 content 表而非索引，
-        # 回填进度必须单独记在 fts_sync。
-        conn.execute("CREATE TABLE IF NOT EXISTS fts_sync (k TEXT PRIMARY KEY, last_id INTEGER NOT NULL)")
-        # 短词（1–2 字）搜索：trigram MATCH 仅支持 ≥3 字，单字空格分词 + phrase
-        # 查询覆盖短词。contentless（content=''）：题干文本生产中不会 UPDATE，
-        # 下架/删除由 JOIN questions 过滤，无需触发器，后台线程分批回填。
-        conn.execute(
-            "CREATE VIRTUAL TABLE IF NOT EXISTS question_fts_cjk USING fts5("
-            "question, content='')"
-        )
-        for name, ddl in [
-            ("question_fts_ai", ("CREATE TRIGGER question_fts_ai AFTER INSERT ON questions BEGIN "
-                                 "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
-            ("question_fts_ad", ("CREATE TRIGGER question_fts_ad AFTER DELETE ON questions BEGIN "
-                                 "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); END")),
-            ("question_fts_au", ("CREATE TRIGGER question_fts_au AFTER UPDATE OF question ON questions BEGIN "
-                                 "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); "
-                                 "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
-        ]:
-            if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name=?", (name,)).fetchone():
-                conn.execute(ddl)
-        conn.commit()
-        _FTS_OK = True
+    db_key = str(getattr(db, "DB_PATH", ""))
+    if db_key in _FTS_READY_PATHS:
         return True
-    except Exception:
-        _FTS_OK = False
-        return False
+    with _FTS_LOCK:
+        if _FTS_OK is False:
+            return False
+        if db_key in _FTS_READY_PATHS:
+            return True
+        try:
+            conn.execute(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS question_fts USING fts5("
+                "question, content='questions', content_rowid='id', tokenize='trigram')"
+            )
+            # 注意：外部内容表的非 MATCH 查询（COUNT/MAX(rowid)）读的是 content 表而非索引，
+            # 回填进度必须单独记在 fts_sync。
+            conn.execute("CREATE TABLE IF NOT EXISTS fts_sync (k TEXT PRIMARY KEY, last_id INTEGER NOT NULL)")
+            # 短词（1–2 字）搜索：trigram MATCH 仅支持 ≥3 字，单字空格分词 + phrase
+            # 查询覆盖短词。contentless（content=''）：题干文本生产中不会 UPDATE，
+            # 下架/删除由 JOIN questions 过滤，无需触发器，后台线程分批回填。
+            conn.execute(
+                "CREATE VIRTUAL TABLE IF NOT EXISTS question_fts_cjk USING fts5("
+                "question, content='')"
+            )
+            for name, ddl in [
+                ("question_fts_ai", ("CREATE TRIGGER question_fts_ai AFTER INSERT ON questions BEGIN "
+                                     "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
+                ("question_fts_ad", ("CREATE TRIGGER question_fts_ad AFTER DELETE ON questions BEGIN "
+                                     "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); END")),
+                ("question_fts_au", ("CREATE TRIGGER question_fts_au AFTER UPDATE OF question ON questions BEGIN "
+                                     "INSERT INTO question_fts(question_fts, rowid, question) VALUES ('delete', old.id, old.question); "
+                                     "INSERT INTO question_fts(rowid, question) VALUES (new.id, new.question); END")),
+            ]:
+                if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name=?", (name,)).fetchone():
+                    conn.execute(ddl)
+            conn.commit()
+            _FTS_OK = True
+            _FTS_READY_PATHS.add(db_key)
+            return True
+        except Exception:
+            _FTS_OK = False
+            return False
 
 
 def fts_backfill(batch: int = 5000) -> int:
@@ -423,6 +436,7 @@ def api_search(q: str, type: str = "all", limit: int = 20, offset: int = 0):
         raise HTTPException(400, "缺少关键词")
     q = q[:80]
     limit = min(max(limit, 1), 50)
+    offset = max(int(offset), 0)
     out: dict = {"q": q}
     # 题号语义码（如 ZL-JQ-2024-000914）或纯数字 id 直达
     if _QCODE_RE.match(q) or q.isdigit():

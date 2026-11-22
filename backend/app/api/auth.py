@@ -3,12 +3,14 @@
 验证码本期为预留桩（接口带 code 字段但不校验），见 SmsProvider。users.phone 是
 凭据标识列：存 11 位手机号、裸邮箱、wx:<openid>、za:<email> 四种形态。
 """
+from collections import OrderedDict
 import hashlib
 import hmac
 import ipaddress
 import os
 import re
 import secrets
+import threading
 import time
 
 import httpx
@@ -129,6 +131,7 @@ def probe_request(request: Request) -> bool:
 
 
 _RATE: dict[str, list[float]] = {}
+_RATE_LOCK = threading.Lock()
 _RATE_SWEEP_EVERY = 60.0
 _rate_sweep = {"at": 0.0, "window": 0}
 
@@ -145,13 +148,14 @@ def _sweep_rate(now: float) -> None:
 
 def rate_limit(key: str, limit: int = 10, window: int = 300):
     now = time.time()
-    _rate_sweep["window"] = max(_rate_sweep["window"], window)
-    _sweep_rate(now)
-    hits = [t for t in _RATE.get(key, []) if now - t < window]
-    if len(hits) >= limit:
-        raise HTTPException(429, "操作过于频繁，请稍后再试")
-    hits.append(now)
-    _RATE[key] = hits
+    with _RATE_LOCK:
+        _rate_sweep["window"] = max(_rate_sweep["window"], window)
+        _sweep_rate(now)
+        hits = [t for t in _RATE.get(key, []) if now - t < window]
+        if len(hits) >= limit:
+            raise HTTPException(429, "操作过于频繁，请稍后再试")
+        hits.append(now)
+        _RATE[key] = hits
 
 
 # ---------- 表结构 ----------
@@ -239,18 +243,32 @@ def _issue_token(conn, user_id: int) -> str:
     return token
 
 
-_REVOKED_CACHE: dict[str, tuple[float, float]] = {}
+_REVOKED_CACHE: OrderedDict[str, tuple[float, float]] = OrderedDict()
+_REVOKED_CACHE_LOCK = threading.Lock()
+_REVOKED_CACHE_MAX = 2048
 _REVOKED_CACHE_TTL = 60.0
+
+
+_REVOKED_HTTP: httpx.Client | None = None
+
+
+def _revoked_http() -> httpx.Client:
+    global _REVOKED_HTTP
+    if _REVOKED_HTTP is None:
+        _REVOKED_HTTP = httpx.Client(timeout=5)
+    return _REVOKED_HTTP
 
 
 def _central_revoked_before(email: str) -> float:
     """中心「退出全部设备」时间戳（秒）；进程内缓存 60s，中心不可达时 fail-open。"""
     now = time.time()
-    hit = _REVOKED_CACHE.get(email)
-    if hit and now - hit[1] < _REVOKED_CACHE_TTL:
-        return hit[0]
+    with _REVOKED_CACHE_LOCK:
+        hit = _REVOKED_CACHE.get(email)
+        if hit and now - hit[1] < _REVOKED_CACHE_TTL:
+            _REVOKED_CACHE.move_to_end(email)
+            return hit[0]
     try:
-        r = httpx.get(
+        r = _revoked_http().get(
             "https://account.zalize.com/api/revoked-before",
             params={"email": email},
             timeout=5,
@@ -258,7 +276,11 @@ def _central_revoked_before(email: str) -> float:
         value = float((r.json() or {}).get("revokedBefore") or 0) / 1000.0 if r.status_code == 200 else 0.0
     except Exception:
         value = 0.0
-    _REVOKED_CACHE[email] = (value, now)
+    with _REVOKED_CACHE_LOCK:
+        _REVOKED_CACHE[email] = (value, now)
+        _REVOKED_CACHE.move_to_end(email)
+        while len(_REVOKED_CACHE) > _REVOKED_CACHE_MAX:
+            _REVOKED_CACHE.popitem(last=False)
     return value
 
 
@@ -270,21 +292,29 @@ def get_user_by_token(authorization: str | None):
     if not token:
         return None
     conn = db.get_conn()
-    row = conn.execute(
-        """SELECT u.*, t.created_at AS token_created_at FROM auth_tokens t JOIN users u ON u.id=t.user_id
-           WHERE t.token=? AND t.expires_at>?""",
-        (token, time.time()),
-    ).fetchone()
-    if row:
-        binding = conn.execute(
-            "SELECT email FROM zalize_bindings WHERE user_id=?", (row["id"],)
-        ).fetchone() if _has_bindings_table(conn) else None
-        if binding and row["token_created_at"] < _central_revoked_before(binding["email"]):
-            conn.execute("DELETE FROM auth_tokens WHERE token=?", (token,))
-            conn.commit()
-            conn.close()
-            return None
-    conn.close()
+    try:
+        row = conn.execute(
+            """SELECT u.*, t.created_at AS token_created_at FROM auth_tokens t JOIN users u ON u.id=t.user_id
+               WHERE t.token=? AND t.expires_at>?""",
+            (token, time.time()),
+        ).fetchone()
+        binding_email = None
+        if row and _has_bindings_table(conn):
+            binding = conn.execute(
+                "SELECT email FROM zalize_bindings WHERE user_id=?", (row["id"],)
+            ).fetchone()
+            binding_email = binding["email"] if binding else None
+    finally:
+        conn.close()
+    # 外部撤销查询在释放数据库连接后执行，避免跨 5s HTTP 占持 SQLite 连接
+    if row and binding_email and row["token_created_at"] < _central_revoked_before(binding_email):
+        conn2 = db.get_conn()
+        try:
+            conn2.execute("DELETE FROM auth_tokens WHERE token=?", (token,))
+            conn2.commit()
+        finally:
+            conn2.close()
+        return None
     return row
 
 
@@ -365,7 +395,9 @@ def api_login(body: dict, request: Request):
     phone = str(body.get("phone") or "").strip()
     identifier = email or phone
     password = str(body.get("password") or "")
-    rate_limit(f"login:{client_ip(request)}:{identifier}", 10, 300)
+    ip = client_ip(request)
+    rate_limit(f"login:ip:{ip}", 30, 300)
+    rate_limit(f"login:{ip}:{identifier}", 10, 300)
     conn = db.get_conn()
     row = conn.execute("SELECT * FROM users WHERE phone=?", (identifier,)).fetchone()
     if not row or not verify_password(password, row["password_hash"]):

@@ -450,7 +450,8 @@ def shenlun_hotspots(limit: int = 30, offset: int = 0) -> dict:
         topics.values(),
         key=lambda g: (-sum(len(g["segs"][k]) for k in SHENLUN_SEG_TYPES), -len(g["others"]), g["topic"]),
     )
-    return {"total": len(ordered), "items": ordered[offset: offset + min(max(limit, 0), 50)]}
+    off = max(int(offset), 0)
+    return {"total": len(ordered), "items": ordered[off: off + min(max(int(limit), 0), 50)]}
 
 
 def shenlun_notes_list(uid: str) -> list[dict]:

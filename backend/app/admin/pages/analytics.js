@@ -37,7 +37,11 @@
   }
 
   async function get(path) {
-    if (!cache[path]) cache[path] = api(path).then((d) => ({ ok: true, d })).catch((e) => ({ ok: false, reason: e }));
+    if (!cache[path]) {
+      cache[path] = api(path)
+        .then((d) => ({ ok: true, d }))
+        .catch((e) => { delete cache[path]; return { ok: false, reason: e }; });
+    }
     const r = await cache[path];
     return r.ok ? r.d : failed(r);
   }

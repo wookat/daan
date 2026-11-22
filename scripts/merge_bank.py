@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
 """合并题库批次到 knowledge/questions_bank.jsonl：格式校验 + 按题干去重。用法: merge_bank.py file1.jsonl [file2 ...]"""
-import json, sys, collections, os
+import collections
+import json
+import os
+import sys
 
 BANK = os.path.join(os.path.dirname(__file__), '..', 'knowledge', 'questions_bank.jsonl')
 MODS = {'ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'}
 
-existing = [json.loads(l) for l in open(BANK) if l.strip()]
+existing = [json.loads(line) for line in open(BANK) if line.strip()]
 seen = {q['question'] for q in existing}
 merged = list(existing)
 bad = dup = incoming = 0
 for f in sys.argv[1:]:
-    for l in open(f):
-        l = l.strip()
-        if not l:
+    for line in open(f):
+        line = line.strip()
+        if not line:
             continue
         try:
-            q = json.loads(l)
+            q = json.loads(line)
         except json.JSONDecodeError:
             bad += 1
             continue
         incoming += 1
         ok = (q.get('module') in MODS and q.get('question') and isinstance(q.get('options'), dict)
               and set(q['options']) >= {'A', 'B', 'C', 'D'} and q.get('answer') in q['options']
-              and q.get('source') and q.get('explanation') and '\\frac' not in l)
+              and q.get('source') and q.get('explanation') and '\\frac' not in line)
         if not ok:
             bad += 1
             continue

@@ -1,7 +1,7 @@
 @import '../../styles/pkg-social.wxss';
 @import '../../styles/md.wxss';
 
-.ivhero { display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--card-pad); border-radius: var(--r-lg); background: var(--brand-grad); color: var(--on-brand); margin-bottom: var(--card-gap); }
+.ivhero { display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--card-pad); border-radius: var(--r-lg); background: var(--brand); color: var(--on-brand); margin-bottom: var(--card-gap); }
 .ivhero-l { font-size: var(--fs-caption); color: var(--on-brand-2); }
 .ivhero-v { display: flex; align-items: baseline; gap: var(--sp-4); }
 .ivhero-n { font-size: var(--fs-display); font-weight: var(--fw-semibold); line-height: 1; }

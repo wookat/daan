@@ -352,5 +352,5 @@ export default {
 .sh { width: 96px; height: 56px; background: var(--card); border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; }
 .mv { width: 24px; height: 24px; border-radius: var(--r-xs); background: var(--brand); transition: transform var(--dur-base) var(--ease-standard); }
 .mv--on { transform: translateX(80px) rotate(90deg); }
-.inv { margin-top: var(--sp-12); padding: var(--sp-12); border-radius: var(--r-md); background: var(--brand-grad); display: flex; gap: var(--sp-8); flex-wrap: wrap; }
+.inv { margin-top: var(--sp-12); padding: var(--sp-12); border-radius: var(--r-md); background: var(--brand); display: flex; gap: var(--sp-8); flex-wrap: wrap; }
 </style>

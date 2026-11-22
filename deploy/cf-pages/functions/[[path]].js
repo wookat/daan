@@ -1,6 +1,7 @@
 import {
   isBlockedBot,
   isEdgeCacheable,
+  isUpstreamCacheable,
   edgeTtl,
   cacheFreshness,
   isCacheableContentType,
@@ -13,17 +14,17 @@ import {
 
 const ORIGIN = "https://kaogong-origin.zalize.com";
 
-const SECURITY_HEADERS = {
+export const SECURITY_HEADERS = {
   "Strict-Transport-Security": "max-age=31536000",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "SAMEORIGIN",
   "Permissions-Policy": "camera=(self), microphone=(), geolocation=(), payment=()",
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://career.zalize.com; " +
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; " +
     "style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.dcloud.net.cn; " +
-    "font-src 'self' data: https://at.alicdn.com; connect-src 'self'; object-src 'none'; " +
-    "base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
+    "font-src 'self' data: https://at.alicdn.com; connect-src 'self' https://cloudflareinsights.com; " +
+    "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'",
 };
 
 // 缓存副本在边缘长存 24h：TTL 过期后先回陈旧副本并后台刷新（stale-while-revalidate），
@@ -113,7 +114,8 @@ async function revalidate(req, cacheKey, pathname, isApi, prev) {
     return;
   }
   const ctOk = isCacheableContentType(pathname, isApi, resp.headers.get("content-type"));
-  if (resp.status !== 200 || !ctOk) return;
+  const ccOk = isUpstreamCacheable(resp.headers.get("cache-control"), resp.headers.get("vary"));
+  if (resp.status !== 200 || !ctOk || !ccOk) return;
   await caches.default.put(cacheKey, toCacheCopy(resp.body, stampLastModified(resp, prev)));
 }
 
@@ -123,7 +125,8 @@ function outageResponse() {
   const html =
     '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<meta http-equiv="refresh" content="30"><title>服务暂时不可用 - 考公助手</title>' +
+    '<meta name="robots" content="noindex">' +
+    '<meta http-equiv="refresh" content="30"><title>服务暂时不可用 - 答岸</title>' +
     "<style>body{margin:0;font-family:system-ui,sans-serif;background:#f6f7fb;color:#1f2430;" +
     "display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center}" +
     "@media (prefers-color-scheme:dark){body{background:#15181f;color:#e7eaf2}}" +
@@ -145,6 +148,21 @@ function outageResponse() {
   return resp;
 }
 
+function apiOutageResponse() {
+  const resp = new Response(JSON.stringify({ detail: "服务暂时不可用，请稍后重试" }), {
+    status: 503,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Retry-After": "5",
+      "Cache-Control": "no-store",
+      "X-Edge-Outage": "1",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) resp.headers.set(k, v);
+  return resp;
+}
+
 export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
   if (isBlockedBot(url.pathname, request.headers.get("User-Agent"))) {
@@ -154,7 +172,8 @@ export async function onRequest({ request, env, waitUntil }) {
     request.method,
     url.pathname,
     request.headers.has("Authorization"),
-    url.searchParams.has("uid")
+    url.searchParams.has("uid"),
+    request.headers.has("Origin")
   );
   const isApi = url.pathname.startsWith("/api/");
   const ttl = edgeTtl(url.pathname);
@@ -174,9 +193,14 @@ export async function onRequest({ request, env, waitUntil }) {
   // 回源模式头：origin 访问日志据此区分用户可见回源（miss/pass/retry）与
   // 后台刷新（swr，失败无用户影响），供事后审计 5xx 是否真实外泄
   req.headers.set("X-Kg-Fetch", cacheable ? "miss" : "pass");
-  // 回源请求剥离条件头：确保拿到 200 全量以刷新/建立副本（条件评估在边缘完成）
-  req.headers.delete("If-None-Match");
-  req.headers.delete("If-Modified-Since");
+  if (cacheable) {
+    // 仅可缓存路径剥离条件头与个人凭证：确保拿到无个性化 200 全量建立副本；
+    // 非缓存路径（如 /qimg/*、/admin/static/*）保留条件头让 origin 正常返 304
+    req.headers.delete("If-None-Match");
+    req.headers.delete("If-Modified-Since");
+    req.headers.delete("Cookie");
+    req.headers.delete("Authorization");
+  }
   // 显式透传真实客户端 IP/UA：Workers 出网会重写 CF-Connecting-IP，
   // 自定义头不受影响，供 origin 访问日志与 slow_load 归因使用
   const clientIp = request.headers.get("CF-Connecting-IP");
@@ -205,6 +229,7 @@ export async function onRequest({ request, env, waitUntil }) {
       if (stale) return fromCache(stale, ttl, "STALE", request);
       if (!shouldRetryOrigin(request.method, 0, !!stale, attempt)) {
         if (shouldServeOutage(request.method, url.pathname, 0, !!stale)) return outageResponse();
+        if (isApi) return apiOutageResponse();
         throw e;
       }
       upstream = null;
@@ -222,7 +247,8 @@ export async function onRequest({ request, env, waitUntil }) {
   }
   const resp = decorate(new Response(upstream.body, upstream), url.pathname);
   const ctOk = isCacheableContentType(url.pathname, isApi, resp.headers.get("content-type"));
-  if (cacheable && resp.status === 200 && ctOk) {
+  const ccOk = isUpstreamCacheable(resp.headers.get("cache-control"), resp.headers.get("vary"));
+  if (cacheable && resp.status === 200 && ctOk && ccOk) {
     stampLastModified(resp, stale);
     const [body, cacheBody] = resp.body.tee();
     waitUntil(caches.default.put(request.url, toCacheCopy(cacheBody, resp)));

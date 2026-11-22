@@ -403,7 +403,7 @@ export default {
 .state { width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-16); padding: var(--sp-24) 0; }
 .skel { width: 100%; }
 .state-t { color: var(--ink-3); font-size: var(--fs-sub); }
-.poster { width: 100%; max-width: 320px; border-radius: var(--r-lg); box-shadow: var(--sh-2); }
+.poster { width: 100%; max-width: 320px; border-radius: var(--r-lg); box-shadow: var(--sh-2); /* kg-allow */ }
 .bar { width: 100%; max-width: 320px; margin-top: var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-12); }
 .tip { text-align: center; font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
 .hidden-canvas { position: fixed; left: -9999px; top: 0; width: 660px; height: 900px; }

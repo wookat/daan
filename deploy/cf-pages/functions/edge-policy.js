@@ -22,8 +22,9 @@ export const API_CACHE_ALLOWLIST = new Set([
   "/api/shenlun/materials",
 ]);
 
-// uid 无关公开 GET 的前缀匹配端点（路径参数型，如 /api/search/question/{qid}）
+// uid 无关公开 GET 的路径参数型端点（严格限定纯数字 ID，避免未来个人子路径被误缓存）
 export const API_CACHE_PREFIXES = ["/api/search/question/", "/api/shenlun/questions/"];
+const API_CACHE_PATTERNS = [/^\/api\/search\/question\/\d+$/, /^\/api\/shenlun\/questions\/\d+$/];
 
 // app 壳静态件（构建产物直出，uid 无关）：短 TTL 缓存，争用/重启窗口有
 // stale 副本可退；sw.js 新版生效延迟被 TTL 上界约束（浏览器对 SW 主脚本的
@@ -38,7 +39,7 @@ export function isBlockedBot(pathname, ua) {
   return pathname !== "/robots.txt" && BLOCKED_BOT_UA.test(ua || "");
 }
 
-export function isEdgeCacheable(method, pathname, hasAuth, hasUid) {
+export function isEdgeCacheable(method, pathname, hasAuth, hasUid, hasOrigin = false) {
   if (method !== "GET") return false;
   if (pathname.startsWith("/tiku")) return true;
   // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
@@ -46,8 +47,16 @@ export function isEdgeCacheable(method, pathname, hasAuth, hasUid) {
   if (pathname.startsWith("/p/")) return true;
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") return true;
   if (SHELL_CACHE_ALLOWLIST.has(pathname)) return true;
-  if (hasAuth || hasUid) return false;
-  return API_CACHE_ALLOWLIST.has(pathname) || API_CACHE_PREFIXES.some((p) => pathname.startsWith(p));
+  // 跨源请求（如 Capacitor App 带 Origin 头）绕过公共 caches.default，避免无 CORS 头缓存污染
+  if (hasAuth || hasUid || hasOrigin) return false;
+  return API_CACHE_ALLOWLIST.has(pathname) || API_CACHE_PATTERNS.some((re) => re.test(pathname));
+}
+
+// 尊重上游显式私有/禁缓存声明（private / no-store 或 Vary: Cookie / Authorization 不入公共缓存）
+export function isUpstreamCacheable(cacheControl, vary) {
+  if (/\b(private|no-store)\b/i.test(cacheControl || "")) return false;
+  if (/\b(cookie|authorization)\b/i.test(vary || "")) return false;
+  return true;
 }
 
 export function edgeTtl(pathname) {

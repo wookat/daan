@@ -209,7 +209,7 @@ export default {
 .form { max-width: 480px; margin: 0 auto; }
 .hero { padding: var(--sp-32) var(--sp-8) var(--sp-32); text-align: center; display: flex; flex-direction: column; align-items: center; }
 /* logo 砖：字形原始 SVG 无内边距，直接 aspectFit 进 72px 会顶满砖沿；砖内留 12px 呼吸位 */
-.hero-logo { width: 72px; height: 72px; border-radius: var(--r-lg); margin-bottom: var(--sp-16); box-shadow: var(--sh-2); background: var(--card); display: flex; align-items: center; justify-content: center; }
+.hero-logo { width: 72px; height: 72px; border-radius: var(--r-lg); margin-bottom: var(--sp-16); border: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: center; }
 .hero-logo-g { width: 48px; height: 48px; }
 .hero-t { font-size: var(--fs-h1); line-height: var(--lh-h1); font-weight: 600; color: var(--ink); }
 .hero-s { margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-2); }

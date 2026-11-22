@@ -36,29 +36,30 @@ describe('R546 重练返回后地址栏筛选同步', () => {
     expect(apply.trim().endsWith('this.syncBookUrl();')).toBe(true);
   });
 
-  it('syncBookUrl：replaceState 保留 history.state（vue-router/uni 的 position/__id__ 不被抹成 null）', () => {
+  it('syncBookUrl：replaceState 保留 history.state 且通过 withBasePath 保留 /app/ 前缀', () => {
     const sync = method('syncBookUrl');
-    expect(sync).toContain("window.history.replaceState(window.history.state, '', buildBookUrl(");
+    expect(sync).toContain("window.history.replaceState(window.history.state, '', withBasePath(buildBookUrl(");
     expect(sync).not.toContain("replaceState(null");
   });
 
-  it('模拟：重练返回（onShow）后地址栏恢复 mod/kp/qt，且 state 原样保留', async () => {
+  it('模拟：重练返回（onShow）后地址栏恢复 mod/kp/qt，且 state 与 /app/ 前缀原样保留', async () => {
     const { buildBookUrl } = await import('../src/book/book-url.js');
+    const { withBasePath } = await import('../src/utils/hash-url.js');
     const state = { __id__: 3, position: 2, current: '/pages/book/book' };
     const replaceState = vi.fn();
     const vm = {
       tab: 'todo', filterMod: 'shuliang', kpFilter: '排列组合与概率', qtFilter: '概率问题', kp3Filter: '', srcFilter: '', pidFilter: '', rzFilter: '', sortBy: '',
       _pendingKp: '', _pendingKp3: '',
     };
-    const g = { window: { history: { state, replaceState } } };
-    const sync = new Function('window', 'buildBookUrl', `return function(){${method('syncBookUrl').replace(/[ \t]*\/\/ #(ifdef H5|endif)[^\n]*/g, '')}}`)(g.window, buildBookUrl).bind(vm);
+    const g = { window: { location: { pathname: '/app/' }, history: { state, replaceState } } };
+    const sync = new Function('window', 'buildBookUrl', 'withBasePath', `return function(){${method('syncBookUrl').replace(/[ \t]*\/\/ #(ifdef H5|endif)[^\n]*/g, '')}}`)(g.window, buildBookUrl, (u) => withBasePath(u, g.window.location.pathname)).bind(vm);
     vm.syncBookUrl = sync;
     // 重练返回：无 pending 深链 → 同步
     if (!vm._pendingKp && !vm._pendingKp3) vm.syncBookUrl();
     expect(replaceState).toHaveBeenCalledTimes(1);
     const [st, , url] = replaceState.mock.calls[0];
     expect(st).toBe(state);
-    expect(url).toBe(buildBookUrl({ tab: 'todo', mod: 'shuliang', kp: '排列组合与概率', qt: '概率问题', kp3: '', src: '', pid: '', rz: '', sort: '' }));
+    expect(url).toBe('/app/' + buildBookUrl({ tab: 'todo', mod: 'shuliang', kp: '排列组合与概率', qt: '概率问题', kp3: '', src: '', pid: '', rz: '', sort: '' }).slice(1));
     expect(url).toContain('mod=shuliang');
     expect(url).toContain('kp=');
     expect(url).toContain('qt=');

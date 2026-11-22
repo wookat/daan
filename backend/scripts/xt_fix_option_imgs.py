@@ -48,6 +48,7 @@ def main():
 
     db.init_db()
     conn = db.get_conn()
+    has_note = "note" in {r[1] for r in conn.execute("PRAGMA table_info(questions)")}
     norm2ids = {}
     for r in conn.execute("SELECT id, question FROM questions"):
         norm2ids.setdefault(norm_text(r["question"]), []).append(r["id"])
@@ -72,9 +73,8 @@ def main():
             need_imgs.update(p.split("/")[-1] for p in paths)
         need_imgs.update(stem_imgs)
         for qid in ids:
-            row = conn.execute(
-                "SELECT id, options, image, disabled, note FROM questions WHERE id=?", (qid,)
-            ).fetchone()
+            cols = "id, options, image, disabled, note" if has_note else "id, options, image, disabled, NULL AS note"
+            row = conn.execute(f"SELECT {cols} FROM questions WHERE id=?", (qid,)).fetchone()
             if not row:
                 continue
             opts = json.loads(row["options"] or "{}")
@@ -112,12 +112,17 @@ def main():
     for qid, oi_json, img, opts_json, revive in updates:
         sets, vals = [], []
         if oi_json is not None:
-            sets.append("option_imgs=?"); vals.append(oi_json)
-        sets.append("image=?"); vals.append(img)
+            sets.append("option_imgs=?")
+            vals.append(oi_json)
+        sets.append("image=?")
+        vals.append(img)
         if opts_json is not None:
-            sets.append("options=?"); vals.append(opts_json)
+            sets.append("options=?")
+            vals.append(opts_json)
         if revive:
-            sets.append("disabled=0"); sets.append("note=NULL")
+            sets.append("disabled=0")
+            if has_note:
+                sets.append("note=NULL")
         if not sets:
             continue
         vals.append(qid)

@@ -26,6 +26,7 @@
 .dot.bad { background: var(--bad); }
 
 .q-img { width: 100%; border-radius: var(--r-sm); margin-top: var(--sp-8); }
+.opt-img { display: block; max-width: 100%; border-radius: var(--r-xs); margin-top: var(--sp-4); }
 .opt--hover { background: var(--fill-deep); }
 
 .banner { display: flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-sm); margin-bottom: var(--card-gap); font-size: var(--fs-sub); line-height: var(--lh-sub); }

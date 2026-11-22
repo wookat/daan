@@ -18,7 +18,7 @@
         <view v-if="showLanding" class="hero-wrap">
           <kg-hero-card
             label="拍题 AI 讲解 · 遗忘曲线复习 · 迷你模考"
-            value="10万+"
+            value="16万+"
             unit="行测题免费刷，免注册即练"
             :primary="{ text: '免注册立即开练' }"
             @primary="startDaily"
@@ -47,7 +47,7 @@
         </kg-hero-card>
 
         <!-- 续练/续考/续复习（并入 hero 下方一组，保留放弃确认） -->
-        <view v-if="examResume || practiceResume || reviewResume" class="resumes">
+        <view v-if="examResume || practiceResume || reviewResume" class="resumes kg-cards">
           <kg-card v-if="examResume" class="rs" :padding="12">
             <view class="rs-row">
               <view class="rs-main">
@@ -92,7 +92,7 @@
         </view>
 
         <!-- 今日待办：到期复习 / 未打卡 / 断卡风险聚合成一张卡，不再多张促练横幅叠罗汉 -->
-        <kg-card v-if="todoRows.length" class="sec todo" variant="soft">
+        <kg-card v-if="todoRows.length" class="sec todo" variant="flat">
           <kg-section-header title="今日待办" />
           <view v-for="t in todoRows" :key="t.k" class="todo-row" role="button" @click="t.go()">
             <view class="todo-ico" :class="'is-' + t.tone"><l-icon :name="t.icon" :size="18" tone="on-brand" /></view>
@@ -187,7 +187,7 @@
               </view>
             </view>
           </kg-card>
-          <kg-card v-if="weakModule" variant="soft" clickable chevron class="modrow" @click="openModule(weakModule)">
+          <kg-card v-if="weakModule" variant="flat" clickable chevron class="modrow modrow--weak" @click="openModule(weakModule)">
             <view class="modrow-in">
               <view class="modrow-ico"><l-icon name="zap" :size="24" tone="brand" /></view>
               <view class="grow">
@@ -1117,7 +1117,7 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.wrap { padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + var(--tab-h) + env(safe-area-inset-bottom)); }
 .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
 
 /* 顶部：考试切换 + 搜索 */
@@ -1140,8 +1140,8 @@ export default {
 .hero-lnk-row { display: flex; gap: var(--sp-16); }
 .hero-lnk { display: inline-flex; align-items: center; min-height: 40px; margin: -3px 0; font-size: var(--fs-sub); color: var(--on-brand); text-decoration: underline; text-underline-offset: 3px; }
 
-/* 续练/续考/续复习 */
-.resumes { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
+/* 续练/续考/续复习（外层已挂 .kg-cards，由 .kg-cards 独管卡间 gap 防叠加） */
+.resumes { margin-top: var(--card-gap); }
 .rs-row { display: flex; align-items: center; gap: var(--sp-8); }
 .rs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
 .rs-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
@@ -1150,11 +1150,11 @@ export default {
 .rs-x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; margin-right: calc(var(--sp-12) * -1); flex-shrink: 0; }
 
 /* 横幅 */
-.strip { margin-top: var(--sp-12); }
+.strip { margin-top: var(--card-gap); }
 .ann-body { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); padding: var(--sp-8) var(--sp-12) 0; }
 
-/* 到期复习 */
-.todo { margin-top: var(--sp-12); }
+/* 到期复习：白卡 + 暖色强调边（与统计页今日待办同源且不再融进页面灰底） */
+.todo { margin-top: var(--card-gap); border-color: var(--warn-line); border-left: 3px solid var(--warn); }
 .todo-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
 .todo-row:first-of-type { border-top: 0; }
 /* 待办图标块实心化：--warn-soft #fffbeb 浅底贴在白卡上几乎不可见；按行语义 tone 出实心块 */
@@ -1164,9 +1164,9 @@ export default {
 .todo-s { font-size: var(--fs-sub); color: var(--ink-3); }
 .todo-x { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 
-/* 学习计划 */
-.sec { margin-top: var(--sp-16); }
-.sec-h { margin-top: var(--sp-16); }
+/* 学习计划（卡间统一 --card-gap，分组标题统一走 kg-section-header 默认 --sp-24） */
+.sec { margin-top: var(--card-gap); }
+.sec-h { margin-top: var(--sp-24); }
 .plan { display: grid; gap: var(--sp-12); }
 .plan-s { font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); }
 .plan-y { font-size: var(--fs-caption); color: var(--ink-3); }
@@ -1187,7 +1187,9 @@ export default {
 .skelwrap { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
 .skel-hint { font-size: var(--fs-caption); color: var(--ink-4); text-align: center; padding: var(--sp-8) 0; }
 .modlist { margin-top: var(--sp-12); }
-.modrow-in { display: flex; align-items: center; gap: var(--sp-12); }
+.modrow { min-height: 72px; box-sizing: border-box; display: flex; align-items: center; }
+.modrow--weak { border-color: var(--brand-soft-2); }
+.modrow-in { width: 100%; display: flex; align-items: center; gap: var(--sp-12); }
 .modrow-ico { width: 44px; height: 44px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .modrow-ico.is-warn { background: var(--warn-soft); }
 .modrow-tr { display: flex; align-items: center; gap: var(--sp-8); }
@@ -1225,8 +1227,9 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 1024px) {
   .wrap.home { max-width: 1064px; padding-top: var(--sp-24); }
-  .toprow { max-width: 640px; }
+  .toprow { max-width: 720px; }
   .more-grid { margin-top: var(--sp-8); }
+  .modlist > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 /* #endif */
 </style>

@@ -95,14 +95,18 @@
     <template v-if="!reviewing">
       <kg-two-col>
         <template #main>
-          <!-- 首屏：今日待复习 N · 预计 M 分钟 · 累计 K + 开始复习 -->
+          <!-- 首屏：今日待复习 N · 预计 M 分钟 · 累计 K + 开始复习 / 错题重练并排（节省首屏 ~82px） -->
           <kg-card v-if="!loading || items.length || due.length" class="head">
             <kg-stat-row :items="headStats" />
-            <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
+            <view v-if="due.length" class="head-acts" :class="{ 'is-dual': todoItems.length }">
+              <kg-button v-if="due.length" variant="primary" size="lg" block class="head-cta" @click="startReviewFromCard">开始复习</kg-button>
+              <kg-button v-if="todoItems.length" variant="secondary" size="lg" block icon="rotate-ccw" class="head-cta-sub" @click="redoAll">{{ tab === 'sticky' ? '易错专项' : '错题重练' }}</kg-button>
+            </view>
             <text v-else-if="items.length && !dueSynced" class="head-tip">{{ offlineView ? '今日待复习需网络恢复后同步' : '正在同步今日待复习…' }}</text>
             <text v-else-if="items.length" class="head-tip">今天没有到期错题，待掌握 {{ todoItems.length }}，已掌握 {{ doneItems.length }}</text>
+            <kg-button v-if="!due.length && todoItems.length" variant="secondary" size="lg" block icon="rotate-ccw" @click="redoAll">{{ tab === 'sticky' ? '长期易错专项重练' : '错题重练（最多 10 题）' }}</kg-button>
           </kg-card>
-          <kg-card v-if="resumeInfo" variant="soft" class="resumecard" role="button" aria-label="继续刚才的复习">
+          <kg-card v-if="resumeInfo" variant="flat" class="resumecard" role="button" aria-label="继续刚才的复习">
             <view class="rs-row">
               <view class="grow">
                 <view class="rs-tr"><l-icon name="clock" :size="16" tone="warn" /><text class="rs-t">上次复习中断在第 {{ resumeInfo.rIdx + 1 }}/{{ resumeInfo.items.length }} 题</text></view>
@@ -113,20 +117,22 @@
             </view>
           </kg-card>
 
-          <view v-if="items.length || favs.length" class="segrow">
-            <view class="seg" role="tablist">
-              <view class="seg-i" :class="{ on: tab === 'todo' }" role="tab" @click="tab = 'todo'">待掌握 {{ todoItems.length }}</view>
-              <view class="seg-i" :class="{ on: tab === 'done' }" role="tab" @click="tab = 'done'">已掌握 {{ doneItems.length }}</view>
-              <view class="seg-i" :class="{ on: tab === 'sticky' }" role="tab" @click="tab = 'sticky'">易错 {{ stickyItems.length }}</view>
-              <view class="seg-i" :class="{ on: tab === 'fav' }" role="tab" @click="tab = 'fav'">收藏{{ favs.length ? ' ' + favs.length : '' }}</view>
+          <view v-if="items.length || favs.length" class="sticky-bar">
+            <view class="segrow">
+              <view class="seg" role="tablist">
+                <view class="seg-i" :class="{ on: tab === 'todo' }" role="tab" @click="tab = 'todo'"><text>待掌握</text><text class="seg-n num">{{ todoItems.length }}</text></view>
+                <view class="seg-i" :class="{ on: tab === 'done' }" role="tab" @click="tab = 'done'"><text>已掌握</text><text class="seg-n num">{{ doneItems.length }}</text></view>
+                <view class="seg-i" :class="{ on: tab === 'sticky' }" role="tab" @click="tab = 'sticky'"><text>易错</text><text class="seg-n num">{{ stickyItems.length }}</text></view>
+                <view class="seg-i" :class="{ on: tab === 'fav' }" role="tab" @click="tab = 'fav'"><text>收藏</text><text v-if="favs.length" class="seg-n num">{{ favs.length }}</text></view>
+              </view>
             </view>
-          </view>
-          <view v-if="tab !== 'fav' && items.length" class="toolrow">
-            <kg-chip-row v-if="chipList.length > 2" class="modchips" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" @update:model-value="(v) => { filterMod = v; kpFilter = ''; qtFilter = ''; kp3Filter = ''; }" />
-            <view v-else class="toolfill" />
-            <view class="toolbtns">
-              <kg-button variant="secondary" size="md" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true" />
-              <kg-button v-if="shownItems.length" :variant="batchMode ? 'primary' : 'secondary'" size="md" @click="toggleBatch">{{ batchMode ? '完成' : '批量' }}</kg-button>
+            <view v-if="tab !== 'fav' && items.length" class="toolrow">
+              <kg-chip-row v-if="chipList.length > 2" class="modchips" :options="chipList.map((c) => ({ label: c.name, value: c.key }))" :model-value="filterMod" @update:model-value="(v) => { filterMod = v; kpFilter = ''; qtFilter = ''; kp3Filter = ''; }" />
+              <view v-else class="toolfill" />
+              <view class="toolbtns">
+                <kg-button :variant="activeFilterCount ? 'secondary' : 'ghost'" size="sm" icon="sliders-horizontal" aria-label="筛选与排序" @click="filterOpen = true">筛选{{ activeFilterCount ? '·' + activeFilterCount : '' }}</kg-button>
+                <kg-button v-if="shownItems.length" :variant="batchMode ? 'primary' : 'ghost'" size="sm" @click="toggleBatch">{{ batchMode ? '完成' : '批量' }}</kg-button>
+              </view>
             </view>
           </view>
 
@@ -168,12 +174,12 @@
             </kg-card>
           </template>
 
-          <kg-card v-if="tab !== 'fav' && todoItems.length" clickable chevron class="entry" @click="redoAll">
+          <kg-card v-if="tab !== 'fav' && todoItems.length && (pidFilter || kp3Filter || kpFilter || rzFilter || srcFilter)" clickable chevron class="entry" @click="redoAll">
             <view class="entry-in">
               <view class="entry-ico"><l-icon name="rotate-ccw" :size="20" tone="brand" /></view>
               <view class="grow">
-                <text class="entry-t">{{ tab === 'sticky' ? '长期易错专项卷' : pidFilter ? '重练本卷错题 · ' + pidLabel : '错题重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
-                <text class="entry-s">{{ tab === 'sticky' ? '专出复习中累计再错 2 次以上的题（最多 10 题）' : pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
+                <text class="entry-t">{{ pidFilter ? '重练本卷错题 · ' + pidLabel : '按当前筛选重练' + (kp3Filter ? ' · ' + kp3Filter : kpFilter ? ' · ' + (qtFilter ? kpFilter + ' · ' + fineTypeLabel(kpFilter, qtFilter) : kpFilter) : rzFilter ? ' · ' + rzFilter : srcFilter ? ' · ' + (srcFilter === 'exam' ? '模考错题' : '练习错题') : '') }}</text>
+                <text class="entry-s">{{ pidFilter ? '按卷面顺序只练本卷上次答错的题（答对过即不再算错）' : kp3Filter ? '只重练当前筛选考点的待掌握错题（最多 10 题）' : kpFilter ? (qtFilter ? '只重练当前细分题型的待掌握错题（最多 10 题）' : '重练该题型组下全部待掌握错题，含组内各细分题型（最多 10 题）') : rzFilter ? '只重练当前筛选错因的待掌握错题（最多 10 题）' : srcFilter ? '只重练当前筛选来源的待掌握错题（最多 10 题）' : '重练待掌握的错题，一次最多 10 题' }}</text>
               </view>
             </view>
           </kg-card>
@@ -610,6 +616,7 @@ import { cloudFavId } from '../../exam/exam-fav.js';
 import { syncCloudFavs } from '../../fav/fav-sync.js';
 import { buildBookUrl, normalizeTabPageFullPath, parseBookOpts } from '../../book/book-url.js';
 import { isBookHref } from '../../book/book-url.js';
+import { withBasePath } from '../../utils/hash-url.js';
 import { onSheetHistoryLanded } from '../../utils/sheet-history.js';
 import { exportNote, exportNotesMap } from '../../book/book-export.js';
 import { setBookBadge } from '../../utils/tabbar-badge.js';
@@ -772,6 +779,9 @@ export default {
     chipList() {
       const mods = [...new Set(this.items.map((m) => m.module).filter(Boolean))];
       return [{ key: '', name: '全部' }, ...mods.map((m) => ({ key: m, name: NAMES[m] || m }))];
+    },
+    activeFilterCount() {
+      return (this.kpFilter ? 1 : 0) + (this.kp3Filter ? 1 : 0) + (this.srcFilter ? 1 : 0) + (this.rzFilter ? 1 : 0) + (this.pidFilter ? 1 : 0) + (this.sortBy !== 'time' ? 1 : 0);
     },
     todoItems() {
       return this.items.filter((m) => !m.mastered);
@@ -1137,7 +1147,7 @@ export default {
     syncBookUrl() {
       // #ifdef H5
       if (typeof window !== 'undefined' && window.history) {
-        window.history.replaceState(window.history.state, '', buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, qt: this.qtFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy }));
+        window.history.replaceState(window.history.state, '', withBasePath(buildBookUrl({ tab: this.tab, mod: this.filterMod, kp: this.kpFilter, qt: this.qtFilter, kp3: this.kp3Filter, src: this.srcFilter, pid: this.pidFilter, rz: this.rzFilter, sort: this.sortBy })));
       }
       // #endif
     },
@@ -1940,31 +1950,35 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + 50px + env(safe-area-inset-bottom)); }
+.wrap { padding: var(--sp-12) var(--page-x) calc(var(--sp-40) + var(--tab-h) + env(safe-area-inset-bottom)); }
 .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
 .offbar { margin-bottom: var(--sp-12); }
 
-/* 首屏数字行 + 主按钮 */
-.head { display: grid; gap: var(--sp-16); margin-bottom: var(--card-gap); }
+/* 首屏数字行 + 并排操作（开始复习 / 错题重练） */
+.head { display: grid; gap: var(--sp-12); margin-bottom: var(--card-gap); }
+.head-acts { display: grid; grid-template-columns: 1fr; gap: var(--sp-8); }
+.head-acts.is-dual { grid-template-columns: 1.35fr 1fr; }
 .head-tip { font-size: var(--fs-sub); color: var(--ink-3); text-align: center; }
-.resumecard { margin-bottom: var(--card-gap); }
+.resumecard { margin-bottom: var(--card-gap); border-color: var(--warn-line); border-left: 3px solid var(--warn); }
 .rs-row { display: flex; align-items: center; gap: var(--sp-8); }
 .rs-tr { display: flex; align-items: center; gap: var(--sp-4); }
 .rs-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .rs-s { font-size: var(--fs-sub); color: var(--ink-3); }
 
-/* 分段 + 筛选/批量 */
-.segrow { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-12); }
-/* 工具行：模块 chip 横滚 + 尾部固定筛选/批量，分段栏独占一行不再挤压 */
-.toolrow { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); }
-.toolrow .modchips { flex: 1; min-width: 0; margin-bottom: 0; }
+/* 吸顶分段切换（Underline 40px 轻盈底线）+ 30px 齐平工具行 */
+.sticky-bar { position: sticky; top: var(--window-top, 0px); z-index: var(--z-sticky); background: var(--bg); margin: 0 calc(-1 * var(--page-x)) var(--sp-12); padding: 0 var(--page-x) var(--sp-8); }
+.segrow { display: flex; align-items: center; margin-bottom: var(--sp-8); }
+.seg { flex: 1; min-width: 0; display: flex; border-bottom: 1px solid var(--line); }
+.seg-i { position: relative; flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 3px; font-size: var(--fs-body); color: var(--ink-3); white-space: nowrap; padding: 0 var(--sp-4); }
+.seg-i.on { color: var(--brand-text); font-weight: 600; }
+.seg-i.on::after { content: ''; position: absolute; left: 20%; right: 20%; bottom: 0; height: 2px; border-radius: var(--r-full); background: var(--brand); }
+.seg-n { font-size: var(--fs-caption); opacity: 0.78; }
+/* 工具行：左侧模块 chip(28-30px) 与右侧筛选/批量(sm 30px)严格等高齐平，命中区由 kg-button::after 保 44px */
+.toolrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 30px; }
+.toolrow .modchips { flex: 1; min-width: 0; }
 .toolfill { flex: 1; }
-.toolbtns { display: flex; gap: var(--sp-8); flex-shrink: 0; }
-.toolbtns .kg-btn { min-height: var(--hit-min); }
-.seg { flex: 1; min-width: 0; display: flex; background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-4); }
-.seg-i { flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--r-xs); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; padding: 0 var(--sp-4); }
-.seg-i.on { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: var(--sh-1); }
-.modchips { margin-bottom: var(--sp-12); }
+.toolbtns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.toolbtns :deep(.kg-btn--sm) { padding: 0 10px !important; }
 
 /* 入口卡（重练 / 收藏夹 / AI 分析） */
 .entry { margin-bottom: var(--card-gap); }
@@ -2110,11 +2124,11 @@ export default {
 .rf-row2 { display: flex; justify-content: center; gap: var(--sp-16); }
 
 /* 批量操作条 / 浮钮 */
-.batchbar { position: fixed; left: var(--page-x); right: var(--page-x); bottom: calc(50px + var(--sp-12) + env(safe-area-inset-bottom)); z-index: var(--z-bar); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); padding: var(--sp-8) var(--sp-12); display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); }
+.batchbar { position: fixed; left: var(--page-x); right: var(--page-x); bottom: calc(var(--tab-h) + var(--sp-12) + env(safe-area-inset-bottom)); z-index: var(--z-bar); background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: var(--sh-2); /* kg-allow */ padding: var(--sp-8) var(--sp-12); display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); }
 .bb-n { font-size: var(--fs-sub); color: var(--ink-3); flex: 1; }
 /* 动作组容不下时整体折到第二行右对齐，不让单个按钮被挤窄 */
 .bb-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-8); margin-left: auto; }
-.fabmenu { position: fixed; right: var(--sp-16); bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-12); }
+.fabmenu { position: fixed; right: var(--sp-16); bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-12); }
 /* 菜单项统一宽度——三个按钮文字长短不一，右对齐时左缘参差 */
 .fabmenu .kg-btn { width: 176px; }
 /* #ifdef H5 */
@@ -2126,7 +2140,7 @@ export default {
 /* #ifndef H5 */
 .fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
 /* #endif */
-.fab-main { width: 52px; height: 52px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-2); transition: transform var(--dur-base) var(--ease-standard); }
+.fab-main { width: 52px; height: 52px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-2); /* kg-allow */ transition: transform var(--dur-base) var(--ease-standard); }
 .fab-main.open { transform: rotate(45deg); }
 /* 列表见底时给悬浮「＋」（52px + 底距）让位，末卡「···」不被盖 */
 .fabspace { height: calc(52px + var(--sp-32)); }
@@ -2151,8 +2165,8 @@ export default {
 .verdict { font-size: var(--fs-body); font-weight: 600; margin: var(--sp-8) 0; line-height: var(--lh-body); }
 .verdict.good { color: var(--ok-strong); }
 .verdict.badv { color: var(--bad); }
-/* 作答后「下一题/确认答案」吸底：讲解长时不必滚到底才能继续；到自然位置后随内容停住。tab 页需让出 H5 TabBar（50px） */
-.next-btn { margin-top: var(--sp-12); position: sticky; bottom: calc(50px + env(safe-area-inset-bottom) + var(--sp-8)); z-index: var(--z-sticky); box-shadow: var(--sh-2); }
+/* 作答后「下一题/确认答案」吸底：讲解长时不必滚到底才能继续；到自然位置后随内容停住。tab 页需让出 H5 TabBar（--tab-h） */
+.next-btn { margin-top: var(--sp-12); position: sticky; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + var(--sp-8)); z-index: var(--z-sticky); box-shadow: var(--sh-2); /* kg-allow */ }
 /* #ifndef H5 */
 .next-btn { bottom: calc(env(safe-area-inset-bottom) + var(--sp-8)); }
 /* #endif */

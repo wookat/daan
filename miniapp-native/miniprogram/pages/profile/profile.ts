@@ -210,7 +210,7 @@ Page({
     wx.navigateTo({ url: '/pkgGrow/calendar/calendar' });
   },
   onMistakes() {
-    wx.switchTab({ url: '/pages/mistakes/mistakes' });
+    wx.switchTab({ url: '/pages/book/book' });
   },
   onCopyUid() {
     wx.setClipboardData({ data: this.data.uid });

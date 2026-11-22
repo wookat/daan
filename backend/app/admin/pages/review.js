@@ -57,14 +57,14 @@
       <div class="wb-body">
         <div class="q-text">${esc(item.question)}</div>
         <div style="display:grid;gap:8px;margin-bottom:14px">${opts.map(([k, v]) =>
-          `<div class="opt-row ${String(item.answer || '').toUpperCase().startsWith(k) ? 'ans' : ''}"><b>${k}.</b><span>${esc(v)}</span></div>`).join('')}</div>
+          `<div class="opt-row ${String(item.answer || '').toUpperCase().startsWith(k) ? 'ans' : ''}"><b>${esc(k)}.</b><span>${esc(v)}</span></div>`).join('')}</div>
         <div id="rv-expl" class="expl-box hidden"><b>解析：</b>${esc(item.explanation || '（无解析）')}</div>
         <div style="font-size:12px;color:var(--t3);margin:12px 0 8px">候选考点（按 <span class="kbd">1</span>-<span class="kbd">9</span> 选择）：
           当前标注 <span class="tag ${item.cur_tag3 && item.cur_tag3 !== 'UNKNOWN' ? 'tag-info' : 'tag-warn'}">${esc(item.cur_tag3 || '未标注')}</span>
           ${item.tag3 ? `　AI 建议 <span class="tag tag-brand">${esc(item.tag3)}</span>` : ''}</div>
         <div class="row" style="gap:8px;flex-wrap:wrap" id="rv-chips">
-          ${candidates.map((c, i) => `<span class="chip ${selected === c.code ? 'on' : ''}" data-code="${c.code}">
-            <span class="kbd" style="margin-right:4px">${i + 1}</span>${c.code} ${esc(c.name)}${c.code === item.tag3 ? ' ⭐' : ''}</span>`).join('')}
+          ${candidates.map((c, i) => `<span class="chip ${selected === c.code ? 'on' : ''}" data-code="${esc(c.code)}">
+            <span class="kbd" style="margin-right:4px">${i + 1}</span>${esc(c.code)} ${esc(c.name)}${c.code === item.tag3 ? ' ⭐' : ''}</span>`).join('')}
           <span class="chip ${selected === 'UNKNOWN' ? 'on' : ''}" data-code="UNKNOWN"><span class="kbd" style="margin-right:4px">0</span>UNKNOWN 待定</span>
         </div>
       </div>

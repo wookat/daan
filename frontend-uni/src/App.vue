@@ -2,6 +2,7 @@
 // #ifdef H5
 import { initReminderLoop } from './services/reminder.js'
 import { installSheetHistory } from './utils/sheet-history.js'
+import { flushH5TabBarIcons } from './utils/tabbar-icons.js'
 // #endif
 import { applyTheme, watchSystemTheme } from './services/theme.js'
 import { flushOfflineQueue, watchNetwork } from './services/offline.js'
@@ -60,7 +61,40 @@ export default {
       })
     }
     markMain()
-    new MutationObserver(markMain).observe(document.body, { childList: true, subtree: true })
+    let a11yRaf = 0
+    const scheduleMarkMain = () => {
+      if (a11yRaf) return
+      a11yRaf = window.requestAnimationFrame(() => {
+        a11yRaf = 0
+        markMain()
+      })
+    }
+    new MutationObserver(scheduleMarkMain).observe(document.body, { childList: true, subtree: true })
+    // 空闲期后台预热其余 4 个主 Tab 的异步路由分包（不抢占首屏 LCP，消除首次切 Tab ~1s 停顿）
+    const router = this.$router
+    if (router && typeof router.afterEach === 'function') {
+      router.afterEach((to) => {
+        if (to && to.meta && to.meta.isTabBar) flushH5TabBarIcons()
+      })
+    }
+    if (router && typeof router.getRoutes === 'function') {
+      const TAB_PATHS = new Set(['/pages/home/home', '/pages/book/book', '/pages/ask/ask', '/pages/stats/stats', '/pages/profile/profile'])
+      const warmTabs = () => {
+        for (const r of router.getRoutes()) {
+          if (!TAB_PATHS.has(r.path)) continue
+          const loader = r.components && r.components.default
+          if (typeof loader === 'function') {
+            try { Promise.resolve(loader()).catch(() => {}) } catch (e) { /* 静默忽略 */ }
+          }
+        }
+      }
+      const scheduleWarm = () => {
+        if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(warmTabs, { timeout: 3000 })
+        else setTimeout(warmTabs, 1500)
+      }
+      if (document.readyState === 'complete') scheduleWarm()
+      else window.addEventListener('load', scheduleWarm, { once: true })
+    }
     // #endif
     applyTheme()
     watchSystemTheme()
@@ -114,6 +148,14 @@ page {
 /* wot 未开放变量的硬编码底色（wd-popup #fff / picker roller rgba(245,245,245)）：写在 scoped 选择器上，只能提权覆盖到语义 token */
 .wd-popup-wrapper .wd-popup {
   background: var(--card) !important;
+}
+/* 兜底：防 wd-transition 动画竞态把移动端底部抽屉卡在 translate3d(0, 100%, 0)（y=100vh 视口外）；必须写在全局 App.vue 才能命中 wd-popup 内部节点 */
+.wd-popup-wrapper .wd-popup--bottom.kg-sheet.is-settled {
+  top: auto !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  transform: translate3d(0, 0, 0) !important;
 }
 .wd-picker-view .wd-picker-view__roller {
   background: var(--fill) !important;
@@ -184,41 +226,48 @@ html.theme-dark body {
   --wot-cell-tap-bg: rgba(255, 255, 255, 0.06);
   --wot-button-plain-bg-color: transparent;
 }
-.theme-dark uni-tabbar .uni-tabbar,
-.theme-dark uni-tabbar .uni-tabbar__border {
+/* 底部 TabBar 质感统一：顶边走语义 --line（替代 uni 默认 rgba(0,0,0,.33) 生硬黑线），移动端加轻微顶层阴影 */
+uni-tabbar .uni-tabbar {
   background: var(--card) !important;
-  border-color: var(--line);
+  box-shadow: 0 -1px 8px rgba(0, 0, 0, 0.04);
 }
-/* tabbar 文字色为 pages.json 静态配置的内联样式（uni-h5 无 setTabBarStyle），按配置色值定向覆盖 */
+uni-tabbar .uni-tabbar-border {
+  background-color: var(--line) !important;
+}
+.theme-dark uni-tabbar .uni-tabbar {
+  background: var(--card) !important;
+  box-shadow: none;
+}
+.theme-dark uni-tabbar .uni-tabbar-border {
+  background-color: var(--line) !important;
+}
+/* tabbar 文字色兜底覆盖（兼顾静态配置与 setTabBarStyle） */
 .theme-dark uni-tabbar .uni-tabbar__label {
   color: var(--ink-3) !important;
 }
 .theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
   color: var(--brand-text) !important;
 }
-/* tabbar 图标为浅色主题静态 PNG（选中蓝 #3060f0 深底偏沉、未选灰偏暗），深色下滤镜提亮对齐 --brand-text/--ink-2 色感 */
-.theme-dark uni-tabbar .uni-tabbar__icon img {
+/* 仅对静态 PNG 回退图施加滤镜；内联 SVG data:URI 已原生输出目标浅/深/主题色，不叠加滤镜 */
+.theme-dark uni-tabbar .uni-tabbar__icon img:not([src^='data:']) {
   filter: brightness(1.25);
 }
-.theme-dark uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+.theme-dark uni-tabbar .uni-tabbar__icon img[src*='-on']:not([src^='data:']) {
   filter: saturate(0.6) brightness(1.45);
 }
-/* tabbar 激活态跟皮肤走：selectedColor 与 -on 图标都是 pages.json 静态蓝（uni-h5 无 setTabBarStyle），
-   文字按内联色值定向覆盖到 --brand-text；图标按皮肤 hue-rotate 换色相（底蓝 hue≈225°，
-   森林绿 142°→277°、暖橙 21°→156°），深色叠加同款提亮滤镜 */
 uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
   color: var(--brand-text) !important;
 }
-.acc-forest uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+.acc-forest uni-tabbar .uni-tabbar__icon img[src*='-on']:not([src^='data:']) {
   filter: hue-rotate(277deg);
 }
-.acc-sunset uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+.acc-sunset uni-tabbar .uni-tabbar__icon img[src*='-on']:not([src^='data:']) {
   filter: hue-rotate(156deg);
 }
-.theme-dark.acc-forest uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+.theme-dark.acc-forest uni-tabbar .uni-tabbar__icon img[src*='-on']:not([src^='data:']) {
   filter: hue-rotate(277deg) saturate(0.6) brightness(1.45);
 }
-.theme-dark.acc-sunset uni-tabbar .uni-tabbar__icon img[src*='-on'] {
+.theme-dark.acc-sunset uni-tabbar .uni-tabbar__icon img[src*='-on']:not([src^='data:']) {
   filter: hue-rotate(156deg) saturate(0.6) brightness(1.45);
 }
 .theme-dark uni-page-head .uni-page-head {
@@ -349,10 +398,11 @@ uni-modal .uni-modal__btn_primary {
     justify-content: flex-start !important;
     padding-top: 32px;
     border-right: 1px solid var(--line);
+    box-shadow: none;
     box-sizing: border-box;
   }
-  .uni-tabbar .uni-tabbar__border {
-    display: none;
+  .uni-tabbar .uni-tabbar-border {
+    display: none !important;
   }
   .uni-tabbar .uni-tabbar__item {
     flex: none !important;
@@ -360,12 +410,16 @@ uni-modal .uni-modal__btn_primary {
     height: 52px;
   }
   .uni-tabbar .uni-tabbar__bd {
+    width: 100%;
     flex-direction: row !important;
     justify-content: flex-start;
     align-items: center;
     padding: 0 24px;
     gap: 10px;
     height: 52px !important;
+  }
+  .uni-tabbar .uni-tabbar__icon {
+    margin-top: 0 !important;
   }
   .uni-tabbar .uni-tabbar__label {
     margin-top: 0 !important;
@@ -450,11 +504,15 @@ uni-modal .uni-modal__btn_primary {
 /* #endif */
 
 /* 卡片间距唯一来源约定：
- * 1) 裸堆叠（无容器）：kg-card 自带兄弟边距（.kg-card + .kg-card）生效；
+ * 1) 裸堆叠（无容器）：kg-card / kg-hero 自带兄弟边距生效（防 Hero 与下方 predict-card / sec 0px 贴死）；
  * 2) 列表/网格容器：挂 .kg-cards —— gap 提供间距并清零卡外边距，防双份；
  *    .kg-cards--grid 于 ≥768px 自动切两列网格。禁止再自写 gap + 卡 margin。
  * !important：各页面作用域样式里的 .item/.kg-card 边距会被编译成
  * 0,2,0~0,3,0 优先级，普通声明压不住，必须显式提升。 */
+.kg-hero + .kg-card,
+.kg-card + .kg-hero {
+  margin-top: var(--card-gap);
+}
 .kg-cards {
   display: flex;
   flex-direction: column;

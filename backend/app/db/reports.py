@@ -23,6 +23,8 @@ def _uid_kind(uid: str) -> str:
 
 def real_user_report(days: int = 60) -> dict:
     conn = db.get_conn()
+    db._ensure_answer_log(conn)
+    db._ensure_user_profile(conn)
     q = conn.execute
     now = time.time()
     since = now - days * 86400
@@ -58,7 +60,7 @@ def real_user_report(days: int = 60) -> dict:
         if uid == _OWNER_UID:
             return {"verdict": "owner", "signals": ["owner_account"]}
         ts = u["ts"]
-        days_active = len({time.strftime("%Y-%m-%d", time.localtime(t)) for t in ts})
+        days_active = len({time.strftime("%Y-%m-%d", time.gmtime(t + 8 * 3600)) for t in ts})
         avg = sum(u["secs"]) / len(u["secs"]) if u["secs"] else 0.0
         gaps = [ts[i + 1] - ts[i] for i in range(len(ts) - 1)]
         max_gap = max(gaps) if gaps else 0.0
@@ -85,7 +87,7 @@ def real_user_report(days: int = 60) -> dict:
         return {"verdict": "suspect", "signals": ["fast_pace" if avg < 5 else "single_short_session"]}
 
     def isotime(t):
-        return time.strftime("%Y-%m-%d %H:%M", time.localtime(t))
+        return time.strftime("%Y-%m-%d %H:%M", time.gmtime(t + 8 * 3600))
 
     items = []
     for uid, u in users.items():
@@ -99,7 +101,7 @@ def real_user_report(days: int = 60) -> dict:
             "uid": uid, "kind": _uid_kind(uid),
             "nickname": (reg["nickname"] if reg else None),
             "answers": u["n"],
-            "days_active": len({time.strftime("%Y-%m-%d", time.localtime(t)) for t in ts}),
+            "days_active": len({time.strftime("%Y-%m-%d", time.gmtime(t + 8 * 3600)) for t in ts}),
             "avg_secs": avg, "max_gap_min": round(max_gap / 60, 1),
             "first": isotime(ts[0]), "last": isotime(last),
             "last_ts": last,
@@ -119,7 +121,7 @@ def real_user_report(days: int = 60) -> dict:
 
     weekly = {}
     for r in rows:
-        wk = time.strftime("%G-W%V", time.gmtime(r["created_at"]))
+        wk = time.strftime("%G-W%V", time.gmtime(r["created_at"] + 8 * 3600))
         weekly.setdefault(wk, {"answers": 0, "uids": set()})
         weekly[wk]["answers"] += 1
         weekly[wk]["uids"].add(r["uid"])

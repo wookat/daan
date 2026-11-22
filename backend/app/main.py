@@ -1,6 +1,7 @@
 """应用装配层：中间件、路由挂载、静态资源与后台预热线程（业务路由见各域模块）。"""
 import hashlib
 import json
+import logging
 import mimetypes
 import os
 import threading
@@ -37,7 +38,7 @@ from app.services import social
 from app.api import study as study_api
 from app.services import team
 from app.api import zalize_sso
-from app.api.deps import ACCESS_CODE
+from app.api.deps import ACCESS_CODE, rl
 from app.services.storm_guard import ErrorStormGuard
 
 _DOCS_OFF = os.environ.get("DISABLE_API_DOCS") == "1"
@@ -48,17 +49,10 @@ app = FastAPI(
     openapi_url=None if _DOCS_OFF else "/openapi.json",
 )
 # Android App（Capacitor WebView，origin 为 https://localhost）跨域访问 API
+# CORSMiddleware 在所有 @app.middleware("http") 之后注册，确保位于最外层（OPTIONS 预检与 403/429 响应均带 CORS 头）
 APP_ORIGINS = os.environ.get(
     "APP_CORS_ORIGINS", "https://localhost,capacitor://localhost,http://localhost"
 ).split(",")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in APP_ORIGINS if o.strip()],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["X-Paper-Code"],
-)
 
 
 @app.exception_handler(RequestValidationError)
@@ -81,6 +75,8 @@ async def _bad_param_handler(request: Request, exc: Exception):
     year/id）：/api 同 400；公开 HTML 页族按「不存在」回品牌 404。"""
     path = request.url.path
     if path.startswith("/api/"):
+        if isinstance(exc, TypeError):
+            logging.getLogger("kg.api").warning("bad_param TypeError on %s %s: %s", request.method, path, exc)
         return JSONResponse({"detail": "参数格式错误"}, status_code=400)
     if isinstance(exc, OverflowError) and path.startswith(("/tiku", "/s/", "/p/")):
         return seo._not_found("页面不存在")
@@ -197,8 +193,12 @@ async def report_5xx(request, call_next):
 @app.post("/api/monitor/report")
 async def monitor_report(request: Request):
     """前端未捕获 JS 错误同源上报，由后端转发中心收集器（不向浏览器暴露中心 key）。"""
+    rl(request, "monitor", 30, 60)
+    raw = await request.body()
+    if len(raw) > 16384:
+        raise HTTPException(status_code=413, detail="payload_too_large")
     try:
-        body = await request.json()
+        body = json.loads(raw or b"")
     except Exception:
         raise HTTPException(status_code=400, detail="bad_json")
     if not isinstance(body, dict):
@@ -232,38 +232,62 @@ async def log_slow_requests(request, call_next):
 async def guard_account_uid(request, call_next):
     """账号态 uid（u<id>）可被枚举，统一要求携带本人 Bearer token 才可按该 uid 读写。
 
-    匿名随机 uid 不受影响（其本身即凭据）。覆盖 query 与 JSON body 两处 uid。
+    匿名随机 uid 不受影响（其本身即凭据）。同时校验 query 与 JSON body 两处 uid，防止
+    query 传入本人 uid 遮蔽 body 中他人 uid 的越权。OPTIONS 预检直接放行。
     表单体（multipart/urlencoded）不在此解析，Form(uid) 端点自行校验 owns_uid。
-    uid 原串直接交给 is_account_uid/owns_uid，二者内部 strip 与 handler 的 `uid.strip()[:64]` 同口径。
     """
-    uid = request.query_params.get("uid")
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    q_uid = request.query_params.get("uid")
+    body_uid = None
     body = b""
     ct = (request.headers.get("content-type") or "").lower()
     if (
-        not auth.is_account_uid(uid)
-        and request.method in ("POST", "PATCH", "PUT", "DELETE")
+        request.method in ("POST", "PATCH", "PUT", "DELETE")
         and not ct.startswith(("multipart/form-data", "application/x-www-form-urlencoded"))
     ):
         body = await request.body()
         try:
             parsed = json.loads(body or b"{}")
-            uid = parsed.get("uid") if isinstance(parsed, dict) else None
+            body_uid = parsed.get("uid") if isinstance(parsed, dict) else None
         except (ValueError, TypeError):
-            uid = None
-        if uid is not None and not isinstance(uid, str):
+            body_uid = None
+        if body_uid is not None and not isinstance(body_uid, str):
             return JSONResponse({"detail": "uid 格式错误"}, status_code=400)
+    auth_hdr = request.headers.get("authorization")
+    for candidate in (q_uid, body_uid):
+        if (
+            candidate
+            and auth.is_account_uid(candidate)
+            and not await run_in_threadpool(auth.owns_uid, candidate, auth_hdr)
+        ):
+            return JSONResponse({"detail": "无权访问该账号数据，请重新登录"}, status_code=403)
     if (
-        uid
-        and auth.is_account_uid(uid)
-        and not await run_in_threadpool(auth.owns_uid, uid, request.headers.get("authorization"))
+        q_uid is not None
+        and body_uid is not None
+        and q_uid.strip()
+        and body_uid.strip()
+        and q_uid.strip() != body_uid.strip()
     ):
-        return JSONResponse({"detail": "无权访问该账号数据，请重新登录"}, status_code=403)
+        return JSONResponse({"detail": "uid 参数不一致"}, status_code=400)
     if body:
         async def _receive():
             return {"type": "http.request", "body": body, "more_body": False}
 
         request = Request(request.scope, _receive)
     return await call_next(request)
+
+
+# 最外层注册 CORSMiddleware（FastAPI user_middleware 按 LIFO 包装），保证 OPTIONS 预检
+# 及 guard_account_uid / error_storm_middleware 的 403/429 早退响应都带合法 CORS 头
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in APP_ORIGINS if o.strip()],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-Paper-Code"],
+)
 
 
 app.include_router(auth.router)
@@ -318,11 +342,12 @@ auth.init_auth_db()
 social.init_social_db()
 interview.init_interview_db()
 pk.init_pk_db()
-migrate.run_migrations()
 mock_event.init_mock_event_db()
 report.init_report_db()
 team.init_team_db()
 db_analytics.init_analytics_db()
+# 迁移必须在各模块建表（特别是 answer_log 等）之后执行，确保 0002 等索引迁移在新库正常落地
+migrate.run_migrations()
 
 
 _HOT_UID_TABLES = (
@@ -396,7 +421,8 @@ def _warmup():
             try:
                 for t in _HOT_UID_TABLES:
                     try:
-                        conn.execute(f"SELECT * FROM {t}").fetchall()
+                        # 仅预热页缓存与 B-tree 索引，不再全表 SELECT * 装入 Python 堆内存
+                        conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
                     except Exception:
                         pass
             finally:
@@ -425,11 +451,12 @@ threading.Thread(target=_stats_refresher, daemon=True).start()
 
 
 def _fts_backfiller():
-    """搜索索引后台分批回填（首次建表 13.5 万题避免阻塞启动）。"""
+    """搜索索引后台分批回填（首次建表 13.5 万题避免阻塞启动，支持事件立即唤醒）。"""
     while True:
         try:
             if insights.fts_backfill() == 0:
-                time.sleep(3600)
+                insights.FTS_WAKE.wait(timeout=120)
+                insights.FTS_WAKE.clear()
                 continue
         except Exception:
             time.sleep(600)
