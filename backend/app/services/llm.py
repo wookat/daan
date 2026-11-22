@@ -40,7 +40,7 @@ def _main_only() -> bool:
     """LLM_MAIN_ONLY=1：批量生成等离线任务强制只用主模型——429/5xx 退避重试，不降级 rescue。"""
     return os.environ.get("LLM_MAIN_ONLY") == "1"
 
-TIMEOUT = httpx.Timeout(float(os.environ.get("LLM_TIMEOUT", "180")), connect=15.0)
+TIMEOUT = httpx.Timeout(float(os.environ.get("LLM_TIMEOUT") or "180"), connect=15.0)
 
 
 def _has_image(messages: list) -> bool:

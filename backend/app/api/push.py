@@ -27,7 +27,7 @@ CN_TZ = timezone(timedelta(hours=8))
 VAPID_PRIVATE = os.environ.get("KG_VAPID_PRIVATE", "")
 VAPID_PUBLIC = os.environ.get("KG_VAPID_PUBLIC", "")
 VAPID_SUB = os.environ.get("KG_VAPID_SUB", "mailto:support@zalize.com")
-PUSH_HOUR = int(os.environ.get("KG_PUSH_HOUR", "8"))
+PUSH_HOUR = int(os.environ.get("KG_PUSH_HOUR") or "8")
 _MAX_SUB_JSON = 4096
 
 

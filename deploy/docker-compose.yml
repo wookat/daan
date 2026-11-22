@@ -39,7 +39,7 @@ services:
       - WX_MINIAPP_APPID=${WX_MINIAPP_APPID:-wx01f2f29cfe51baba}
       - WX_MINIAPP_SECRET=${WX_MINIAPP_SECRET:-}
       - APP_CORS_ORIGINS=${APP_CORS_ORIGINS:-https://localhost,capacitor://localhost,http://localhost}
-      - LLM_TIMEOUT=${LLM_TIMEOUT:-}
+      - LLM_TIMEOUT=${LLM_TIMEOUT:-180}
       # 探针出口网段（逗号分隔 CIDR）：命中的作答/埋点入库打 probe=1，运营看板剔除；空=不打标
       - KG_PROBE_CIDRS=${KG_PROBE_CIDRS:-}
     volumes:
