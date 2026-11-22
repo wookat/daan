@@ -3,7 +3,12 @@ FROM python:3.12-slim
 WORKDIR /app
 # pdf_export.py uses bundled SimSun.ttf + SimHei.ttf directly (no apt CJK font packages needed);
 # libglib2.0-0 is required by opencv-python-headless at import time.
-RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 && rm -rf /var/lib/apt/lists/* \
+ARG APT_MIRROR=mirrors.tencent.com
+ARG PIP_INDEX_URL=https://mirrors.tencent.com/pypi/simple
+RUN if [ -n "$APT_MIRROR" ] && [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources; \
+    fi \
+ && apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 && rm -rf /var/lib/apt/lists/* \
  && groupadd -g 1000 appuser \
  && useradd -u 1000 -g 1000 -m -s /usr/sbin/nologin appuser
 COPY backend/requirements.txt backend/requirements.txt
