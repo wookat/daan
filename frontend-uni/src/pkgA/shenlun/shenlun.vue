@@ -115,6 +115,11 @@
             <scroll-view scroll-y class="d-ans-body" :show-scrollbar="false">
               <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" placeholder-style="color: var(--ink-4)" auto-height @input="saveDraft" />
               <kg-button variant="primary" size="lg" block :disabled="grading || !myAnswer.trim()" :loading="grading" class="grade-btn" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</kg-button>
+              <view v-if="showSyncTip" class="sl-sync" role="button" @click="goSyncLogin">
+                <l-icon name="cloud" :size="16" tone="brand-text" />
+                <text class="sl-sync-t">登录账号，申论草稿与 AI 批改记录多端永久同步</text>
+                <text class="sl-sync-go">去登录 ›</text>
+              </view>
               <view v-if="gradeResult" class="d-grade">
                 <text class="d-h">批改结果<text class="g-note">（AI 参考，非官方评分）</text></text>
                 <text class="g-body">{{ gradeResult }}</text>
@@ -298,7 +303,7 @@
 
 <script>
 import { fmtYMDHM } from '../../utils/fmt.js';
-import { request, anonUid, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api/api.js';
+import { request, anonUid, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode, getAuthUser, trackEvent } from '../../api/api.js';
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun/shenlun-url.js';
 import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun/shenlun-qfav.js';
 import { qNavState } from '../../shenlun/shenlun-qnav.js';
@@ -358,6 +363,7 @@ export default {
       qEnd: false,
       mEnd: false,
       qTotal: 0,
+      authed: !!getAuthUser(),
       qFavIds: uni.getStorageSync('slQFavIds') || [],
       qFavs: uni.getStorageSync('slQFavs') || [],
       qFavOnly: false,
@@ -415,8 +421,12 @@ export default {
     qWordSt() {
       return wordState(this.myAnswer.length, this.qWordLim);
     },
+    showSyncTip() {
+      return !this.authed && (Boolean(this.gradeResult) || (this.myAnswer && this.myAnswer.trim().length >= 30));
+    },
   },
   onShow() {
+    this.authed = !!getAuthUser();
     // #ifdef H5
     if (!this._slKeyHandler && typeof window !== 'undefined') {
       this._slKeyHandler = (e) => this.onSlKeydown(e);
@@ -996,6 +1006,10 @@ export default {
     fmtTime(ts) {
       return fmtYMDHM(ts);
     },
+    goSyncLogin() {
+      trackEvent('login_nudge_click', 'shenlun_sync');
+      uni.navigateTo({ url: '/pkgA/user/login' });
+    },
     async grade() {
       const qid = this.detail && this.detail.id;
       const ans = (this.myAnswer || '').trim();
@@ -1118,6 +1132,9 @@ export default {
 .d-save.over { color: var(--bad-strong); font-weight: 600; }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 160px; margin-top: var(--sp-8); padding: var(--sp-12); background: var(--fill); border-radius: var(--r-sm); color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-body); }
 .grade-btn { margin-top: var(--sp-12); }
+.sl-sync { display: flex; align-items: center; gap: var(--sp-8); min-height: 40px; margin-top: var(--sp-8); padding: var(--sp-4) var(--sp-12); border-radius: var(--r-sm); background: var(--brand-soft); box-sizing: border-box; cursor: pointer; }
+.sl-sync-t { flex: 1; font-size: var(--fs-caption); color: var(--ink-2); line-height: var(--lh-caption); }
+.sl-sync-go { flex-shrink: 0; font-size: var(--fs-caption); font-weight: 600; color: var(--brand-text); }
 .d-grade { margin-top: var(--sp-4); }
 .g-note { font-size: var(--fs-caption); font-weight: 400; color: var(--ink-3); }
 .g-body { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }

@@ -5,6 +5,10 @@
       <view class="nb"><l-icon name="pencil-line" :size="16" tone="inherit" /><text>我的笔记：</text></view>{{ note }}
       <text class="edit">改</text>
     </view>
+    <view v-if="!editing && note && !isAuthed" class="sync-tip" role="button" @click="goSyncLogin">
+      <l-icon name="cloud" :size="14" tone="brand-text" />
+      <text class="sync-tip-t">笔记仅存本机，登录多端同步 ›</text>
+    </view>
     <view v-else-if="editing" class="note-edit">
       <textarea
         v-model="draft"
@@ -40,7 +44,7 @@
 </template>
 
 <script>
-import { fetchCommentCount, fetchComments, fetchNote, saveNote, shareCreate, qShareText, shareVariant, trackEvent } from '../../api/api.js';
+import { fetchQuestionSocial, fetchCommentCount, fetchComments, fetchNote, saveNote, shareCreate, qShareText, shareVariant, trackEvent, getAuthUser } from '../../api/api.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
 
@@ -51,7 +55,14 @@ export default {
     compact: { type: Boolean, default: false },
   },
   data() {
-    return { count: null, note: '', draft: '', editing: false, busy: false, hot: null };
+    return { count: null, note: '', draft: '', editing: false, busy: false, hot: null, isAuthed: !!getAuthUser() };
+  },
+  mounted() {
+    this._onAuth = () => { this.isAuthed = !!getAuthUser(); };
+    if (uni.$on) uni.$on('authChanged', this._onAuth);
+  },
+  beforeUnmount() {
+    if (this._onAuth && uni.$off) uni.$off('authChanged', this._onAuth);
   },
   watch: {
     questionId: {
@@ -74,7 +85,18 @@ export default {
   methods: {
     async load() {
       const qid = this.questionId;
+      this.isAuthed = !!getAuthUser();
       try {
+        try {
+          const d = await fetchQuestionSocial(qid);
+          if (qid !== this.questionId) return;
+          this.count = d.total;
+          this.note = d.note || '';
+          this.hot = d.hot || null;
+          return;
+        } catch (e) {
+          if (!String((e && e.message) || '').includes('404')) throw e;
+        }
         const [c, n] = await Promise.all([fetchCommentCount(qid), fetchNote(qid)]);
         if (qid !== this.questionId) return;
         this.count = c.total;
@@ -85,6 +107,10 @@ export default {
           this.hot = (d.items && d.items[0]) || null;
         }
       } catch (e) { /* 非关键路径 */ }
+    },
+    goSyncLogin() {
+      trackEvent('login_nudge_click', 'note_sync');
+      uni.navigateTo({ url: '/pkgA/user/login' });
     },
     startEdit() {
       this.draft = uni.getStorageSync('qNoteDraft:' + this.questionId) || this.note;
@@ -134,6 +160,8 @@ export default {
 .qsb.is-compact .firstc { margin-top: var(--sp-4); padding: var(--sp-4) var(--sp-12); }
 .qsb.is-compact .hotc { margin-top: var(--sp-4); }
 .mynote { background: var(--warn-soft); border-left: 3px solid var(--warn); border-radius: 0 var(--r-xs) var(--r-xs) 0; padding: var(--sp-8) var(--sp-12); font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; }
+.sync-tip { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: 40px; padding: 0 var(--sp-4); margin: 0 -4px; }
+.sync-tip-t { font-size: var(--fs-caption); color: var(--brand-text); }
 .nb { display: inline-flex; align-items: center; gap: var(--sp-4); vertical-align: middle; color: var(--warn-strong); font-weight: 600; }
 .edit { color: var(--brand-text); margin-left: 2px; font-size: var(--fs-caption); display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--sp-4); margin-top: -10px; margin-bottom: -10px; vertical-align: middle; }
 .note-edit { background: var(--warn-soft); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); }
@@ -154,6 +182,6 @@ export default {
 .firstc-ph { font-size: var(--fs-caption); color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .firstc-cta { font-size: var(--fs-caption); color: var(--brand-text); font-weight: 600; flex-shrink: 0; }
 /* #ifdef H5 */
-.hotc, .firstc, .qsb-link, .mynote, .nop, .edit { cursor: pointer; }
+.hotc, .firstc, .qsb-link, .mynote, .nop, .edit, .sync-tip { cursor: pointer; }
 /* #endif */
 </style>

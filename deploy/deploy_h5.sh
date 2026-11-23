@@ -21,7 +21,7 @@ if [[ -n "${TICKETS_VPS_SSH_CREDENTIAL:-}" ]]; then
   export SSHPASS="$TICKETS_VPS_SSH_CREDENTIAL"
   SSH_RUN=(sshpass -e ssh "${SSH_OPTS[@]}")
 else
-  SSH_RUN=(ssh "${SSH_OPTS[@]}")
+  SSH_RUN=(ssh -o BatchMode=yes "${SSH_OPTS[@]}")
 fi
 REMOTE="$TICKETS_VPS_SSH_USER@$TICKETS_VPS_SSH_HOST"
 

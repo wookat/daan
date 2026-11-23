@@ -101,6 +101,16 @@ export function trackReplayPayload(item, now) {
   return out;
 }
 
+export function detectTrackPlatform(uniPlatform, ua, winWidth) {
+  const base = uniPlatform || 'h5';
+  if (base !== 'h5') return base;
+  const s = ua != null ? String(ua) : (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  if (/MicroMessenger/i.test(s)) return 'h5-wx';
+  const w = winWidth != null ? winWidth : (typeof window !== 'undefined' ? window.innerWidth : 0);
+  if (/Mobile|Android|iPhone|iPad|iPod|HarmonyOS/i.test(s) || (w > 0 && w < 768)) return 'h5-m';
+  return 'h5-pc';
+}
+
 const PUBLIC_CACHE_RE = /^\/api\/(announcement|question_counts|daily_set|submodules|real_filters|papers|comments\/plaza|search(\/question\/\d+)?|shenlun\/(questions(\/\d+)?|filters|materials|hotspots)|shizheng\/daily|exam\/templates|access_info|push\/pubkey)$/;
 
 /** 公开 uid 无关只读 GET：回传时不带 Authorization，避免 logged-in 用户穿透 Cloudflare Edge Cache */

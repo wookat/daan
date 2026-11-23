@@ -1,9 +1,9 @@
 // API transport 层：BASE_URL/请求封装/登录态/访问码/快照兜底/GET 合并缓存/埋点可靠投递。
 // 端点按域分在 api/{social,daily,export,ai,play}.js；src/api.js 只做 barrel 重导出，调用侧 import 不变。
-import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, isPublicCacheablePath, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, isPublicCacheablePath, trackRetryable, trackQueuePush, trackReplayPayload, detectTrackPlatform } from './api-policy';
 import { createGetCache, getTtl, isTrackPath } from './api-get-cache';
 
-export { isStaleUidErr, isPublicCacheablePath };
+export { isStaleUidErr, isPublicCacheablePath, detectTrackPlatform };
 
 const REMOTE_BASE = 'https://kaogong.zalize.com';
 
@@ -153,7 +153,9 @@ export async function withAuthRetry(fn) {
 // 平台在构建期注入（h5/mp-weixin/app），埋点与后端平台拆分共用；
 // 会话 id 随每个请求经 X-Kg-Session 上送：30 分钟无活动自动轮换，
 // 用于管理端会话时长/深度聚合。持久化节流 30s 一次（重启续接精度可接受）。
-const TRACK_PLATFORM = (typeof process !== 'undefined' && process.env && process.env.UNI_PLATFORM) || 'h5';
+const TRACK_PLATFORM = detectTrackPlatform(
+  typeof process !== 'undefined' && process.env && process.env.UNI_PLATFORM,
+);
 const SESS_IDLE_MS = 30 * 60 * 1000;
 let _sessId = null;
 let _sessAt = 0;

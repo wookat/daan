@@ -71,7 +71,7 @@ export const sessionOps = {
         daily: this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null,
       });
       clearTimeout(this._ppTimer);
-      this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 1500);
+      this._ppTimer = setTimeout(() => this.pushPracticeProgress(), 2000);
     },
 
     pushPracticeProgress() {
@@ -82,11 +82,17 @@ export const sessionOps = {
         this._daily && this._dailyDate ? { date: this._dailyDate, past: !!this._dailyPast } : null
       );
       if (!payload) return;
-      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {});
+      const sig = JSON.stringify(payload);
+      if (sig === this._lastPpSig) return;
+      this._lastPpSig = sig;
+      request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), ...payload } }).catch(() => {
+        if (this._lastPpSig === sig) this._lastPpSig = '';
+      });
     },
 
     clearServerProgress() {
       clearTimeout(this._ppTimer);
+      this._lastPpSig = '';
       uni.setStorageSync('ppClearedAt', Date.now());
       request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
     },

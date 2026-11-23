@@ -351,6 +351,15 @@
               </view>
             </view>
           </kg-card>
+          <kg-card v-if="tab !== 'fav' && shownItems.length" clickable chevron class="side entry" @click="exportSel = false; exportConfirm = true">
+            <view class="entry-in">
+              <view class="entry-ico"><l-icon name="file-text" :size="20" tone="brand" /></view>
+              <view class="grow">
+                <text class="entry-t">导出错题卷 PDF</text>
+                <text class="entry-s">含答案解析与机读答题卡，可打印刷题</text>
+              </view>
+            </view>
+          </kg-card>
           <kg-card v-if="tab !== 'fav' && modGroups.length" class="side modgroup">
             <text class="side-t">按模块查看</text>
             <view v-for="g in modGroups" :key="g.key" class="mg-blk">

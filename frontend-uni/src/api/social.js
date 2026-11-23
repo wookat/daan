@@ -11,6 +11,10 @@ export function fetchCommentCount(questionId) {
   return request(`/api/comments/count?question_id=${questionId}`);
 }
 
+export function fetchQuestionSocial(questionId) {
+  return request(`/api/question_social?question_id=${questionId}&uid=${encodeURIComponent(anonUid())}`, { ttl: 15000 });
+}
+
 export function postComment(questionId, content, parentId) {
   return request('/api/comments', {
     method: 'POST',

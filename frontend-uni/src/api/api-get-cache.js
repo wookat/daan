@@ -6,7 +6,7 @@ export const GET_TTL_DEFAULT = 3000;
 
 // 只读「读模型」端点：服务端只 SELECT、同 uid 3s 内再读结果一致。抽题（questions）、续做（*/resume）、复习队列（review*）
 // 这类每次调用都可能换内容或推进流程的端点不进白名单，只做 in-flight 合并。
-const READ_ONLY = /^\/api\/(home_bundle|stats_bundle|growth|daily_plan|plan(\/\w+)?|today|predict|checkin(\/\w+)?|summary|stats|profile|announcement|question_counts|daily_set|recommend|mastery\/map|shenlun\/stats|shenlun\/filters|submodules|real_filters|papers|exam\/attempts|exam\/templates|shizheng\/daily)(?=\?|$)/;
+const READ_ONLY = /^\/api\/(home_bundle|stats_bundle|question_social|growth|daily_plan|plan(\/\w+)?|today|predict|checkin(\/\w+)?|summary|stats|profile|announcement|question_counts|daily_set|recommend|mastery\/map|shenlun\/stats|shenlun\/filters|submodules|real_filters|papers|exam\/attempts|exam\/templates|shizheng\/daily)(?=\?|$)/;
 
 /** 埋点上报：只写 events 表，不影响任何只读端点的结果，写后无需作废。 */
 export function isTrackPath(path) {

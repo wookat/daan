@@ -1,8 +1,10 @@
 // 边缘决策纯函数：与 [[path]].js 的 IO 编排分离，可被 vitest 直接单测。
 
 // /tiku* 为纯公开 SEO 页族（不随登录态/UA 变化），在边缘缓存 5 分钟，
-// 避免每个请求（含爬虫抓取）穿透到共享 origin 产生长尾 TTFB。
+// 避免每个请求（含爬虫抓取）穿透到共享 origin 产生长尾 TTFB；
+// /tiku/q/* 单题静态化程度高，边缘缓存 1 小时以吸收突发爬虫与长尾请求。
 export const EDGE_CACHE_TTL = 300;
+export const TIKU_Q_EDGE_CACHE_TTL = 3600;
 
 // uid 无关的公开只读 API（响应确定、不随登录态变化），短 TTL 边缘缓存，
 // 屏蔽共享 origin 的长尾抖动；带 Authorization/uid 的请求一律绕过。
@@ -39,9 +41,10 @@ const API_CACHE_PATTERNS = [/^\/api\/search\/question\/\d+$/, /^\/api\/shenlun\/
 // 更新检查默认绕过浏览器 HTTP 缓存，但不绕过 CDN）。
 export const SHELL_CACHE_ALLOWLIST = new Set(["/sw.js", "/precache.json"]);
 
-// 无获客价值的商业爬虫（舆情/SEO 工具）：每条 /tiku/q/* URL 各异使边缘缓存失效，
+// 无获客价值的商业 SEO 爬虫与 AI 训练抓取器：每条 /tiku/q/* URL 各异使边缘缓存失效，
 // 全部穿透共享 origin SSR；在边缘直接 403，robots.txt 放行以便其读到禁抓声明。
-const BLOCKED_BOT_UA = /awariobot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot/i;
+// 保留 Googlebot / Bingbot / Baiduspider / Sogou / Yisou / OAI-SearchBot / PerplexityBot 搜索索引。
+const BLOCKED_BOT_UA = /awariobot|semrushbot|ahrefsbot|mj12bot|dotbot|petalbot|gptbot|reflectionbot|claudebot|bytespider|ccbot|amazonbot|meta-externalagent/i;
 
 export function isBlockedBot(pathname, ua) {
   return pathname !== "/robots.txt" && BLOCKED_BOT_UA.test(ua || "");
@@ -70,6 +73,7 @@ export function isUpstreamCacheable(cacheControl, vary) {
 
 export function edgeTtl(pathname) {
   if (pathname.startsWith("/qimg/")) return QIMG_EDGE_CACHE_TTL;
+  if (pathname.startsWith("/tiku/q/")) return TIKU_Q_EDGE_CACHE_TTL;
   return pathname.startsWith("/api/") || SHELL_CACHE_ALLOWLIST.has(pathname)
     ? API_EDGE_CACHE_TTL
     : EDGE_CACHE_TTL;

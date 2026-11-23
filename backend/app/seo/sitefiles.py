@@ -194,7 +194,10 @@ def llms_txt():
 def robots_txt():
     blocked = "".join(
         f"User-agent: {b}\nDisallow: /\n\n"
-        for b in ("AwarioBot", "SemrushBot", "AhrefsBot", "MJ12bot", "DotBot", "PetalBot")
+        for b in (
+            "AwarioBot", "SemrushBot", "AhrefsBot", "MJ12bot", "DotBot", "PetalBot",
+            "GPTBot", "Reflectionbot", "ClaudeBot", "Bytespider", "CCBot", "Amazonbot", "Meta-ExternalAgent",
+        )
     )
     return PlainTextResponse(
         blocked + "User-agent: *\nAllow: /tiku/\nDisallow: /api/\nDisallow: /admin\n"

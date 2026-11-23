@@ -103,6 +103,16 @@ export async function exportPdf(body) {
     await savePdfNative(blob, (body.title || '试卷') + '-' + Date.now() + '.pdf');
     return;
   }
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) || '';
+  if (/MicroMessenger/i.test(ua)) {
+    uni.showModal({
+      title: '微信内暂不支持直接下载 PDF',
+      content: '请点右上角「···」选择「在默认浏览器中打开」后重新导出；本次试卷码已保存在本机，打开即可复查。',
+      showCancel: false,
+      confirmText: '知道了',
+    });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

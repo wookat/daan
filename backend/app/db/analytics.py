@@ -183,11 +183,13 @@ def usage_overview(days: int = 30) -> dict:
 
     per_day: dict[str, dict] = defaultdict(lambda: {"uids": set(), "answers": 0, "events": 0})
     uids_all: set[str] = set()
+    hourly_cst = [0] * 24
     for r in rows:
         d = _day(r["created_at"])
         per_day[d]["uids"].add(r["uid"])
         per_day[d]["answers" if r["src"] == "a" else "events"] += 1
         uids_all.add(r["uid"])
+        hourly_cst[time.gmtime(r["created_at"] + 8 * 3600).tm_hour] += 1
 
     today_s, yday_s = _day(day0), _day(day0 - 86400)
     def act(d):
@@ -257,6 +259,8 @@ def usage_overview(days: int = 30) -> dict:
         "组队成员": "SELECT COUNT(DISTINCT uid) n FROM team_members WHERE joined_at>=?",
         "主动分享": "SELECT COUNT(DISTINCT from_uid) n FROM shared_questions WHERE created_at>=?",
         "错题本": "SELECT COUNT(DISTINCT uid) n FROM mistakes WHERE created_at>=? AND uid IS NOT NULL",
+        "申论草稿": "SELECT COUNT(DISTINCT uid) n FROM shenlun_drafts WHERE updated_at>=?",
+        "题目笔记": "SELECT COUNT(DISTINCT uid) n FROM question_notes WHERE updated_at>=?",
     }
     base_n = max(1, len(uids_all))
     penetration = []
@@ -306,6 +310,7 @@ def usage_overview(days: int = 30) -> dict:
         "platform_coverage": round(marked * 100 / total_ev, 1) if total_ev else 0,
         "penetration": penetration,
         "top_events": top_events,
+        "hourly_cst": hourly_cst,
         "days": days,
         "generated_at": now,
     }

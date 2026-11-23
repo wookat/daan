@@ -7,7 +7,7 @@ import {
   QIMG_EDGE_CACHE_TTL,
 } from '../../deploy/cf-pages/functions/edge-policy.js';
 import { getTtl } from '../src/api/api-get-cache.js';
-import { isPublicCacheablePath } from '../src/api/api-policy.js';
+import { isPublicCacheablePath, detectTrackPlatform } from '../src/api/api-policy.js';
 
 const read = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 
@@ -140,5 +140,33 @@ describe('Frontend 6 UX & Layout Fixes', () => {
     expect(stats).toContain('/api/stats_bundle?uid=');
     expect(stats).toContain('aspect-ratio: 1 / 1');
     expect(stats).toContain(':prefetched="statsPredData"');
+  });
+
+  it('29d analytics optimizations: platform split, question_social bundle, pp dedupe, WeChat PDF, and 3 sync nudges', () => {
+    expect(detectTrackPlatform('h5', 'Mozilla/5.0 MicroMessenger/8.0.48', 390)).toBe('h5-wx');
+    expect(detectTrackPlatform('h5', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)', 390)).toBe('h5-m');
+    expect(detectTrackPlatform('h5', 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0', 1440)).toBe('h5-pc');
+    expect(detectTrackPlatform('mp-weixin', 'MicroMessenger', 390)).toBe('mp-weixin');
+
+    expect(getTtl('/api/question_social?question_id=1&uid=u1')).toBeGreaterThan(0);
+
+    const ops = read('../src/practice/session-ops.js');
+    expect(ops).toContain('_lastPpSig');
+
+    const qsb = read('../src/components/q-social-bar/q-social-bar.vue');
+    expect(qsb).toContain('fetchQuestionSocial');
+    expect(qsb).toContain('note_sync');
+
+    const expApi = read('../src/api/export.js');
+    expect(expApi).toContain('MicroMessenger');
+
+    const book = read('../src/pages/book/book.vue');
+    expect(book).toContain('导出错题卷 PDF');
+
+    const ec = read('../src/components/export-confirm/export-confirm.vue');
+    expect(ec).toContain('pdf_export');
+
+    const sl = read('../src/pkgA/shenlun/shenlun.vue');
+    expect(sl).toContain('shenlun_sync');
   });
 });

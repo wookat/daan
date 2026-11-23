@@ -21,12 +21,17 @@
       </view>
       <view class="opt-note">{{ optNote }}</view>
       <view v-if="sheetlessNote" class="opt-note sheetless">{{ sheetlessNote }}</view>
+      <view v-if="!isAuthed()" class="sync-note" role="button" @click="goLogin">
+        <text class="sync-note-t">登录后错题与试卷码云端留档，换设备随时重导</text>
+        <text class="sync-note-go">去登录 ›</text>
+      </view>
       <view class="confirm-btn" :class="{ dim: busy }" role="button" :aria-disabled="String(!!busy)" @click="onConfirm">{{ busy ? '正在生成 PDF…' : '确认导出' }}</view>
     </view>
   </view>
 </template>
 
 <script>
+import { getAuthUser, trackEvent } from '../../api/api.js';
 // #ifdef H5
 import { sheetOpened, sheetClosed } from '../../utils/sheet-history.js';
 // #endif
@@ -50,6 +55,7 @@ export default {
   },
   watch: {
     visible(v) {
+      if (v && this.$forceUpdate) this.$forceUpdate();
       // #ifdef H5
       if (v) {
         if (this._histTok == null) this._histTok = sheetOpened(() => this.$emit('close'));
@@ -61,11 +67,14 @@ export default {
     },
   },
   mounted() {
+    this._onAuth = () => { if (this.$forceUpdate) this.$forceUpdate(); };
+    if (uni.$on) uni.$on('authChanged', this._onAuth);
     // #ifdef H5
     if (this.visible) this._histTok = sheetOpened(() => this.$emit('close'));
     // #endif
   },
   beforeUnmount() {
+    if (this._onAuth && uni.$off) uni.$off('authChanged', this._onAuth);
     // #ifdef H5
     if (this._histTok != null) {
       sheetClosed(this._histTok);
@@ -105,6 +114,14 @@ export default {
         with_notes: this.withNotes,
       });
     },
+    isAuthed() {
+      return !!getAuthUser();
+    },
+    goLogin() {
+      trackEvent('login_nudge_click', 'pdf_export');
+      this.$emit('close');
+      uni.navigateTo({ url: '/pkgA/user/login' });
+    },
   },
 };
 </script>
@@ -128,13 +145,16 @@ export default {
 .expchip { flex: 1 1 auto; min-height: 44px; padding: 0 var(--sp-8); box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--fs-caption); color: var(--ink-2); background: var(--fill); white-space: nowrap; }
 .expchip.on { border-color: var(--brand-text); color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
 .opt-note { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
+.sync-note { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); min-height: 40px; margin-top: var(--sp-8); padding: var(--sp-4) var(--sp-12); border-radius: var(--r-sm); background: var(--fill); box-sizing: border-box; }
+.sync-note-t { font-size: var(--fs-caption); color: var(--ink-2); }
+.sync-note-go { flex-shrink: 0; font-size: var(--fs-caption); font-weight: 600; color: var(--brand-text); }
 .confirm-btn { margin-top: var(--sp-16); min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--brand); color: var(--on-brand); border-radius: var(--r-full); font-size: var(--fs-sub); font-weight: 600; }
 .confirm-btn.dim { opacity: 0.6; }
 /* #ifdef H5 */
 @media (min-width: 768px) {
   .mask { align-items: center; }
   .sheet { width: min(480px, 92vw); border-radius: var(--r-lg); padding: var(--sp-20); }
-  .sheet-x, .expchip, .confirm-btn { cursor: pointer; }
+  .sheet-x, .expchip, .confirm-btn, .sync-note { cursor: pointer; }
 }
 /* #endif */
 </style>

@@ -11,11 +11,12 @@ import {
   shouldRetryOrigin,
   shouldServeOutage,
   EDGE_CACHE_TTL,
+  TIKU_Q_EDGE_CACHE_TTL,
   API_EDGE_CACHE_TTL,
 } from '../../deploy/cf-pages/functions/edge-policy.js';
 
 describe('isBlockedBot', () => {
-  it('拦截六个商业爬虫（大小写不敏感）', () => {
+  it('拦截商业及高耗无转化 AI 爬虫（大小写不敏感）', () => {
     for (const ua of [
       'Mozilla/5.0 (compatible; AwarioBot/1.0)',
       'Mozilla/5.0 (compatible; SemrushBot/7~bl)',
@@ -23,6 +24,13 @@ describe('isBlockedBot', () => {
       'Mozilla/5.0 (compatible; MJ12bot/v1.4.8)',
       'Mozilla/5.0 (compatible; DotBot/1.2)',
       'Mozilla/5.0 (compatible; PetalBot;)',
+      'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)',
+      'Mozilla/5.0 (compatible; Reflectionbot/1.0)',
+      'ClaudeBot/1.0',
+      'Bytespider',
+      'CCBot/2.0',
+      'Amazonbot/0.1',
+      'meta-externalagent/1.1',
       'awariobot',
     ]) {
       expect(isBlockedBot('/tiku/q/3', ua)).toBe(true);
@@ -30,9 +38,15 @@ describe('isBlockedBot', () => {
   });
   it('robots.txt 放行被拦截 UA（读禁抓声明）', () => {
     expect(isBlockedBot('/robots.txt', 'SemrushBot')).toBe(false);
+    expect(isBlockedBot('/robots.txt', 'GPTBot')).toBe(false);
   });
-  it('搜索引擎与真实浏览器不拦截', () => {
+  it('搜索引擎与真实浏览器（含微信 WebView）不拦截', () => {
     expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (compatible; Googlebot/2.1)')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (compatible; bingbot/2.0)')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (compatible; Baiduspider/2.0)')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'OAI-SearchBot/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'PerplexityBot/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 MicroMessenger/8.0.50 Chrome/120')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (Windows NT 10.0) Chrome/120')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', '')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', null)).toBe(false);
@@ -91,9 +105,10 @@ describe('isEdgeCacheable', () => {
 });
 
 describe('edgeTtl', () => {
-  it('API 60s，页面 300s', () => {
+  it('API 60s，单题 SEO 3600s，列表页 300s', () => {
     expect(edgeTtl('/api/question_counts')).toBe(API_EDGE_CACHE_TTL);
-    expect(edgeTtl('/tiku/q/3')).toBe(EDGE_CACHE_TTL);
+    expect(edgeTtl('/tiku/q/3')).toBe(TIKU_Q_EDGE_CACHE_TTL);
+    expect(edgeTtl('/tiku/')).toBe(EDGE_CACHE_TTL);
     expect(edgeTtl('/sitemap.xml')).toBe(EDGE_CACHE_TTL);
   });
 });

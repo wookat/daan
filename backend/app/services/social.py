@@ -311,6 +311,35 @@ def api_comments_count(question_id: int):
     return {"total": n}
 
 
+@router.get("/question_social")
+def api_question_social(question_id: int, uid: str = ""):
+    u = (uid or "").strip()[:64]
+    conn = db.get_conn()
+    total = conn.execute(
+        "SELECT COUNT(*) FROM question_comments WHERE question_id=? AND status='ok'",
+        (question_id,),
+    ).fetchone()[0]
+    hot = None
+    if total > 0:
+        row = conn.execute(
+            "SELECT * FROM question_comments WHERE question_id=? AND parent_id IS NULL AND status='ok' "
+            "ORDER BY likes DESC, created_at DESC LIMIT 1",
+            (question_id,),
+        ).fetchone()
+        if row:
+            hot = _comment_payload(row, set(), u or None)
+    note = ""
+    if u:
+        nrow = conn.execute(
+            "SELECT content FROM question_notes WHERE uid=? AND question_id=?",
+            (u, question_id),
+        ).fetchone()
+        if nrow and nrow["content"]:
+            note = nrow["content"]
+    conn.close()
+    return {"total": total, "hot": hot, "note": note}
+
+
 @router.post("/comments")
 def api_comment_create(body: dict, authorization: str | None = Header(None)):
     user = require_user(authorization)
