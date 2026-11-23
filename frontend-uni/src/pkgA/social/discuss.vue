@@ -407,7 +407,7 @@ export default {
   .ibar { max-width: 680px; margin: 0 auto; border: 1px solid var(--line); border-radius: var(--r-md) var(--r-md) 0 0; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .wrap { max-width: 1064px !important; margin: 0 auto; }
   .wrap.has-bar { padding-bottom: var(--sp-24); }
   .ibar { max-width: none; margin-top: var(--sp-16); border: 1px solid var(--line); border-radius: var(--r-md); }
 }

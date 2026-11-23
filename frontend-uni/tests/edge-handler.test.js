@@ -403,14 +403,14 @@ describe('审计 P0/P1 边缘安全头、CORS 与故障响应回归', () => {
     expect(cachesStub.store.size).toBe(0);
   });
 
-  it('非缓存路径 /qimg/1.png 保留客户端 If-None-Match 条件头回源', async () => {
-    const q = queueFetch(new Response(null, { status: 304, headers: { ETag: '"img1"' } }));
+  it('非缓存路径 /admin/static/app.js 保留客户端 If-None-Match 条件头回源', async () => {
+    const q = queueFetch(new Response(null, { status: 304, headers: { ETag: '"app1"' } }));
     const a = ctx(
-      new Request(`${EDGE}/qimg/1.png`, { headers: { 'If-None-Match': '"img1"' } })
+      new Request(`${EDGE}/admin/static/app.js`, { headers: { 'If-None-Match': '"app1"' } })
     );
     const resp = await run(onRequest(a.args));
     expect(resp.status).toBe(304);
-    expect(q.calls[0].headers.get('If-None-Match')).toBe('"img1"');
+    expect(q.calls[0].headers.get('If-None-Match')).toBe('"app1"');
   });
 
   it('/api/* 网络异常返回 JSON 503（而非未捕获 Worker 1101）', async () => {

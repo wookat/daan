@@ -101,7 +101,7 @@ function drawPoster(ctx, d) {
   }
 
   const date = new Date();
-  let sub = `${date.getMonth() + 1} 月 ${date.getDate()} 日 · 花生上岸`;
+  let sub = `${date.getMonth() + 1} 月 ${date.getDate()} 日 · 答岸`;
   if (d.days_to_exam != null) sub += ` · 距${d.exam_type || '考试'}还有 ${d.days_to_exam} 天`;
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   let subSz = 24;
@@ -229,7 +229,7 @@ function drawExamPoster(ctx, d) {
   const date = new Date();
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.font = '24px sans-serif';
-  ctx.fillText(`${date.getMonth() + 1} 月 ${date.getDate()} 日 · 花生上岸`, pad, 168);
+  ctx.fillText(`${date.getMonth() + 1} 月 ${date.getDate()} 日 · 答岸`, pad, 168);
 
   ctx.fillStyle = '#ffffff';
   ctx.font = '800 120px sans-serif';

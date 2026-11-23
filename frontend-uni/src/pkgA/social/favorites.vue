@@ -451,7 +451,7 @@ export default {
 .fops { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
 .chips { margin-bottom: var(--sp-12); }
 .redo { margin-bottom: var(--sp-12); }
-.qitem { margin-bottom: var(--card-gap); }
+.qitem { margin-bottom: 0; }
 .qtx { display: -webkit-box; font-size: var(--fs-body); color: var(--ink); -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .qtx.full { -webkit-line-clamp: unset; display: block; }
 .meta { display: flex; gap: var(--sp-8); align-items: center; margin-top: var(--sp-8); flex-wrap: wrap; }
@@ -466,7 +466,8 @@ export default {
 .ansline { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-8) 0; }
 .exp { display: block; font-size: var(--fs-sub); color: var(--ink-2); background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-12); }
 .ops { display: flex; gap: var(--sp-8); margin-top: var(--sp-8); flex-wrap: wrap; }
-.ngrid { display: flex; flex-direction: column; }
+.ngrid { display: flex; flex-direction: column; gap: var(--card-gap); }
+.ngrid .qitem { margin-top: 0 !important; margin-bottom: 0 !important; }
 
 /* 桌面（H5）：≥1024 KgTwoCol 双栏（收藏夹辅栏 + 列表主列），笔记两列 */
 /* #ifdef H5 */
@@ -475,10 +476,9 @@ export default {
   .folder:hover, .qitem:hover, .fops:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .wrap { max-width: 1064px !important; margin: 0 auto; }
   .seg { max-width: 420px; }
   .ngrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap) var(--sp-24); align-items: start; }
-  .ngrid .qitem { margin-top: 0 !important; margin-bottom: 0 !important; }
 }
 /* #endif */
 </style>

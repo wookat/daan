@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page" :class="{ 'is-detail': tab === 'q' && detail }">
     <wd-segmented ref="seg" :value="tabLabel" :options="tabOpts" class="seg" @change="onTabChange" />
 
     <!-- 真题列表 -->
@@ -70,36 +70,40 @@
       <kg-button v-if="!loading && !qErr && !qFavOnly && !qEnd && qs.length >= 20" variant="secondary" size="md" block class="more" @click="loadMore">加载更多</kg-button>
     </template>
 
-    <!-- 真题详情 / 作答（≥768px 双栏各自独立滚动：材料与作答/批改互不干扰） -->
+    <!-- 真题详情 / 作答（≥768px 双栏独立滚动；材料卡外壳与标题固定，仅内部文本滚动） -->
     <template v-if="tab === 'q' && detail">
       <kg-button variant="text" size="sm" icon="chevron-left" class="back" @click="detail = null">返回列表</kg-button>
       <view class="d-cols">
-        <scroll-view scroll-y class="d-col" :style="splitH ? { height: splitH + 'px' } : {}">
-          <kg-card class="d-card">
-            <view class="q-top">
-              <text class="q-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
-              <view class="q-top-r">
+        <view class="d-col d-col-l" :style="splitH ? { height: splitH + 'px' } : {}">
+          <kg-card class="d-card d-card-l">
+            <view class="d-l-hd">
+              <text class="q-paper d-paper">{{ detail.paper || (detail.exam_year + ' · ' + (detail.exam_region || '')) }}</text>
+              <view class="q-meta-bar">
                 <kg-tag tone="brand">{{ detail.qtype }}</kg-tag>
-                <view class="star-btn" role="button" :aria-label="qFavIds.includes(detail.id) ? '取消收藏本题' : '收藏本题'" @click="toggleQFav(detail)">
-                  <l-icon name="star" :size="20" :tone="qFavIds.includes(detail.id) ? 'warn' : 'faint'" :fill="qFavIds.includes(detail.id) ? 'currentColor' : 'none'" />
+                <view class="q-meta-acts">
+                  <view class="star-btn" role="button" :aria-label="qFavIds.includes(detail.id) ? '取消收藏本题' : '收藏本题'" @click="toggleQFav(detail)">
+                    <l-icon name="star" :size="20" :tone="qFavIds.includes(detail.id) ? 'warn' : 'faint'" :fill="qFavIds.includes(detail.id) ? 'currentColor' : 'none'" />
+                  </view>
+                  <kg-button variant="text" size="sm" icon="copy" aria-label="复制本题链接" @click="copyQLink">复制链接</kg-button>
                 </view>
-                <kg-button variant="text" size="sm" icon="copy" aria-label="复制本题链接" @click="copyQLink">复制链接</kg-button>
               </view>
             </view>
-            <text class="d-h">作答要求</text>
-            <text class="d-q">{{ detail.question }}</text>
-            <view class="d-toggle" role="button" :aria-expanded="showMat ? 'true' : 'false'" @click="showMat = !showMat">
-              <text class="d-h">给定资料</text>
-              <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showMat }" />
-            </view>
-            <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
+            <scroll-view scroll-y class="d-l-body">
+              <text class="d-h">作答要求</text>
+              <text class="d-q">{{ detail.question }}</text>
+              <view class="d-toggle" role="button" :aria-expanded="showMat ? 'true' : 'false'" @click="showMat = !showMat">
+                <text class="d-h">给定资料</text>
+                <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showMat }" />
+              </view>
+              <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
+            </scroll-view>
           </kg-card>
           <view v-if="qNav.idx >= 0 && qNav.total > 1" class="d-nav">
             <kg-button variant="ghost" size="md" icon="chevron-left" :disabled="!qNav.prevId" aria-label="上一题" @click="qNav.prevId && openQ(qNav.prevId)">上一题</kg-button>
             <text class="d-nav-pos num">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
             <kg-button variant="ghost" size="md" :disabled="!qNav.nextId" aria-label="下一题" @click="qNav.nextId && openQ(qNav.nextId)">下一题</kg-button>
           </view>
-        </scroll-view>
+        </view>
         <view class="d-col d-col-r" :style="splitH ? { height: splitH + 'px' } : {}">
           <kg-card class="d-card d-card-r">
             <!-- 作答头固定不滚：长文作答时字数统计始终可见 -->
@@ -443,23 +447,29 @@ export default {
     if (this.detail) this.measureSplit();
   },
   onLoad(opts) {
+    const tab = (opts && opts.tab) || 'q';
     if (opts && typeof opts.paper === 'string' && opts.paper && opts.paper.length <= 100) this.paper = opts.paper;
-    this.loadQs();
     this.loadFilters().then(() => {
-      if (!opts) return;
+      if (!opts || tab !== 'q' || this.qFavOnly || !(opts.year || opts.region)) return;
       const y = Number(opts.year || '');
-      if (this.years.includes(y)) this.setYear(y);
-      if (this.regions.includes(opts.region || '')) this.setRegion(opts.region);
+      if (this.years.includes(y)) this.year = y;
+      if (this.regions.includes(opts.region || '')) this.region = opts.region;
+      this.qOffset = 0;
+      this.qEnd = false;
+      this.syncFilterUrl();
+      this.loadQs();
     });
-    if (opts && opts.tab === 'r') this.switchRec();
-    else if (opts && opts.tab === 'm') {
+    if (tab === 'r') this.switchRec();
+    else if (tab === 'm') {
       if (MTYPES.includes(opts.mtype || '')) this.mtype = opts.mtype;
       if (/^\d+$/.test(opts.mid || '')) this.pinMid = Number(opts.mid);
       else if (opts.fav === '1') this.favOnly = true;
       this.switchMat();
+    } else {
+      if (opts && QTYPES.includes(opts.qtype || '')) this.qtype = opts.qtype;
+      if (opts && opts.fav === '1') this.enterQFavView();
+      else if (!(opts && (opts.year || opts.region))) this.loadQs();
     }
-    if (opts && QTYPES.includes(opts.qtype || '')) this.setQtype(opts.qtype);
-    if (opts && (!opts.tab || opts.tab === 'q') && opts.fav === '1') this.enterQFavView();
     if (opts && /^\d+$/.test(opts.id || '')) this.openQ(Number(opts.id));
     this.syncQFavs();
   },
@@ -857,9 +867,9 @@ export default {
           .select('.d-cols')
           .boundingClientRect((r) => {
             const top = r && r.top != null ? r.top : 0;
-            const wh = win.windowHeight || (typeof window !== 'undefined' ? window.innerHeight : 0) || 700;
+            const vh = (typeof window !== 'undefined' && window.innerHeight) || win.windowHeight || 700;
             const safeTop = top > 0 ? top : 96;
-            this.splitH = Math.max(360, Math.floor(wh - safeTop - 16));
+            this.splitH = Math.max(360, Math.floor(vh - safeTop - 16));
           })
           .exec();
       });
@@ -1027,6 +1037,7 @@ export default {
 
 <style scoped>
 .page { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.page.is-detail { padding-bottom: var(--sp-16); }
 .seg { margin-bottom: var(--sp-12); }
 .chips { margin-bottom: var(--sp-12); }
 .grow { flex: 1; min-width: 0; }
@@ -1039,7 +1050,8 @@ export default {
   .m-fltbar { flex-direction: row; align-items: center; }
   .m-fltbar .m-chips { flex: 1; width: auto; min-width: 0; }
 }
-.paper-tag { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* kg-tag 内部 .kg-tag__t 已自带单行省略；外层不再加 overflow:hidden 以免裁剪 .tappable::after 热区 */
+.paper-tag { max-width: 60%; }
 .tappable { cursor: pointer; position: relative; }
 .tappable::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 40px; transform: translateY(-50%); }
 .more { margin-top: var(--sp-8); }
@@ -1073,17 +1085,25 @@ export default {
 .flip { transform: rotate(180deg); }
 .d-mat { display: block; font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); white-space: pre-wrap; }
 
-/* ≥768 双栏独立滚动：两列各占一半，各自 scroll-view；窄屏退化为单列整页滚动 */
-.d-cols { display: flex; flex-direction: column; gap: 0; }
+/* ≥768 双栏独立滚动；材料卡外壳与头部固定，仅内部 .d-l-body 滚动；窄屏材料区限高内滚，作答区顺接在下方 */
+.d-cols { display: flex; flex-direction: column; gap: var(--card-gap); }
 .d-col { min-width: 0; }
-.d-col-r { display: flex; flex-direction: column; min-width: 0; }
-.d-card-r { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.d-col-l, .d-col-r { display: flex; flex-direction: column; min-width: 0; }
+.d-card-l, .d-card-r { display: flex; flex-direction: column; min-height: 0; flex: 1; margin-bottom: 0; box-sizing: border-box; }
+.d-l-hd { flex-shrink: 0; padding-bottom: var(--sp-8); border-bottom: 1px solid var(--line); }
+.d-paper { display: block; font-size: var(--fs-sub); font-weight: 500; line-height: var(--lh-sub); color: var(--ink); word-break: break-word; }
+.q-meta-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: var(--sp-8); flex-wrap: wrap; }
+.q-meta-acts { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
+.d-l-body { flex: 1; min-height: 0; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; }
+.d-l-body .d-h:first-child { margin-top: var(--sp-8); }
 .d-ans-body { flex: 1; min-height: 0; }
+:deep(.d-l-body .uni-scroll-view),
+:deep(.d-ans-body .uni-scroll-view) { overscroll-behavior: contain; }
 @media (min-width: 768px) {
   .d-cols { flex-direction: row; align-items: stretch; gap: var(--sp-16); }
-  .d-col { flex: 1 1 0; }
-  .d-col-r { flex: 1 1 0; }
-  .d-card-r { margin-bottom: 0; height: 100%; box-sizing: border-box; }
+  .d-col, .d-col-l, .d-col-r { flex: 1 1 0; }
+  .d-card-l, .d-card-r { height: 100%; box-sizing: border-box; }
+  .d-l-body { max-height: none; }
 }
 /* 窄屏单列：作答头吸顶，字数统计滚出材料区后仍可见 */
 @media (max-width: 767.9px) {
@@ -1107,7 +1127,7 @@ export default {
 .hist-res { display: block; margin-top: var(--sp-4); font-size: var(--fs-caption); line-height: var(--lh-sub); color: var(--ink-2); white-space: pre-wrap; }
 .d-ref, .d-notes { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink); white-space: pre-wrap; }
 .d-notes { color: var(--ink-2); }
-.d-nav { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); }
+.d-nav { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: var(--sp-8); }
 .d-nav-pos { font-size: var(--fs-sub); color: var(--ink-2); }
 
 .m-topic { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }

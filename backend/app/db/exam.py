@@ -231,6 +231,8 @@ def _ensure_exam_tables(conn):
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ep_kind ON exam_papers(kind, year, region)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_uid ON exam_attempts(uid, paper_id, id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_paper ON exam_attempts(paper_id, submitted_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_ea_paper_sub ON exam_attempts(paper_id, submitted_at, uid)")
     db.add_column_if_missing(conn, "exam_attempts", "secs", "TEXT")
     db.add_column_if_missing(conn, "exam_attempts", "marks", "TEXT")
     db.add_column_if_missing(conn, "exam_attempts", "probe", "INTEGER")
@@ -430,7 +432,21 @@ def list_exam_papers(kind: str | None = None, year: int | None = None,
 
 
 def exam_active_qids(question_ids: list[int]) -> list[int]:
-    active = {q["id"] for q in db.questions_by_ids(question_ids) if not q.get("disabled")}
+    if not question_ids:
+        return []
+    conn = db.get_conn()
+    active: set[int] = set()
+    uniq = list(dict.fromkeys(question_ids))
+    for chunk_start in range(0, len(uniq), 900):
+        chunk = uniq[chunk_start:chunk_start + 900]
+        active.update(
+            r[0]
+            for r in conn.execute(
+                f"SELECT id FROM questions WHERE disabled=0 AND id IN ({','.join('?' * len(chunk))})",
+                chunk,
+            )
+        )
+    conn.close()
     return [i for i in question_ids if i in active]
 
 

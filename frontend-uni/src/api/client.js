@@ -1,9 +1,9 @@
 // API transport 层：BASE_URL/请求封装/登录态/访问码/快照兜底/GET 合并缓存/埋点可靠投递。
 // 端点按域分在 api/{social,daily,export,ai,play}.js；src/api.js 只做 barrel 重导出，调用侧 import 不变。
-import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
+import { isTimeoutMsg, isNetMsg, netFailMessage, classifyHttpError, snapCacheable, snapFresh, snapPushIndex, isStaleUidResponse, isStaleUidErr, isPublicCacheablePath, trackRetryable, trackQueuePush, trackReplayPayload } from './api-policy';
 import { createGetCache, getTtl, isTrackPath } from './api-get-cache';
 
-export { isStaleUidErr };
+export { isStaleUidErr, isPublicCacheablePath };
 
 const REMOTE_BASE = 'https://kaogong.zalize.com';
 
@@ -188,12 +188,18 @@ export function sessionId() {
 }
 
 export function rawRequest(path, { method = 'GET', data, header = {}, timeout = 180000 } = {}) {
+  const skipAuth = method === 'GET' && isPublicCacheablePath(path);
   return new Promise((resolve, reject) => {
     uni.request({
       url: BASE_URL + path,
       method,
       data,
-      header: { 'X-Access-Code': getAccessCode(), 'X-Kg-Session': sessionId(), ...authHeader(), ...header },
+      header: {
+        'X-Access-Code': getAccessCode(),
+        'X-Kg-Session': sessionId(),
+        ...(skipAuth ? {} : authHeader()),
+        ...header,
+      },
       timeout,
       success: (res) => {
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(res.data);

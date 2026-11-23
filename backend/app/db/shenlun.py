@@ -151,6 +151,8 @@ def shenlun_paper_questions(paper: str) -> list[dict]:
 
 
 def _ensure_shenlun_answers(conn):
+    if db._is_ensured(conn, "shenlun_answers"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_answers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,9 +164,12 @@ def _ensure_shenlun_answers(conn):
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_sa_uid ON shenlun_answers(uid, qid, id)")
+    db._mark_ensured(conn, "shenlun_answers")
 
 
 def _ensure_mat_favs(conn):
+    if db._is_ensured(conn, "shenlun_mat_favs"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_mat_favs (
             uid TEXT NOT NULL,
@@ -173,6 +178,7 @@ def _ensure_mat_favs(conn):
             PRIMARY KEY (uid, mid)
         )"""
     )
+    db._mark_ensured(conn, "shenlun_mat_favs")
 
 
 def mat_fav_ids(uid: str) -> list[int]:
@@ -211,6 +217,8 @@ def mat_fav_items(uid: str) -> list[dict]:
 
 
 def _ensure_qfavs(conn):
+    if db._is_ensured(conn, "shenlun_qfavs"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_qfavs (
             uid TEXT NOT NULL,
@@ -219,6 +227,7 @@ def _ensure_qfavs(conn):
             PRIMARY KEY (uid, qid)
         )"""
     )
+    db._mark_ensured(conn, "shenlun_qfavs")
 
 
 def qfav_ids(uid: str) -> list[int]:
@@ -258,6 +267,8 @@ def qfav_items(uid: str) -> list[dict]:
 
 
 def _ensure_sl_drafts(conn):
+    if db._is_ensured(conn, "shenlun_drafts"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shenlun_drafts (
             uid TEXT NOT NULL,
@@ -267,6 +278,7 @@ def _ensure_sl_drafts(conn):
             PRIMARY KEY (uid, qid)
         )"""
     )
+    db._mark_ensured(conn, "shenlun_drafts")
 
 
 def sl_draft_get(uid: str, qid: int) -> dict:

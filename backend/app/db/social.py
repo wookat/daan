@@ -5,10 +5,19 @@ import time
 
 import app.db as db
 
-__all__ = ["_ensure_announcements", "_ensure_ask_cur", "_ensure_ask_sessions", "_ensure_reminder_prefs", "active_announcement", "clear_ask_cur", "delete_ask_session", "get_ask_cur", "get_backup", "get_reminder_prefs", "list_ask_sessions", "save_ask_cur", "save_ask_session", "save_backup", "set_reminder_pref"]
+__all__ = ["_ensure_announcements", "_ensure_ask_cur", "_ensure_ask_sessions", "_ensure_reminder_prefs", "active_announcement", "clear_ask_cur", "delete_ask_session", "get_ask_cur", "get_backup", "get_reminder_prefs", "invalidate_announcement_cache", "list_ask_sessions", "save_ask_cur", "save_ask_session", "save_backup", "set_reminder_pref"]
+
+_ANN_TTL = 60.0
+_ANN_CACHE: dict[str, tuple[float, dict | None]] = {}
+
+
+def invalidate_announcement_cache() -> None:
+    _ANN_CACHE.clear()
 
 
 def _ensure_announcements(conn) -> None:
+    if db._is_ensured(conn, "announcements"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS announcements (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,19 +27,30 @@ def _ensure_announcements(conn) -> None:
             active INTEGER DEFAULT 1
         )"""
     )
+    db._mark_ensured(conn, "announcements")
 
 
 def active_announcement() -> dict | None:
+    path_key = str(db.DB_PATH)
+    now = time.time()
+    hit = _ANN_CACHE.get(path_key) if path_key != ":memory:" else None
+    if hit and now - hit[0] < _ANN_TTL:
+        return dict(hit[1]) if hit[1] else None
     conn = db.get_conn()
     _ensure_announcements(conn)
     row = conn.execute(
         "SELECT id, title, body FROM announcements WHERE active=1 ORDER BY id DESC LIMIT 1"
     ).fetchone()
     conn.close()
-    return dict(row) if row else None
+    res = dict(row) if row else None
+    if path_key != ":memory:":
+        _ANN_CACHE[path_key] = (now, res)
+    return dict(res) if res else None
 
 
 def _ensure_reminder_prefs(conn):
+    if db._is_ensured(conn, "reminder_prefs"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS reminder_prefs (
             uid TEXT NOT NULL,
@@ -41,6 +61,7 @@ def _ensure_reminder_prefs(conn):
             PRIMARY KEY (uid, channel)
         )"""
     )
+    db._mark_ensured(conn, "reminder_prefs")
 
 
 def set_reminder_pref(uid: str, channel: str, enabled: bool, hour: int | None = None):
@@ -98,6 +119,8 @@ def get_backup(code: str) -> dict | None:
 
 
 def _ensure_ask_sessions(conn):
+    if db._is_ensured(conn, "ask_sessions"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS ask_sessions (
             uid TEXT NOT NULL,
@@ -110,6 +133,7 @@ def _ensure_ask_sessions(conn):
             PRIMARY KEY (uid, sid)
         )"""
     )
+    db._mark_ensured(conn, "ask_sessions")
 
 
 def save_ask_session(uid: str, sid: int, ts: int, title: str, n: int, items_json: str) -> None:
@@ -160,6 +184,8 @@ def list_ask_sessions(uid: str) -> list[dict]:
 
 
 def _ensure_ask_cur(conn):
+    if db._is_ensured(conn, "ask_cur"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS ask_cur (
             uid TEXT PRIMARY KEY,
@@ -169,6 +195,7 @@ def _ensure_ask_cur(conn):
             updated_at REAL NOT NULL
         )"""
     )
+    db._mark_ensured(conn, "ask_cur")
 
 
 def save_ask_cur(uid: str, sid: int, ts: int, items_json: str) -> None:

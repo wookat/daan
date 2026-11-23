@@ -93,10 +93,11 @@ def test_legacy_text_row_still_falls_back_to_like(monkeypatch):
     items = db.mistakes_redo_questions(uid=UID, mids=[m_legacy, m_gone])
     assert [(q["mistake_id"], q["id"]) for q in items] == [(m_legacy, qid)]
     assert "_sz" not in items[0]
-    # 两行都先查了 shizheng（各 1 次等值查），未命中才 LIKE 扫；m_legacy 首扫即中（1 次），
-    # m_gone 全文扫落空再扫首行%次行% / 首行% 共 3 次（R521 前的回落阶梯不动）
+    # 两行都先查了 shizheng（各 1 次等值查）；m_legacy 命中 questions.question 唯一索引等值查（0 LIKE 扫），
+    # m_gone 全文扫落空再扫首行%次行% / 首行% 共 3 次（回落阶梯不动）
     assert len(tr.sz_lookups()) == 2
-    assert len(tr.like_scans()) == 4
+    assert any("FROM questions WHERE question=" in s for s in tr.sql)
+    assert len(tr.like_scans()) == 3
     _cleanup()
 
 

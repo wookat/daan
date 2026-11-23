@@ -354,11 +354,14 @@ def _avail_new_count(conn, uid: str, tag3: str | None = None, submodule: str | N
 
 
 def _ensure_reinforce_log(conn):
+    if db._is_ensured(conn, "reinforce_log"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS reinforce_log (
             uid TEXT NOT NULL, day TEXT NOT NULL, skill TEXT NOT NULL,
             created_at REAL, PRIMARY KEY (uid, day, skill))"""
     )
+    db._mark_ensured(conn, "reinforce_log")
 
 
 def reinforce_done_today(uid: str) -> set:
@@ -476,7 +479,7 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
     conn = db.get_conn()
     db._ensure_answer_log(conn)
     limit = min(max(limit, 1), 10)
-    qcols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
+    qcols = db.table_cols(conn, "questions")
     order = (
         "CASE WHEN correct_ratio IS NULL THEN 1 ELSE 0 END, ABS(COALESCE(correct_ratio,60) - 60), RANDOM()"
         if "correct_ratio" in qcols else "RANDOM()"
@@ -519,8 +522,7 @@ def reinforce_questions(uid: str, tag3: str | None = None, module: str | None = 
         got = _pick("tag3=?", [tag3], limit, seen)
         # 资料分析：优先把同材料的题成组带上
         if got and (module == "ziliao" or (got[0].get("module") == "ziliao")):
-            cols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
-            if "material_hash" in cols:
+            if "material_hash" in qcols:
                 regrouped: list[dict] = []
                 for q in got:
                     if len(regrouped) >= limit:

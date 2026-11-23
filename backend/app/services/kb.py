@@ -1,4 +1,5 @@
 """知识库：花生十三主体系 + 补充名师体系（申论名师 shenlun-skill、小P判断推理），均来自公开开源整理。"""
+import functools
 import os
 
 _KNOW = os.path.join(os.path.dirname(__file__), "..", "..", "..", "knowledge")
@@ -80,6 +81,7 @@ MODULES = {
 }
 
 
+@functools.lru_cache(maxsize=32)
 def load_method_text(module_key: str, max_chars: int = 24000) -> str:
     mod = MODULES.get(module_key)
     if not mod:

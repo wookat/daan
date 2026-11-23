@@ -76,8 +76,12 @@ def _practice_sub(reason: str, acc: float) -> str:
     return f"{reason}，最近正确率 {pct}%"
 
 
-def today_plan(uid: str) -> dict:
-    profile = db.get_user_profile(uid)
+_UNSET = object()
+
+
+def today_plan(uid: str, profile=_UNSET, recommend_items: list[dict] | None = None) -> dict:
+    if profile is _UNSET:
+        profile = db.get_user_profile(uid)
     if not profile:
         return {"profile": None, "tasks": []}
     days_left = _days_left(profile.get("exam_date"))
@@ -133,7 +137,7 @@ def today_plan(uid: str) -> dict:
             })
 
     # 专项练习：优先弱项（今日主攻模块置前）
-    weak = db.recommend_stats(uid, top=4)["items"]
+    weak = list(recommend_items[:4]) if recommend_items is not None else db.recommend_stats(uid, top=4)["items"]
     focus = (db.get_user_state(uid) or {}).get("focus_module") or ""
     if focus:
         weak.sort(key=lambda w: 0 if w.get("module") == focus else 1)

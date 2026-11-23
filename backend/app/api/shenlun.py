@@ -77,7 +77,7 @@ async def api_shenlun_grade(body: dict, request: Request, x_access_code: str | N
         "\n\n要求：客观、具体、指出原文依据；不要复述整篇材料；控制在 600 字内。"
     )
     try:
-        result = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1500)
+        result = await llm.chat_fast([{"role": "user", "content": prompt}], temperature=0.3, max_tokens=1800, think=False)
     except Exception as e:
         raise HTTPException(502, f"批改失败：{friendly_ai_err(e)}") from e
     uid = (body.get("uid") or "").strip()[:64]

@@ -61,7 +61,7 @@ def growth_stats(uid: str) -> dict:
     }
 
 
-def daily_plan(uid: str) -> dict:
+def daily_plan(uid: str, recommend_items: list[dict] | None = None) -> dict:
     """昨日学习摘要 + 今日推荐（规则版：待复习错题 + 弱项题型）。"""
     conn = db.get_conn()
     db._ensure_answer_log(conn)
@@ -92,7 +92,7 @@ def daily_plan(uid: str) -> dict:
     conn.close()
     state = db.get_user_state(uid)
     focus = (state or {}).get("focus_module") or ""
-    weak = db.recommend_stats(uid, top=6)["items"]
+    weak = list(recommend_items) if recommend_items is not None else db.recommend_stats(uid, top=6)["items"]
     if focus:
         weak.sort(key=lambda w: 0 if w.get("module") == focus else 1)
     return {

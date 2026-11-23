@@ -17,6 +17,7 @@ DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(__file__), ".."
 _local = threading.local()
 _ENSURED_LOCK = threading.Lock()
 _ENSURED_TABLES: set[tuple[str, str]] = set()
+_TABLE_COLS: dict[tuple[str, str], frozenset[str]] = {}
 
 
 def _is_ensured(conn, name: str) -> bool:
@@ -31,6 +32,36 @@ def _mark_ensured(conn, name: str) -> None:
     if p and p != ":memory:":
         with _ENSURED_LOCK:
             _ENSURED_TABLES.add((p, name))
+
+
+def table_cols(conn, table: str) -> frozenset[str]:
+    """Cached table column names per DB path (skips cache for :memory:)."""
+    p = getattr(conn, "_db_path", None)
+    if p and p != ":memory:":
+        with _ENSURED_LOCK:
+            hit = _TABLE_COLS.get((p, table))
+        if hit is not None:
+            return hit
+    cols = frozenset(r["name"] for r in conn.execute(f"PRAGMA table_info({table})"))
+    if cols and p and p != ":memory:":
+        with _ENSURED_LOCK:
+            _TABLE_COLS[(p, table)] = cols
+    return cols
+
+
+def table_exists(conn, table: str) -> bool:
+    """Cached table existence check once observed present on disk."""
+    key = f"exists:{table}"
+    if _is_ensured(conn, key):
+        return True
+    ok = bool(
+        conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (table,)
+        ).fetchone()
+    )
+    if ok:
+        _mark_ensured(conn, key)
+    return ok
 
 
 class _ConnProxy:
@@ -101,8 +132,14 @@ def get_conn():
         # 立刻 SQLITE_BUSY_SNAPSHOT，busy_timeout 不生效。
         conn = sqlite3.connect(cur_path, timeout=30, isolation_level="IMMEDIATE")
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        if cur_path == ":memory:" or (cur_path, "_wal_init") not in _ENSURED_TABLES:
+            conn.execute("PRAGMA journal_mode=WAL")
+            if cur_path != ":memory:":
+                with _ENSURED_LOCK:
+                    _ENSURED_TABLES.add((cur_path, "_wal_init"))
         conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA temp_store=MEMORY")
         conn.execute(f"PRAGMA cache_size={SQLITE_CACHE_KIB}")
         conn.execute(f"PRAGMA mmap_size={SQLITE_MMAP_BYTES}")
         conn.execute(f"PRAGMA journal_size_limit={SQLITE_WAL_LIMIT_BYTES}")
@@ -166,6 +203,11 @@ def init_db():
         "WHERE mastery_state IS NULL"
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_mist_uid ON mistakes(uid, created_at)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_mist_uid_qid ON mistakes(uid, question_id) "
+        "WHERE question_id IS NOT NULL"
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_mist_uid_due ON mistakes(uid, mastered, next_review, created_at)")
     # 历史 question_type 混存「模块名-细分」与「细分」两种格式，统一回填为细分题型名（幂等）
     conn.execute(
         "UPDATE mistakes SET question_type = trim(substr(question_type, instr(question_type,'-')+1)) "
@@ -216,6 +258,7 @@ def init_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_module ON questions(module, submodule)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_q_mod_sub_id ON questions(module, submodule, disabled, id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_real ON questions(is_real)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3 ON questions(tag3)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_q_tag3_disabled ON questions(tag3, disabled)")
@@ -347,6 +390,8 @@ def init_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_shenlun_notes_uid ON shenlun_notes(uid, updated_at)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sq_list ON shenlun_questions(disabled, exam_year, exam_region, qtype, id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_sm_type ON shenlun_materials(disabled, type, id)")
     conn.execute(
         """CREATE TABLE IF NOT EXISTS shizheng_questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

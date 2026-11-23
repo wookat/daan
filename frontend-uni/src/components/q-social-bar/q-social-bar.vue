@@ -1,5 +1,5 @@
 <template>
-  <view class="qsb">
+  <view class="qsb" :class="{ 'is-compact': compact }">
     <!-- 我的笔记 -->
     <view v-if="!editing && note" class="mynote" @click="startEdit">
       <view class="nb"><l-icon name="pencil-line" :size="16" tone="inherit" /><text>我的笔记：</text></view>{{ note }}
@@ -48,6 +48,7 @@ export default {
   name: 'QSocialBar',
   props: {
     questionId: { type: Number, required: true },
+    compact: { type: Boolean, default: false },
   },
   data() {
     return { count: null, note: '', draft: '', editing: false, busy: false, hot: null };
@@ -128,6 +129,10 @@ export default {
 
 <style scoped>
 .qsb { margin-top: var(--sp-8); }
+.qsb.is-compact { margin-top: var(--sp-4); }
+.qsb.is-compact .qsb-row { margin-top: 0; gap: 0 var(--sp-12); }
+.qsb.is-compact .firstc { margin-top: var(--sp-4); padding: var(--sp-4) var(--sp-12); }
+.qsb.is-compact .hotc { margin-top: var(--sp-4); }
 .mynote { background: var(--warn-soft); border-left: 3px solid var(--warn); border-radius: 0 var(--r-xs) var(--r-xs) 0; padding: var(--sp-8) var(--sp-12); font-size: var(--fs-caption); color: var(--ink-2); line-height: 1.6; }
 .nb { display: inline-flex; align-items: center; gap: var(--sp-4); vertical-align: middle; color: var(--warn-strong); font-weight: 600; }
 .edit { color: var(--brand-text); margin-left: 2px; font-size: var(--fs-caption); display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--sp-4); margin-top: -10px; margin-bottom: -10px; vertical-align: middle; }

@@ -101,6 +101,19 @@ export function trackReplayPayload(item, now) {
   return out;
 }
 
+const PUBLIC_CACHE_RE = /^\/api\/(announcement|question_counts|daily_set|submodules|real_filters|papers|comments\/plaza|search(\/question\/\d+)?|shenlun\/(questions(\/\d+)?|filters|materials|hotspots)|shizheng\/daily|exam\/templates|access_info|push\/pubkey)$/;
+
+/** 公开 uid 无关只读 GET：回传时不带 Authorization，避免 logged-in 用户穿透 Cloudflare Edge Cache */
+export function isPublicCacheablePath(path) {
+  if (typeof path !== 'string') return false;
+  const q = path.indexOf('?');
+  const pathname = q >= 0 ? path.slice(0, q) : path;
+  if (!PUBLIC_CACHE_RE.test(pathname)) return false;
+  if (q < 0) return true;
+  const qs = path.slice(q + 1);
+  return !/(^|&)uid=/.test(qs);
+}
+
 // ---------- SSE 解析 ----------
 
 // 按空行切分事件，尾部不完整片段留在 rest 供下一 chunk 续接；无 data 行或损坏 JSON 忽略。

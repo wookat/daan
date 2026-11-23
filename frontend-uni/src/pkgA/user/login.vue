@@ -1,21 +1,27 @@
 <template>
   <view class="page">
-    <view class="form">
+    <view class="auth-shell">
       <view class="hero">
         <view class="hero-logo">
           <image class="hero-logo-g" src="/static/brand/daan.svg" mode="aspectFit" aria-hidden="true" />
         </view>
         <text class="hero-t">答岸</text>
         <text class="hero-s">登录后错题、做题记录多端同步，本机记录自动合并</text>
+        <view class="hero-pts">
+          <view class="hero-pt"><l-icon name="circle-check" :size="16" tone="brand" /><text class="hero-pt-t">16 万+ 历年行测与申论真题库</text></view>
+          <view class="hero-pt"><l-icon name="circle-check" :size="16" tone="brand" /><text class="hero-pt-t">艾宾浩斯复习调度 · 错题多端同步</text></view>
+          <view class="hero-pt"><l-icon name="circle-check" :size="16" tone="brand" /><text class="hero-pt-t">AI 逐题精讲与模考能力评估</text></view>
+        </view>
       </view>
 
-      <kg-card class="card">
+      <kg-card class="card auth-card">
         <wd-segmented ref="seg" :value="modeLabel" :options="modeOpts" class="seg" @change="onModeChange" />
 
         <view class="field">
           <wd-input
             v-model="email"
             label="邮箱"
+            label-width="72px"
             type="text"
             maxlength="128"
             placeholder="请输入邮箱"
@@ -30,6 +36,7 @@
           <wd-input
             v-model="password"
             label="密码"
+            label-width="72px"
             show-password
             maxlength="64"
             placeholder="6-64 位密码"
@@ -44,6 +51,7 @@
           <wd-input
             v-model="password2"
             label="确认密码"
+            label-width="72px"
             show-password
             maxlength="64"
             placeholder="再次输入密码"
@@ -55,7 +63,7 @@
           <text v-if="fieldErr.password2" class="ferr" role="alert">{{ fieldErr.password2 }}</text>
         </view>
         <view v-if="mode === 'register'" class="field">
-          <wd-input v-model="nickname" label="昵称" maxlength="20" placeholder="选填，给自己起个名字" clearable />
+          <wd-input v-model="nickname" label="昵称" label-width="72px" maxlength="20" placeholder="选填，给自己起个名字" clearable />
           <text class="fnote">邮箱验证码功能即将上线，当前注册无需验证码</text>
         </view>
 
@@ -64,7 +72,7 @@
         </kg-button>
         <!-- #ifdef H5 -->
         <kg-button variant="secondary" size="lg" block :disabled="busy" class="sso" @click="ssoLogin">Zalize 统一账号一键登录</kg-button>
-        <text class="note">已在 account.zalize.com 登录过心动简历/速申等站点？可直接一键登录并合并本机记录</text>
+        <text class="note">已在 account.zalize.com 登录过心动简历/速申等站点？支持一键登录并合并</text>
         <!-- #endif -->
         <text v-if="err" class="err" role="alert">{{ err }}</text>
       </kg-card>
@@ -219,21 +227,34 @@ export default {
 </script>
 
 <style scoped>
-/* T5 工具模板：单列居中 max 480，不双栏，页面底 --bg */
-.page { min-height: 100vh; background: var(--bg); padding: var(--sp-16) var(--page-x) var(--sp-48); box-sizing: border-box; }
-.form { max-width: 480px; margin: 0 auto; }
-.hero { padding: var(--sp-32) var(--sp-8) var(--sp-32); text-align: center; display: flex; flex-direction: column; align-items: center; }
+/* 多端居中适应：移动端 440 单列垂直居中，桌面端 ≥1024px 880px 双栏展示，消除 44px 溢高与留白 */
+.page { min-height: calc(100vh - var(--window-top, 0px)); display: flex; align-items: center; justify-content: center; background: var(--bg); padding: var(--sp-24) var(--page-x); box-sizing: border-box; }
+.auth-shell { width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--sp-24); }
+.hero { padding: var(--sp-8) var(--sp-8) 0; text-align: center; display: flex; flex-direction: column; align-items: center; }
 /* logo 砖：字形原始 SVG 无内边距，直接 aspectFit 进 72px 会顶满砖沿；砖内留 12px 呼吸位 */
 .hero-logo { width: 72px; height: 72px; border-radius: var(--r-lg); margin-bottom: var(--sp-16); border: 1px solid var(--line); background: var(--card); display: flex; align-items: center; justify-content: center; }
 .hero-logo-g { width: 48px; height: 48px; }
 .hero-t { font-size: var(--fs-h1); line-height: var(--lh-h1); font-weight: 600; color: var(--ink); }
-.hero-s { margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-2); }
+.hero-s { margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-2); max-width: 340px; line-height: var(--lh-sub); }
+.hero-pts { display: none; margin-top: var(--sp-24); flex-direction: column; gap: var(--sp-12); }
+.hero-pt { display: flex; align-items: center; gap: var(--sp-8); }
+.hero-pt-t { font-size: var(--fs-body); color: var(--ink-2); }
+.auth-card { width: 100%; box-sizing: border-box; }
 .seg { margin-bottom: var(--sp-16); }
 .field { margin-bottom: var(--sp-12); }
 .ferr { display: block; margin-top: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); }
 .fnote { display: block; margin-top: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sub); color: var(--ink-3); }
 .primary { margin-top: var(--sp-8); }
 .sso { margin-top: var(--sp-12); }
-.note { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-3); text-align: center; }
+.note { display: block; max-width: 340px; margin: var(--sp-12) auto 0; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-3); text-align: center; }
 .err { display: block; margin-top: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); text-align: center; }
+
+/* #ifdef H5 */
+@media (min-width: 1024px) {
+  .auth-shell { max-width: 880px; flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-40); }
+  .hero { flex: 1; text-align: left; align-items: flex-start; padding: 0; }
+  .hero-pts { display: flex; }
+  .auth-card { width: 420px; flex-shrink: 0; }
+}
+/* #endif */
 </style>

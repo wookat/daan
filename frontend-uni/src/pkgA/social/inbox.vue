@@ -129,7 +129,7 @@ export default {
   .wrap { max-width: 680px; margin: 0 auto; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .wrap { max-width: 1064px !important; margin: 0 auto; }
 }
 /* #endif */
 </style>

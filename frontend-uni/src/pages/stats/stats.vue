@@ -30,11 +30,11 @@
 
     <kg-two-col v-else>
       <template #main>
-        <kg-hero-card variant="plain" label="累计刷题（含模考）" :value="totalDone" unit="题" :streak="streakDays" :secondary="{ text: '学习日历' }" @secondary="goCalendar">
+        <kg-hero-card variant="plain" label="累计刷题（含模考）" :value="totalDone" unit="题" :streak="streakDays" :secondary="wideScreen ? null : { text: '学习日历' }" @secondary="goCalendar">
           <kg-stat-row :items="heroStats" />
         </kg-hero-card>
 
-        <predict-card ref="predict" />
+        <predict-card ref="predict" :prefetched="statsPredData" />
 
         <!-- 今日待办 -->
         <kg-card v-if="(reco && reco.items.length) || dueN" class="sec">
@@ -69,7 +69,7 @@
             </view>
             <view class="hm-grid">
               <view v-for="(col, ci) in hmCols" :key="ci" class="hm-col">
-                <view v-for="(c, ri) in col" :key="ri" class="hm-c" :class="'lv' + c.lv + (c.future ? ' fut' : '')" />
+                <view v-for="(c, ri) in col" :key="ri" class="hm-c" :class="'lv' + c.lv + (c.future ? ' fut' : '')" :title="c.future ? '' : c.key + ' · ' + c.n + ' 题'" />
               </view>
             </view>
           </view>
@@ -100,50 +100,6 @@
           </view>
         </kg-card>
 
-        <!-- 错题模块分布 -->
-        <kg-card class="sec">
-          <kg-section-header title="错题模块分布" />
-          <kg-empty-state v-if="loadErr && !byModule.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
-          <kg-empty-state v-else-if="!byModule.length" compact icon="inbox" title="暂无错题" desc="答错的题会汇集到这里，按模块统计" />
-          <view v-for="m in shownModules" :key="m.module" class="mrow" role="button" @click="goPractice(m.module)">
-            <view class="mrow-main">
-              <view class="blabel">
-                <text>{{ modName(m.module) }}</text>
-                <text class="bn num">×{{ m.n }}</text>
-              </view>
-              <kg-progress :value="m.n" :max="total" :module="m.module" />
-            </view>
-            <l-icon name="chevron-right" :size="20" tone="faint" />
-          </view>
-          <view v-if="byModule.length > 3" class="more" role="button" @click="modOpen = !modOpen">{{ modOpen ? '收起' : '展开全部 ' + byModule.length + ' 个模块' }}</view>
-        </kg-card>
-
-        <!-- 高频错题型 -->
-        <kg-card class="sec">
-          <kg-section-header title="高频错题型 TOP10" />
-          <kg-empty-state v-if="loadErr && !byType.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
-          <kg-empty-state v-else-if="!byType.length" compact icon="inbox" title="暂无数据" desc="错题积累后会按题型聚合" />
-          <view v-else class="top-chips">
-            <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" role="button" @click="goType(t)">
-              <text class="tc-name">{{ typeName(t.question_type) }}</text>
-              <text class="tc-n num">×{{ t.n }}</text>
-            </view>
-            <view v-if="byType.length > 5" class="top-chip is-more" role="button" @click="topOpen = !topOpen">{{ topOpen ? '收起' : '+' + (byType.length - 5) }}</view>
-          </view>
-        </kg-card>
-
-        <!-- 错因分布 -->
-        <kg-card v-if="byReason.length" class="sec">
-          <kg-section-header title="错因分布" />
-          <view v-for="r in byReason" :key="r.error_reason" class="brow">
-            <view class="blabel">
-              <text>{{ r.error_reason }}</text>
-              <text class="bn num">×{{ r.n }}</text>
-            </view>
-            <view class="bar"><view class="fill is-warn" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" /></view>
-          </view>
-        </kg-card>
-
         <!-- 近 7 日 -->
         <kg-card v-if="trendHas" class="sec">
           <kg-section-header title="近 7 日正确率" />
@@ -164,32 +120,6 @@
           <text v-if="growthDelta !== null" class="gw-delta" :class="{ 'is-up': growthDelta >= 0 }">
             {{ growthDeltaLabel }}{{ growthDelta >= 0 ? '提升' : '下降' }} {{ Math.abs(growthDelta) }} 个百分点
           </text>
-        </kg-card>
-
-        <!-- 申论 -->
-        <kg-card v-if="slStats && slStats.total" class="sec">
-          <kg-section-header title="申论学习" more="作答记录" @more="goShenlun" />
-          <view class="sl-row">
-            <text class="sl-num num">{{ slStats.total }}</text>
-            <text class="sl-lab">次 AI 批改</text>
-            <text v-if="slStats.last_at" class="sl-last">最近 {{ slLast }}</text>
-          </view>
-          <view class="sl-types">
-            <kg-tag v-for="t in slStats.by_type" :key="t.qtype" tone="brand">{{ t.qtype }} ×{{ t.n }}</kg-tag>
-          </view>
-          <template v-if="slStats.issues && slStats.issues.length">
-            <view class="sl-ih" role="button" @click="slIssuesOpen = !slIssuesOpen">
-              <text>近期问题点（{{ slStats.issues.length }}）</text>
-              <l-icon name="chevron-down" :size="16" tone="muted" class="chev" :class="{ 'is-open': slIssuesOpen }" />
-            </view>
-            <view v-if="slIssuesOpen">
-              <view v-for="(it, i) in slStats.issues" :key="i" class="sl-issue">
-                <kg-tag :tone="it.kind === '提升建议' ? 'warn' : 'bad'">{{ it.kind === '提升建议' ? '建议' : '遗漏' }}</kg-tag>
-                <text class="sl-it">{{ it.text }}</text>
-              </view>
-              <text class="note">来自你最近的 AI 批改结果，供针对性强化</text>
-            </view>
-          </template>
         </kg-card>
 
         <!-- 模考趋势 -->
@@ -238,17 +168,6 @@
           <view v-if="history.length > 6" class="more" role="button" @click="showAllHist = !showAllHist">{{ showAllHist ? '收起' : '展开全部 ' + Math.min(history.length, 30) + ' 条' }}</view>
         </kg-card>
 
-        <!-- 掌握度地图入口 -->
-        <kg-card class="sec" clickable chevron @click="goMasteryMap">
-          <view class="km-entry">
-            <view class="km-cov" :style="kmCovStyle"><view class="km-cov-in num">{{ kmCov != null ? kmCov + '%' : '--' }}</view></view>
-            <view class="grow">
-              <text class="km-entry-t">考点掌握度地图</text>
-              <text class="km-entry-s">三级考点五档色阶，看清每个考点的掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
-            </view>
-          </view>
-        </kg-card>
-
         <!-- 考点地图 -->
         <kg-card v-if="subMap.length" class="sec">
           <kg-section-header title="考点地图" />
@@ -266,16 +185,6 @@
             <kg-tag tone="warn">60–80%</kg-tag>
             <kg-tag tone="ok">&gt;80% 掌握</kg-tag>
             <text class="note">点考点直达专项练习</text>
-          </view>
-        </kg-card>
-
-        <kg-card class="sec" clickable chevron @click="goPlanSetup">
-          <view class="km-entry">
-            <view class="todo-ico"><l-icon name="calendar" :size="20" tone="on-brand" /></view>
-            <view class="grow">
-              <text class="km-entry-t">学习计划</text>
-              <text class="km-entry-s">报考画像与每日任务，可随时重新制定</text>
-            </view>
           </view>
         </kg-card>
       </template>
@@ -314,6 +223,97 @@
             </view>
           </view>
         </kg-card>
+
+        <kg-card class="sec" clickable chevron @click="goPlanSetup">
+          <view class="km-entry">
+            <view class="todo-ico"><l-icon name="calendar" :size="20" tone="on-brand" /></view>
+            <view class="grow">
+              <text class="km-entry-t">学习计划</text>
+              <text class="km-entry-s">报考画像与每日任务，可随时重新制定</text>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 掌握度地图入口 -->
+        <kg-card class="sec" clickable chevron @click="goMasteryMap">
+          <view class="km-entry">
+            <view class="km-cov" :style="kmCovStyle"><view class="km-cov-in num">{{ kmCov != null ? kmCov + '%' : '--' }}</view></view>
+            <view class="grow">
+              <text class="km-entry-t">考点掌握度地图</text>
+              <text class="km-entry-s">三级考点五档色阶，看清每个考点的掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
+            </view>
+          </view>
+        </kg-card>
+
+        <!-- 错题模块分布 -->
+        <kg-card class="sec">
+          <kg-section-header title="错题模块分布" />
+          <kg-empty-state v-if="loadErr && !byModule.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
+          <kg-empty-state v-else-if="!byModule.length" compact icon="inbox" title="暂无错题" desc="答错的题会汇集到这里，按模块统计" />
+          <view v-for="m in shownModules" :key="m.module" class="mrow" role="button" @click="goPractice(m.module)">
+            <view class="mrow-main">
+              <view class="blabel">
+                <text>{{ modName(m.module) }}</text>
+                <text class="bn num">×{{ m.n }}</text>
+              </view>
+              <kg-progress :value="m.n" :max="total" :module="m.module" />
+            </view>
+            <l-icon name="chevron-right" :size="20" tone="faint" />
+          </view>
+          <view v-if="byModule.length > 3" class="more" role="button" @click="modOpen = !modOpen">{{ modOpen ? '收起' : '展开全部 ' + byModule.length + ' 个模块' }}</view>
+        </kg-card>
+
+        <!-- 高频错题型 -->
+        <kg-card class="sec">
+          <kg-section-header title="高频错题型 TOP10" />
+          <kg-empty-state v-if="loadErr && !byType.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
+          <kg-empty-state v-else-if="!byType.length" compact icon="inbox" title="暂无数据" desc="错题积累后会按题型聚合" />
+          <view v-else class="top-chips">
+            <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" role="button" @click="goType(t)">
+              <text class="tc-name">{{ typeName(t.question_type) }}</text>
+              <text class="tc-n num">×{{ t.n }}</text>
+            </view>
+            <view v-if="byType.length > 5" class="top-chip is-more" role="button" @click="topOpen = !topOpen">{{ topOpen ? '收起' : '+' + (byType.length - 5) }}</view>
+          </view>
+        </kg-card>
+
+        <!-- 错因分布 -->
+        <kg-card v-if="byReason.length" class="sec">
+          <kg-section-header title="错因分布" />
+          <view v-for="r in byReason" :key="r.error_reason" class="brow">
+            <view class="blabel">
+              <text>{{ r.error_reason }}</text>
+              <text class="bn num">×{{ r.n }}</text>
+            </view>
+            <view class="bar"><view class="fill is-warn" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" /></view>
+          </view>
+        </kg-card>
+
+        <!-- 申论 -->
+        <kg-card v-if="slStats && slStats.total" class="sec">
+          <kg-section-header title="申论学习" more="作答记录" @more="goShenlun" />
+          <view class="sl-row">
+            <text class="sl-num num">{{ slStats.total }}</text>
+            <text class="sl-lab">次 AI 批改</text>
+            <text v-if="slStats.last_at" class="sl-last">最近 {{ slLast }}</text>
+          </view>
+          <view class="sl-types">
+            <kg-tag v-for="t in slStats.by_type" :key="t.qtype" tone="brand">{{ t.qtype }} ×{{ t.n }}</kg-tag>
+          </view>
+          <template v-if="slStats.issues && slStats.issues.length">
+            <view class="sl-ih" role="button" @click="slIssuesOpen = !slIssuesOpen">
+              <text>近期问题点（{{ slStats.issues.length }}）</text>
+              <l-icon name="chevron-down" :size="16" tone="muted" class="chev" :class="{ 'is-open': slIssuesOpen }" />
+            </view>
+            <view v-if="slIssuesOpen">
+              <view v-for="(it, i) in slStats.issues" :key="i" class="sl-issue">
+                <kg-tag :tone="it.kind === '提升建议' ? 'warn' : 'bad'">{{ it.kind === '提升建议' ? '建议' : '遗漏' }}</kg-tag>
+                <text class="sl-it">{{ it.text }}</text>
+              </view>
+              <text class="note">来自你最近的 AI 批改结果，供针对性强化</text>
+            </view>
+          </template>
+        </kg-card>
       </template>
     </kg-two-col>
   </view>
@@ -321,17 +321,26 @@
 
 <script>
 import { request, snapPeek, anonUid, getAuthUser, fetchCheckinSummary, trackEvent, isStaleUidErr } from '../../api/api.js';
-import { checkinStreak, dayKey, cnWeekKey } from '../../home/checkin.js';
+import { checkinStreak, cnWeekKey } from '../../home/checkin.js';
 import { examTrend } from '../../exam/exam-trend.js';
 import { snapshotViewMixin } from '../../practice/snapshot-view.js';
 import { setBookBadge } from '../../utils/tabbar-badge.js';
-import { visColors } from '../../components/kg-echart/kg-echart.vue';
+import { visColors } from '../../utils/vis-colors.js';
 
-// 统一柱状图底座：隐藏轴、柱距自适应、点按有反馈
-function barOption(c, data, { yMax = 100, labels = null, markY = null, markLabel = '' } = {}) {
+// 统一柱状图底座：带坐标虚线、悬停提示与数值标签
+function barOption(c, data, { yMax = 100, labels = null, markY = null, markLabel = '', unit = '', showLabel = false } = {}) {
   return {
     animationDuration: 400,
-    grid: { left: 4, right: 4, top: markY != null ? 20 : 8, bottom: labels ? 2 : 4, containLabel: !!labels },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: c.card,
+      borderColor: c.line,
+      borderWidth: 1,
+      textStyle: { color: c.ink, fontSize: 12 },
+      valueFormatter: (v) => (unit ? `${v}${unit}` : String(v)),
+    },
+    grid: { left: 4, right: 4, top: markY != null || showLabel ? 22 : 8, bottom: labels ? 2 : 4, containLabel: !!labels },
     xAxis: {
       type: 'category',
       data: labels || data.map((d, i) => i + 1),
@@ -339,12 +348,31 @@ function barOption(c, data, { yMax = 100, labels = null, markY = null, markLabel
       axisTick: { show: false },
       axisLabel: labels ? { color: c.ink3, fontSize: 11 } : { show: false },
     },
-    yAxis: { type: 'value', max: yMax, show: false },
+    yAxis: {
+      type: 'value',
+      max: yMax,
+      splitNumber: 2,
+      axisLabel: { show: false },
+      axisLine: { show: false },
+      axisTick: { show: false },
+      splitLine: { show: true, lineStyle: { color: c.line, type: 'dashed' } },
+    },
     series: [{
       type: 'bar',
       data,
+      barMaxWidth: 28,
+      barMinHeight: 4,
       barCategoryGap: '35%',
       itemStyle: { borderRadius: [4, 4, 0, 0] },
+      label: showLabel
+        ? {
+            show: true,
+            position: 'top',
+            color: c.ink2,
+            fontSize: 11,
+            formatter: (p) => (p.value > 0 ? `${p.value}${unit}` : ''),
+          }
+        : { show: false },
       emphasis: { itemStyle: { opacity: 0.75 } },
       ...(markY != null
         ? {
@@ -379,7 +407,8 @@ const UNLOCK_N = 10;
 export default {
   mixins: [snapshotViewMixin({ noun: '统计', reload: 'refreshAccountData' })],
   data() {
-    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, dueSynced: false, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null, themeTick: 0 };
+    const ww = (uni.getSystemInfoSync && uni.getSystemInfoSync().windowWidth) || 0;
+    return { UNLOCK_N, wideScreen: ww >= 1024, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, dueSynced: false, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null, statsPredData: null, themeTick: 0 };
   },
   computed: {
     hasData() {
@@ -535,7 +564,7 @@ export default {
           else if (n >= 15) lv = 3;
           else if (n >= 5) lv = 2;
           else if (n > 0) lv = 1;
-          col.push({ lv, future });
+          col.push({ lv, future, key, n });
         }
         cols.push(col);
       }
@@ -580,19 +609,28 @@ export default {
       ];
     },
     trend() {
+      const svDays = this.hmDays;
       const days = this.pstats.days || {};
       const dc = this.pstats.daysCorrect || {};
+      const today = this.cnToday;
       const out = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const key = dayKey(d);
-        const done = days[key] || 0;
+        const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        let done = 0;
+        let correct = 0;
+        if (svDays && svDays[key]) {
+          done = svDays[key].n || 0;
+          correct = svDays[key].correct || 0;
+        } else if (!svDays) {
+          done = days[key] || 0;
+          correct = dc[key] || 0;
+        }
         out.push({
           key,
           label: i === 0 ? '今天' : `${d.getMonth() + 1}/${d.getDate()}`,
           done,
-          pct: done ? Math.round(((dc[key] || 0) / done) * 100) : 0,
+          pct: done ? Math.round((correct / done) * 100) : 0,
         });
       }
       return out;
@@ -606,10 +644,11 @@ export default {
       return barOption(
         c,
         this.trend.map((t) => ({
-          value: t.done ? Math.max(t.pct, 6) : 0,
+          value: t.done ? (t.pct > 0 ? t.pct : 2) : 0,
           itemStyle: { color: !t.done ? c.fill : t.pct < 60 ? c.warn : c.brand },
+          label: { show: t.done > 0, position: 'top', color: c.ink2, fontSize: 11, formatter: () => `${t.pct}%` },
         })),
-        { labels: this.trend.map((t) => t.label) }
+        { labels: this.trend.map((t) => t.label), unit: '%', showLabel: true }
       );
     },
     examOption() {
@@ -624,7 +663,7 @@ export default {
           value: p.score,
           itemStyle: { color: p.score < max * 0.6 ? c.bad : p.score < max * 0.8 ? c.warn : c.brand },
         })),
-        { yMax: max, markY: d.target != null ? d.target : null, markLabel: d.target != null ? '目标 ' + d.target : '' }
+        { yMax: max, markY: d.target != null ? d.target : null, markLabel: d.target != null ? '目标 ' + d.target : '', unit: '分', showLabel: true }
       );
     },
     accOption() {
@@ -632,7 +671,8 @@ export default {
       const c = visColors();
       return barOption(
         c,
-        this.trendData.map((p) => ({ value: p, itemStyle: { color: pctColor(c, p) } }))
+        this.trendData.map((p) => ({ value: p, itemStyle: { color: pctColor(c, p) } })),
+        { unit: '%' }
       );
     },
     speedOption() {
@@ -644,7 +684,7 @@ export default {
           value: s,
           itemStyle: { color: s > 90 ? c.bad : s > 60 ? c.warn : c.brand },
         })),
-        { yMax: 120 }
+        { yMax: 120, unit: 's' }
       );
     },
     reasonTotal() {
@@ -734,10 +774,14 @@ export default {
   onShow() {
     this.refreshAccountData();
   },
+  onResize(res) {
+    const w = (res && res.size && res.size.windowWidth) || ((uni.getSystemInfoSync && uni.getSystemInfoSync().windowWidth) || 0);
+    this.wideScreen = w >= 1024;
+  },
   watch: {
-    // 解锁卡 → 完整页切换后 predict-card 才挂载，补一次加载
+    // 解锁卡 → 完整页切换后 predict-card 才挂载，仅无预取时补一次加载
     hasData(v) {
-      if (v) this.$nextTick(() => this.$refs.predict && this.$refs.predict.load());
+      if (v) this.$nextTick(() => this.$refs.predict && !this.statsPredData && this.$refs.predict.load());
     },
   },
   methods: {
@@ -746,14 +790,64 @@ export default {
       this.authUser = getAuthUser();
       this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
       this.history = this.loadHist();
-      this.loadHeatmap();
-      if (this.$refs.predict) this.$refs.predict.load();
-      this.loadGrowth();
-      this.loadReco();
-      this.loadSlStats();
-      this.loadMastery();
-      this.loadExamTrend();
-      this.load();
+      this.loadBundle().then((ok) => {
+        if (ok) return;
+        this.loadHeatmap();
+        if (this.$refs.predict) this.$refs.predict.load();
+        this.loadGrowth();
+        this.loadReco();
+        this.loadSlStats();
+        this.loadMastery();
+        this.loadExamTrend();
+        this.load();
+      });
+    },
+    applyBundle(d, isSnap = false) {
+      if (!d || typeof d !== 'object') return false;
+      const stale = isSnap ? true : !!this.noteSnapshot(d);
+      if (d.summary) {
+        this.hmDays = d.summary.days || {};
+        if (d.summary.streak != null) this.svStreak = d.summary.streak;
+        if (!this._hmTracked && !isSnap) {
+          this._hmTracked = true;
+          trackEvent('heatmap_view', 'stats');
+        }
+      }
+      if (d.growth) this.growth = d.growth;
+      if (d.recommend) this.reco = d.recommend;
+      if (d.due_total != null) {
+        this.dueN = d.due_total || 0;
+        if (!stale) {
+          this.dueSynced = true;
+          setBookBadge(this.dueN);
+        } else {
+          this.dueSynced = false;
+        }
+      }
+      if (d.shenlun_stats) this.slStats = d.shenlun_stats;
+      if ('mastery_cov' in d) this.kmCov = d.mastery_cov;
+      if (d.exam_attempts) this.examAttempts = d.exam_attempts;
+      if ('target_score' in d) this.examTarget = d.target_score;
+      if (d.predict) this.statsPredData = d.predict;
+      if (d.stats) {
+        this.paintStats(d.stats);
+        if (!isSnap && !stale) this.settleSnapshotRound();
+      }
+      return true;
+    },
+    async loadBundle() {
+      this.loadErr = '';
+      const bp = '/api/stats_bundle?uid=' + encodeURIComponent(anonUid());
+      const snap = snapPeek(bp);
+      if (snap) this.applyBundle(snap, true);
+      try {
+        const d = await request(bp);
+        this.applyBundle(d, false);
+        return true;
+      } catch (e) {
+        if (isStaleUidErr(e)) return true;
+        return false;
+      }
     },
     resetAccountState() {
       this.hmDays = null;
@@ -761,6 +855,7 @@ export default {
       this.kmCov = null;
       this.examAttempts = null;
       this.examTarget = null;
+      this.statsPredData = null;
       this.growth = null;
       this.reco = null;
       this.dueN = 0;
@@ -989,21 +1084,26 @@ export default {
 .grow { flex: 1; min-width: 0; }
 .more { text-align: center; font-size: var(--fs-sub); color: var(--brand-text); min-height: var(--hit-min); display: flex; align-items: center; justify-content: center; }
 
-/* 热力图：4 档只用品牌色透明度，深色自动跟随 */
+/* 热力图：4 档只用品牌色透明度，深色自动跟随；方格居中不拉扁 */
 .hm-total { font-size: var(--fs-caption); color: var(--ink-3); }
-.hm-body { display: flex; gap: var(--sp-4); margin-top: var(--sp-4); }
-.hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 1px 0; }
-.hm-yl { font-size: var(--fs-caption); color: var(--ink-3); height: 13px; line-height: 13px; }
-.hm-grid { flex: 1; display: flex; gap: 3px; }
-.hm-col { flex: 1; display: flex; flex-direction: column; gap: 3px; }
-.hm-c { width: 100%; height: 13px; border-radius: 3px; background: var(--fill); }
+.hm-body { display: flex; gap: var(--sp-8); margin-top: var(--sp-8); align-items: stretch; }
+.hm-ylab { display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0; }
+.hm-yl { font-size: var(--fs-caption); color: var(--ink-3); height: 14px; line-height: 14px; }
+.hm-grid { display: flex; gap: 4px; flex: 1; max-width: 300px; }
+.hm-col { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.hm-c { width: 100%; aspect-ratio: 1 / 1; max-width: 18px; border-radius: 3px; background: var(--fill); }
 .hm-c.lv1 { background: var(--brand-soft-2); }
 .hm-c.lv2 { background: var(--brand); opacity: 0.45; }
 .hm-c.lv3 { background: var(--brand); opacity: 0.7; }
 .hm-c.lv4 { background: var(--brand-press); }
 .hm-c.fut { opacity: 0; }
 .hm-legend { display: flex; align-items: center; gap: var(--sp-4); justify-content: flex-end; margin-top: var(--sp-8); }
-.hm-legend .hm-c { width: 13px; flex: none; }
+.hm-legend .hm-c { width: 13px; height: 13px; max-width: 13px; flex: none; }
+@media (min-width: 768px) {
+  .hm-grid { max-width: 280px; gap: 5px; }
+  .hm-col { gap: 5px; }
+  .hm-yl { height: 18px; line-height: 18px; }
+}
 .hm-lt { font-size: var(--fs-caption); color: var(--ink-3); }
 .hm-note { font-size: var(--fs-caption); color: var(--ink-3); margin-right: auto; }
 

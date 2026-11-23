@@ -34,6 +34,8 @@ def _jwks_client():
 
 
 def _init_binding_table(conn):
+    if db._is_ensured(conn, "zalize_bindings"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS zalize_bindings (
             email TEXT PRIMARY KEY,
@@ -41,6 +43,8 @@ def _init_binding_table(conn):
             created_at REAL NOT NULL
         )"""
     )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_zb_uid ON zalize_bindings(user_id)")
+    db._mark_ensured(conn, "zalize_bindings")
 
 
 def _central_email(cookie: str | None) -> str:

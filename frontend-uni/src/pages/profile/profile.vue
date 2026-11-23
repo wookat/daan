@@ -70,20 +70,20 @@
         <!-- 偏好设置（桌面双栏放到右栏平衡高度，移动端自然顺排在「学习」下方） -->
         <kg-section-header title="偏好设置" />
         <wd-cell-group custom-class="cellcard" border>
-          <wd-cell title="每日目标" :value="dailyGoal + ' 题/天'" is-link clickable @click="cycleGoal">
+          <wd-cell key="goal" title="每日目标" :value="dailyGoal + ' 题/天'" is-link clickable @click="cycleGoal">
             <template #icon><view class="cell-ico"><l-icon name="flag" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell title="字号与显示" :value="['小', '标准', '大'][fontLv]" is-link clickable @click="cycleFont">
+          <wd-cell key="font" title="字号与显示" :value="['小', '标准', '大'][fontLv]" is-link clickable @click="cycleFont">
             <template #icon><view class="cell-ico"><l-icon name="a-large-small" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell title="学习提醒" :value="remindOn ? '每天 ' + remindTime : '未开启'" is-link clickable @click="goReminders">
+          <wd-cell key="remind" title="学习提醒" :value="remindOn ? '每天 ' + remindTime : '未开启'" is-link clickable @click="goReminders">
             <template #icon><view class="cell-ico"><l-icon name="alarm-clock" :size="20" tone="info" /></view></template>
           </wd-cell>
           <!-- #ifdef H5 -->
-          <wd-cell title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
+          <wd-cell key="theme" title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
             <template #icon><view class="cell-ico"><l-icon name="moon" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell title="主题色" custom-class="acc-cell">
+          <wd-cell key="accent" title="主题色" custom-class="acc-cell">
             <template #icon><view class="cell-ico"><l-icon name="palette" :size="20" tone="info" /></view></template>
             <view class="acc-row">
               <view
@@ -100,17 +100,17 @@
               </view>
             </view>
           </wd-cell>
-          <wd-cell v-if="pwaInstallable" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
+          <wd-cell v-if="pwaInstallable" key="pwa" title="安装到桌面" value="像 App 一样从主屏打开" is-link clickable @click="installPwa">
             <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell v-else-if="iosInstallable" title="安装到主屏幕" value="像 App 一样从主屏打开" is-link clickable @click="showIosGuide">
+          <wd-cell v-else-if="iosInstallable" key="ios-pwa" title="安装到主屏幕" value="像 App 一样从主屏打开" is-link clickable @click="showIosGuide">
             <template #icon><view class="cell-ico"><l-icon name="monitor-down" :size="20" tone="info" /></view></template>
           </wd-cell>
           <!-- #endif -->
-          <wd-cell title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
+          <wd-cell key="offline" title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
             <template #icon><view class="cell-ico"><l-icon name="package" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell title="答题音效" :value="sfxOn ? '已开启' : '已关闭'" is-link clickable @click="toggleSfx">
+          <wd-cell key="sfx" title="答题音效" :value="sfxOn ? '已开启' : '已关闭'" is-link clickable @click="toggleSfx">
             <template #icon><view class="cell-ico"><l-icon name="bell" :size="20" tone="info" /></view></template>
           </wd-cell>
         </wd-cell-group>
@@ -118,13 +118,13 @@
         <!-- 其他 -->
         <kg-section-header title="其他" />
         <wd-cell-group custom-class="cellcard" border>
-          <wd-cell v-if="announce" title="公告" :value="announce.title" is-link clickable @click="showAnnounce">
+          <wd-cell v-if="announce" key="announce" title="公告" :value="announce.title" is-link clickable @click="showAnnounce">
             <template #icon><view class="cell-ico"><l-icon name="megaphone" :size="20" tone="warn" /></view></template>
           </wd-cell>
-          <wd-cell title="反馈与纠错" is-link clickable @click="feedback">
+          <wd-cell key="feedback" title="反馈与纠错" is-link clickable @click="feedback">
             <template #icon><view class="cell-ico"><l-icon name="message-circle" :size="20" tone="warn" /></view></template>
           </wd-cell>
-          <wd-cell title="关于" value="答岸" is-link clickable @click="aboutOpen = true">
+          <wd-cell key="about" title="关于" value="答岸" is-link clickable @click="aboutOpen = true">
             <template #icon><view class="cell-ico"><l-icon name="info" :size="20" tone="warn" /></view></template>
           </wd-cell>
         </wd-cell-group>
@@ -667,8 +667,8 @@ export default {
 .streak-best { flex: 1; min-width: 0; font-size: var(--fs-caption); color: var(--ink-3); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .streak-best :deep(uni-text), .streak-best text { white-space: nowrap; }
 
-/* cell 组：作为 cell 规范样板 */
-:deep(.cellcard) { display: block; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); margin-bottom: var(--sp-4); }
+/* cell 组边框/圆角由 App.vue .cellcard 统一治理，本页只留间距与行内排版微调 */
+:deep(.cellcard) { margin-bottom: var(--sp-4); }
 /* 标题不换行、右侧值单行省略：wot 默认左右各 flex:1，长标题会被挤成两行；
    title 由 <text> 渲染，uni-h5 基础样式 uni-text{white-space:pre-line} 会盖掉父级 nowrap，需下探到 text 本体 */
 :deep(.cellcard .wd-cell__left) { flex: 0 0 auto; max-width: 62%; min-width: 0; }

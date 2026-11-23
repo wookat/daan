@@ -106,7 +106,7 @@ export default {
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); display: flex; flex-direction: column; gap: var(--card-gap); }
 .hero-s { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); }
 
-.jcard { display: grid; justify-items: center; text-align: center; padding: var(--sp-24) var(--sp-16); }
+.jcard { display: grid; justify-items: center; text-align: center; padding: var(--sp-24) var(--sp-16); margin-top: 0; }
 .jcard :deep(.kg-inv) { width: 100%; }
 .code-l { font-size: var(--fs-sub); color: var(--ink-3); margin-bottom: var(--sp-12); }
 .code { font-size: var(--fs-display); font-weight: 600; line-height: var(--lh-display); color: var(--brand-text); letter-spacing: 4px; margin-bottom: var(--sp-24); }

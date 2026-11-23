@@ -260,6 +260,9 @@
               <kg-tag v-if="ansLetter(m.correct_answer)" tone="ok">答案 {{ ansLetter(m.correct_answer) }}</kg-tag>
             </view>
             <view v-if="m.open && mStatLine(m)" class="mstat">{{ mStatLine(m) }}</view>
+            <view v-if="m.open && (m.html || m.explanation)" class="mexpl">
+              <rich-text :nodes="m.html || md(m.explanation || '')" />
+            </view>
             <view v-if="m.open && m.attempts && m.attempts.length" class="attempts">
               <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
               <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
@@ -283,9 +286,8 @@
               </view>
               <kg-button variant="text" size="sm" icon="ellipsis" aria-label="更多操作" @click.stop="itemSheet(m)" />
             </view>
-            <rich-text v-if="m.open" :nodes="m.html" />
-            <view v-if="m.open && m.question_id" @click.stop>
-              <q-social-bar :question-id="m.question_id" />
+            <view v-if="m.open && m.question_id" class="msocial" @click.stop>
+              <q-social-bar compact :question-id="m.question_id" />
             </view>
           </kg-card>
           <kg-button v-if="tab !== 'fav' && pageN < shownItems.length" variant="text" size="md" block class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</kg-button>
@@ -1391,6 +1393,7 @@ export default {
     md,
     toggleCard(m) {
       m.open = !m.open;
+      if (m.open && !m.html) m.html = md(m.explanation || '');
       if (m.open && m.question_id && !m.attempts) {
         request('/api/attempts?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + m.question_id)
           .then((d) => { m.attempts = (d && d.items) || []; })
@@ -1553,7 +1556,7 @@ export default {
       if (!this.items.length) {
         const snap = getCachedMistakes(anonUid());
         if (snap && snap.items && snap.items.length) {
-          this.items = snap.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+          this.items = snap.items.map((m) => ({ ...m, open: false, html: '' }));
         }
       }
       if (this.items.length) {
@@ -1568,7 +1571,7 @@ export default {
         // 且页面顶部明示网络异常与快照时刻；旧快照不回写 mistakesCache（避免旧数据刷新时间戳）
         const staleD = staleAt(d);
         const staleR = staleAt(r);
-        this.items = d.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+        this.items = d.items.map((m) => ({ ...m, open: false, html: '' }));
         if (!staleR) {
           this.due = r.items;
           this.dueTotal = r.total || r.items.length;
@@ -1594,7 +1597,7 @@ export default {
         }
         const c = getCachedMistakes(anonUid());
         if (c && c.items && c.items.length) {
-          this.items = c.items.map((m) => ({ ...m, open: false, html: md(m.explanation || '') }));
+          this.items = c.items.map((m) => ({ ...m, open: false, html: '' }));
           this.showSnapshot(c.ts || 0);
           this.applyPendingKp();
           uni.showToast({ title: this.offlineText, icon: 'none' });
@@ -2035,6 +2038,9 @@ export default {
 .att-pick { color: var(--ink); }
 .att-secs { color: var(--ink-3); }
 .att-time { margin-left: auto; color: var(--ink-4); font-size: var(--fs-caption); }
+.mexpl { margin-top: var(--sp-8); padding-top: var(--sp-8); border-top: 1px solid var(--line); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); }
+.mexpl :deep(p:last-child) { margin-bottom: 0; }
+.msocial { margin-top: var(--sp-4); }
 .mfoot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-top: var(--sp-8); border-top: 1px solid var(--line); padding-top: var(--sp-4); }
 .hint { font-size: var(--fs-caption); color: var(--ink-3); }
 .acts { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
@@ -2190,6 +2196,7 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 1024px) {
   .wrap.book { max-width: 1064px; padding-top: var(--sp-24); }
+  .wrap.book :deep(.kg-two__aside) { padding-bottom: 68px; }
   .batchbar { max-width: 1032px; margin: 0 auto; }
   .sticky-bar { margin: 0 0 var(--sp-8); padding-left: 0; padding-right: 0; }
   .trendcard, .kbdcard { display: block; }

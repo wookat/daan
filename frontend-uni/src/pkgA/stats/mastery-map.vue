@@ -350,7 +350,7 @@ export default {
   .tile:hover, .row:hover, .side-item:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .page { max-width: 1044px !important; margin: 0 auto; }
+  .page { max-width: 1064px !important; margin: 0 auto; }
   .page.has-bar { padding-bottom: var(--sp-24); }
   .tabs { display: none; }
   .side-nav { display: block; }

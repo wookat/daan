@@ -28,6 +28,7 @@ def admin_create_announcement(title: str, body: str) -> int:
     conn.commit()
     aid = cur.lastrowid
     conn.close()
+    db.invalidate_announcement_cache()
     return aid
 
 
@@ -159,6 +160,7 @@ def admin_set_announcement(aid: int, active: bool) -> bool:
     conn.commit()
     ok = cur.rowcount > 0
     conn.close()
+    db.invalidate_announcement_cache()
     return ok
 
 

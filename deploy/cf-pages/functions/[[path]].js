@@ -195,7 +195,7 @@ export async function onRequest({ request, env, waitUntil }) {
   req.headers.set("X-Kg-Fetch", cacheable ? "miss" : "pass");
   if (cacheable) {
     // 仅可缓存路径剥离条件头与个人凭证：确保拿到无个性化 200 全量建立副本；
-    // 非缓存路径（如 /qimg/*、/admin/static/*）保留条件头让 origin 正常返 304
+    // 非缓存路径（如 /admin/static/*、/api/* 非白名单）保留条件头让 origin 正常返 304
     req.headers.delete("If-None-Match");
     req.headers.delete("If-Modified-Since");
     req.headers.delete("Cookie");

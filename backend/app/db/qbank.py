@@ -146,7 +146,7 @@ def random_questions(
         done = [
             r["question_id"]
             for r in conn.execute(
-                "SELECT DISTINCT question_id FROM (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL ORDER BY id DESC LIMIT 3000)",
+                "SELECT DISTINCT question_id FROM (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL ORDER BY created_at DESC LIMIT 3000)",
                 (uid,),
             )
         ]
@@ -283,8 +283,7 @@ def questions_by_ids(ids: list[int]) -> list[dict]:
 def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[dict]:
     """资料分析材料题组：选若干材料，同材料题连续出，标注 组内序号/组题数。"""
     conn = db.get_conn()
-    cols = {r["name"] for r in conn.execute("PRAGMA table_info(questions)")}
-    if "material_hash" not in cols:
+    if "material_hash" not in db.table_cols(conn, "questions"):
         conn.close()
         return random_questions("ziliao", limit, uid=uid)
     out: list[dict] = []
@@ -293,7 +292,7 @@ def grouped_ziliao_questions(limit: int = 10, uid: str | None = None) -> list[di
         done = {
             r["question_id"]
             for r in conn.execute(
-                "SELECT DISTINCT question_id FROM (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL ORDER BY id DESC LIMIT 3000)",
+                "SELECT DISTINCT question_id FROM (SELECT question_id FROM answer_log WHERE uid=? AND question_id IS NOT NULL ORDER BY created_at DESC LIMIT 3000)",
                 (uid,),
             )
         }

@@ -30,7 +30,18 @@ export default {
 .kg-two--aside-first :deep(.kg-two__main > .kg-sec:first-child) { margin-top: calc(var(--sp-24) - var(--card-gap)) !important; }
 @media (min-width: 1024px) {
   .kg-two, .kg-two--aside-first { flex-direction: row; align-items: flex-start; gap: var(--sp-24); }
-  .kg-two__aside { width: 320px; flex-shrink: 0; position: sticky; top: calc(var(--window-top, 0px) + var(--sp-16)); }
+  .kg-two__aside {
+    width: 320px;
+    flex-shrink: 0;
+    position: sticky;
+    top: calc(var(--window-top, 0px) + var(--sp-16));
+    max-height: calc(100vh - var(--window-top, 0px) - var(--sp-32));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: var(--sp-16);
+    box-sizing: border-box;
+    scrollbar-width: thin;
+  }
   :deep(.kg-two__aside > :first-child),
   :deep(.kg-two__main > :first-child) { margin-top: 0 !important; }
 }

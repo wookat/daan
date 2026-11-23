@@ -49,10 +49,13 @@
 
 <script>
 import { request, anonUid } from '../../api/api.js';
-import { visColors } from '../kg-echart/kg-echart.vue';
+import { visColors } from '../../utils/vis-colors.js';
 
 export default {
   name: 'PredictCard',
+  props: {
+    prefetched: { type: Object, default: null },
+  },
   data() {
     return { data: null, loading: true, themeTick: 0 };
   },
@@ -92,10 +95,21 @@ export default {
       };
     },
   },
+  watch: {
+    prefetched: {
+      immediate: true,
+      handler(v) {
+        if (v) {
+          this.data = v;
+          this.loading = false;
+        }
+      },
+    },
+  },
   mounted() {
     this._onTheme = () => { this.themeTick += 1; };
     uni.$on('themeChanged', this._onTheme);
-    this.load();
+    if (!this.prefetched) this.load();
   },
   beforeUnmount() {
     if (this._onTheme) {
@@ -107,6 +121,10 @@ export default {
     reset() {
       this.data = null;
       this.loading = true;
+    },
+    applyData(d) {
+      this.data = d || null;
+      this.loading = false;
     },
     // 页面 onShow 会重新调用以刷新作答进度；已有数据时静默更新不闪骨架屏
     async load() {

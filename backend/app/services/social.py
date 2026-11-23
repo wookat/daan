@@ -54,6 +54,7 @@ def init_social_db():
         )"""
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_qc_qid ON question_comments(question_id, status)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_qc_plaza ON question_comments(status, created_at)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_qc_parent ON question_comments(parent_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_qc_uid ON question_comments(uid, created_at)")
     conn.execute(
@@ -753,58 +754,13 @@ def _cn_now() -> datetime:
     return datetime.now(CN_TZ)
 
 
-@router.get("/checkin/badges")
-def api_checkin_badges(uid: str):
-    """连续打卡里程碑徽章：按 answer_log + review_log 的学习日期计算当前连击与历史最长连击（与 summary 同口径）。"""
-    u = _clean_uid(uid)
+_UNSET = object()
+
+
+def _compute_checkin(u: str, profile=_UNSET, with_summary: bool = True) -> tuple[dict, dict | None]:
     conn = db.get_conn()
-    days = {
-        r["d"]
-        for r in conn.execute(
-            f"SELECT DISTINCT {CN_DAY_SQL} AS d FROM answer_log WHERE uid=?",
-            (u,),
-        )
-    }
-    if conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_log'"
-    ).fetchone():
-        days.update(
-            r["d"]
-            for r in conn.execute(
-                f"SELECT DISTINCT {CN_DAY_SQL} AS d FROM review_log WHERE uid=?",
-                (u,),
-            )
-        )
-    conn.close()
-    streak = 0
-    d = _cn_now()
-    if d.strftime("%Y-%m-%d") not in days:
-        d -= timedelta(days=1)
-    while d.strftime("%Y-%m-%d") in days:
-        streak += 1
-        d -= timedelta(days=1)
-    best = 0
-    run = 0
-    prev = None
-    for day in sorted(days):
-        cur = datetime.strptime(day, "%Y-%m-%d").date()
-        run = run + 1 if prev is not None and (cur - prev).days == 1 else 1
-        best = max(best, run)
-        prev = cur
-    return {
-        "streak": streak,
-        "best_streak": best,
-        "badges": [{"days": m, "unlocked": best >= m} for m in BADGE_MILESTONES],
-    }
-
-
-# ---------- 打卡摘要（海报数据） ----------
-
-@router.get("/checkin/summary")
-def api_checkin_summary(uid: str):
-    u = _clean_uid(uid)
-    conn = db.get_conn()
-    days = {
+    has_review_log = db.table_exists(conn, "review_log")
+    days: dict[str, dict] = {
         r["d"]: {"n": r["n"], "correct": r["c"]}
         for r in conn.execute(
             f"""SELECT {CN_DAY_SQL} AS d,
@@ -813,10 +769,7 @@ def api_checkin_summary(uid: str):
             (u,),
         )
     }
-    # 复习作答同样计入每日练习量（今日已练/连签/日历口径统一：练习+复习都算学习行为）
-    if conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_log'"
-    ).fetchone():
+    if has_review_log:
         for r in conn.execute(
             f"""SELECT {CN_DAY_SQL} AS d,
                       COUNT(*) AS n, SUM(correct) AS c
@@ -826,33 +779,55 @@ def api_checkin_summary(uid: str):
             t = days.setdefault(r["d"], {"n": 0, "correct": 0})
             t["n"] += r["n"]
             t["correct"] = (t["correct"] or 0) + (r["c"] or 0)
-    total = sum(d["n"] for d in days.values())
-    today = _cn_now().strftime("%Y-%m-%d")
-    day0 = _cn_now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-    cleared_today = conn.execute(
-        "SELECT COUNT(*) FROM review_log WHERE uid=? AND correct=1 AND created_at>=?",
-        (u, day0),
-    ).fetchone()[0] if conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='review_log'"
-    ).fetchone() else 0
-    prof = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='user_profile'"
-    ).fetchone()
+
+    cleared_today = 0
     exam_date = exam_type = None
-    if prof:
-        p = conn.execute("SELECT * FROM user_profile WHERE uid=?", (u,)).fetchone()
-        if p:
-            keys = p.keys()
-            exam_date = p["exam_date"] if "exam_date" in keys else None
-            exam_type = p["exam_type"] if "exam_type" in keys else None
+    if with_summary:
+        day0 = _cn_now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+        if has_review_log:
+            cleared_today = conn.execute(
+                "SELECT COUNT(*) FROM review_log WHERE uid=? AND correct=1 AND created_at>=?",
+                (u, day0),
+            ).fetchone()[0]
+        if profile is _UNSET:
+            if db.table_exists(conn, "user_profile"):
+                p = conn.execute("SELECT * FROM user_profile WHERE uid=?", (u,)).fetchone()
+                if p:
+                    keys = p.keys()
+                    exam_date = p["exam_date"] if "exam_date" in keys else None
+                    exam_type = p["exam_type"] if "exam_type" in keys else None
+        elif profile:
+            exam_date = profile.get("exam_date")
+            exam_type = profile.get("exam_type")
     conn.close()
+
     streak = 0
     d = _cn_now()
+    today = d.strftime("%Y-%m-%d")
     if today not in days:
         d -= timedelta(days=1)
     while d.strftime("%Y-%m-%d") in days:
         streak += 1
         d -= timedelta(days=1)
+
+    best = 0
+    run = 0
+    prev = None
+    for day in sorted(days):
+        cur = datetime.strptime(day, "%Y-%m-%d").date()
+        run = run + 1 if prev is not None and (cur - prev).days == 1 else 1
+        best = max(best, run)
+        prev = cur
+
+    badges = {
+        "streak": streak,
+        "best_streak": best,
+        "badges": [{"days": m, "unlocked": best >= m} for m in BADGE_MILESTONES],
+    }
+    if not with_summary:
+        return badges, None
+
+    total = sum(v["n"] for v in days.values())
     t = days.get(today, {"n": 0, "correct": 0})
     days_to_exam = None
     if exam_date:
@@ -860,7 +835,7 @@ def api_checkin_summary(uid: str):
             days_to_exam = (datetime.strptime(exam_date, "%Y-%m-%d").date() - datetime.now(CN_TZ).date()).days
         except ValueError:
             days_to_exam = None
-    return {
+    summary = {
         "date": today,
         "streak": streak,
         "today_n": t["n"],
@@ -872,3 +847,27 @@ def api_checkin_summary(uid: str):
         "exam_type": exam_type,
         "days_to_exam": days_to_exam if days_to_exam is not None and days_to_exam >= 0 else None,
     }
+    return badges, summary
+
+
+def checkin_summary_and_badges(uid: str, profile=_UNSET) -> tuple[dict, dict]:
+    u = _clean_uid(uid)
+    badges, summary = _compute_checkin(u, profile=profile, with_summary=True)
+    return summary, badges  # type: ignore[return-value]
+
+
+@router.get("/checkin/badges")
+def api_checkin_badges(uid: str):
+    """连续打卡里程碑徽章：按 answer_log + review_log 的学习日期计算当前连击与历史最长连击（与 summary 同口径）。"""
+    u = _clean_uid(uid)
+    badges, _ = _compute_checkin(u, with_summary=False)
+    return badges
+
+
+# ---------- 打卡摘要（海报数据） ----------
+
+@router.get("/checkin/summary")
+def api_checkin_summary(uid: str):
+    u = _clean_uid(uid)
+    _, summary = _compute_checkin(u, with_summary=True)
+    return summary

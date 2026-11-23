@@ -113,13 +113,23 @@ export default {
       })
     }
     markMain()
-    let a11yRaf = 0
-    const scheduleMarkMain = () => {
-      if (a11yRaf) return
-      a11yRaf = window.requestAnimationFrame(() => {
-        a11yRaf = 0
-        markMain()
-      })
+    let a11yTimer = 0
+    const scheduleMarkMain = (muts) => {
+      if (muts) {
+        let hasElem = false
+        for (let i = 0; i < muts.length && !hasElem; i++) {
+          const added = muts[i].addedNodes
+          for (let j = 0; j < added.length; j++) {
+            if (added[j].nodeType === 1) { hasElem = true; break }
+          }
+        }
+        if (!hasElem) return
+      }
+      if (a11yTimer) clearTimeout(a11yTimer)
+      a11yTimer = setTimeout(() => {
+        a11yTimer = 0
+        window.requestAnimationFrame(markMain)
+      }, 160)
     }
     new MutationObserver(scheduleMarkMain).observe(document.body, { childList: true, subtree: true })
     // 空闲期后台预热其余 4 个主 Tab 的异步路由分包（不抢占首屏 LCP，消除首次切 Tab ~1s 停顿）
@@ -416,6 +426,27 @@ uni-modal .uni-modal__btn_primary {
 }
 /* #endif */
 
+/* 全局 Cell 组卡片容器：全尺寸统一圆角与边框；相邻兄弟自画分割线，规避 Wot 动态 v-if 排序错位导致顶部双线/漏线 */
+.cellcard,
+.cellcard .wd-cell-group__body {
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--card);
+}
+.cellcard {
+  display: block;
+  border: 1px solid var(--line);
+  box-sizing: border-box;
+}
+.cellcard .wd-cell.is-border .wd-cell__wrapper::after,
+.wd-cell-group.cellcard .wd-cell-group__body .wd-cell.is-border .wd-cell__wrapper::after {
+  display: none;
+  content: none;
+}
+.cellcard .wd-cell + .wd-cell .wd-cell__wrapper {
+  border-top: 1px solid var(--line);
+}
+
 /* 桌面/宽屏适配：内容居中限宽 */
 /* #ifdef H5 */
 @media (min-width: 700px) {
@@ -430,9 +461,6 @@ uni-modal .uni-modal__btn_primary {
 
 /* 宽屏（≥768px）：细描边，不叠阴影 */
 @media (min-width: 768px) {
-  uni-page-body .cellcard {
-    border: 1px solid var(--line);
-  }
   uni-page-body .wrap.home .searchbar {
     border: 1px solid var(--line);
     box-shadow: none;

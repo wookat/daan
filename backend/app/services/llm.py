@@ -4,10 +4,48 @@ import json
 import logging
 import os
 import time
+import weakref
 from collections.abc import AsyncIterator
 from typing import Literal, overload
 
 import httpx
+
+_ORIG_ASYNC_CLIENT = httpx.AsyncClient
+_CLIENT_POOL: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, httpx.AsyncClient] = weakref.WeakKeyDictionary()
+
+
+class _PooledClientCtx:
+    """Reuse a keep-alive AsyncClient per running event loop when httpx isn't monkeypatched."""
+
+    __slots__ = ("_inner", "_close")
+
+    def __init__(self, inner: httpx.AsyncClient, close: bool):
+        self._inner = inner
+        self._close = close
+
+    async def __aenter__(self) -> httpx.AsyncClient:
+        return self._inner
+
+    async def __aexit__(self, *args) -> None:
+        if self._close:
+            await self._inner.aclose()
+
+
+def _async_client():
+    if httpx.AsyncClient is not _ORIG_ASYNC_CLIENT:
+        return httpx.AsyncClient(timeout=TIMEOUT)
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return _PooledClientCtx(httpx.AsyncClient(timeout=TIMEOUT), True)
+    client = _CLIENT_POOL.get(loop)
+    if client is None or client.is_closed:
+        client = httpx.AsyncClient(
+            timeout=TIMEOUT,
+            limits=httpx.Limits(max_connections=32, max_keepalive_connections=16, keepalive_expiry=60.0),
+        )
+        _CLIENT_POOL[loop] = client
+    return _PooledClientCtx(client, False)
 
 log = logging.getLogger("kg.llm")
 
@@ -110,7 +148,7 @@ async def chat(messages: list, temperature: float = 0.2, max_tokens: int = 4000,
     t0 = time.perf_counter()
     ok = False
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+        async with _async_client() as client:
             max_attempts = 12 if _main_only() else 3
             for attempt in range(max_attempts):
                 try:
@@ -222,7 +260,7 @@ async def chat_stream(messages: list, temperature: float = 0.2, max_tokens: int 
         tries.append(("rescue", RESCUE_BASE_URL, RESCUE_API_KEY, RESCUE_MODEL))
     if not tries:
         _require_configured(base, key)
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+    async with _async_client() as client:
         for i, (ch, b, k, m) in enumerate(tries):
             t0 = time.perf_counter()
             attempt_ok = False

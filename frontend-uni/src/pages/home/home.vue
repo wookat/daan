@@ -508,9 +508,11 @@ export default {
   },
   onHide() {
     if (this._countsTimer) { clearTimeout(this._countsTimer); this._countsTimer = null; }
+    if (this._prefetchTimer) { clearTimeout(this._prefetchTimer); this._prefetchTimer = null; }
   },
   onUnload() {
     if (this._countsTimer) { clearTimeout(this._countsTimer); this._countsTimer = null; }
+    if (this._prefetchTimer) { clearTimeout(this._prefetchTimer); this._prefetchTimer = null; }
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
   },
   onShow() {
@@ -520,7 +522,11 @@ export default {
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     if (!this.counts.length) this.counts = uni.getStorageSync('countsSnap') || [];
     this.loadCounts();
-    this.prefetchNext();
+    if (this._prefetchTimer) clearTimeout(this._prefetchTimer);
+    this._prefetchTimer = setTimeout(() => {
+      this._prefetchTimer = null;
+      this.prefetchNext();
+    }, 1200);
     this.loadAnnounce();
     this.calcWeeklyDot();
     this.checkComeback();
@@ -1156,8 +1162,8 @@ export default {
 .strip { margin-top: var(--card-gap); }
 .ann-body { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); padding: var(--sp-8) var(--sp-12) 0; }
 
-/* 到期复习：白卡 + 暖色强调边（与统计页今日待办同源且不再融进页面灰底） */
-.todo { margin-top: var(--card-gap); border-color: var(--warn-line); border-left: 3px solid var(--warn); }
+/* 到期复习：标准白卡，不再加左侧黄色条 */
+.todo { margin-top: var(--card-gap); }
 .todo-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
 .todo-row:first-of-type { border-top: 0; }
 /* 待办图标块实心化：--warn-soft #fffbeb 浅底贴在白卡上几乎不可见；按行语义 tone 出实心块 */

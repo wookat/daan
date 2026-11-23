@@ -198,7 +198,7 @@ export default {
   .page { max-width: 680px; margin: 0 auto; }
 }
 @media (min-width: 1024px) {
-  .page { max-width: 1044px; margin: 0 auto; }
+  .page { max-width: 1064px; margin: 0 auto; }
 }
 /* #endif */
 </style>

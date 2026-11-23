@@ -293,7 +293,7 @@ import { markedNos, nextNavMode } from '../../exam/exam-marks.js';
 import { isFaved, toggleFav, markFavLocalOnly } from '../../exam/exam-fav.js';
 import { qStatLine } from '../../utils/q-stat.js';
 import { qTimeLine, paperAvgSecs } from '../../exam/exam-time.js';
-import { visColors } from '../../components/kg-echart/kg-echart.vue';
+import { visColors } from '../../utils/vis-colors.js';
 import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
 import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { goalGap, prevScoreDelta } from '../../exam/exam-goal.js';

@@ -496,6 +496,10 @@ export default {
 }
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; }
+  .page :deep(.kg-two__aside) {
+    top: calc(var(--window-top, 0px) + 112px);
+    max-height: calc(100vh - var(--window-top, 0px) - 128px);
+  }
 }
 /* #endif */
 </style>

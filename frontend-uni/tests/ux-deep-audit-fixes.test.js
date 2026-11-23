@@ -151,7 +151,7 @@ describe('Q1-Q6: 全站视觉/布局/交互修复回归锁', () => {
     expect(app).toContain('translate3d(0, 0, 0) !important');
   });
 
-  it('Q2+Q3: stats 入口图标用 on-brand、home 待办用白卡+暖左边框且 resumes 带 kg-cards、pomo 带左右留白', () => {
+  it('Q2+Q3: stats 入口图标用 on-brand、home 待办去掉左边框且 resumes 带 kg-cards、pomo 带左右留白', () => {
     const stats = read('../src/pages/stats/stats.vue');
     expect(stats).toContain('name="calendar" :size="20" tone="on-brand"');
     expect(stats).toContain('name="calendar-check" :size="20" tone="on-brand"');
@@ -160,7 +160,7 @@ describe('Q1-Q6: 全站视觉/布局/交互修复回归锁', () => {
     const home = read('../src/pages/home/home.vue');
     expect(home).toContain('class="resumes kg-cards"');
     expect(home).toContain('<kg-card v-if="todoRows.length" class="sec todo" variant="flat">');
-    expect(home).toContain('border-left: 3px solid var(--warn)');
+    expect(home).not.toContain('border-left: 3px solid var(--warn)');
     expect(home).toContain('max-width: 720px');
 
     const pomo = read('../src/pages/stats/pomo.vue');

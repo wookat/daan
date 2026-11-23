@@ -55,6 +55,8 @@ def shizheng_count() -> int:
 
 
 def _ensure_daily_set(conn):
+    if db._is_ensured(conn, "daily_set_entries"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS daily_set_entries (
             day TEXT NOT NULL,
@@ -69,6 +71,8 @@ def _ensure_daily_set(conn):
     db.add_column_if_missing(conn, "daily_set_entries", "nickname", "TEXT")
     # 探针成绩（服务端三路判定）不进「N 人完成 / 排行榜 / 击败 X%」全站池；本人成绩对本人始终可见
     db.add_column_if_missing(conn, "daily_set_entries", "probe", "INTEGER")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_dse_uid_day ON daily_set_entries(uid, day)")
+    db._mark_ensured(conn, "daily_set_entries")
 
 
 def _daily_pool(uid: str | None) -> tuple[str, list]:

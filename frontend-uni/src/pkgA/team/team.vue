@@ -336,8 +336,8 @@ export default {
 .join { margin-bottom: var(--card-gap); }
 .join-t { display: block; font-size: var(--fs-sub); color: var(--ink-2); margin-bottom: var(--sp-8); }
 
-.t-row { margin-bottom: var(--sp-8); }
-.t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.t-row { margin-bottom: 0; }
+.t-l { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; padding-right: var(--sp-24); box-sizing: border-box; }
 .t-name { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .t-sub { font-size: var(--fs-caption); color: var(--ink-2); }
 
@@ -359,7 +359,7 @@ export default {
 .wh-d { flex: 1; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 .wh-d.today { color: var(--brand-text); font-weight: 600; }
 
-.mem { margin-bottom: var(--sp-8); }
+.mem { margin-bottom: 0; }
 .mem-top { display: flex; align-items: center; gap: var(--sp-12); }
 .mem-av { width: 36px; height: 36px; border-radius: var(--r-full); background: var(--brand-soft); color: var(--brand-text); font-size: var(--fs-body); font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .mem-av.me { background: var(--brand); color: var(--on-brand); }

@@ -103,7 +103,7 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; }
+  .wrap { max-width: 1064px !important; }
 }
 /* #endif */
 </style>

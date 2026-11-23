@@ -558,5 +558,17 @@ class AssetStaticFiles(StaticFiles):
         return resp
 
 
-app.mount("/qimg", StaticFiles(directory=qbank_api.QIMG_DIR), name="qimg")
+class ImmutableStaticFiles(StaticFiles):
+    """题目配图（/qimg/*）：内容按 hash/题号命名且不可变，响应带 1 年不可变缓存头。"""
+
+    _CACHE = "public, max-age=31536000, immutable"
+
+    async def get_response(self, path: str, scope):
+        resp = await super().get_response(path, scope)
+        if resp.status_code == 200:
+            resp.headers["Cache-Control"] = self._CACHE
+        return resp
+
+
+app.mount("/qimg", ImmutableStaticFiles(directory=qbank_api.QIMG_DIR), name="qimg")
 app.mount("/", AssetStaticFiles(directory=FRONTEND_DIR, html=True), name="static")

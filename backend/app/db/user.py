@@ -7,11 +7,14 @@ __all__ = ["_ensure_user_profile", "_ensure_user_state", "get_user_profile", "ge
 
 
 def _ensure_user_state(conn):
+    if db._is_ensured(conn, "user_state"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS user_state (
             uid TEXT NOT NULL, day TEXT NOT NULL, focus_module TEXT, note TEXT,
             created_at REAL, PRIMARY KEY (uid, day))"""
     )
+    db._mark_ensured(conn, "user_state")
 
 
 def set_user_state(uid: str, focus_module: str, note: str = "") -> None:

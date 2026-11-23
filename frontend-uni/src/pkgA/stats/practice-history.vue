@@ -238,9 +238,9 @@ export default {
 
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
-.list { display: flex; flex-direction: column; }
+.list { display: flex; flex-direction: column; gap: var(--card-gap); }
 .group { margin-bottom: var(--sp-8); }
-.item { margin-bottom: var(--card-gap); }
+.item { margin-top: 0; margin-bottom: 0; }
 .row { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); }
 .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-4); }
 .row-top { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
@@ -280,7 +280,7 @@ export default {
   .row:hover, .d-row.opener:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px; margin: 0 auto; }
+  .wrap { max-width: 1064px; margin: 0 auto; }
 }
 /* #endif */
 </style>

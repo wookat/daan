@@ -319,11 +319,7 @@ def get_user_by_token(authorization: str | None):
 
 
 def _has_bindings_table(conn) -> bool:
-    return bool(
-        conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='zalize_bindings'"
-        ).fetchone()
-    )
+    return db.table_exists(conn, "zalize_bindings")
 
 
 _ACCOUNT_UID_RE = re.compile(r"^u\d+$")

@@ -8,6 +8,8 @@ __all__ = ["_ensure_answer_log", "_ensure_practice_progress", "_ensure_practice_
 
 
 def _ensure_practice_results(conn) -> None:
+    if db._is_ensured(conn, "practice_results"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS practice_results (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,6 +22,7 @@ def _ensure_practice_results(conn) -> None:
     )
     db.add_column_if_missing(conn, "practice_results", "uid", "TEXT")
     db.add_column_if_missing(conn, "practice_results", "probe", "INTEGER")
+    db._mark_ensured(conn, "practice_results")
 
 
 def save_practice_result(
@@ -72,6 +75,7 @@ def _ensure_answer_log(conn):
         "CREATE INDEX IF NOT EXISTS idx_al_uid_qid ON answer_log(uid, question_id) "
         "WHERE question_id IS NOT NULL"
     )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_al_created ON answer_log(created_at, probe)")
     db._mark_ensured(conn, "answer_log")
 
 
@@ -82,6 +86,21 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False, ses
     conn = db.get_conn()
     _ensure_answer_log(conn)
     db._ensure_mistake_uid(conn)
+    batch_qids = list({
+        it.get("qid") or it.get("question_id") or it.get("id")
+        for it in items
+        if isinstance(it, dict)
+        and (it.get("qid") or it.get("question_id") or it.get("id"))
+        and not db.foreign_module_qid(it.get("module"), it.get("qid") or it.get("question_id") or it.get("id"))
+    })
+    qmeta: dict[int, tuple[str | None, str | None]] = {}
+    for chunk_start in range(0, len(batch_qids), 900):
+        chunk = batch_qids[chunk_start:chunk_start + 900]
+        for qr in conn.execute(
+            f"SELECT id, module, submodule FROM questions WHERE id IN ({','.join('?' * len(chunk))})",
+            chunk,
+        ):
+            qmeta[qr["id"]] = (qr["module"], qr["submodule"])
     now = time.time()
     n = 0
     reviewed: list[dict] = []
@@ -93,13 +112,10 @@ def save_answer_log_detail(uid: str, items: list[dict], probe: bool = False, ses
         module, sub = it.get("module"), it.get("submodule")
         if db.foreign_module_qid(module, qid):
             qid = None
-        if qid:
-            qrow = conn.execute(
-                "SELECT module, submodule FROM questions WHERE id=?", (qid,)
-            ).fetchone()
-            if qrow:
-                module = qrow["module"] or module
-                sub = qrow["submodule"] or sub
+        if qid and qid in qmeta:
+            qm, qs = qmeta[qid]
+            module = qm or module
+            sub = qs or sub
         sub = db.merge_submodule(module, sub)
         try:
             secs_v = max(0, min(int(it.get("secs") or 0), 7200))

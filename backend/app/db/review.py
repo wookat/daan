@@ -8,7 +8,7 @@ from app.services import difficulty
 from app.services import review_fields
 from app.services import taxonomy
 
-__all__ = ["_advance_review", "_ensure_mistake_uid", "_ensure_review_cur", "_ensure_review_log", "_find_open_mistake", "_hydrate_mistake", "_shizheng_redo_item", "clear_review_cur", "delete_mistake", "due_mix_questions", "due_review_count", "due_reviews", "get_review_cur", "list_mistakes", "mistake_analysis_stats", "mistake_counts", "mistakes_by_qids", "mistakes_redo", "mistakes_redo_questions", "record_review", "save_mistake", "save_review_cur", "update_mistake"]
+__all__ = ["_advance_review", "_ensure_mistake_uid", "_ensure_review_cur", "_ensure_review_log", "_find_open_mistake", "_hydrate_mistake", "_save_mistake_on_conn", "_shizheng_redo_item", "clear_review_cur", "delete_mistake", "due_mix_questions", "due_review_count", "due_reviews", "get_review_cur", "list_mistakes", "mistake_analysis_stats", "mistake_counts", "mistakes_by_qids", "mistakes_redo", "mistakes_redo_questions", "record_review", "save_mistake", "save_mistakes_bulk", "save_review_cur", "update_mistake"]
 
 
 def mistakes_redo_questions(limit: int = 10, qtype: str | None = None, module: str | None = None, noqt: bool = False, uid: str | None = None, reason: str | None = None, source: str | None = None, tag3: str | None = None, mids: list[int] | None = None) -> list[dict]:
@@ -52,9 +52,18 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
         where += " AND question_id IN (SELECT id FROM questions WHERE tag3=?)"
         args.append(tag3)
     rows = conn.execute(
-        f"SELECT id, question_text, question_id FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
+        f"SELECT id, question_text, question_id, source FROM mistakes WHERE {where} ORDER BY COALESCE(next_review, created_at), created_at DESC LIMIT ?",
         (*args, limit * 2),
     ).fetchall()
+    qids = list({r["question_id"] for r in rows if r["question_id"]})
+    by_qid: dict = {}
+    for chunk_start in range(0, len(qids), 900):
+        chunk = qids[chunk_start:chunk_start + 900]
+        for qr in conn.execute(
+            f"SELECT * FROM questions WHERE id IN ({','.join('?' * len(chunk))}) AND (disabled IS NULL OR disabled=0)",
+            chunk,
+        ):
+            by_qid[qr["id"]] = qr
     out = []
     seen = set()
     skipped = 0
@@ -66,10 +75,7 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
             continue
         seen.add(key)
         if r["question_id"]:
-            byid = conn.execute(
-                "SELECT * FROM questions WHERE id=? AND (disabled IS NULL OR disabled=0)",
-                (r["question_id"],),
-            ).fetchone()
+            byid = by_qid.get(r["question_id"])
             if byid:
                 d = dict(byid)
                 d["options"] = json.loads(d.get("options") or "{}")
@@ -89,26 +95,36 @@ def mistakes_redo(limit: int = 10, qtype: str | None = None, module: str | None 
                 if len(out) >= limit:
                     break
                 continue
-        def esc(s):
-            return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        cands = conn.execute(
-            "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
-            (esc(full) + "%",),
-        ).fetchall()
-        if not cands:
-            lines = [ln.strip() for ln in full.split("\n") if ln.strip()]
-            second = lines[1][:20] if len(lines) > 1 else ""
-            pats = []
-            if second:
-                pats.append(esc(head) + "%" + esc(second) + "%")
-            pats.append(esc(head) + "%")
-            for p in pats:
-                cands = conn.execute(
-                    "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
-                    (p,),
-                ).fetchall()
-                if cands:
-                    break
+        exact = conn.execute(
+            "SELECT * FROM questions WHERE question=? AND (disabled IS NULL OR disabled=0) LIMIT 1",
+            (full,),
+        ).fetchone()
+        if exact:
+            cands = [exact]
+        elif r["source"] == "manual":
+            skipped += 1
+            continue
+        else:
+            def esc(s):
+                return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            cands = conn.execute(
+                "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
+                (esc(full) + "%",),
+            ).fetchall()
+            if not cands:
+                lines = [ln.strip() for ln in full.split("\n") if ln.strip()]
+                second = lines[1][:20] if len(lines) > 1 else ""
+                pats = []
+                if second:
+                    pats.append(esc(head) + "%" + esc(second) + "%")
+                pats.append(esc(head) + "%")
+                for p in pats:
+                    cands = conn.execute(
+                        "SELECT * FROM questions WHERE question LIKE ? ESCAPE '\\' AND (disabled IS NULL OR disabled=0) LIMIT 80",
+                        (p,),
+                    ).fetchall()
+                    if cands:
+                        break
         norm = re.sub(r"\s+", "", full)
         q = None
         for c in cands:
@@ -248,9 +264,7 @@ def _ensure_mistake_uid(conn):
     db._mark_ensured(conn, "mistake_uid")
 
 
-def save_mistake(rec: dict, probe: bool = False) -> int:
-    conn = db.get_conn()
-    _ensure_mistake_uid(conn)
+def _save_mistake_on_conn(conn, rec: dict, probe: bool = False) -> int:
     qtext = rec.get("question_text")
     qid = rec.get("question_id")
     if db.foreign_module_qid(rec.get("module"), qid):
@@ -294,8 +308,6 @@ def save_mistake(rec: dict, probe: bool = False) -> int:
                 dup["id"],
             ),
         )
-        conn.commit()
-        conn.close()
         return dup["id"]
     explanation = rec.get("explanation")
     if qid and not (explanation or "").strip():
@@ -336,10 +348,31 @@ def save_mistake(rec: dict, probe: bool = False) -> int:
             0,
         ),
     )
-    conn.commit()
-    rowid = cur.lastrowid
-    conn.close()
-    return rowid
+    return cur.lastrowid
+
+
+def save_mistake(rec: dict, probe: bool = False) -> int:
+    conn = db.get_conn()
+    _ensure_mistake_uid(conn)
+    try:
+        rowid = _save_mistake_on_conn(conn, rec, probe=probe)
+        conn.commit()
+        return rowid
+    finally:
+        conn.close()
+
+
+def save_mistakes_bulk(recs: list[dict], probe: bool = False) -> list[int]:
+    if not recs:
+        return []
+    conn = db.get_conn()
+    _ensure_mistake_uid(conn)
+    try:
+        ids = [_save_mistake_on_conn(conn, rec, probe=probe) for rec in recs]
+        conn.commit()
+        return ids
+    finally:
+        conn.close()
 
 
 def mistakes_by_qids(uid: str, qids: list[int]) -> dict[int, dict]:
@@ -640,6 +673,8 @@ def record_review(
 
 
 def _ensure_review_cur(conn):
+    if db._is_ensured(conn, "review_cur"):
+        return
     conn.execute(
         """CREATE TABLE IF NOT EXISTS review_cur (
             uid TEXT PRIMARY KEY,
@@ -647,6 +682,7 @@ def _ensure_review_cur(conn):
             updated_at REAL NOT NULL
         )"""
     )
+    db._mark_ensured(conn, "review_cur")
 
 
 def save_review_cur(uid: str, snap_json: str) -> None:

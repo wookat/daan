@@ -13,7 +13,8 @@ from app.services import manual_mistake
 from app.services import plan
 from app.services import taxonomy
 from app.api.deps import as_int, clamp_limit, rl
-from app.services.social import api_checkin_badges, api_checkin_summary
+from app.services import insights
+from app.services.social import checkin_summary_and_badges
 
 router = APIRouter()
 
@@ -138,12 +139,38 @@ def api_home_bundle(uid: str):
         raise HTTPException(400, "缺少 uid")
     u = uid[:64]
     profile = db.get_user_profile(u)
+    reco_items = db.recommend_stats(u, top=6)["items"]
+    summary, badges = checkin_summary_and_badges(u, profile=profile)
     return {
-        "plan": db.daily_plan(u),
+        "plan": db.daily_plan(u, recommend_items=reco_items),
         "profile": profile,
-        "plan_today": plan.today_plan(u) if profile else None,
-        "badges": api_checkin_badges(u),
-        "summary": api_checkin_summary(u),
+        "plan_today": plan.today_plan(u, profile=profile, recommend_items=reco_items) if profile else None,
+        "badges": badges,
+        "summary": summary,
+    }
+
+
+@router.get("/api/stats_bundle")
+def api_stats_bundle(uid: str):
+    """统计页数据聚合：把 10 路 GET 合并为 1 次请求，独立端点保留以兼容旧端。"""
+    uid = uid.strip()
+    if not uid:
+        raise HTTPException(400, "缺少 uid")
+    u = uid[:64]
+    profile = db.get_user_profile(u)
+    summary, _ = checkin_summary_and_badges(u, profile=profile)
+    mastery_snap = db.mastery_snapshot(u)
+    return {
+        "summary": summary,
+        "growth": db.growth_stats(u),
+        "recommend": db.recommend_stats(u),
+        "due_total": db.due_review_count(u),
+        "shenlun_stats": db.shenlun_stats(u),
+        "mastery_cov": None if mastery_snap.get("cold") else (mastery_snap.get("coverage") or {}).get("pct"),
+        "exam_attempts": db.list_exam_attempts(u, limit=20),
+        "target_score": profile.get("target_score") if profile else None,
+        "stats": api_stats(u),
+        "predict": insights.api_predict(u),
     }
 
 

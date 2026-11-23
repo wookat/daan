@@ -8,6 +8,9 @@ export const EDGE_CACHE_TTL = 300;
 // 屏蔽共享 origin 的长尾抖动；带 Authorization/uid 的请求一律绕过。
 export const API_EDGE_CACHE_TTL = 60;
 
+// 题目配图（/qimg/*）：按 hash/题号静态落盘，边缘缓存 24h
+export const QIMG_EDGE_CACHE_TTL = 86400;
+
 export const API_CACHE_ALLOWLIST = new Set([
   "/api/announcement",
   "/api/question_counts",
@@ -20,6 +23,11 @@ export const API_CACHE_ALLOWLIST = new Set([
   "/api/shenlun/questions",
   "/api/shenlun/filters",
   "/api/shenlun/materials",
+  "/api/shenlun/hotspots",
+  "/api/shizheng/daily",
+  "/api/exam/templates",
+  "/api/access_info",
+  "/api/push/pubkey",
 ]);
 
 // uid 无关公开 GET 的路径参数型端点（严格限定纯数字 ID，避免未来个人子路径被误缓存）
@@ -47,6 +55,7 @@ export function isEdgeCacheable(method, pathname, hasAuth, hasUid, hasOrigin = f
   if (pathname.startsWith("/p/")) return true;
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") return true;
   if (SHELL_CACHE_ALLOWLIST.has(pathname)) return true;
+  if (pathname.startsWith("/qimg/")) return true;
   // 跨源请求（如 Capacitor App 带 Origin 头）绕过公共 caches.default，避免无 CORS 头缓存污染
   if (hasAuth || hasUid || hasOrigin) return false;
   return API_CACHE_ALLOWLIST.has(pathname) || API_CACHE_PATTERNS.some((re) => re.test(pathname));
@@ -60,6 +69,7 @@ export function isUpstreamCacheable(cacheControl, vary) {
 }
 
 export function edgeTtl(pathname) {
+  if (pathname.startsWith("/qimg/")) return QIMG_EDGE_CACHE_TTL;
   return pathname.startsWith("/api/") || SHELL_CACHE_ALLOWLIST.has(pathname)
     ? API_EDGE_CACHE_TTL
     : EDGE_CACHE_TTL;
@@ -123,6 +133,7 @@ export function shouldServeOutage(method, pathname, status, hasStale) {
 
 export function isCacheableContentType(pathname, isApi, contentType) {
   const ct = contentType || "";
+  if (pathname.startsWith("/qimg/")) return ct.startsWith("image/");
   if (pathname === "/sw.js") return ct.includes("javascript");
   if (pathname === "/precache.json") return ct.includes("json");
   if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") {
