@@ -5,14 +5,14 @@
       v-else-if="errMsg"
       icon="triangle-alert"
       :title="errMsg"
-      desc="题目可能已被删除或链接不完整，10万+ 题库仍可免费刷"
+      desc="题目可能已被删除或链接不完整，16万+ 题库仍可免费刷"
       cta-text="去刷题"
       @cta="goHome"
     />
 
     <template v-else-if="d">
-      <kg-hero-card :label="d.from_name + ' 分享了一道题'" :value="d.answered || d.is_sharer ? (answers.length || d.n_answered) : '?'" :unit="d.answered || d.is_sharer ? ' 人已作答' : ''">
-        <text class="hero-s">{{ d.answered || d.is_sharer ? '看看大家都选了什么' : '先作答，再看答案和大家的选择' }}</text>
+      <kg-hero-card :label="d.from_name + ' 分享了一道题'" :value="revealed ? (answers.length || d.n_answered) : '?'" :unit="revealed ? ' 人已作答' : ''">
+        <text class="hero-s">{{ revealed ? '看看大家都选了什么' : '先作答，再看答案和大家的选择' }}</text>
       </kg-hero-card>
 
       <kg-question-card :q="qCard" class="sec">
@@ -67,18 +67,18 @@
         </kg-card>
         <kg-card v-else-if="teamJoined" variant="flat" class="sec team-cta joined">
           <view class="tc-l">
-            <text class="tc-t">🎉 已加入「{{ teamInvite.name }}」</text>
+            <view class="tc-t tc-t--row"><l-icon name="party-popper" :size="16" tone="ok" /><text>已加入「{{ teamInvite.name }}」</text></view>
             <text class="tc-s">每天刷题就是打卡，队友都能看到你的进度</text>
           </view>
           <kg-button size="md" variant="ghost" @click="goTeamPage">看队友</kg-button>
         </kg-card>
-
-        <kg-action-bar layout="actions" primary-text="去刷同类题" :secondary-text="d.is_sharer ? '复制分享链接' : ''" @primary="goSimilar" @secondary="copyLink" />
       </template>
 
       <view class="reg-tip">
-        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册答岸，10万+ 题库免费刷</kg-button>
+        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册答岸，16万+ 题库免费刷</kg-button>
       </view>
+
+      <kg-action-bar v-if="revealed" layout="actions" primary-text="去刷同类题" :secondary-text="d.is_sharer ? '复制分享链接' : ''" @primary="goSimilar" @secondary="copyLink" />
     </template>
   </view>
 </template>
@@ -129,7 +129,11 @@ export default {
     optList() {
       const o = (this.d && this.d.question.options) || {};
       const oi = (this.d && this.d.question.option_imgs) || {};
-      return Object.keys(o).map((k) => ({ key: k, text: String(o[k] == null ? '' : o[k]), images: ((oi[k] || []).map(imgUrl)) }));
+      return Object.keys(o).map((k) => {
+        const raw = oi[k];
+        const arr = Array.isArray(raw) ? raw : raw ? [raw] : [];
+        return { key: k, text: String(o[k] == null ? '' : o[k]), images: arr.map(imgUrl) };
+      });
     },
     optPicked() {
       const v = this.revealed && this.myResult ? this.myResult.picked : this.isMulti ? this.multiSel : this.picked;
@@ -191,6 +195,7 @@ export default {
         const secs = Math.round((Date.now() - this.startTs) / 1000);
         const r = await shareAnswer(this.sid, k, secs);
         this.myResult = { picked: k, correct: r.correct };
+        this.d.answered = true;
         this.d.question.answer = r.answer;
         this.d.question.explanation = r.explanation;
         this.answers = r.answers || [];
@@ -252,7 +257,7 @@ export default {
 .page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
 .sec { margin-top: var(--card-gap); }
 .h { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-bottom: var(--sp-12); }
-.hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; margin-top: var(--sp-8); }
+.hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand-2); margin-top: var(--sp-8); }
 .ans-row { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-4) 0; border-bottom: 1px solid var(--line); }
 .ans-row:last-child { border-bottom: none; }
 .ans-name { flex: 1; font-size: var(--fs-body); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -261,6 +266,7 @@ export default {
 .team-cta.joined { background: var(--ok-soft); }
 .tc-l { flex: 1; min-width: 0; }
 .tc-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+.tc-t--row { display: flex; align-items: center; gap: var(--sp-4); }
 .tc-s { display: block; font-size: var(--fs-caption); color: var(--ink-2); margin-top: var(--sp-4); }
 .reg-tip { display: flex; justify-content: center; padding: var(--sp-12) 0; }
 
@@ -268,6 +274,9 @@ export default {
 .multi-hint { font-size: var(--fs-caption); color: var(--ink-2); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 680px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 760px; margin: 0 auto; padding-bottom: var(--sp-24); }
 }

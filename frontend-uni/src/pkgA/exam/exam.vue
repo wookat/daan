@@ -15,7 +15,7 @@
         <kg-progress :value="idx + 1" :max="items.length" class="prog" />
 
         <view @touchstart="touchStart" @touchend="touchEnd">
-          <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv" :show-meta="false">
+          <kg-question-card :key="cur.id" :q="qCard" :index="idx" :total="items.length" :font-level="fontLv" :show-meta="false">
             <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
             <kg-option-group
               :options="optList"
@@ -194,11 +194,17 @@ export default {
     },
   },
   async onLoad(opt) {
+    opt = opt || {};
     this._eventId = opt.event_id ? Number(opt.event_id) : null;
+    this._templateId = opt.template ? String(opt.template) : null;
     const saved = uni.getStorageSync(PROG_KEY);
     if (
       saved && saved.attemptId && saved.endAt > Date.now() &&
-      ((opt.paper_id && String(saved.paperId) === String(opt.paper_id)) || (opt.mini && saved.mini)) &&
+      (
+        (opt.paper_id && String(saved.paperId) === String(opt.paper_id)) ||
+        (opt.mini && saved.mini) ||
+        (opt.template && saved.templateId && String(saved.templateId) === String(opt.template))
+      ) &&
       countAnswered(saved.items) > 0
     ) {
       const resume = await new Promise((resolve) => {
@@ -214,11 +220,13 @@ export default {
         this._progPushed = true;
         this.attemptId = saved.attemptId;
         this._mini = !!saved.mini;
+        if (!this._eventId && saved.eventId) this._eventId = Number(saved.eventId);
+        if (!this._templateId && saved.templateId) this._templateId = String(saved.templateId);
         this.paper = saved.paper;
         this.items = saved.items;
         this.idx = Math.min(saved.idx || 0, saved.items.length - 1);
         this._endAt = saved.endAt;
-        uni.setNavigationBarTitle({ title: this._mini ? '迷你模考' : String((saved.paper && saved.paper.title) || '全真模考').slice(0, 16) });
+        uni.setNavigationBarTitle({ title: this._mini ? '迷你模考' : String((saved.paper && saved.paper.title) || '全真模考').trim().slice(0, 40) });
         this.loading = false;
         this.startClock();
         return;
@@ -229,6 +237,9 @@ export default {
   },
   onShow() {
     this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
+    if (this.attemptId && !this.loading && !this.submitting && this._endAt > Date.now() && !this.timer) {
+      this.startClock();
+    }
     // #ifdef H5
     if (!this._exKeyHandler && typeof window !== 'undefined') {
       this._exKeyHandler = (e) => this.onExKeydown(e);
@@ -239,6 +250,8 @@ export default {
   onUnload() {
     this.stopClock();
     if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
+    if (this._navTimer) { clearTimeout(this._navTimer); this._navTimer = null; }
+    if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
     this.saveProgress();
     this.flushProgress();
     // #ifdef H5
@@ -251,6 +264,9 @@ export default {
   onHide() {
     this.saveProgress();
     this.flushProgress();
+    this.stopClock();
+    this.flushQSecs();
+    if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
     // #ifdef H5
     if (this._exKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._exKeyHandler);
@@ -268,31 +284,35 @@ export default {
       act.resolve(!!cont);
     },
     async start(opt) {
-      if (!opt.mini && !opt.paper_id && !opt.template) {
+      const o = opt || {};
+      if (!o.mini && !o.paper_id && !o.template) {
         uni.showToast({ title: '链接缺少试卷参数，去卷库选卷', icon: 'none' });
-        setTimeout(() => uni.reLaunch({ url: '/pkgA/exam/list' }), 1200);
+        this._navTimer = setTimeout(() => { this._navTimer = null; uni.reLaunch({ url: '/pkgA/exam/list' }); }, 1200);
         return;
       }
       try {
-        const data = opt.template
-          ? { uid: anonUid(), template_id: String(opt.template), weak_boost: opt.boost === '1' || opt.boost === 'true' }
-          : opt.mini
+        const data = o.template
+          ? { uid: anonUid(), template_id: String(o.template), weak_boost: o.boost === '1' || o.boost === 'true' }
+          : o.mini
             ? { uid: anonUid(), mini: true }
-            : { uid: anonUid(), paper_id: Number(opt.paper_id) };
+            : { uid: anonUid(), paper_id: Number(o.paper_id) };
         const d = await request('/api/exam/start', { method: 'POST', data });
         this.attemptId = d.attempt_id;
         this.paper = d.paper;
         this.items = (d.items || []).map((q) => ({ ...q, _picked: '', _marked: false, _secs: 0 }));
-        this._mini = !!opt.mini;
+        this._mini = !!o.mini;
         this._endAt = Date.now() + d.paper.duration_min * 60 * 1000;
-        uni.setNavigationBarTitle({ title: opt.mini ? '迷你模考' : d.paper.title.slice(0, 16) });
+        uni.setNavigationBarTitle({ title: o.mini ? '迷你模考' : String((d.paper && d.paper.title) || '全真模考').trim().slice(0, 40) });
         this.loading = false;
         this.startClock();
         this.saveProgress();
       } catch (e) {
         uni.showToast({ title: '开考失败：' + e.message, icon: 'none' });
         // 深链直达时无历史栈，navigateBack 会静默失败卡在加载页，兜底回卷库
-        setTimeout(() => uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pkgA/exam/list' }) }), 1200);
+        this._navTimer = setTimeout(() => {
+          this._navTimer = null;
+          uni.navigateBack({ fail: () => uni.reLaunch({ url: '/pkgA/exam/list' }) });
+        }, 1200);
       }
     },
     startClock() {
@@ -333,8 +353,9 @@ export default {
       }
       this.cur._picked = this.cur._picked === k ? '' : k;
       this.saveProgress();
+      if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
       if (this.cur._picked && this.idx + 1 < this.items.length) {
-        setTimeout(() => this.next(), 180);
+        this._pickTimer = setTimeout(() => this.next(), 180);
       }
     },
     toggleExcl(k) {
@@ -348,6 +369,7 @@ export default {
       this.saveProgress();
     },
     goto(i) {
+      if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
       if (i < 0 || i >= this.items.length || i === this.idx) return;
       this.flushQSecs();
       this.idx = i;
@@ -360,12 +382,15 @@ export default {
       this.goto(i);
     },
     touchStart(e) {
-      this._tsx = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0;
+      const t = e.changedTouches && e.changedTouches[0];
+      this._tsx = t ? t.clientX : 0;
+      this._tsy = t ? t.clientY : 0;
     },
     touchEnd(e) {
-      const x = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0;
-      const dx = x - this._tsx;
-      if (Math.abs(dx) < 60) return;
+      const t = e.changedTouches && e.changedTouches[0];
+      const dx = (t ? t.clientX : 0) - (this._tsx || 0);
+      const dy = (t ? t.clientY : 0) - (this._tsy || 0);
+      if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.8) return;
       if (dx < 0) this.next();
       else this.prev();
     },
@@ -375,6 +400,8 @@ export default {
         attemptId: this.attemptId,
         paperId: this.paper && this.paper.id,
         mini: !!this._mini,
+        eventId: this._eventId || null,
+        templateId: this._templateId || null,
         paper: this.paper,
         items: this.items,
         idx: this.idx,
@@ -407,6 +434,8 @@ export default {
       }).catch(() => {});
     },
     confirmSubmit() {
+      this.cardOpen = false;
+      if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
       const blank = this.items.length - this.answeredCount;
       uni.showModal({
         title: '确认交卷？',
@@ -442,8 +471,9 @@ export default {
       } catch (e) {
         // 超时/失败先确认服务端是否已判分（请求可能已送达），已判分直接进报告，避免重交撞「已交卷」
         try {
-          await request('/api/exam/report/' + this.attemptId + '?uid=' + encodeURIComponent(anonUid()), { timeout: 8000 });
+          const rep = await request('/api/exam/report/' + this.attemptId + '?uid=' + encodeURIComponent(anonUid()), { timeout: 8000 });
           uni.removeStorageSync(PROG_KEY);
+          if (rep) this.mergeIntoStats(rep);
           await this.gotoReport(this.attemptId);
           return;
         } catch (e2) {
@@ -595,6 +625,9 @@ export default {
 .side-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .side-grid { max-height: 46vh; overflow-y: auto; }
 .kbd-note { display: block; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-12); }
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
   .page :deep(.kg-two__aside) { display: block; }

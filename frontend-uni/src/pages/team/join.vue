@@ -8,7 +8,7 @@
       <template v-if="state === 'ready'">
         <text class="code-l">邀请码</text>
         <text class="code num">{{ code }}</text>
-        <kg-button variant="primary" size="lg" block @click="join">加入小队</kg-button>
+        <kg-button variant="primary" size="lg" block :loading="joining" :disabled="joining" @click="join">加入小队</kg-button>
       </template>
       <template v-else-if="state === 'joined'">
         <view class="ok-ico"><l-icon name="party-popper" :size="32" tone="brand" /></view>
@@ -30,26 +30,31 @@
       </template>
     </kg-card>
 
-    <view class="reg-tip">
-      <kg-button variant="text" size="lg" @click="goLogin">登录 / 注册账号，打卡记录多端同步 ›</kg-button>
-    </view>
+    <template v-if="!logged">
+      <view class="reg-tip">
+        <kg-button variant="text" size="lg" @click="goLogin">登录 / 注册账号，打卡记录多端同步 ›</kg-button>
+      </view>
+    </template>
   </view>
 </template>
 
 <script>
-import { teamJoin, trackEvent } from '../../api/api.js';
+import { teamJoin, trackEvent, getAuthUser } from '../../api/api.js';
 
 const SEO_TITLE = '队友邀请你加入刷题小队，一起打卡冲上岸 - 答岸';
 
 export default {
   data() {
-    return { code: '', state: 'input', teamName: '', errMsg: '' };
+    return { code: '', state: 'input', teamName: '', errMsg: '', joining: false, logged: !!getAuthUser() };
+  },
+  onShow() {
+    this.logged = !!getAuthUser();
   },
   onLoad(query) {
     const c = query && query.code ? String(query.code).trim().toUpperCase() : '';
     trackEvent('team_join_open', 'team', c || null);
     uni.setStorageSync('regSource', 'team');
-    if (c) {
+    if (c && c.length >= 4 && c.length <= 8) {
       this.code = c;
       this.state = 'ready';
     }
@@ -62,19 +67,24 @@ export default {
   },
   methods: {
     async join() {
+      if (this.joining) return;
       const c = (this.code || '').trim().toUpperCase();
       if (!c) return uni.showToast({ title: '请输入邀请码', icon: 'none' });
+      this.joining = true;
       try {
         uni.showLoading({ title: '加入中…' });
         const d = await teamJoin(c);
         uni.hideLoading();
-        this.teamName = d.team.name;
+        if (!d || !d.team) throw new Error('加入失败，邀请码可能无效');
+        this.teamName = d.team.name || '学习小队';
         this.state = 'joined';
         this._teamId = d.team.id;
       } catch (e) {
         uni.hideLoading();
         this.errMsg = e.message || '加入失败，邀请码可能无效';
         this.state = 'error';
+      } finally {
+        this.joining = false;
       }
     },
     goTeam() {
@@ -93,7 +103,7 @@ export default {
 
 <style scoped>
 /* T5 工具页：单列居中 max 480，永不双栏 */
-.wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); display: flex; flex-direction: column; gap: var(--sp-16); }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); display: flex; flex-direction: column; gap: var(--card-gap); }
 .hero-s { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); }
 
 .jcard { display: grid; justify-items: center; text-align: center; padding: var(--sp-24) var(--sp-16); }
@@ -112,7 +122,7 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 700px) {
-  .wrap.tjoin { max-width: 480px; }
+  .wrap.tjoin { max-width: 480px; margin: 0 auto; }
 }
 /* #endif */
 </style>

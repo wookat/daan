@@ -33,8 +33,8 @@
         />
         <kg-skeleton v-else preset="cards" />
       </template>
-      <template #aside>
-        <kg-card v-if="items.length" variant="flat" class="aside-card">
+      <template v-if="items.length" #aside>
+        <kg-card variant="flat" class="aside-card">
           <text class="aside-t">继续练习</text>
           <text class="aside-d">随机抽一题模拟面试，AI 即时点评</text>
           <kg-button variant="primary" size="lg" block icon="mic" @click="goPractice">去练一题</kg-button>
@@ -71,6 +71,7 @@ export default {
   methods: {
     async load() {
       this.loadErr = '';
+      if (!this.items.length) this.loaded = false;
       try {
         const d = await interviewHistory(100);
         this.items = d.items || [];
@@ -89,10 +90,16 @@ export default {
       return fmtDurShared(s);
     },
     openSession(id) {
-      uni.navigateTo({ url: '/pkgA/interview/interview?session_id=' + id });
+      const url = '/pkgA/interview/interview?session_id=' + id;
+      const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+      if (pages.length >= 8) uni.redirectTo({ url });
+      else uni.navigateTo({ url });
     },
     goPractice() {
-      uni.navigateTo({ url: '/pkgA/interview/interview' });
+      const url = '/pkgA/interview/interview';
+      const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+      if (pages.length >= 8) uni.redirectTo({ url });
+      else uni.navigateTo({ url });
     },
   },
 };
@@ -101,10 +108,10 @@ export default {
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); }
 .stats { margin-bottom: var(--sp-16); }
-.item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.item-top { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); padding-right: var(--sp-24); }
 .score { font-size: var(--fs-h3); color: var(--ink); flex-shrink: 0; }
-.score.good { color: var(--ok); }
-.q { display: block; font-size: var(--fs-body); color: var(--ink); }
+.score.good { color: var(--ok-strong); }
+.q { display: block; font-size: var(--fs-body); color: var(--ink); padding-right: var(--sp-24); }
 .ellip2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .meta { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); }
 .aside-card { display: flex; flex-direction: column; gap: var(--sp-8); }

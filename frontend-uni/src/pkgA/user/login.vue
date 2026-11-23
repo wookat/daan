@@ -21,7 +21,6 @@
             placeholder="请输入邮箱"
             clearable
             :error="!!fieldErr.email"
-            custom-input-class="num"
             @blur="checkEmail"
             @input="fieldErr.email = ''"
           />
@@ -37,6 +36,7 @@
             :error="!!fieldErr.password"
             @blur="checkPassword"
             @input="fieldErr.password = ''"
+            @confirm="mode === 'login' && submit()"
           />
           <text v-if="fieldErr.password" class="ferr" role="alert">{{ fieldErr.password }}</text>
         </view>
@@ -50,6 +50,7 @@
             :error="!!fieldErr.password2"
             @blur="checkPassword2"
             @input="fieldErr.password2 = ''"
+            @confirm="submit"
           />
           <text v-if="fieldErr.password2" class="ferr" role="alert">{{ fieldErr.password2 }}</text>
         </view>
@@ -104,8 +105,11 @@ export default {
     },
   },
   onLoad(opts) {
-    // 统一账号回流：ssoLogin 未登录时跳 account.zalize.com?redirect=回本页带 sso=1，回来后自动重试一次
-    if (opts && opts.sso === '1') this.ssoLogin();
+    // 统一账号回流：ssoLogin 未登录时跳 account.zalize.com?redirect=回本页带 sso=1，回来后仅自动重试一次（防 cookie 被禁陷入死循环）
+    if (opts && opts.sso === '1') this.ssoLogin(true);
+  },
+  onUnload() {
+    if (this._leaveTimer) { clearTimeout(this._leaveTimer); this._leaveTimer = null; }
   },
   methods: {
     leave() {
@@ -115,10 +119,16 @@ export default {
     },
     onModeChange(opt) {
       const o = MODE_OPTS.find((x) => x.label === (opt && opt.value));
-      if (o) this.mode = o.value;
+      if (o) {
+        this.mode = o.value;
+        this.err = '';
+        this.fieldErr = { email: '', password: '', password2: '' };
+      }
     },
     checkEmail() {
-      this.fieldErr.email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(this.email) ? '' : '请输入正确的邮箱地址';
+      const mail = (this.email || '').trim();
+      if (mail !== this.email) this.email = mail;
+      this.fieldErr.email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail) ? '' : '请输入正确的邮箱地址';
       return !this.fieldErr.email;
     },
     checkPassword() {
@@ -129,7 +139,7 @@ export default {
       this.fieldErr.password2 = this.password2 === this.password ? '' : '两次输入的密码不一致';
       return !this.fieldErr.password2;
     },
-    async ssoLogin() {
+    async ssoLogin(fromCallback = false) {
       this.err = '';
       this.busy = true;
       try {
@@ -146,9 +156,13 @@ export default {
         } else {
           uni.showToast({ title: '登录成功', icon: 'success' });
         }
-        setTimeout(() => this.leave(), 1200);
+        this._leaveTimer = setTimeout(() => this.leave(), 1200);
       } catch (e) {
         if (e.message === '未登录 Zalize 统一账号') {
+          if (fromCallback === true) {
+            this.err = '统一账号未生效，请检查浏览器 Cookie 设置或改用邮箱登录';
+            return;
+          }
           // #ifdef H5
           // 中心站 ?redirect= 登录后回跳（中心站校验 *.zalize.com）；回本页带 sso=1 自动重试 SSO
           const back = location.origin + location.pathname + '#/pkgA/user/login?sso=1';
@@ -170,10 +184,11 @@ export default {
       this.busy = true;
       try {
         const anon = uni.getStorageSync('anonUid') || '';
+        const mail = this.email.trim();
         const r =
           this.mode === 'login'
-            ? await authLogin(this.email, this.password)
-            : await authRegister(this.email, this.password, '', this.nickname.trim());
+            ? await authLogin(mail, this.password)
+            : await authRegister(mail, this.password, '', this.nickname.trim());
         setAuth(r.token, r.user);
         if (this.mode === 'register') {
           const src = uni.getStorageSync('regSource');
@@ -192,7 +207,7 @@ export default {
         } else {
           uni.showToast({ title: this.mode === 'login' ? '登录成功' : '注册成功', icon: 'success' });
         }
-        setTimeout(() => this.leave(), 1200);
+        this._leaveTimer = setTimeout(() => this.leave(), 1200);
       } catch (e) {
         this.err = e.message || '操作失败';
       } finally {

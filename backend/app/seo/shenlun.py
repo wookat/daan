@@ -111,15 +111,16 @@ def _render_shenlun_year(year: int, page: int) -> str:
         + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?year={year}">进入申论专区在线作答{year}年申论真题 →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = _year_path(year, "shenlun") + (f"?page={page}" if page > 1 else "")
     return _page(
         f"{year}年申论真题{suffix}_{year}年公务员考试申论真题及参考解析_答岸",
         f"{year}年公务员考试申论真题共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{suffix}",
-        _year_path(year, "shenlun") + (f"?page={page}" if page > 1 else ""),
+        page_path,
         body,
         _collection_ld(
             f"{year}年申论真题",
             f"{year}年公务员考试申论真题 {total} 题，附参考解析。",
-            _year_path(year, "shenlun"),
+            page_path,
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (f"{year}年真题", _year_path(year, "shenlun"))],
         ),
     )
@@ -151,15 +152,16 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
         + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?qtype={quote(qtype)}">进入申论专区在线作答{_e(qtype)}真题 →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = _sub_path("shenlun", qtype) + (f"?page={page}" if page > 1 else "")
     return _page(
         f"申论{qtype}真题{suffix}_历年申论{qtype}题型真题及参考解析_答岸",
         f"申论{qtype}题型真题共 {total} 题，附参考解析，可在线作答。{suffix}",
-        _sub_path("shenlun", qtype) + (f"?page={page}" if page > 1 else ""),
+        page_path,
         body,
         _collection_ld(
             f"申论·{qtype}真题",
             f"历年申论{qtype}题型真题 {total} 题，附参考解析。",
-            _sub_path("shenlun", qtype),
+            page_path,
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (qtype, _sub_path("shenlun", qtype))],
         ),
     )
@@ -297,15 +299,16 @@ def _tiku_shenlun(page: int):
         + '<a class="cta" href="/app/#/pkgA/shenlun/shenlun">进入申论专区在线作答（真题 + 素材范文）→</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = "/tiku/shenlun/" + (f"?page={page}" if page > 1 else "")
     return _page(
         f"申论真题库{suffix}_历年申论真题及参考解析_答岸",
         f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{mat_desc}{suffix}",
-        "/tiku/shenlun/" + (f"?page={page}" if page > 1 else ""),
+        page_path,
         body,
         _collection_ld(
             "申论真题库",
             f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析。{mat_desc}",
-            "/tiku/shenlun/",
+            page_path,
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/")],
         ),
     )

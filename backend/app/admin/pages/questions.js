@@ -125,7 +125,7 @@
         </div>
         <div class="fld"><div class="lb">三级考点</div><select class="sel" id="ed-tag3" style="width:100%">${await topicOptions(q.tag3)}</select></div>
         <div class="fld"><div class="lb">解析</div><textarea class="ipt" id="ed-expl" rows="4" style="width:100%">${esc(q.explanation || '')}</textarea></div>
-        <div class="fld"><div class="lb">华生解析（AI 精讲）</div><textarea class="ipt" id="ed-hs" rows="4" style="width:100%">${esc(q.hs_explanation || '')}</textarea></div>
+        <div class="fld"><div class="lb">花生解析（AI 精讲）</div><textarea class="ipt" id="ed-hs" rows="4" style="width:100%">${esc(q.hs_explanation || '')}</textarea></div>
         <div class="fld"><label style="font-size:13px"><input type="checkbox" id="ed-disabled" ${q.disabled === 1 ? 'checked' : ''}> 下架此题</label>
           ${q.hs_down > 0 ? `<span class="tag tag-bad" style="margin-left:10px">差评 ${q.hs_down}</span>` : ''}
           ${q.is_real ? '<span class="tag tag-info" style="margin-left:10px">真题</span>' : ''}
@@ -167,7 +167,7 @@
     </div>
     <div class="card" style="margin-bottom:12px">
       <div class="row" style="gap:10px;flex-wrap:wrap">
-        <input class="ipt" id="q-kw" aria-label="题干关键词 / 题目 ID" style="width:260px" placeholder="题干关键词 / 题目 ID" value="${esc(state.qid || state.kw)}">
+        <input class="ipt" id="q-kw" aria-label="题干关键词 / 题目 ID" style="width:260px;max-width:100%" placeholder="题干关键词 / 题目 ID" value="${esc(state.qid || state.kw)}">
         <select class="sel" id="q-module" aria-label="模块筛选"><option value="">全部模块</option>
           ${Object.entries(MODS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
         <div class="row" style="gap:6px">

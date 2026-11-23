@@ -16,7 +16,7 @@
   const num = (n) => (n == null ? '0' : Number(n).toLocaleString());
   const pct = (n) => (n == null ? '—' : `${Number(n).toFixed(1)}%`);
   const tabBtn = (href, label, on) =>
-    `<a href="${href}" style="display:inline-block;margin:0 6px 8px 0;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;border:1px solid ${on ? 'var(--brand)' : 'var(--line)'};background:${on ? 'var(--brand)' : 'transparent'};color:${on ? '#fff' : 'var(--t2)'}">${esc(label)}</a>`;
+    `<a href="${href}" style="display:inline-block;margin:0 6px 8px 0;padding:5px 12px;border-radius:6px;font-size:12px;text-decoration:none;border:1px solid ${on ? 'var(--brand)' : 'var(--line)'};background:${on ? 'var(--brand)' : 'transparent'};color:${on ? 'var(--on-brand,#fff)' : 'var(--t2)'}">${esc(label)}</a>`;
   const bar = (v, max, label) =>
     `<div style="display:flex;align-items:center;gap:8px;margin:3px 0">
       <span style="width:110px;font-size:12px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(String(label))}</span>
@@ -28,12 +28,12 @@
   const kpi = (lb, v, d) => `<div class="kpi"><div class="lb">${lb}</div><div class="v">${v}</div>${d || ''}</div>`;
   const card = (t, inner, tag) => `<div class="card" style="margin-bottom:14px"><div class="card-h"><span class="t">${t}</span>${tag ? `<span class="tag tag-gray">${tag}</span>` : ''}</div>${inner}</div>`;
   const failed = (r) => card('加载失败', `<span style="color:var(--error);font-size:12px">${esc((r && r.reason && r.reason.message) || 'error')}</span>`);
-  const grid2 = (a, b) => `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${a}${b}</div>`;
+  const grid2 = (a, b) => `<div class="split-2" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">${a}${b}</div>`;
 
   function spark(rows, key) {
     const max = Math.max(1, ...rows.map((r) => r[key] || 0));
     return `<div style="display:flex;align-items:flex-end;gap:2px;height:56px">${rows.map((r, i) =>
-      `<i style="flex:1;min-width:3px;border-radius:2px 2px 0 0;background:${i === rows.length - 1 ? 'var(--brand)' : '#93c5fd'};height:${Math.max(4, Math.round(((r[key] || 0) * 100) / max))}%" title="${r.d}：${num(r[key] || 0)}"></i>`).join('')}</div>`;
+      `<i style="flex:1;min-width:3px;border-radius:2px 2px 0 0;background:${i === rows.length - 1 ? 'var(--brand)' : 'var(--brand-200)'};height:${Math.max(4, Math.round(((r[key] || 0) * 100) / max))}%" title="${r.d}：${num(r[key] || 0)}"></i>`).join('')}</div>`;
   }
 
   async function get(path) {
@@ -60,7 +60,7 @@
       for (let hr = 0; hr < 24; hr += 1) {
         const v = (heat[wd] && heat[wd][hr]) || 0;
         const a = v / max;
-        h += `<td title="周${names[wd]} ${hr}时：${num(v)} 次" style="height:16px;background:rgba(37,99,235,${(a * 0.9 + 0.04).toFixed(2)});border:1px solid #fff"></td>`;
+        h += `<td title="周${names[wd]} ${hr}时：${num(v)} 次" style="height:16px;background:rgba(46,91,255,${(a * 0.85 + 0.06).toFixed(2)});border:1px solid var(--surface)"></td>`;
       }
       h += '</tr>';
     });
@@ -131,7 +131,7 @@
       if (!names.length) return card('漏斗', '暂无数据');
       if (!funnelPreset || !d.presets[funnelPreset]) funnelPreset = names[0];
       const btns = names.map((n) =>
-        `<button data-fp="${esc(n)}" style="margin:0 6px 8px 0;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid ${n === funnelPreset ? 'var(--brand)' : 'var(--line)'};background:${n === funnelPreset ? 'var(--brand)' : 'transparent'};color:${n === funnelPreset ? '#fff' : 'var(--t2)'}">${esc(n)}</button>`).join('');
+        `<button data-fp="${esc(n)}" style="margin:0 6px 8px 0;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid ${n === funnelPreset ? 'var(--brand)' : 'var(--line)'};background:${n === funnelPreset ? 'var(--brand)' : 'transparent'};color:${n === funnelPreset ? 'var(--on-brand,#fff)' : 'var(--t2)'}">${esc(n)}</button>`).join('');
       return `<div style="margin-bottom:12px">${btns}</div>
         ${card(`${esc(funnelPreset)}（近 ${d.days} 天 · 有序漏斗）`, d.steps.length ? funnelSteps(d.steps) : '该漏斗暂无数据，换个预设或等埋点积累')}`;
     },
@@ -218,7 +218,7 @@
   function funnelBody(d) {
     const names = Object.keys((cache['__presets']) || d.presets || {});
     const btns = names.map((n) =>
-      `<button data-fp="${esc(n)}" style="margin:0 6px 8px 0;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid ${n === funnelPreset ? 'var(--brand)' : 'var(--line)'};background:${n === funnelPreset ? 'var(--brand)' : 'transparent'};color:${n === funnelPreset ? '#fff' : 'var(--t2)'}">${esc(n)}</button>`).join('');
+      `<button data-fp="${esc(n)}" style="margin:0 6px 8px 0;padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid ${n === funnelPreset ? 'var(--brand)' : 'var(--line)'};background:${n === funnelPreset ? 'var(--brand)' : 'transparent'};color:${n === funnelPreset ? 'var(--on-brand,#fff)' : 'var(--t2)'}">${esc(n)}</button>`).join('');
     return `<div style="margin-bottom:12px">${btns}</div>
       ${card(`${esc(funnelPreset)}（近 ${d.days} 天 · 有序漏斗）`, d.steps.length ? funnelSteps(d.steps) : '该漏斗暂无数据，换个预设或等埋点积累')}`;
   }

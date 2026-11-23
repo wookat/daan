@@ -9,6 +9,7 @@
     <!-- 0 数据：整页折叠为 1 张解锁卡 -->
     <template v-if="!hasData">
       <kg-hero-card
+        class="unlock-card"
         variant="plain"
         :label="'再答 ' + unlockLeft + ' 题解锁学习统计'"
         :value="totalDone"
@@ -64,7 +65,7 @@
           </kg-section-header>
           <view class="hm-body">
             <view class="hm-ylab">
-              <text v-for="w in ['一', '', '三', '', '五', '', '日']" :key="w + 'y'" class="hm-yl">{{ w }}</text>
+              <text v-for="(w, wi) in ['一', '', '三', '', '五', '', '日']" :key="wi" class="hm-yl">{{ w }}</text>
             </view>
             <view class="hm-grid">
               <view v-for="(col, ci) in hmCols" :key="ci" class="hm-col">
@@ -123,7 +124,7 @@
           <kg-empty-state v-if="loadErr && !byType.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="load" />
           <kg-empty-state v-else-if="!byType.length" compact icon="inbox" title="暂无数据" desc="错题积累后会按题型聚合" />
           <view v-else class="top-chips">
-            <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" role="button" @click="goPractice('')">
+            <view v-for="t in shownTypes" :key="t.question_type" class="top-chip" role="button" @click="goType(t)">
               <text class="tc-name">{{ typeName(t.question_type) }}</text>
               <text class="tc-n num">×{{ t.n }}</text>
             </view>
@@ -378,11 +379,11 @@ const UNLOCK_N = 10;
 export default {
   mixins: [snapshotViewMixin({ noun: '统计', reload: 'refreshAccountData' })],
   data() {
-    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, dueSynced: false, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null };
+    return { UNLOCK_N, authUser: getAuthUser(), loadErr: '', byModule: [], byType: [], byReason: [], pstats: { byModule: {}, days: {} }, kmCov: null, history: [], showAllHist: false, growth: null, reco: null, dueN: 0, dueSynced: false, gwMod: '', slStats: null, slIssuesOpen: false, modOpen: false, topOpen: false, hmDays: null, svStreak: null, examAttempts: null, examTarget: null, themeTick: 0 };
   },
   computed: {
     hasData() {
-      return this.totalDone > 0 || this.byModule.length > 0 || this.history.length > 0 || this.hmTotal > 0;
+      return this.totalDone >= UNLOCK_N || this.hmTotal >= UNLOCK_N;
     },
     unlockLeft() {
       return Math.max(UNLOCK_N - this.totalDone, 1);
@@ -445,7 +446,7 @@ export default {
     },
     growthRows() {
       if (!this.growth) return [];
-      return this.growth.weeks.slice(-8).map((w) => {
+      const rows = this.growth.weeks.slice(-8).map((w) => {
         const [y, wk] = w.week.split('-');
         const src = this.gwMod ? (w.modules || {})[this.gwMod] || { n: 0, c: 0 } : w;
         return {
@@ -455,6 +456,7 @@ export default {
           pct: src.n ? Math.round((src.c / src.n) * 100) : 0,
         };
       });
+      return this.gwMod ? rows.filter((x) => x.n > 0) : rows;
     },
     growthDelta() {
       const r = this.growthRows;
@@ -464,6 +466,7 @@ export default {
     growthDeltaLabel() {
       // 服务端 weeks 只含有作答的周：末两行是「本周 / 上周」才这么叫，否则点名两周
       const r = this.growthRows;
+      if (r.length < 2) return '';
       const last = r[r.length - 1];
       const prev = r[r.length - 2];
       const today = this.cnToday;
@@ -598,6 +601,7 @@ export default {
       return this.trend.some((t) => t.done > 0);
     },
     trend7Option() {
+      void this.themeTick;
       const c = visColors();
       return barOption(
         c,
@@ -609,6 +613,7 @@ export default {
       );
     },
     examOption() {
+      void this.themeTick;
       const c = visColors();
       const d = this.examTrendD;
       if (!d) return {};
@@ -619,10 +624,11 @@ export default {
           value: p.score,
           itemStyle: { color: p.score < max * 0.6 ? c.bad : p.score < max * 0.8 ? c.warn : c.brand },
         })),
-        { yMax: max }
+        { yMax: max, markY: d.target != null ? d.target : null, markLabel: d.target != null ? '目标 ' + d.target : '' }
       );
     },
     accOption() {
+      void this.themeTick;
       const c = visColors();
       return barOption(
         c,
@@ -630,6 +636,7 @@ export default {
       );
     },
     speedOption() {
+      void this.themeTick;
       const c = visColors();
       return barOption(
         c,
@@ -682,6 +689,7 @@ export default {
       }));
     },
     statsRadarOption() {
+      void this.themeTick;
       const c = visColors();
       return {
         animationDuration: 400,
@@ -714,10 +722,13 @@ export default {
       if ((u ? u.uid : null) === (this.authUser ? this.authUser.uid : null)) return;
       this.resetAccountState();
     };
+    this._onTheme = () => { this.themeTick += 1; };
     uni.$on('authChanged', this._onAuth);
+    uni.$on('themeChanged', this._onTheme);
   },
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    if (this._onTheme) uni.$off('themeChanged', this._onTheme);
     this.unbindNet();
   },
   onShow() {
@@ -755,6 +766,11 @@ export default {
       this.dueN = 0;
       this.dueSynced = false;
       this.slStats = null;
+      this.byModule = [];
+      this.byType = [];
+      this.byReason = [];
+      this.loadErr = '';
+      if (this.$refs.predict && this.$refs.predict.reset) this.$refs.predict.reset();
       this.refreshAccountData();
     },
     loadHist() {
@@ -837,12 +853,20 @@ export default {
       if (k) uni.setStorageSync('practiceLaunch', { kind: 'start', module: k, source: source || null });
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
+    goType(t) {
+      const raw = String((t && t.question_type) || '');
+      const m = /^(数量关系|数学运算|资料分析|言语理解(?:与表达)?|判断推理|逻辑判断|常识判断|常识)[-－·：:]/.exec(raw);
+      const MAP = { 数量关系: 'shuliang', 数学运算: 'shuliang', 资料分析: 'ziliao', 言语理解: 'yanyu', 言语理解与表达: 'yanyu', 判断推理: 'panduan', 逻辑判断: 'panduan', 常识判断: 'changshi', 常识: 'changshi' };
+      const mod = (t && t.module) || (m ? MAP[m[1]] : '');
+      this.goPractice(mod || '');
+    },
     medalRingStyle(md) {
       const color = md.got ? 'var(--warn)' : 'var(--ink-4)';
       const pct = md.got ? 100 : md.pct;
       return { background: `conic-gradient(${color} 0% ${pct}%, var(--fill) ${pct}% 100%)` };
     },
     goBook() {
+      uni.setStorageSync('autoStartReview', 1);
       uni.switchTab({ url: '/pages/book/book' });
     },
     async loadMastery() {
@@ -1086,19 +1110,15 @@ export default {
 .chev.is-open { transform: rotate(180deg); }
 .sl-issue { display: flex; align-items: flex-start; gap: var(--sp-8); margin-bottom: var(--sp-8); }
 .sl-it { flex: 1; font-size: var(--fs-sub); color: var(--ink); line-height: var(--lh-sub); }
-.trend { display: flex; align-items: flex-end; gap: var(--sp-4); height: 80px; padding-top: var(--sp-8); }
-.trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
-.trend-bar { width: 100%; border-radius: 3px 3px 0 0; background: var(--ok); min-height: 3px; }
-.trend-bar.is-warn { background: var(--warn); }
-.trend-bar.is-bad { background: var(--bad); }
 .trend-x { display: flex; justify-content: space-between; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
-.et-wrap { position: relative; }
-.et-target { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--warn-strong); z-index: 1; pointer-events: none; }
-.et-target-t { position: absolute; right: 0; top: -16px; font-size: var(--fs-caption); color: var(--warn-strong); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap.stats { padding-bottom: var(--sp-40); }
+}
 @media (min-width: 1024px) {
-  .wrap.stats { max-width: 1064px; }
+  .wrap.stats { max-width: 1064px; padding-top: var(--sp-24); }
+  .unlock-card { max-width: 560px; margin: 0 auto; }
 }
 /* #endif */
 </style>

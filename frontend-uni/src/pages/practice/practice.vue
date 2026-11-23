@@ -434,15 +434,16 @@ import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { requestNotificationPermission } from '../../services/reminder.js';
 import { announce } from '../../a11y/a11y-live.js';
 import { pickAnnounceText } from '../../a11y/live-policy.js';
+// #endif
 import { dailyOps } from '../../practice/daily-ops.js';
 import { sessionOps } from '../../practice/session-ops.js';
-// #endif
 import { paperContinuePlan, paperQuery, paperFinishState, paperShareText, paperWrongItems, paperWrongPlan, paperWrongLaunch, wrongRetryPlan, doneBarPlan } from '../../exam/paper-continue.js';
 import { adoptServerDailyGoal } from '../../home/daily-goal.js';
 import { adoptServerPracticePrefs } from '../../practice/practice-prefs.js';
-import { qStatLine, qDifficulty } from '../../utils/q-stat.js';
+import { qDifficulty } from '../../utils/q-stat.js';
 import { toggleExcl, pickWithExcl, exclVisible } from '../../exam/exam-excl.js';
-import { dailyPendingFor, cnDayOf, patchPendingMistake, unlinkedWrongItems, relinkMistakeIds } from '../../practice/practice-progress.js';import { weakSpots as buildWeakSpots } from '../../practice/weak-spots.js';
+import { dailyPendingFor, cnDayOf, patchPendingMistake, unlinkedWrongItems, relinkMistakeIds } from '../../practice/practice-progress.js';
+import { weakSpots as buildWeakSpots } from '../../practice/weak-spots.js';
 import { isExplanationCovered } from '../../practice/exp-dup.js';
 import { reviewedMasteredCount, fixReportText } from '../../review/review-advance.js';
 import { leadQidOf, leadPickOf, mergeLead, leadHintText } from '../../practice/leadq.js';
@@ -463,7 +464,6 @@ export default {
   data() {
     return {
       askSeenTick: 0,
-      counts: [],
       session: false,
       loadState: '',
       loadSecs: 0,
@@ -477,18 +477,11 @@ export default {
       right: 0,
       lastModule: null,
       lastSubmodule: null,
-      subSelect: null,
-      paperSheet: false,
-      customOpen: false,
       reportOpen: false,
       reportType: '',
       reportDetail: '',
       reportBusy: false,
       reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'],
-      papers: [],
-      paperRegion: null,
-      subProg: {},
-      submodules: [],
       streak: 0,
       bestStreak: 0,
       autoSaved: false,
@@ -528,14 +521,11 @@ export default {
       daily: uni.getStorageSync('dailyPlan') || { days: {} },
       szDaily: loadSzDaily(anonUid()),
       realMode: uni.getStorageSync('realMode') ? true : false,
-      realYears: [],
-      realRegions: [],
       realYear: uni.getStorageSync('realYear') || null,
       realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       hsRated: {},
-      announce: null,
       matOpen: {},
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
     };
@@ -561,16 +551,6 @@ export default {
         .map((b) => ({ ...b, pct: Math.round((b.right / b.n) * 100) }))
         .sort((a, b) => order.indexOf(a.mod) - order.indexOf(b.mod));
     },
-    paperRegions() {
-      const seen = [];
-      for (const p of this.papers) {
-        if (p.region && !seen.includes(p.region)) seen.push(p.region);
-      }
-      return seen.sort((a, b) => a.localeCompare(b, 'zh'));
-    },
-    shownPapers() {
-      return this.paperRegion ? this.papers.filter((p) => p.region === this.paperRegion) : this.papers;
-    },
     kpChain() {
       const q = this.cur;
       if (!q) return '';
@@ -581,9 +561,6 @@ export default {
         if (kp && kp !== q.submodule) parts.push(kp);
       }
       return parts.filter(Boolean).join(' › ');
-    },
-    qStatLine() {
-      return qStatLine(this.cur);
     },
     matInfo() {
       const q = this.cur;
@@ -636,10 +613,6 @@ export default {
       const t = { changshi: 40, yanyu: 50, shuliang: 90, panduan: 60, ziliao: 80 };
       return (this.cur && t[this.cur.module]) || 60;
     },
-    todayCount() {
-      const days = (this.pstats && this.pstats.days) || {};
-      return days[dayKey()] || 0;
-    },
     cur() {
       return this.items[this.idx] || null;
     },
@@ -657,28 +630,9 @@ export default {
     weakSpots() {
       return buildWeakSpots(this.items, (m) => this.modName(m));
     },
-    weakModule() {
-      let worst = null;
-      let worstAcc = 1;
-      for (const [m, s] of Object.entries(this.pstats.byModule)) {
-        if (s.done < 5) continue;
-        const acc = s.correct / s.done;
-        if (acc < 0.8 && acc < worstAcc) {
-          worstAcc = acc;
-          worst = m;
-        }
-      }
-      return worst;
-    },
     isFav() {
       if (!this.cur) return false;
       return this.favs.some((f) => f.question === this.cur.question);
-    },
-    todayDone() {
-      return !!this.daily.days[dayKey()];
-    },
-    szTodayDone() {
-      return !!this.szDaily.days[dayKey()];
     },
     dailyModule() {
       const mods = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi'];
@@ -686,19 +640,6 @@ export default {
       let h = 0;
       for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
       return mods[h % mods.length];
-    },
-    dailyModName() {
-      return this.modName(this.dailyModule);
-    },
-    dailyStreak() {
-      let n = 0;
-      const d = new Date();
-      if (!this.todayDone) d.setDate(d.getDate() - 1);
-      while (this.daily.days[dayKey(d)]) {
-        n++;
-        d.setDate(d.getDate() - 1);
-      }
-      return n;
     },
     answeredCount() {
       return this.items.filter((q) => q._picked).length;
@@ -935,13 +876,16 @@ export default {
       this.start(pm);
       return;
     }
-    if (!this.session && !this.tryResume()) {
+    if (this.session && this.cur && !this.revealed) {
+      this.startQTimer();
+    } else if (!this.session && !this.tryResume()) {
       // 裸直达路由（无任何启动参数）：直接按上次模块开练，避免停留在无反馈的准备页
       this.start(uni.getStorageSync('lastModule') || null, null, null, false, undefined, null, 'direct');
     }
   },
   onHide() {
-    if (this.autoTimer) clearTimeout(this.autoTimer);
+    if (this.autoTimer) { clearTimeout(this.autoTimer); this.autoTimer = null; }
+    if (this._loadTick) { clearInterval(this._loadTick); this._loadTick = null; }
     this.stopQTimer();
     // #ifdef H5
     if (this._pkHandler && typeof window !== 'undefined') {
@@ -956,6 +900,7 @@ export default {
     if (this.autoTimer) { clearTimeout(this.autoTimer); this.autoTimer = null; }
     if (this._loadTick) { clearInterval(this._loadTick); this._loadTick = null; }
     if (this.examTimer) { clearInterval(this.examTimer); this.examTimer = null; }
+    if (this._ppTimer) { clearTimeout(this._ppTimer); this._ppTimer = null; }
     this.stopQTimer();
     if (this._actx && typeof this._actx.close === 'function') {
       try { this._actx.close(); } catch (e) { /* ignore */ }
@@ -1028,30 +973,6 @@ export default {
     previewImg(p) {
       uni.previewImage({ urls: [this.imgUrl(p)] });
     },
-    modStat(m) {
-      return this.pstats.byModule[m] || { done: 0, correct: 0 };
-    },
-    progText(c) {
-      const s = this.modStat(c.module);
-      if (!s.done) return c.n + ' 题';
-      return `已刷 ${s.done}/${c.n} · 正确率 ${Math.round((s.correct / s.done) * 100)}%`;
-    },
-    progPct(c) {
-      const s = this.modStat(c.module);
-      return Math.min(100, (s.done / (c.n || 1)) * 100);
-    },
-    async loadAnnounce() {
-      try {
-        const d = await request('/api/announcement');
-        const item = d.item;
-        if (item && uni.getStorageSync('annDismissed') !== String(item.id)) this.announce = item;
-      } catch (e) { /* 非关键路径 */ }
-    },
-    setGoal(g) {
-      this.dailyGoal = g;
-      uni.setStorageSync('dailyGoal', g);
-      request('/api/profile', { method: 'POST', data: { uid: anonUid(), daily_goal: g } }).catch(() => {});
-    },
     syncDailyGoal() {
       if (this._goalSynced) return;
       this._goalSynced = true;
@@ -1081,87 +1002,11 @@ export default {
         })
         .catch(() => {});
     },
-    dismissAnn() {
-      if (this.announce) uni.setStorageSync('annDismissed', String(this.announce.id));
-      this.announce = null;
-    },
-    async loadCounts() {
-      try {
-        const d = await request('/api/question_counts');
-        this.counts = d.counts || [];
-      } catch (e) { /* 走下方重试 */ }
-      if (this.counts.length) {
-        this._countsTries = 0;
-        return;
-      }
-      this._countsTries = (this._countsTries || 0) + 1;
-      if (this._countsTries <= 20) setTimeout(() => this.loadCounts(), 3000);
-    },
-    async openModule(module) {
-      try {
-        const d = await request('/api/submodules?module=' + module);
-        const items = (d.items || []).filter((s) => s.submodule);
-        if (items.length < 2) {
-          this.start(module);
-          return;
-        }
-        this.submodules = items;
-        this.subSelect = module;
-        this.subProg = {};
-        const uid = uni.getStorageSync('anonUid');
-        if (uid) {
-          request('/api/submodule_progress?uid=' + uid + '&module=' + module)
-            .then((p) => { this.subProg = p.items || {}; })
-            .catch(() => {});
-        }
-      } catch (e) {
-        this.start(module);
-      }
-    },
-    setReal(v) {
-      this.realMode = v;
-      uni.setStorageSync('realMode', v ? '1' : '');
-      if (v && !this.realYears.length) this.loadRealFilters();
-    },
-    async loadRealFilters() {
-      try {
-        const d = await request('/api/real_filters');
-        this.realYears = d.years || [];
-        this.realRegions = d.regions || [];
-      } catch (e) { /* 非关键路径 */ }
-    },
-    setRealYear(y) {
-      this.realYear = y;
-      uni.setStorageSync('realYear', y || '');
-    },
-    setRealRegion(r) {
-      this.realRegion = r;
-      uni.setStorageSync('realRegion', r || '');
-    },
-    setGroup(n) {
-      this.groupSize = n;
-      uni.setStorageSync('groupSize', n);
-      request('/api/profile', { method: 'POST', data: { uid: anonUid(), group_size: n } }).catch(() => {});
-    },
     goMini() {
       uni.navigateTo({ url: '/pkgA/exam/exam?mini=1' });
     },
     goExamList() {
       uni.navigateTo({ url: '/pkgA/exam/list' });
-    },
-    goSearch() {
-      uni.navigateTo({ url: '/pkgA/search/search' });
-    },
-    async openPapers() {
-      this.paperSheet = true;
-      if (this.papers.length) return;
-      try {
-        const d = await request('/api/papers');
-        this.papers = d.items || [];
-      } catch (e) {
-        uni.showToast({ title: '试卷加载失败：' + e.message, icon: 'none' });
-        this.paperSheet = false;
-      }
     },
     async startPaper(p, untimed = false, wantWrong = false) {
       if (this._starting) return;
@@ -1222,7 +1067,6 @@ export default {
             if (cont) items = plan.remaining;
           }
         }
-        this.paperSheet = false;
         this._source = untimed ? (p.source || null) : null;
         this._ptitle = untimed ? (p.title || null) : null;
         this._reinforce = null;
@@ -1751,7 +1595,6 @@ export default {
       this.beginLoadState();
       this.lastModule = module;
       this.lastSubmodule = submodule || null;
-      this.subSelect = null;
       const limit = count || this.groupSize || 10;
       const realQ = forceReal
         ? '&real=1' + (year ? '&year=' + year : '')
@@ -2027,7 +1870,7 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       if (!this.session || !this.cur) return;
-      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.paperSheet || this.customOpen || this.quitOpen || this.resumeOpen) return;
+      if (this.cardOpen || this.toolsOpen || this.reportOpen || this.quitOpen || this.resumeOpen) return;
       const k = e.key;
       if (/^[a-dA-D]$/.test(k) && !this.picked && !this.beiMode) {
         const K = k.toUpperCase();
@@ -2643,6 +2486,9 @@ export default {
   background: var(--fill); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: var(--r-xs); font-size: var(--fs-caption); font-weight: 600; color: var(--ink-2);
 }
 .kbd-d { font-size: var(--fs-caption); color: var(--ink-2); margin-left: var(--sp-4); }
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; }
   .page.has-bar { padding-bottom: var(--sp-24); }

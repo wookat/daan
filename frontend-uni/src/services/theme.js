@@ -42,14 +42,18 @@ export function isDark() {
 
 export function applyTheme() {
   // #ifdef H5
+  const mode = getThemeMode();
   const dark = isDark();
   document.documentElement.classList.toggle('theme-dark', dark);
+  document.documentElement.classList.toggle('tc-light', mode === 'light');
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   applyAccent();
 
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', dark ? '#15161c' : '#eef3ff');
-  syncH5TabBarIcons({ dark, accent: getThemeAccent() });
+  if (meta) meta.setAttribute('content', dark ? '#15161c' : '#f6f7fb');
+  const accent = getThemeAccent();
+  syncH5TabBarIcons({ dark, accent });
+  try { uni.$emit('themeChanged', { dark, accent, mode }); } catch (e) { /* ignore */ }
   // #endif
 }
 

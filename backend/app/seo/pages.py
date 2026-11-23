@@ -89,7 +89,7 @@ def tiku_index():
         '<a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
         '<a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
         + "".join(sections)
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">进入刷题主站 →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/">进入刷题主站 →</a>'
     )
     return _page(
         "公务员考试题库_行测真题在线刷题_答岸",
@@ -150,11 +150,12 @@ def _render_daily(day: str, archived: bool):
     stats = db.daily_set_stats(day)
     cards = []
     for i, q in enumerate(items, 1):
-        stem = (q.get("question") or "").strip().replace("\n", " ")[:70]
+        raw_stem = (q.get("question") or "").strip().replace("\n", " ")
+        stem = raw_stem[:70] + ("…" if len(raw_stem) > 70 else "")
         mod = _module_name(q.get("module") or "") or "综合"
         cards.append(
             '<section class="card">'
-            f'<h2>{i}. <a href="/tiku/q/{q["id"]}">{_e(stem)}…</a></h2>'
+            f'<h2>{i}. <a href="/tiku/q/{q["id"]}">{_e(stem)}</a></h2>'
             f'<p class="meta">{_e(mod)}{" · 真题" if q.get("is_real") else ""}</p>'
             "</section>"
         )
@@ -193,7 +194,7 @@ def _render_daily(day: str, archived: bool):
         _crumb(crumbs)
         + f"<h1>每日一练（{_e(day)}）</h1>"
         + f'<p class="meta">全站同题 · 五大模块各 2 题共 10 题 · {_e(part)}，完成后可查看击败全站百分比</p>'
-        + "".join(cards)
+        + ("".join(cards) if cards else '<section class="card"><p>本期每日一练暂未生成，请前往题库自由练题。</p></section>')
         + board_html
         + cta
         + archive_html
@@ -254,12 +255,13 @@ def tiku_discuss():
     for r in rows:
         if r["q_id"] is None:
             continue
-        stem = (r["question"] or "").strip().replace("\n", " ")[:70]
+        raw_stem = (r["question"] or "").strip().replace("\n", " ")
+        stem = raw_stem[:70] + ("…" if len(raw_stem) > 70 else "")
         mod = _module_name(r["module"]) or "综合"
         nick = (r["nickname"] or "考友").strip()[:20]
         cards.append(
             '<section class="card">'
-            f'<h2><a href="/tiku/q/{r["question_id"]}">{_e(stem)}…</a></h2>'
+            f'<h2><a href="/tiku/q/{r["question_id"]}">{_e(stem)}</a></h2>'
             f'<p class="meta">{_e(mod)} · {r["cnt"]} 条讨论</p>'
             f'<p><b>{_e(nick)}：</b>{_e(r["content"] or "")}</p>'
             "</section>"
@@ -323,7 +325,7 @@ def tiku_papers():
         + '<div class="card"><ul class="qlist">'
         + lis
         + "</ul></div>"
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站全真模考 →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/exam/list">进入主站全真模考 →</a>'
     )
     return _page(
         "历年公务员考试真题卷_国考省考真题在线模考_答岸",
@@ -410,7 +412,7 @@ def tiku_paper_detail(pid: int):
         + _e(social_text)
         + "</p>"
         + (f'<div class="card"><h2>模块分布</h2><div class="tags">{dist_links}</div></div>' if dist_links else "")
-        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/exam/list{_exam_list_query(p)}">在线模考本卷 →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pkgA/exam/list{_e(_exam_list_query(p))}">在线模考本卷 →</a>'
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
@@ -548,7 +550,7 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
     )
     cta = (
         f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?module={quote(module)}'
-        f'&real=1&year={year}&source=seo">在线刷{year}年{_e(mod_name)}真题（免费）→</a>'
+        f'&amp;real=1&amp;year={year}&amp;source=seo">在线刷{year}年{_e(mod_name)}真题（免费）→</a>'
     )
     body = (
         _crumb([("题库", "/tiku/"), (mod_name, f"/tiku/{module}/"), (f"{year}年真题", None)])
@@ -562,12 +564,13 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
         + (f'<div class="card"><h2>其他年份{_e(mod_name)}真题</h2><div class="tags">{other_years}</div></div>' if other_years else "")
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = _year_path(year, module) + (f"?page={page}" if page > 1 else "")
     jsonld = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": f"{year}年{mod_name}真题题库",
         "description": f"{year}年公务员考试{mod_name}模块真题 {total} 题，附答案解析。",
-        "url": _url(_year_path(year, module)),
+        "url": _url(page_path),
         "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
@@ -646,7 +649,7 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
     )
     cta = (
         f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?tag3={quote(code)}'
-        f'&module={quote(mod_key)}&source=seo">在线练习「{_e(name)}」（免费）→</a>'
+        f'&amp;module={quote(mod_key)}&amp;source=seo">在线练习「{_e(name)}」（免费）→</a>'
     )
     body = (
         _crumb([("题库", "/tiku/"), (mod_name, f"/tiku/{mod_key}/"), (name, None)])
@@ -661,12 +664,13 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
         + _sibling_topics(code, topic)
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = _topic_path(code) + (f"?page={page}" if page > 1 else "")
     jsonld = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": f"{name}考点题库",
         "description": (topic["desc"] or f"{mod_name}{name}考点真题练习")[:200],
-        "url": _url(_topic_path(code)),
+        "url": _url(page_path),
         "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
@@ -784,8 +788,8 @@ def _render_question(qid: int, version: float | None = None) -> str:
     # 搜索访客的意图是「这道题」：选项本身可点（点即带着选择进练习页作答），答案不在首屏摊开
     practice_href = (
         f'{_e(SITE_BASE)}/app/#/pages/practice/practice?qid={qid}'
-        f'{"&tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
-        f'{"&module=" + quote(r["module"]) if r["module"] else ""}&source=seo_q'
+        f'{"&amp;tag3=" + quote(r["tag3"]) if r["tag3"] else ""}'
+        f'{"&amp;module=" + quote(r["module"]) if r["module"] else ""}&amp;source=seo_q'
     )
     opt_parts = []
     for k, v in sorted(options.items()):
@@ -797,7 +801,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
             for u in (oimgs or []) if isinstance(u, str) and u
         )
         opt_parts.append(
-            f'<a class="opt" href="{practice_href}&pick={_e(k)}" rel="nofollow">'
+            f'<a class="opt" href="{practice_href}&amp;pick={_e(k)}" rel="nofollow">'
             f'<b>{_e(k)}.</b> {_e(v)}{oimg_html}</a>'
         )
     opts_html = "".join(opt_parts)

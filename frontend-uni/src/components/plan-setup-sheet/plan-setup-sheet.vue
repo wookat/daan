@@ -82,6 +82,11 @@ export default {
   },
   watch: {
     modelValue(v) { if (v) this.initFromProfile(); },
+    profile(v, old) {
+      if (this.modelValue && v && !old && this.setupStep === 1 && !this.pf.exam_date) {
+        this.initFromProfile();
+      }
+    },
   },
   methods: {
     initFromProfile() {

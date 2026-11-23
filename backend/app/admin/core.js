@@ -34,8 +34,19 @@
     const r = await fetch(path, Object.assign({
       headers: { 'X-Admin-Token': token(), 'Content-Type': 'application/json' },
     }, opt || {}));
-    if (r.status === 401) { showLogin('令牌无效或已失效，请重新输入管理令牌'); throw new Error('令牌无效或已失效，请重新输入管理令牌'); }
-    if (r.status === 503) { const d = (await r.json().catch(() => ({}))).detail; showLogin(d || '服务端未配置管理令牌'); throw new Error(d || '服务端未配置管理令牌'); }
+    if (r.status === 401) {
+      showLogin('令牌无效或已失效，请重新输入管理令牌');
+      const err = new Error('令牌无效或已失效，请重新输入管理令牌');
+      err._handled = true;
+      throw err;
+    }
+    if (r.status === 503) {
+      const d = (await r.json().catch(() => ({}))).detail;
+      showLogin(d || '服务端未配置管理令牌');
+      const err = new Error(d || '服务端未配置管理令牌');
+      err._handled = true;
+      throw err;
+    }
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || ('HTTP ' + r.status));
     return r.json();
   }
@@ -65,7 +76,11 @@
   }
 
   function fmtOpts(o) {
-    const opts = typeof o === 'string' ? JSON.parse(o || '{}') : (o || {});
+    let opts = o || {};
+    if (typeof o === 'string') {
+      try { opts = JSON.parse(o || '{}'); } catch (e) { return o; }
+    }
+    if (!opts || typeof opts !== 'object') return String(opts || '');
     return Object.entries(opts).map(([k, v]) => `${k}. ${v}`).join('\n');
   }
 
@@ -97,12 +112,15 @@
   }
 
   /* ---- 侧栏红点 ---- */
+  function applyBadges(d) {
+    if (!d || !d.todos) return;
+    setBadge('badge-batches', d.todos.pending_batches);
+    setBadge('badge-review', d.todos.tag3_review);
+    setBadge('badge-reports', d.todos.open_reports);
+  }
   async function refreshBadges() {
     try {
-      const d = await api('/api/admin/dashboard');
-      setBadge('badge-batches', d.todos.pending_batches);
-      setBadge('badge-review', d.todos.tag3_review);
-      setBadge('badge-reports', d.todos.open_reports);
+      applyBadges(await api('/api/admin/dashboard'));
     } catch (e) { /* ignore */ }
   }
   function setBadge(id, n) {
@@ -141,9 +159,12 @@
 
   /* ---- 路由 ---- */
   let currentCleanup = null;
+  let routeSeq = 0;
   async function route() {
+    const seq = ++routeSeq;
     const hash = location.hash.replace(/^#\//, '') || 'dashboard';
-    const [rawName, qs] = hash.split('?');
+    const [rawPart, qs] = hash.split('?');
+    const rawName = (rawPart || '').replace(/\/+$/, '');
     const name = VALID_PAGES.has(rawName) ? rawName : 'dashboard';
     if (typeof currentCleanup === 'function') { currentCleanup(); currentCleanup = null; }
     document.querySelectorAll('.side nav a[data-page]').forEach((a) =>
@@ -152,20 +173,28 @@
     el.innerHTML = '<div class="empty"><div class="eico">⏳</div>加载中…</div>';
     try {
       const page = await loadPageScript(name);
+      if (seq !== routeSeq) return;
       if (!page) throw new Error('未知页面');
       $('crumb').innerHTML = `<b>${esc(page.title)}</b>　${esc(page.crumb)}`;
       document.title = page.title + ' · 答岸管理后台';
-      currentCleanup = await page.render(el, new URLSearchParams(qs || ''));
+      const cleanup = await page.render(el, new URLSearchParams(qs || ''));
+      if (seq !== routeSeq) {
+        if (typeof cleanup === 'function') cleanup();
+        return;
+      }
+      currentCleanup = cleanup;
     } catch (e) {
+      if (seq !== routeSeq) return;
       el.innerHTML = `<div class="empty"><div class="eico">⚠️</div>加载失败：${esc(e.message)}</div>`;
     }
-    refreshBadges();
+    if (seq === routeSeq && name !== 'dashboard') refreshBadges();
   }
 
   if (typeof window.addEventListener === 'function') {
     window.addEventListener('unhandledrejection', (e) => {
+      if (e.reason && e.reason._handled) return;
       const msg = (e.reason && e.reason.message) || '';
-      if (msg && msg !== '未登录') toast('操作失败：' + msg);
+      if (msg && msg !== '未登录') toast('操作失败：' + msg, true);
     });
   }
 
@@ -207,6 +236,10 @@
       else if (v) location.hash = '#/questions?kw=' + encodeURIComponent(v);
     });
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && $('drawer').classList.contains('show')) {
+        closeDrawer();
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k' && !$('app').classList.contains('hidden')) {
         e.preventDefault();
         $('gsearch').focus();
@@ -225,7 +258,7 @@
 
   window.Admin = {
     $, api, esc, toast, MODS, modTag, fmtTime, fmtDay, fmtOpts,
-    openDrawer, closeDrawer, taxonomy, topicOptions, refreshBadges,
+    openDrawer, closeDrawer, taxonomy, topicOptions, refreshBadges, applyBadges,
     registerPage: (name, page) => { PAGES[name] = page; },
     boot,
   };

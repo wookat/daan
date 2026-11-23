@@ -49,6 +49,9 @@
 
     <!-- 小队面板 -->
     <template v-else-if="view === 'panel' && panel">
+      <view v-if="teams.length > 1" class="panel-back">
+        <kg-button variant="text" size="sm" icon="chevron-left" @click="backToTeams">切换其他小队（{{ teams.length }}）</kg-button>
+      </view>
       <kg-hero-card
         :label="panel.team.name"
         :value="panel.members.length"
@@ -156,7 +159,8 @@ export default {
       return ['一', '二', '三', '四', '五', '六', '日'];
     },
     todayIdx() {
-      return (new Date().getDay() + 6) % 7;
+      // 与后端 CN_TZ (UTC+8) 同口径，避免非东八区跨日错位
+      return (new Date(Date.now() + 8 * 3600000).getUTCDay() + 6) % 7;
     },
     weekRank() {
       if (!this.panel) return [];
@@ -201,10 +205,17 @@ export default {
         this.panel = d;
         this.curTeamId = t.id;
         this.view = 'panel';
+        this.loaded = true;
       } catch (e) {
         uni.hideLoading();
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
+        if (!this.loaded) this.loadHome();
       }
+    },
+    backToTeams() {
+      this.view = 'home';
+      this.panel = null;
+      this.loadHome();
     },
     async createTeam() {
       const name = (this.newName || '').trim();
@@ -260,7 +271,7 @@ export default {
       });
     },
     inviteUrl() {
-      return `${SITE}/#/pages/team/join?code=${this.panel.team.invite_code}`;
+      return `${SITE}/app/#/pages/team/join?code=${this.panel.team.invite_code}`;
     },
     copyInvite() {
       const t = this.panel.team;
@@ -316,7 +327,8 @@ export default {
 </script>
 
 <style scoped>
-.page { padding: var(--sp-16) var(--page-x) var(--sp-48); }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-48); box-sizing: border-box; }
+.panel-back { margin-bottom: var(--sp-8); }
 .skel { display: flex; flex-direction: column; gap: var(--sp-12); }
 .hero { margin-bottom: var(--card-gap); }
 .hero-s { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--on-brand-2); margin-bottom: var(--sp-8); }
@@ -341,9 +353,9 @@ export default {
 .rank-name { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank-n { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-2); }
 
-.week-head { display: flex; align-items: center; padding: 0 var(--sp-4) var(--sp-8); }
-.wh-name { flex: 1; font-size: var(--fs-caption); color: var(--ink-3); }
-.wh-days { display: flex; gap: var(--sp-4); width: 60%; max-width: 280px; }
+.week-head { display: flex; flex-direction: column; gap: var(--sp-4); padding: 0 var(--card-pad) var(--sp-8); }
+.wh-name { font-size: var(--fs-caption); color: var(--ink-3); }
+.wh-days { display: flex; gap: var(--sp-4); width: 100%; }
 .wh-d { flex: 1; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 .wh-d.today { color: var(--brand-text); font-weight: 600; }
 
@@ -366,4 +378,12 @@ export default {
 .wk-cell.future { background: transparent; border: 1px dashed var(--line); }
 
 .sheet-body { padding: var(--sp-8) 0; }
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 680px; margin: 0 auto; }
+}
+@media (min-width: 1024px) {
+  .page { max-width: 1064px; margin: 0 auto; }
+}
+/* #endif */
 </style>

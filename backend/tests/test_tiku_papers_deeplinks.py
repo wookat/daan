@@ -35,7 +35,7 @@ def test_paper_detail_cta_carries_year_region(client):
     pid = _seed_paper("2024年上海公务员考试《行测》真题", 2024, "上海", qids[:3])
     html = client.get(f"/tiku/papers/{pid}").text
     assert (
-        f'href="{SITE_BASE}/app/#/pkgA/exam/list?pid={pid}&year=2024&region={quote("上海")}">在线模考本卷'
+        f'href="{SITE_BASE}/app/#/pkgA/exam/list?pid={pid}&amp;year=2024&amp;region={quote("上海")}">在线模考本卷'
         in html
     )
 

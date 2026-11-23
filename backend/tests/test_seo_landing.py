@@ -50,13 +50,13 @@ def test_question_page_cta_deeplinks_same_question(client):
     m = re.search(r'class="cta cta-w" href="([^"]+)">([^<]+)</a>', html)
     assert m
     href, label = m.group(1), m.group(2)
-    assert f"/#/pages/practice/practice?qid={qids[0]}&tag3=ZL-PJ-04&module=ziliao&source=seo_q" in href
+    assert f"/#/pages/practice/practice?qid={qids[0]}&amp;tag3=ZL-PJ-04&amp;module=ziliao&amp;source=seo_q" in href
     assert label == "做这道题，再来五道同考点 ›"
 
     html = client.get(f"/tiku/q/{qids[1]}").text
     m = re.search(r'class="cta cta-w" href="([^"]+)">([^<]+)</a>', html)
     assert m
-    assert f"/#/pages/practice/practice?qid={qids[1]}&module=ziliao&source=seo_q" in m.group(1)
+    assert f"/#/pages/practice/practice?qid={qids[1]}&amp;module=ziliao&amp;source=seo_q" in m.group(1)
     assert m.group(2) == "去练习页做这道题 ›"
     assert "继续刷题" not in html
 
@@ -73,7 +73,7 @@ def test_question_page_first_fold_funnel(client):
     opts = re.findall(r'<a class="opt" href="([^"]+)" rel="nofollow"><b>([A-D])\.</b>', html)
     assert [k for _, k in opts] == ["A", "B", "C", "D"]
     for href, k in opts:
-        assert f"qid={qids[0]}" in href and "source=seo_q" in href and href.endswith(f"&pick={k}")
+        assert f"qid={qids[0]}" in href and "source=seo_q" in href and href.endswith(f"&amp;pick={k}")
     assert '<div class="opt">' not in html
 
     assert "<details open" not in html
@@ -193,7 +193,7 @@ def test_tiku_footer_count_claim_matches_home(client):
     for path in ("/tiku/", "/tiku/yanyu/", f"/tiku/q/{qids[0]}", "/tiku/discuss/"):
         r = client.get(path)
         assert r.status_code == 200, path
-        assert "10万+ 行测题 · 1.5万+ 历年真题" in r.text, path
+        assert "16万+ 行测题 · 2.3万+ 历年真题" in r.text, path
         assert "13万+" not in r.text, path
 
 

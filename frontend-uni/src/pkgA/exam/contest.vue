@@ -113,8 +113,9 @@ export default {
       loadErr: '',
       event: null,
       past: [],
-      rulesOpen: false,
+      rulesOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
       pastOpen: false,
+      busy: false,
       nowSec: Math.floor(Date.now() / 1000),
       timer: null,
       board: null,
@@ -124,14 +125,18 @@ export default {
   },
   computed: {
     phaseText() {
+      if (!this.event) return '';
       return { upcoming: '未开始', running: '进行中', ended: '已结束' }[this.event.phase] || '';
     },
     fmtWindow() {
+      if (!this.event) return '';
       return fmtWindowCst(this.event.open_at, this.event.close_at);
     },
     countdown() {
+      if (!this.event) return '';
       const target = this.event.phase === 'upcoming' ? this.event.open_at : this.event.close_at;
       let s = Math.max(0, Math.floor(target - this.nowSec));
+      if (s > 0 && s < 60) return '不足 1 分钟';
       const d = Math.floor(s / 86400); s %= 86400;
       const h = Math.floor(s / 3600); s %= 3600;
       const m = Math.floor(s / 60);
@@ -139,6 +144,7 @@ export default {
     },
   },
   onShow() {
+    this.stopTimer();
     this.load();
     this.timer = setInterval(() => {
       this.nowSec = Math.floor(Date.now() / 1000);
@@ -154,6 +160,7 @@ export default {
     },
     async load() {
       this.loadErr = '';
+      if (!this.event) this.loading = true;
       try {
         const d = await request('/api/mock/events?uid=' + encodeURIComponent(anonUid()));
         this.event = d.current || d.next;
@@ -165,20 +172,28 @@ export default {
       this.loading = false;
     },
     async register() {
+      if (this.busy || !this.event) return;
+      this.busy = true;
       try {
         await request('/api/mock/events/' + this.event.id + '/register', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname() } });
         uni.showToast({ title: '报名成功，周六见！', icon: 'none' });
         this.load();
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none' });
+      } finally {
+        this.busy = false;
       }
     },
     async enter() {
+      if (this.busy || !this.event) return;
+      this.busy = true;
       try {
         const d = await request('/api/mock/events/' + this.event.id + '/enter', { method: 'POST', data: { uid: anonUid(), nickname: pkNickname() } });
         uni.navigateTo({ url: '/pkgA/exam/exam?paper_id=' + d.paper_id + '&event_id=' + this.event.id });
       } catch (e) {
         uni.showToast({ title: e.message, icon: 'none' });
+      } finally {
+        this.busy = false;
       }
     },
     practice() {
@@ -248,10 +263,12 @@ export default {
 .brow-s { flex-shrink: 0; font-size: var(--fs-body); font-weight: 600; color: var(--brand-text); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; }
-  .rules-card { margin-top: 0; }
-  .fold-h, .prow, .brow { cursor: pointer; }
+  .fold-h, .prow { cursor: pointer; }
 }
 /* #endif */
 </style>

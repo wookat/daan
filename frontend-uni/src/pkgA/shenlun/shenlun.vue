@@ -7,9 +7,9 @@
       <kg-chip-row :model-value="qFavOnly ? -1 : QTYPES.indexOf(qtype)" :options="qtypeChips" class="chips" @update:model-value="setQtype(QTYPES[$event])" />
       <view class="fltbar">
         <kg-tag v-if="paper" tone="brand" class="paper-tag tappable" role="button" :aria-label="'清除套卷筛选：' + paper" @click="clearPaper">{{ paper }} ✕</kg-tag>
-        <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="region ? 'brand' : undefined" @click="fltOpen = true">{{ region || '地区' }}</kg-button>
-        <kg-button variant="secondary" size="sm" icon="chevron-down" :tone="year ? 'brand' : undefined" @click="fltOpen = true">{{ year || '年份' }}</kg-button>
-        <kg-button variant="secondary" size="sm" icon="star" :tone="qFavOnly ? 'brand' : undefined" :aria-pressed="qFavOnly ? 'true' : 'false'" @click="toggleQFavOnly">收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</kg-button>
+        <kg-button :variant="region ? 'secondary' : 'ghost'" size="sm" icon="chevron-down" @click="fltOpen = true">{{ region || '地区' }}</kg-button>
+        <kg-button :variant="year ? 'secondary' : 'ghost'" size="sm" icon="chevron-down" @click="fltOpen = true">{{ year || '年份' }}</kg-button>
+        <kg-button :variant="qFavOnly ? 'secondary' : 'ghost'" size="sm" icon="star" :aria-pressed="qFavOnly ? 'true' : 'false'" @click="toggleQFavOnly">收藏{{ qFavIds.length ? ' ' + qFavIds.length : '' }}</kg-button>
         <view class="grow"></view>
         <kg-button v-if="fltCount || paper || qtype !== '全部' || qFavOnly" variant="text" size="sm" @click="clearFlt">重置</kg-button>
       </view>
@@ -45,7 +45,7 @@
         icon="pen-line"
         :title="qFavOnly ? '还没有收藏真题' : '暂无题目'"
         :desc="qFavOnly ? '点题目右上角星标收藏，收藏的题会汇总在这里' : '换个题型或年份试试，更多真题陆续上线'"
-        :cta-text="qFavOnly || fltCount || qtype !== '全部' ? '查看全部真题' : ''"
+        :cta-text="qFavOnly || fltCount || paper || qtype !== '全部' ? '查看全部真题' : ''"
         @cta="clearFlt"
       />
       <view v-else class="qgrid kg-cards">
@@ -140,10 +140,12 @@
 
     <!-- 素材/范文 -->
     <template v-if="tab === 'm'">
-      <view class="fltbar">
-        <kg-chip-row :model-value="favOnly ? -1 : MTYPES.indexOf(mtype)" :options="mtypeChips" class="chips grow" @update:model-value="setMtype(MTYPES[$event])" />
-        <kg-button v-if="mtype === '我的笔记'" variant="secondary" size="sm" icon="square-pen" @click="openNoteForm()">写笔记</kg-button>
-        <kg-button v-else-if="mtype !== '热点'" variant="secondary" size="sm" icon="star" :tone="favOnly ? 'brand' : undefined" :aria-pressed="favOnly ? 'true' : 'false'" @click="toggleFavOnly">收藏{{ favIds.length ? ' ' + favIds.length : '' }}</kg-button>
+      <view class="fltbar m-fltbar">
+        <kg-chip-row :model-value="favOnly ? -1 : MTYPES.indexOf(mtype)" :options="mtypeChips" class="chips m-chips" @update:model-value="setMtype(MTYPES[$event])" />
+        <view class="m-flt-act">
+          <kg-button v-if="mtype === '我的笔记'" variant="secondary" size="sm" icon="square-pen" @click="openNoteForm()">写笔记</kg-button>
+          <kg-button v-else-if="mtype !== '热点'" :variant="favOnly ? 'secondary' : 'ghost'" size="sm" icon="star" :aria-pressed="favOnly ? 'true' : 'false'" @click="toggleFavOnly">收藏{{ favIds.length ? ' ' + favIds.length : '' }}</kg-button>
+        </view>
       </view>
       <kg-skeleton v-if="loading" preset="cards" />
       <kg-empty-state
@@ -160,7 +162,7 @@
           <kg-card v-for="g in hots" :key="g.topic" class="m-item">
             <view class="q-top" role="button" @click="expanded = expanded === 'h' + g.topic ? 0 : 'h' + g.topic">
               <text class="m-topic">{{ g.topic }}</text>
-              <l-icon :name="expanded === 'h' + g.topic ? 'chevron-up' : 'chevron-down'" :size="18" tone="faint" />
+              <l-icon :name="expanded === 'h' + g.topic ? 'chevron-up' : 'chevron-down'" :size="16" tone="faint" />
             </view>
             <template v-if="expanded === 'h' + g.topic">
               <view v-for="seg in hotSegRows(g)" :key="seg.name" class="hot-seg">
@@ -292,7 +294,7 @@
 
 <script>
 import { fmtYMDHM } from '../../utils/fmt.js';
-import { request, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api/api';
+import { request, anonUid, snapPeek, hasAccessCode, fetchAccessInfo, promptAccessCode } from '../../api/api.js';
 import { buildShenlunUrl, buildShenlunFilterUrl, buildShenlunTabUrl, buildShenlunMatUrl } from '../../shenlun/shenlun-url.js';
 import { toggleQFav as qfavToggle, missingSnapIds, mergeQFavSync } from '../../shenlun/shenlun-qfav.js';
 import { qNavState } from '../../shenlun/shenlun-qnav.js';
@@ -419,6 +421,7 @@ export default {
     // #endif
   },
   onHide() {
+    if (this._draftTimer) { clearTimeout(this._draftTimer); this._draftTimer = null; }
     // #ifdef H5
     if (this._slKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._slKeyHandler);
@@ -427,6 +430,8 @@ export default {
     // #endif
   },
   onUnload() {
+    this._unmounted = true;
+    if (this._draftTimer) { clearTimeout(this._draftTimer); this._draftTimer = null; }
     // #ifdef H5
     if (this._slKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._slKeyHandler);
@@ -460,6 +465,7 @@ export default {
   },
   methods: {
     async loadQs(append) {
+      const seq = (this._qSeq = (this._qSeq || 0) + 1);
       this.loading = !append;
       this.qErr = '';
       try {
@@ -468,15 +474,17 @@ export default {
         const rg = this.region ? '&region=' + encodeURIComponent(this.region) : '';
         const pp = this.paper ? '&paper=' + encodeURIComponent(this.paper) : '';
         const d = await request('/api/shenlun/questions?limit=20&offset=' + this.qOffset + t + y + rg + pp);
+        if (seq !== this._qSeq) return;
         const items = d.items || [];
         this.qEnd = items.length < 20;
         this.qTotal = d.total || items.length;
         this.qs = append ? this.qs.concat(items) : items;
       } catch (e) {
+        if (seq !== this._qSeq) return;
         this.qErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
-      this.loading = false;
+      if (seq === this._qSeq) this.loading = false;
     },
     async loadMats(append) {
       if (this.mtype === '热点') return this.loadHots(append);
@@ -550,7 +558,7 @@ export default {
     },
     syncFilterUrl() {
       // #ifdef H5
-      if (typeof window !== 'undefined' && window.history && !this.detail) {
+      if (!this._unmounted && typeof window !== 'undefined' && window.history && !this.detail) {
         window.history.replaceState(window.history.state, '', withBasePath(this.filterUrl()));
       }
       // #endif
@@ -571,10 +579,12 @@ export default {
       this.syncFilterUrl();
     },
     tapMat() {
+      this.detail = null;
       this.switchMat();
       this.syncFilterUrl();
     },
     tapRec() {
+      this.detail = null;
       this.switchRec();
       this.syncFilterUrl();
     },
@@ -600,7 +610,8 @@ export default {
     },
     switchMat() {
       this.tab = 'm';
-      if (!this.mats.length) this.loadMats();
+      const empty = this.mtype === '热点' ? !this.hots.length : this.mtype === '我的笔记' ? !this.notes.length : !this.mats.length;
+      if (empty) this.loadMats();
       if (!this.favSynced) {
         this.favSynced = true;
         this.syncFavs();
@@ -608,7 +619,7 @@ export default {
     },
     async switchRec() {
       this.tab = 'r';
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (!uid) {
         this.recs = [];
         return;
@@ -654,11 +665,11 @@ export default {
       this.qFavs = r.snaps;
       uni.setStorageSync('slQFavIds', this.qFavIds);
       uni.setStorageSync('slQFavs', this.qFavs);
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (uid) request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: q.id, on: r.added } }).catch(() => {});
     },
     async syncQFavs() {
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (!uid) return;
       try {
         const d = await request('/api/shenlun/qfavs?uid=' + encodeURIComponent(uid));
@@ -704,11 +715,11 @@ export default {
       }
       uni.setStorageSync('slMatFavIds', this.favIds);
       uni.setStorageSync('slMatFavs', this.favMats);
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (uid) request('/api/shenlun/mat_favs', { method: 'POST', data: { uid, mid: m.id, on } }).catch(() => {});
     },
     async syncFavs() {
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (!uid) return;
       try {
         const d = await request('/api/shenlun/mat_favs?uid=' + encodeURIComponent(uid));
@@ -775,7 +786,7 @@ export default {
       this.loading = true;
       this.mErr = '';
       try {
-        const uid = uni.getStorageSync('anonUid');
+        const uid = anonUid();
         const d = await request('/api/shenlun/notes?uid=' + encodeURIComponent(uid));
         this.notes = d.items || [];
       } catch (e) {
@@ -796,7 +807,7 @@ export default {
         return;
       }
       try {
-        const uid = uni.getStorageSync('anonUid');
+        const uid = anonUid();
         await request('/api/shenlun/notes', {
           method: 'POST',
           data: { uid, id: f.id || undefined, topic: f.topic, title: f.title, content: f.content },
@@ -814,7 +825,7 @@ export default {
         success: async (r) => {
           if (!r.confirm) return;
           try {
-            const uid = uni.getStorageSync('anonUid');
+            const uid = anonUid();
             await request('/api/shenlun/notes/delete', { method: 'POST', data: { uid, id: n.id } });
             this.loadNotes();
           } catch (e) {
@@ -847,14 +858,17 @@ export default {
           .boundingClientRect((r) => {
             const top = r && r.top != null ? r.top : 0;
             const wh = win.windowHeight || (typeof window !== 'undefined' ? window.innerHeight : 0) || 700;
-            if (top > 0) this.splitH = Math.max(360, Math.floor(wh - top - 16));
+            const safeTop = top > 0 ? top : 96;
+            this.splitH = Math.max(360, Math.floor(wh - safeTop - 16));
           })
           .exec();
       });
     },
     async openQ(id) {
+      const seq = (this._openSeq = (this._openSeq || 0) + 1);
       try {
         const d = await request('/api/shenlun/questions/' + id);
+        if (seq !== this._openSeq || this._unmounted) return;
         this.detail = d.item;
         this.showMat = true;
         this.showRef = false;
@@ -864,15 +878,18 @@ export default {
         this.history = [];
         this.showHist = false;
         this.loadHistory(id);
+        uni.pageScrollTo({ scrollTop: 0, duration: 0 });
       } catch (e) {
+        if (seq !== this._openSeq) return;
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
     },
     // 作答记录直达：还原「材料 + 当次作答 + 批改结果」的完整作答界面
     async openRec(r) {
       if (!r || !r.qid) return;
-      // 当前题目有未提交草稿且与历史作答不同：先确认，避免静默覆盖用户正在写的内容
-      if (this.myAnswer && this.detail && this.detail.id === r.qid && this.myAnswer !== r.answer) {
+      // 含已落盘草稿：目标题目存在与历史作答不同的未提交草稿时先确认，避免静默覆盖
+      const curDraft = (this.detail && this.detail.id === r.qid ? this.myAnswer : uni.getStorageSync('slDraft:' + r.qid)) || '';
+      if (curDraft && curDraft !== r.answer) {
         const ok = await new Promise((resolve) => {
           uni.showModal({
             title: '还原历史作答？',
@@ -938,13 +955,13 @@ export default {
       this._draftTimer = setTimeout(() => this.pushDraft(qid), 1500);
     },
     pushDraft(qid, content) {
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (!uid) return;
       const c = content !== undefined ? content : (this.detail && this.detail.id === qid ? this.myAnswer : uni.getStorageSync('slDraft:' + qid) || '');
       request('/api/shenlun/draft', { method: 'POST', data: { uid, qid, content: c } }).catch(() => {});
     },
     async syncDraft(id) {
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (!uid) return;
       try {
         const d = await request('/api/shenlun/draft?uid=' + encodeURIComponent(uid) + '&qid=' + id);
@@ -957,7 +974,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     async loadHistory(id) {
-      const uid = uni.getStorageSync('anonUid');
+      const uid = anonUid();
       if (!uid) return;
       try {
         const d = await request('/api/shenlun/history?qid=' + id + '&uid=' + encodeURIComponent(uid));
@@ -970,7 +987,9 @@ export default {
       return fmtYMDHM(ts);
     },
     async grade() {
-      if (this.grading || !this.myAnswer.trim()) return;
+      const qid = this.detail && this.detail.id;
+      const ans = (this.myAnswer || '').trim();
+      if (!qid || this.grading || !ans) return;
       // AI 批改需访问码（内测）：提前提示；取消时草稿保留
       if (!hasAccessCode()) {
         const info = await fetchAccessInfo();
@@ -988,13 +1007,15 @@ export default {
       try {
         const d = await request('/api/shenlun/grade', {
           method: 'POST',
-          data: { qid: this.detail.id, answer: this.myAnswer, uid: uni.getStorageSync('anonUid') || '' },
+          data: { qid, answer: this.myAnswer, uid: anonUid() },
         });
-        this.gradeResult = d.result;
-        this.loadHistory(this.detail.id);
-        uni.removeStorageSync('slDraft:' + this.detail.id);
+        uni.removeStorageSync('slDraft:' + qid);
         clearTimeout(this._draftTimer);
-        this.pushDraft(this.detail.id, '');
+        this.pushDraft(qid, '');
+        if (!this._unmounted && this.detail && this.detail.id === qid) {
+          this.gradeResult = d.result;
+          this.loadHistory(qid);
+        }
       } catch (e) {
         uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
       }
@@ -1011,6 +1032,13 @@ export default {
 .grow { flex: 1; min-width: 0; }
 .fltbar { display: flex; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-12); flex-wrap: wrap; }
 .fltbar .chips { flex: 1; min-width: 0; margin-bottom: 0; }
+.m-fltbar { flex-direction: column; align-items: stretch; gap: var(--sp-8); }
+.m-fltbar .m-chips { width: 100%; flex: none; }
+.m-flt-act { display: flex; justify-content: flex-end; }
+@media (min-width: 768px) {
+  .m-fltbar { flex-direction: row; align-items: center; }
+  .m-fltbar .m-chips { flex: 1; width: auto; min-width: 0; }
+}
 .paper-tag { max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tappable { cursor: pointer; position: relative; }
 .tappable::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 40px; transform: translateY(-50%); }
@@ -1032,7 +1060,8 @@ export default {
 .star-btn { width: var(--hit-min); height: var(--hit-min); margin: calc((var(--hit-min) - 20px) / -2) 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--r-full); }
 .q-text { display: block; margin-top: var(--sp-8); font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
 .q-text.link { color: var(--brand-text); }
-.q-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: var(--sp-8); }
+.q-item, .m-item { display: flex; flex-direction: column; }
+.q-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: auto; padding-top: var(--sp-8); }
 .q-meta { font-size: var(--fs-caption); color: var(--ink-3); flex: 1; min-width: 0; }
 
 .d-card { margin-bottom: var(--card-gap); }
@@ -1054,11 +1083,11 @@ export default {
   .d-cols { flex-direction: row; align-items: stretch; gap: var(--sp-16); }
   .d-col { flex: 1 1 0; }
   .d-col-r { flex: 1 1 0; }
-  .d-card-r { margin-bottom: 0; height: 100%; }
+  .d-card-r { margin-bottom: 0; height: 100%; box-sizing: border-box; }
 }
 /* 窄屏单列：作答头吸顶，字数统计滚出材料区后仍可见 */
 @media (max-width: 767.9px) {
-  .d-ans-h { position: sticky; top: var(--window-top, 0px); z-index: 5; background: var(--card); margin: calc(var(--card-pad, 16px) * -1) calc(var(--card-pad, 16px) * -1) 0; padding: var(--card-pad, 16px) var(--card-pad, 16px) var(--sp-8); }
+  .d-ans-h { position: sticky; top: var(--window-top, 0px); z-index: var(--z-sticky); background: var(--card); border-radius: var(--r-md) var(--r-md) 0 0; margin: calc(var(--card-pad, 14px) * -1) calc(var(--card-pad, 14px) * -1) 0; padding: var(--card-pad, 14px) var(--card-pad, 14px) var(--sp-8); }
 }
 
 .d-ans-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); flex-shrink: 0; }
@@ -1066,7 +1095,7 @@ export default {
 .rec-cta { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--brand-text); }
 .d-save { font-size: var(--fs-caption); color: var(--ink-3); }
 .d-save.near { color: var(--warn-strong); }
-.d-save.over { color: var(--bad); font-weight: 600; }
+.d-save.over { color: var(--bad-strong); font-weight: 600; }
 .d-ta { width: 100%; box-sizing: border-box; min-height: 160px; margin-top: var(--sp-8); padding: var(--sp-12); background: var(--fill); border-radius: var(--r-sm); color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-body); }
 .grade-btn { margin-top: var(--sp-12); }
 .d-grade { margin-top: var(--sp-4); }
@@ -1088,7 +1117,7 @@ export default {
 
 /* 热点三段式 */
 .hot-seg { margin-top: var(--sp-8); }
-.hot-seg-name { display: block; font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--brand); margin-bottom: var(--sp-4); }
+.hot-seg-name { display: block; font-size: var(--fs-caption); font-weight: var(--fw-semibold); color: var(--brand-text); margin-bottom: var(--sp-4); }
 .hot-more { color: var(--ink-3); cursor: pointer; }
 .hot-line { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-4) 0; }
 .hot-line + .hot-line { border-top: 1px solid var(--line); }
@@ -1102,8 +1131,12 @@ export default {
 .note-ta { width: 100%; box-sizing: border-box; min-height: 100px; padding: var(--sp-8) var(--sp-12); border: 1px solid var(--line); border-radius: var(--r-md); font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); background: var(--card); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+  .qgrid, .mgrid, .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
 @media (min-width: 1024px) {
-  .qgrid, .mgrid, .rgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page { max-width: 1064px; margin: 0 auto; }
   .d-ta { min-height: 320px; }
   .hist-item:hover { background: var(--fill); }
 }

@@ -18,12 +18,12 @@ describe('normFontLv', () => {
 });
 
 describe('fontSizes', () => {
-  it('three levels', () => {
-    expect(fontSizes(0)).toEqual({ q: '26rpx', opt: '24rpx' });
-    expect(fontSizes(1)).toEqual({ q: '30rpx', opt: '28rpx' });
-    expect(fontSizes(2)).toEqual({ q: '34rpx', opt: '32rpx' });
+  it('three levels in px (no tablet rpx 2x blowup)', () => {
+    expect(fontSizes(0)).toEqual({ q: '13px', opt: '12px' });
+    expect(fontSizes(1)).toEqual({ q: '15px', opt: '14px' });
+    expect(fontSizes(2)).toEqual({ q: '17px', opt: '16px' });
   });
   it('invalid level uses standard', () => {
-    expect(fontSizes('big')).toEqual({ q: '30rpx', opt: '28rpx' });
+    expect(fontSizes('big')).toEqual({ q: '15px', opt: '14px' });
   });
 });

@@ -53,8 +53,8 @@ _CSS = (
     ":root{--bg:#f6f7fb;--surface:#fff;--border:#e7e9f0;--text:#17181c;--muted:#6b7280;"
     "--link:" + BRAND + ";--tag-bg:#eef3ff;--ans-bg:#ecfdf5;"
     "--shadow:0 1px 2px rgba(23,24,28,.05);--shadow-hover:0 4px 12px rgba(23,24,28,.1)}"
-    "@media(prefers-color-scheme:dark){:root{--bg:#111827;--surface:#1f2937;--border:#374151;"
-    "--text:#f3f4f6;--muted:#9ca3af;--link:#7c9aff;--tag-bg:#26324d;--ans-bg:#123527;"
+    "@media(prefers-color-scheme:dark){:root{--bg:#15161c;--surface:#1d1f28;--border:#2b2e3a;"
+    "--text:#f2f3f7;--muted:#9ba0b0;--link:#8fa8ff;--tag-bg:#1e2a4a;--ans-bg:#0e2b1e;"
     "--shadow:0 1px 2px rgba(0,0,0,.4);--shadow-hover:0 4px 12px rgba(0,0,0,.5)}}"
     "*{box-sizing:border-box}body{margin:0;font-family:Inter,-apple-system,BlinkMacSystemFont,"
     "'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;"
@@ -72,7 +72,7 @@ _CSS = (
     ".hdr-s input:focus{border-color:var(--link)}"
     ":focus-visible{outline:2px solid var(--link);outline-offset:2px;border-radius:4px}"
     ".hdr-s input:focus:not(:focus-visible){outline:none}"
-    "@media(max-width:480px){.hdr .brand{font-size:15px;white-space:nowrap}.hdr-s{margin:0 8px}.hdr-s input{max-width:none;padding:6px 10px;font-size:13px}.hdr-cta{padding:6px 12px;font-size:13px;white-space:nowrap}}"
+    "@media(max-width:480px){.hdr .wrap{flex-wrap:wrap;gap:8px}.hdr .brand{font-size:16px;white-space:nowrap}.hdr-s{order:3;flex:1 0 100%;margin:0}.hdr-s input{max-width:none;width:100%;padding:8px 14px;font-size:14px}.hdr-cta{padding:6px 14px;font-size:13px;white-space:nowrap}}"
     ".card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 0;"
     "box-shadow:var(--shadow)}"
     ".crumb{font-size:13px;color:var(--muted);margin:10px 0}.crumb a{color:var(--muted)}"
@@ -153,7 +153,7 @@ def _page(
         '<meta property="og:site_name" content="答岸">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(description)}">'
-        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
+        f'<meta property="og:image" content="{_e(SITE_BASE)}/lp-assets/og-card.png">'
         '<meta name="twitter:card" content="summary_large_image">'
         f"{head_meta}"
         f"<style>{_CSS}</style>{ld}</head><body>"
@@ -162,7 +162,7 @@ def _page(
         f'<input name="q" type="search" placeholder="搜题目/考点/卷" aria-label="搜索题库"></form>'
         f'<a class="hdr-cta" href="/app/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
-        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">答岸</a> · 10万+ 行测题 · 1.5万+ 历年真题'
+        f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">答岸</a> · 16万+ 行测题 · 2.3万+ 历年真题'
         f' · <a href="/tiku/papers/">真题卷</a>'
         f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
         f' · <a href="https://career.zalize.com/terms/">服务条款</a>'

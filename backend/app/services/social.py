@@ -268,14 +268,16 @@ def api_comments_plaza(limit: int = 20):
     rows = conn.execute(
         """SELECT g.question_id, g.cnt, g.last_at, c.nickname, c.content,
                   q.question, q.module
-           FROM (SELECT question_id, COUNT(*) AS cnt, MAX(created_at) AS last_at
-                 FROM question_comments WHERE status='ok'
-                 GROUP BY question_id ORDER BY last_at DESC LIMIT ?) g
+           FROM (SELECT qc.question_id, COUNT(*) AS cnt, MAX(qc.created_at) AS last_at
+                 FROM question_comments qc
+                 JOIN questions q0 ON q0.id = qc.question_id AND COALESCE(q0.disabled, 0) = 0
+                 WHERE qc.status='ok'
+                 GROUP BY qc.question_id ORDER BY last_at DESC LIMIT ?) g
            LEFT JOIN question_comments c ON c.id = (
                SELECT id FROM question_comments
                WHERE question_id = g.question_id AND status='ok'
                ORDER BY created_at DESC, id DESC LIMIT 1)
-           LEFT JOIN questions q ON q.id = g.question_id
+           JOIN questions q ON q.id = g.question_id AND COALESCE(q.disabled, 0) = 0
            ORDER BY g.last_at DESC""",
         (n,),
     ).fetchall()

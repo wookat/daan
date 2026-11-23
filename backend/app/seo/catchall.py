@@ -53,18 +53,19 @@ def tiku_module(module: str, page: int = 1):
         + _q_items(rows)
         + "</div>"
         + _pager(f"/tiku/{module}/", page, total)
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站刷{_e(name)} →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?module={quote(module)}&amp;source=seo">进入主站刷{_e(name)} →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = f"/tiku/{module}/" + (f"?page={page}" if page > 1 else "")
     return _page(
         f"{name}题库{suffix}_行测{name}真题及答案解析_答岸",
         f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
-        f"/tiku/{module}/" + (f"?page={page}" if page > 1 else ""),
+        page_path,
         body,
         _collection_ld(
             f"{name}题库",
             f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与解析。",
-            f"/tiku/{module}/",
+            page_path,
             [("题库", "/tiku/"), (name, f"/tiku/{module}/")],
         ),
     )
@@ -94,18 +95,19 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
         + _q_items(rows)
         + "</div>"
         + _pager(_sub_path(module, submodule), page, total)
-        + f'<a class="cta" href="{_e(SITE_BASE)}/">进入主站刷{_e(submodule)} →</a>'
+        + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?module={quote(module)}&amp;submodule={quote(submodule)}&amp;source=seo">进入主站刷{_e(submodule)} →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
+    page_path = _sub_path(module, submodule) + (f"?page={page}" if page > 1 else "")
     return _page(
         f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_答岸",
         f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
-        _sub_path(module, submodule) + (f"?page={page}" if page > 1 else ""),
+        page_path,
         body,
         _collection_ld(
             f"{name}·{submodule}题库",
             f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析。",
-            _sub_path(module, submodule),
+            page_path,
             [("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, _sub_path(module, submodule))],
         ),
     )

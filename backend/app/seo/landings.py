@@ -49,11 +49,11 @@ def share_landing(sid: str):
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(summary)}">'
         f'<meta property="og:url" content="{_e(page_url)}">'
-        f'<meta property="og:image" content="{_e(SITE_BASE)}/static/og-card.png">'
+        f'<meta property="og:image" content="{_e(SITE_BASE)}/lp-assets/og-card.png">'
         f'<meta name="twitter:card" content="summary_large_image">'
         f'<meta name="twitter:title" content="{_e(title)}">'
         f'<meta name="twitter:description" content="{_e(summary)}">'
-        f'<meta name="twitter:image" content="{_e(SITE_BASE)}/static/og-card.png">'
+        f'<meta name="twitter:image" content="{_e(SITE_BASE)}/lp-assets/og-card.png">'
         f'<meta http-equiv="refresh" content="0;url={_e(spa)}">'
         f'<script>location.replace("{spa}"+location.search.replace("?","&"))</script>'
         f"</head><body><p>正在打开分享题目… "

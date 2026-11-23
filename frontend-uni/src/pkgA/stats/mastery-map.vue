@@ -174,13 +174,19 @@ export default {
     },
   },
   onLoad(opts) {
+    this._unmounted = false;
     this._pendingMod = parseMasteryOpts(opts).mod;
   },
   onShow() {
     this.load();
   },
+  onUnload() {
+    this._unmounted = true;
+  },
   watch: {
     curMod() {
+      this.selected = null;
+      this.selGrp = null;
       this.syncUrl();
     },
   },
@@ -194,14 +200,17 @@ export default {
       try {
         this.applyMap(await request(p));
       } catch (e) {
-        this.err = '加载失败：' + e.message;
+        if (!snap && !this.map) this.err = '加载失败：' + e.message;
       }
     },
     applyMap(d) {
+      if (this._unmounted) return;
       this.nTotal = d.n_total || 0;
       this.need = d.need || 30;
       if (d.cold) {
         this.cold = true;
+        this.selected = null;
+        this.selGrp = null;
         this.diffRows = [];
         this.secsText = '';
         return;
@@ -222,9 +231,21 @@ export default {
         this._pendingMod = '';
       }
       if (!this.curMod && d.modules.length) this.curMod = d.modules[0].module;
+      if (this.selected) {
+        let hit = null;
+        let hitGrp = null;
+        const modObj = (d.modules || []).find((x) => x.module === this.curMod);
+        for (const g of (modObj && modObj.subs) || []) {
+          const found = (g.tag3s || []).find((t) => t.code === this.selected.code);
+          if (found) { hit = found; hitGrp = g; break; }
+        }
+        this.selected = hit;
+        this.selGrp = hitGrp;
+      }
     },
     syncUrl() {
       // #ifdef H5
+      if (this._unmounted) return;
       if (typeof window !== 'undefined' && window.history) {
         window.history.replaceState(window.history.state, '', withBasePath(buildMasteryUrl({ mod: this.curMod })));
       }
@@ -269,12 +290,12 @@ export default {
 .legend { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
 .lg { font-size: var(--fs-caption); line-height: var(--lh-caption); padding: 0 6px; border-radius: var(--r-xs); white-space: nowrap; }
 
-/* 掌握度 5 级色轨：lv-* 专属语义 token（未接触灰→入门琥珀→巩固蓝→熟练紫→精通绿，Khan 式进阶） */
+/* 掌握度 5 级色轨：lv-* 专属语义 token（统一深浅色 WCAG AA 对比度，精通态走 ok-soft+ok-strong 避免深色白字配亮绿 1.71:1 不可读） */
 .untouched { background: var(--lv-untouched-soft); color: var(--ink-3); }
-.rumen { background: var(--lv-rumen-soft); color: var(--lv-rumen); }
-.gonggu { background: var(--lv-gonggu-soft); color: var(--lv-gonggu); }
+.rumen { background: var(--lv-rumen-soft); color: var(--warn-strong); }
+.gonggu { background: var(--lv-gonggu-soft); color: var(--brand-text); }
 .shulian { background: var(--lv-shulian-soft); color: var(--lv-shulian); }
-.jingtong { background: var(--lv-jingtong); color: var(--on-brand); }
+.jingtong { background: var(--ok-soft); color: var(--ok-strong); border: 1px solid var(--ok); }
 
 .side-nav { display: none; }
 .tabs { margin-bottom: var(--sp-12); }
@@ -302,10 +323,10 @@ export default {
 .row-name { flex: 1; min-width: 0; font-size: var(--fs-sub); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-pct { flex-shrink: 0; width: 44px; text-align: right; font-size: var(--fs-sub); font-weight: 600; background: none; }
 .row-pct.untouched { color: var(--ink-3); }
-.row-pct.rumen { color: var(--lv-rumen); }
-.row-pct.gonggu { color: var(--lv-gonggu); }
+.row-pct.rumen { color: var(--warn-strong); }
+.row-pct.gonggu { color: var(--brand-text); }
 .row-pct.shulian { color: var(--lv-shulian); }
-.row-pct.jingtong { color: var(--lv-jingtong); }
+.row-pct.jingtong { color: var(--ok-strong); }
 
 .sheet-l { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sheet-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -324,10 +345,13 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
+  .page { max-width: 680px; margin: 0 auto; }
+  .cold { max-width: 520px; margin: 0 auto; }
   .tile:hover, .row:hover, .side-item:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .page { max-width: 1044px !important; }
+  .page { max-width: 1044px !important; margin: 0 auto; }
+  .page.has-bar { padding-bottom: var(--sp-24); }
   .tabs { display: none; }
   .side-nav { display: block; }
   .side-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); min-height: var(--hit-min); padding: 0 var(--sp-8); border-radius: var(--r-sm); }

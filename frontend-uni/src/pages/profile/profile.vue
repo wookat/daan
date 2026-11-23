@@ -227,7 +227,6 @@ export default {
       mistakeN: null,
       announce: null,
       pstats: { byModule: {}, days: {} },
-      daily: { days: {} },
       favN: 0,
       inboxUnread: 0,
       teamName: '',
@@ -332,7 +331,6 @@ export default {
       this.coachOpen = true;
     }
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-    this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
     this.favN = (uni.getStorageSync('favQuestions') || []).length;
     syncCloudFavs().then((list) => {
       if (list) this.favN = list.length;
@@ -346,12 +344,12 @@ export default {
     this.themeMode = getThemeMode();
     this.accKey = getThemeAccent();
     this.offlineN = listPacks().length;
-    this.teamName = this.peekTeamName();
     this.refreshAccountData();
   },
   methods: {
     refreshAccountData() {
       this.user = getAuthUser();
+      this.teamName = this.peekTeamName();
       this.loadRemote();
       this.loadBadges();
       this.loadInbox();
@@ -362,6 +360,9 @@ export default {
       this.growth = null;
       this.badgeInfo = null;
       this.inboxUnread = 0;
+      this.teamName = '';
+      this.favN = (uni.getStorageSync('favQuestions') || []).length;
+      syncCloudFavs().then((list) => { if (list) this.favN = list.length; });
       this.refreshAccountData();
     },
     maskPhone(p) {
@@ -677,13 +678,14 @@ export default {
 :deep(.cellcard .wd-cell__value) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cell-ico { width: 32px; height: 32px; border-radius: var(--r-xs); background: var(--fill); display: flex; align-items: center; justify-content: center; margin-right: var(--sp-12); }
 
-/* 主题色 chips（375px 下三颗胶囊单行完整呈现，防 uni-text pre-line 折行裁切） */
-:deep(.acc-cell .wd-cell__value) { overflow: visible; }
-.acc-row { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 6px; }
-.acc-chip { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 9px; height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2); white-space: nowrap; }
+/* 主题色 chips（375px 手机与 ≥1024px 右侧 320–344px 栏均单行完整不裁切） */
+:deep(.acc-cell .wd-cell__left) { max-width: none; }
+:deep(.acc-cell .wd-cell__value) { overflow: visible; flex: 1; min-width: 0; }
+.acc-row { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 4px; }
+.acc-chip { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 0 7px; height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-caption); color: var(--ink-2); white-space: nowrap; }
 .acc-chip.on { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); font-weight: var(--fw-medium); }
-.acc-dot { width: 10px; height: 10px; border-radius: var(--r-full); flex-shrink: 0; }
-.acc-t { font-size: var(--fs-sub); line-height: 1; white-space: nowrap; }
+.acc-dot { width: 8px; height: 8px; border-radius: var(--r-full); flex-shrink: 0; }
+.acc-t { font-size: var(--fs-caption); line-height: 1; white-space: nowrap; }
 
 .logout { margin-top: var(--sp-24); }
 
@@ -708,8 +710,12 @@ export default {
 .about-copy { display: block; font-size: var(--fs-caption); color: var(--ink-3); text-align: center; margin-top: var(--sp-24); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap.profile { padding-bottom: var(--sp-40); }
+}
 @media (min-width: 1024px) {
-  .wrap.profile { max-width: 1064px; }
+  .wrap.profile { max-width: 1064px; padding-top: var(--sp-24); }
+  :deep(.acc-cell .cell-ico) { margin-right: var(--sp-8); }
 }
 /* #endif */
 </style>

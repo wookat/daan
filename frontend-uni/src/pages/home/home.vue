@@ -206,7 +206,7 @@
           <kg-card clickable class="more-c" @click="goExamList">
             <view class="more-ico"><l-icon name="timer" :size="24" tone="brand" /></view>
             <text class="more-t">模考</text>
-            <text class="more-s">迷你 / 全真 / 组卷 · 成绩报告</text>
+            <text class="more-s">迷你 · 全真 · 成绩报告</text>
           </kg-card>
           <kg-card clickable class="more-c" @click="goShenlun">
             <view class="more-ico"><l-icon name="pen-line" :size="24" tone="brand" /></view>
@@ -401,6 +401,7 @@ export default {
     },
     showLanding() {
       if (this.landingHide) return false;
+      if (this.svTodayN > 0 || this.profile || (this.badgeInfo && (this.badgeInfo.streak || this.badgeInfo.best_streak))) return false;
       return !Object.keys((this.pstats && this.pstats.days) || {}).length;
     },
     examLabel() {
@@ -505,7 +506,11 @@ export default {
     };
     uni.$on('authChanged', this._onAuth);
   },
+  onHide() {
+    if (this._countsTimer) { clearTimeout(this._countsTimer); this._countsTimer = null; }
+  },
   onUnload() {
+    if (this._countsTimer) { clearTimeout(this._countsTimer); this._countsTimer = null; }
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
   },
   onShow() {
@@ -519,7 +524,6 @@ export default {
     this.loadAnnounce();
     this.calcWeeklyDot();
     this.checkComeback();
-    this.checkReminder();
     this.loadDailySet();
     flushDailySubmit().then((ok) => {
       if (ok) this.syncDsDone();
@@ -531,6 +535,7 @@ export default {
       this.openSetup();
     }
     this.refreshAccountData().then(() => {
+      this.checkReminder();
       if (wantSetup && this.setupOpen && this.profile) this.openSetup();
     });
     if (this.realMode) this.loadRealFilters();
@@ -561,11 +566,6 @@ export default {
     closeLanding() {
       this.landingHide = true;
       uni.setStorageSync('landingHide', 1);
-    },
-    goTiku() {
-      // #ifdef H5
-      window.location.href = '/tiku/';
-      // #endif
     },
     loadDailySet() {
       // 全站同题题组：首页外显参与数 + 预取题组供 startDaily 秒开（边缘缓存 60s）
@@ -951,11 +951,14 @@ export default {
         this.counts = MODULE_KEYS.map((m) => ({ module: m, n: 0 }));
       }
       this._countsTries = (this._countsTries || 0) + 1;
-      if (this._countsTries <= 20) setTimeout(() => this.loadCounts(), 3000);
+      if (this._countsTimer) clearTimeout(this._countsTimer);
+      if (this._countsTries <= 20) this._countsTimer = setTimeout(() => { this._countsTimer = null; this.loadCounts(); }, 3000);
     },
     async openModule(module) {
+      const seq = (this._modSeq = (this._modSeq || 0) + 1);
       try {
         const d = await request('/api/submodules?module=' + module);
+        if (seq !== this._modSeq) return;
         const items = (d.items || []).filter((s) => s.submodule);
         if (items.length < 2) {
           this.startPreset(module);
@@ -968,11 +971,11 @@ export default {
         const uid = uni.getStorageSync('anonUid');
         if (uid) {
           request('/api/submodule_progress?uid=' + uid + '&module=' + module)
-            .then((p) => { this.subProg = p.items || {}; })
+            .then((p) => { if (seq === this._modSeq) this.subProg = p.items || {}; })
             .catch(() => {});
         }
       } catch (e) {
-        this.startPreset(module);
+        if (seq === this._modSeq) this.startPreset(module);
       }
     },
     setReal(v) {
@@ -1063,7 +1066,7 @@ export default {
         return;
       }
       if (t.type === 'review') {
-        this.goBook();
+        this.goReview('plan_task');
         return;
       }
       if (t.type === 'reinforce') {
@@ -1189,7 +1192,7 @@ export default {
 .modlist { margin-top: var(--sp-12); }
 .modrow { min-height: 72px; box-sizing: border-box; display: flex; align-items: center; }
 .modrow--weak { border-color: var(--brand-soft-2); }
-.modrow-in { width: 100%; display: flex; align-items: center; gap: var(--sp-12); }
+.modrow-in { width: 100%; display: flex; align-items: center; gap: var(--sp-12); padding-right: var(--sp-24); box-sizing: border-box; }
 .modrow-ico { width: 44px; height: 44px; border-radius: var(--r-sm); background: var(--brand-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .modrow-ico.is-warn { background: var(--warn-soft); }
 .modrow-tr { display: flex; align-items: center; gap: var(--sp-8); }
@@ -1206,7 +1209,6 @@ export default {
 .more-s { font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .more-grid .more-c { margin-top: 0; }
 .weekly, .streak { margin-top: var(--card-gap); }
-.streak-bar { margin-top: var(--sp-12); }
 
 /* sheet 内表单 */
 .setrow { display: flex; flex-direction: column; gap: var(--sp-8); padding: var(--sp-12) 0; border-bottom: 1px solid var(--line); }
@@ -1225,11 +1227,18 @@ export default {
 .sub-n { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap.home { padding-bottom: var(--sp-40); }
+  .modlist > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@media (min-width: 1024px) and (max-width: 1199px) {
+  /* 1024–1199px 扣除 208 侧栏 + 320 右栏后主栏仅 ~440–615px，单列展示模块卡避免文字区被压到 55px */
+  .modlist.kg-cards--grid { grid-template-columns: 1fr; }
+}
 @media (min-width: 1024px) {
   .wrap.home { max-width: 1064px; padding-top: var(--sp-24); }
   .toprow { max-width: 720px; }
   .more-grid { margin-top: var(--sp-8); }
-  .modlist > :last-child:nth-child(odd) { grid-column: 1 / -1; }
 }
 /* #endif */
 </style>

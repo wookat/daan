@@ -43,6 +43,10 @@
             <kg-progress :value="nextMilestone.pct" :thickness="8" class="ms-bar" :aria-label="`距下一个徽章 ${nextMilestone.pct}%`" />
             <text class="ms-sub">再打卡 <text class="ms-left num">{{ nextMilestone.left }}</text> 天解锁「{{ nextMilestone.days }} 天」徽章</text>
           </template>
+          <view v-else-if="badgeErr" class="ms-err">
+            <text class="ms-sub">暂无法加载徽章进度</text>
+            <kg-button variant="text" size="sm" @click="loadBadges">重试</kg-button>
+          </view>
           <text v-else class="ms-sub">已解锁全部打卡徽章，太强了！</text>
           <view class="ms-dots">
             <view v-for="b in badgeInfo.badges" :key="b.days" class="ms-dot" :class="{ on: b.unlocked }">
@@ -63,14 +67,19 @@
 <script>
 import { fetchCheckinBadges, fetchCheckinSummary } from '../../api/api.js';
 
+function cnNow() {
+  const d = new Date();
+  return new Date(d.getTime() + (d.getTimezoneOffset() + 8 * 60) * 60000);
+}
+
 export default {
   data() {
-    const now = new Date();
-    return { pstats: { days: {} }, ym: { y: now.getFullYear(), m: now.getMonth() }, badgeInfo: null, svDays: null };
+    const now = cnNow();
+    return { pstats: { days: {} }, ym: { y: now.getFullYear(), m: now.getMonth() }, badgeInfo: null, badgeErr: false, svDays: null };
   },
   computed: {
     isCurMonth() {
-      const now = new Date();
+      const now = cnNow();
       return this.ym.y === now.getFullYear() && this.ym.m === now.getMonth();
     },
     monthPrefix() {
@@ -112,7 +121,7 @@ export default {
     },
     calCells() {
       const { y, m } = this.ym;
-      const now = new Date();
+      const now = cnNow();
       const first = new Date(y, m, 1);
       const lead = (first.getDay() + 6) % 7;
       const total = new Date(y, m + 1, 0).getDate();
@@ -138,9 +147,11 @@ export default {
   },
   methods: {
     async loadBadges() {
+      this.badgeErr = false;
       try {
         this.badgeInfo = await fetchCheckinBadges();
       } catch (e) {
+        this.badgeErr = true;
         // 非关键路径：请求失败时用空徽章数据渲染，避免辅栏一直骨架
         if (this.badgeInfo === null) this.badgeInfo = { streak: 0, best_streak: 0, badges: [] };
       }
@@ -187,6 +198,9 @@ export default {
 .cal-c.part { background: var(--brand-soft-2); color: var(--brand-text); font-weight: 600; }
 .cal-c.full { background: var(--brand); color: var(--on-brand); font-weight: 600; }
 .cal-c.today { border: 2px solid var(--brand); }
+.cal-c.full.today { border-color: var(--card); outline: 2px solid var(--brand); outline-offset: 1px; }
+.ms-err { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-top: var(--sp-8); }
+.ms-err .ms-sub { margin-top: 0; }
 .cal-legend { display: flex; flex-wrap: wrap; gap: var(--sp-8) var(--sp-16); margin-top: var(--sp-16); }
 .lg { font-size: var(--fs-caption); color: var(--ink-3); display: inline-flex; align-items: center; gap: var(--sp-4); }
 .dot { width: 10px; height: 10px; border-radius: var(--r-full); display: inline-block; }
@@ -214,8 +228,12 @@ export default {
 .poster-tip { text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap.cal-page { max-width: 680px; margin: 0 auto; }
+  .cal-btn:not(.dis) { cursor: pointer; }
+}
 @media (min-width: 1024px) {
-  .wrap.cal-page { max-width: 1064px; }
+  .wrap.cal-page { max-width: 1064px; margin: 0 auto; }
   .ms { margin-top: 0; }
 }
 /* #endif */

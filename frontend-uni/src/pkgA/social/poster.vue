@@ -90,15 +90,26 @@ function drawPoster(ctx, d) {
     if (ctx.measureText(bt).width > W - pad * 2) ctx.font = '800 52px sans-serif';
     ctx.fillText(bt, pad, 106);
   } else {
-    ctx.font = '800 76px sans-serif';
-    ctx.fillText(`连续打卡 第 ${d.streak} 天`, pad, 100);
+    const title = `连续打卡 第 ${d.streak} 天`;
+    let sz = 76;
+    ctx.font = `800 ${sz}px sans-serif`;
+    while (ctx.measureText(title).width > W - pad * 2 && sz > 44) {
+      sz -= 4;
+      ctx.font = `800 ${sz}px sans-serif`;
+    }
+    ctx.fillText(title, pad, 100);
   }
 
   const date = new Date();
   let sub = `${date.getMonth() + 1} 月 ${date.getDate()} 日 · 花生上岸`;
   if (d.days_to_exam != null) sub += ` · 距${d.exam_type || '考试'}还有 ${d.days_to_exam} 天`;
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
-  ctx.font = '24px sans-serif';
+  let subSz = 24;
+  ctx.font = `${subSz}px sans-serif`;
+  while (ctx.measureText(sub).width > W - pad * 2 && subSz > 16) {
+    subSz -= 2;
+    ctx.font = `${subSz}px sans-serif`;
+  }
   ctx.fillText(sub, pad, 200);
 
   // 鼓励语卡
@@ -300,6 +311,11 @@ export default {
       let d;
       let draw = drawPoster;
       if (this.mode === 'exam') {
+        if (!this.attemptId) {
+          this.err = '缺少模考成绩参数，请从成绩报告页重新打开';
+          this.loading = false;
+          return;
+        }
         draw = drawExamPoster;
         try {
           const uid = encodeURIComponent(anonUid());
@@ -321,6 +337,10 @@ export default {
           return;
         }
         this.streak = Number(d.streak) || 0;
+        if (this.zeroDay) {
+          this.loading = false;
+          return;
+        }
         d.badge = this.badge;
         d.quote = this.makeQuote(d);
       }
@@ -370,13 +390,19 @@ export default {
     save() {
       if (!this.imgSrc || this.zeroDay) return;
       // #ifdef H5
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+      if (/MicroMessenger|iPhone|iPad|iPod/i.test(ua)) {
+        uni.showToast({ title: '请长按上方海报图片保存到相册', icon: 'none', duration: 2500 });
+        return;
+      }
       const a = document.createElement('a');
       a.href = this.imgSrc;
-      a.download = 'kaogong-checkin-' + new Date().toISOString().slice(0, 10) + '.png';
+      const prefix = this.mode === 'exam' ? 'kaogong-exam-' : 'kaogong-checkin-';
+      a.download = prefix + new Date().toISOString().slice(0, 10) + '.png';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      uni.showToast({ title: '已保存图片', icon: 'none' });
+      uni.showToast({ title: '已开始下载图片', icon: 'none' });
       // #endif
       // #ifdef MP-WEIXIN
       uni.saveImageToPhotosAlbum({
@@ -399,7 +425,7 @@ export default {
 </script>
 
 <style scoped>
-.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+.wrap { padding: var(--sp-16) var(--page-x) var(--sp-48); display: flex; flex-direction: column; align-items: center; min-height: calc(100vh - var(--window-top, 0px)); box-sizing: border-box; }
 .state { width: 100%; max-width: 320px; display: flex; flex-direction: column; align-items: center; gap: var(--sp-16); padding: var(--sp-24) 0; }
 .skel { width: 100%; }
 .state-t { color: var(--ink-3); font-size: var(--fs-sub); }
@@ -411,7 +437,7 @@ export default {
 /* T5 工具页：任何断点都单列（≤480） */
 /* #ifdef H5 */
 @media (min-width: 700px) {
-  .wrap { max-width: 480px !important; }
+  .wrap { max-width: 480px !important; margin: 0 auto; }
 }
 /* #endif */
 </style>

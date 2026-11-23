@@ -5,7 +5,7 @@
         <view v-if="items.length" class="list kg-cards">
           <kg-card v-for="(it, i) in items" :key="it.type + '-' + it.id + '-' + i" clickable class="item" @click="openDiscuss(it)">
             <view class="row">
-              <view class="avatar" :class="{ 'is-like': it.type === 'like' }" aria-hidden="true">
+              <view class="avatar" aria-hidden="true">
                 <l-icon v-if="it.type === 'like'" name="thumbs-up" :size="20" tone="brand-text" />
                 <text v-else class="avatar-t">{{ (it.nickname || '?').slice(0, 1) }}</text>
               </view>
@@ -50,8 +50,8 @@
         />
         <kg-skeleton v-else preset="cards" />
       </template>
-      <template #aside>
-        <kg-card v-if="items.length" variant="flat">
+      <template v-if="items.length" #aside>
+        <kg-card variant="flat">
           <kg-stat-row :items="[{ label: '消息', value: items.length }, { label: '未读', value: unreadCount }]" />
         </kg-card>
       </template>
@@ -74,8 +74,13 @@ export default {
   },
   onShow() {
     this.logged = !!getToken();
-    if (this.logged) this.load();
-    else this.loaded = true;
+    if (this.logged) {
+      this.load();
+    } else {
+      this.items = [];
+      this.loadErr = '';
+      this.loaded = true;
+    }
   },
   methods: {
     async load() {
@@ -120,8 +125,11 @@ export default {
 .ellip1 { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap { max-width: 680px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; }
+  .wrap { max-width: 1044px !important; margin: 0 auto; }
 }
 /* #endif */
 </style>

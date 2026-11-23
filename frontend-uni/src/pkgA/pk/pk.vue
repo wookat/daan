@@ -1,5 +1,5 @@
 <template>
-  <view class="page" :class="{ 'is-quiz': view === 'quiz' }">
+  <view class="page" :class="{ 'is-quiz': view === 'quiz', 'is-result': view === 'result' }">
     <!-- 入口页（T1） -->
     <kg-two-col v-if="view === 'home'">
       <template #main>
@@ -22,7 +22,8 @@
             <text class="h">我的对局</text>
             <text v-if="mine.wins" class="sec-more num">累计 {{ mine.wins }} 胜</text>
           </view>
-          <kg-empty-state v-if="loadErr && !mine.items.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="loadHome" />
+          <kg-skeleton v-if="!homeLoaded && !mine.items.length" preset="lines" />
+          <kg-empty-state v-else-if="loadErr && !mine.items.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="loadHome" />
           <kg-empty-state v-else-if="!mine.items.length" compact icon="swords" title="还没有对局记录" desc="发起一局或输入挑战码应战" />
           <view v-for="m in mine.items" :key="m.code" class="m-row" role="button" hover-class="row--hover" @click="openMatch(m)">
             <view class="m-l">
@@ -41,7 +42,8 @@
             <text class="h">本周胜场榜</text>
             <text v-if="lb.my_rank" class="sec-more num">我的排名 #{{ lb.my_rank }} · {{ lb.my_wins }} 胜</text>
           </view>
-          <kg-empty-state v-if="loadErr && !lb.items.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="loadHome" />
+          <kg-skeleton v-if="!homeLoaded && !lb.items.length" preset="lines" />
+          <kg-empty-state v-else-if="loadErr && !lb.items.length" compact icon="wifi-off" title="加载失败" :desc="loadErr" cta-text="重试" @cta="loadHome" />
           <kg-empty-state v-else-if="!lb.items.length" compact icon="trophy" title="本周还没有对局" desc="快来抢占榜首！" />
           <view v-for="e in lb.items" :key="e.rank" class="lb-row">
             <kg-tag :tone="e.rank === 1 ? 'warn' : e.rank <= 3 ? 'brand' : 'neutral'" class="lb-rank">{{ e.rank }}</kg-tag>
@@ -65,7 +67,7 @@
           <view class="p">
             <view class="av rival">{{ (rivalName || '?').slice(0, 1) }}</view>
             <text class="nm">{{ rivalName || '等待对手' }}</text>
-            <text class="sc num">{{ rivalScore == null ? '—' : rivalScore }}</text>
+            <text class="sc num">{{ rivalDone ? '已交卷' : '—' }}</text>
           </view>
         </view>
         <kg-progress :value="timeLeft" :max="30" aria-label="本题剩余时间" />
@@ -150,6 +152,7 @@ export default {
       joinCode: '',
       lb: { items: [], my_rank: null, my_wins: 0 },
       mine: { items: [], wins: 0 },
+      homeLoaded: false,
       loadErr: '',
       // 对局
       code: '',
@@ -163,7 +166,6 @@ export default {
       timeLeft: PER_Q_SEC,
       timerId: null,
       rivalName: '',
-      rivalScore: null,
       rivalDone: false,
       myName: pkNickname(),
       submitting: false,
@@ -207,16 +209,11 @@ export default {
         return i === this.qIndex ? 'cur' : '';
       });
     },
-    resCls() {
-      if (!this.match || this.match.status !== 'finished') return 'waiting';
-      if (this.match.winner === 'draw' || !this.mySide) return 'draw';
-      return this.match.winner === this.mySide ? 'win' : 'lose';
-    },
     resTitle() {
-      if (!this.match || this.match.status !== 'finished') return '⏳ 等待对手应战';
-      if (!this.mySide) return '🏳️ 对局已结束';
-      if (this.match.winner === 'draw') return '🤝 平局！';
-      return this.match.winner === this.mySide ? '🏆 胜利！' : '💪 惜败，再战一局';
+      if (!this.match || this.match.status !== 'finished') return '等待对手应战';
+      if (!this.mySide) return '对局已结束';
+      if (this.match.winner === 'draw') return '平局';
+      return this.match.winner === this.mySide ? '本场胜利' : '惜败，再战一局';
     },
     isMp() {
       // #ifdef MP-WEIXIN
@@ -257,6 +254,8 @@ export default {
         this.mine = mine;
       } catch (e) {
         this.loadErr = e.message || '网络异常';
+      } finally {
+        this.homeLoaded = true;
       }
     },
     async createMatch() {
@@ -330,7 +329,6 @@ export default {
       this.picked = '';
       this.submitFailed = false;
       this.rivalName = '';
-      this.rivalScore = null;
       this.rivalDone = false;
       this.view = 'quiz';
       this.beginQ();
@@ -478,13 +476,11 @@ export default {
       }
     },
     myP() {
-      return this.mySide === 'opponent' ? this.match.opponent : this.match.creator;
+      const p = this.mySide === 'opponent' ? this.match && this.match.opponent : this.match && this.match.creator;
+      return p || { name: this.myName, score: 0, correct: 0, time_ms: null };
     },
     theirP() {
-      return this.mySide === 'opponent' ? this.match.creator : this.match.opponent;
-    },
-    oppOf() {
-      return this.match.opponent || { name: this.myName };
+      return this.mySide === 'opponent' ? this.match && this.match.creator : this.match && this.match.opponent;
     },
     fmtMs(ms) {
       if (ms == null) return '—';
@@ -556,8 +552,9 @@ export default {
 .page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
 .sec { margin-top: var(--card-gap); }
 .hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; margin-top: var(--sp-8); }
-.h { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.h { display: block; font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-bottom: var(--sp-8); }
 .sec-h { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-8); margin-bottom: var(--sp-12); }
+.sec-h .h { margin-bottom: 0; }
 .sec-more { font-size: var(--fs-caption); color: var(--brand-text); }
 .acts { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-16); }
 .join { margin-top: var(--sp-16); }
@@ -587,8 +584,6 @@ export default {
 .streak { display: flex; justify-content: center; gap: var(--sp-4); margin-top: var(--sp-12); }
 .dot { width: 8px; height: 8px; border-radius: var(--r-full); background: var(--line); }
 .dot.cur { background: var(--brand); }
-.dot.ok { background: var(--ok); }
-.dot.bad { background: var(--bad); }
 
 /* 结果页 */
 .res-vs { display: flex; align-items: stretch; gap: var(--sp-8); }
@@ -599,9 +594,12 @@ export default {
 .back-row { display: flex; justify-content: center; }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
-  .page { max-width: 1064px; margin: 0 auto; }
-  .page.is-quiz { max-width: 760px; }
+  .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
+  .page.is-quiz, .page.is-result { max-width: 760px; }
   .lb-card { margin-top: 0; }
   .m-row, .code-box { cursor: pointer; }
 }

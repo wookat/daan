@@ -182,7 +182,7 @@ describe('Q1-Q6: 全站视觉/布局/交互修复回归锁', () => {
     expect(team).toContain(":primary=\"teams.length ? { text: '创建小队' } : null\"");
 
     const iv = read('../src/pkgA/interview/interview.vue');
-    expect(iv).toMatch(/disabled[^>]*>语音（即将上线）/);
+    expect(iv).not.toContain('voiceStub');
 
     const pr = read('../src/pages/practice/practice.vue');
     expect(pr).toContain('const urlCount = rawCnt >= 1 && rawCnt <= 50 ? rawCnt : null;');

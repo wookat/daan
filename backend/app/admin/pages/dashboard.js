@@ -47,6 +47,7 @@
 
   async function render(el) {
     const d = await api('/api/admin/dashboard');
+    if (Admin.applyBadges) Admin.applyBadges(d);
     const t = d.today, y = d.yesterday, h = d.health;
     const healthTag = h.pct >= 95 ? '<span class="tag tag-ok">良好</span>'
       : h.pct >= 85 ? '<span class="tag tag-warn">注意</span>' : '<span class="tag tag-bad">异常</span>';

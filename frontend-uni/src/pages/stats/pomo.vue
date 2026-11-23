@@ -1,48 +1,46 @@
 <template>
-  <view class="wrap">
-    <kg-two-col>
-      <template #main>
-        <kg-card class="sec">
-          <view class="dial" :class="phase">
-            <text class="dial-phase">{{ phaseText }}</text>
-            <text class="dial-time num">{{ leftText }}</text>
-            <view class="dial-bar"><view class="dial-fill" :style="{ width: pct + '%' }" /></view>
-            <text v-if="round" class="dial-round">今日第 {{ round }} 个</text>
-          </view>
-          <view class="ops">
-            <kg-button v-if="phase === 'idle' || phase === 'done'" variant="primary" size="lg" block icon="clock" @click="start('focus')">开始专注 25 分钟</kg-button>
-            <template v-if="phase === 'focus'">
-              <kg-button v-if="running" variant="secondary" size="lg" block @click="pause">暂停</kg-button>
-              <kg-button v-else variant="primary" size="lg" block @click="resume">继续</kg-button>
-              <kg-button variant="text" size="md" block @click="reset">放弃本轮</kg-button>
-            </template>
-            <template v-if="phase === 'break'">
-              <kg-button variant="secondary" size="lg" block @click="skipBreak">跳过休息</kg-button>
-            </template>
-          </view>
-        </kg-card>
+  <view class="wrap pomo-page">
+    <kg-card class="sec">
+      <view class="dial" :class="phase">
+        <text class="dial-phase">{{ phaseText }}</text>
+        <text class="dial-time num">{{ leftText }}</text>
+        <view class="dial-bar"><view class="dial-fill" :style="{ width: pct + '%' }" /></view>
+        <text v-if="round" class="dial-round">今日第 {{ round }} 个</text>
+      </view>
+      <view class="ops">
+        <kg-button v-if="phase === 'idle' || phase === 'done'" variant="primary" size="lg" block icon="clock" @click="start('focus')">开始专注 25 分钟</kg-button>
+        <template v-if="phase === 'focus'">
+          <kg-button v-if="running" variant="secondary" size="lg" block @click="pause">暂停</kg-button>
+          <kg-button v-else variant="primary" size="lg" block @click="resume">继续</kg-button>
+          <kg-button variant="text" size="md" block @click="reset">放弃本轮</kg-button>
+        </template>
+        <template v-if="phase === 'break'">
+          <kg-button variant="secondary" size="lg" block @click="skipBreak">跳过休息</kg-button>
+        </template>
+      </view>
+    </kg-card>
 
-        <kg-card class="sec">
-          <view class="stat-row">
-            <view class="stat"><text class="stat-n num">{{ todayDone }}</text><text class="stat-k">今日番茄</text></view>
-            <view class="stat"><text class="stat-n num">{{ todayMins }}</text><text class="stat-k">今日分钟</text></view>
-            <view class="stat"><text class="stat-n num">{{ total }}</text><text class="stat-k">累计番茄</text></view>
-          </view>
-          <text class="tip">每 25 分钟专注 + 5 分钟休息为一轮，切后台计时继续。</text>
-        </kg-card>
-      </template>
-    </kg-two-col>
+    <kg-card class="sec">
+      <kg-stat-row :items="[
+        { label: '今日番茄', value: todayDone },
+        { label: '今日分钟', value: todayMins },
+        { label: '累计番茄', value: total },
+      ]" />
+      <text class="tip">每 25 分钟专注 + 5 分钟休息为一轮，切后台或返回后计时继续。</text>
+    </kg-card>
   </view>
 </template>
 
 <script>
-// 番茄专注：纯前端计时器（25/5 循环），完成数与时长存本地 kgPomo
+// 番茄专注：纯前端计时器（25/5 循环），完成数与时长存本地 kgPomo，进行中状态存 kgPomoLive
 const KEY = 'kgPomo';
+const LIVE_KEY = 'kgPomoLive';
 const FOCUS_MIN = 25;
 const BREAK_MIN = 5;
 
 function dayKey() {
-  const d = new Date(Date.now() + (new Date().getTimezoneOffset() + 8 * 60) * 60000);
+  // 按中国标准时间（UTC+8）按日清零，避免 getTimezoneOffset() 与 getUTC* 叠加导致 08:00 才重置
+  const d = new Date(Date.now() + 8 * 3600000);
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
 }
@@ -78,8 +76,9 @@ export default {
       return `${m}:${String(this.left % 60).padStart(2, '0')}`;
     },
     pct() {
+      if (this.phase === 'done') return 100;
       const total = (this.phase === 'break' ? BREAK_MIN : FOCUS_MIN) * 60;
-      return Math.round(((total - this.left) / total) * 100);
+      return Math.min(100, Math.max(0, Math.round(((total - this.left) / total) * 100)));
     },
   },
   onLoad() {
@@ -87,11 +86,25 @@ export default {
     this.todayDone = st.done;
     this.todayMins = Math.round(st.secs / 60);
     this.total = st.total;
+    this.round = st.done;
+    const live = uni.getStorageSync(LIVE_KEY);
+    if (live && (live.phase === 'focus' || live.phase === 'break')) {
+      this.phase = live.phase;
+      this.running = !!live.running;
+      this.left = Number(live.left) || (live.phase === 'break' ? BREAK_MIN : FOCUS_MIN) * 60;
+      this._endAt = Number(live.endAt) || 0;
+      if (this.running && this._endAt) {
+        this._syncLeft();
+        if (this.running) this._tick();
+      }
+    }
   },
   onUnload() {
+    this._saveLive();
     this._stopTick();
   },
   onHide() {
+    this._saveLive();
     if (this.running) this._stopTick();
   },
   onShow() {
@@ -101,6 +114,13 @@ export default {
     }
   },
   methods: {
+    _saveLive() {
+      if (this.phase === 'focus' || this.phase === 'break') {
+        uni.setStorageSync(LIVE_KEY, { phase: this.phase, running: this.running, left: this.left, endAt: this._endAt });
+      } else {
+        uni.removeStorageSync(LIVE_KEY);
+      }
+    },
     _stopTick() {
       if (this._timer) {
         clearInterval(this._timer);
@@ -122,6 +142,7 @@ export default {
       this.left = (phase === 'break' ? BREAK_MIN : FOCUS_MIN) * 60;
       this._endAt = Date.now() + this.left * 1000;
       this.running = true;
+      this._saveLive();
       this._tick();
     },
     pause() {
@@ -129,11 +150,13 @@ export default {
       this._stopTick();
       this._endAt = 0;
       this.running = false;
+      this._saveLive();
     },
     resume() {
       if (!this.left) return;
       this._endAt = Date.now() + this.left * 1000;
       this.running = true;
+      this._saveLive();
       this._tick();
     },
     finishPhase() {
@@ -148,19 +171,23 @@ export default {
         this.todayDone = st.done;
         this.todayMins = Math.round(st.secs / 60);
         this.total = st.total;
-        this.round += 1;
+        this.round = st.done;
         uni.vibrateShort && uni.vibrateShort({ type: 'medium' });
         this.start('break');
       } else {
         this.phase = 'done';
+        this.left = 0;
         this.running = false;
+        this._saveLive();
       }
     },
     skipBreak() {
       this._stopTick();
       this._endAt = 0;
       this.phase = 'done';
+      this.left = 0;
       this.running = false;
+      this._saveLive();
     },
     reset() {
       this._stopTick();
@@ -168,7 +195,8 @@ export default {
       this.phase = 'idle';
       this.running = false;
       this.left = FOCUS_MIN * 60;
-      this.round = 0;
+      this.round = this.todayDone;
+      this._saveLive();
     },
   },
 };
@@ -176,20 +204,20 @@ export default {
 
 <style scoped>
 .wrap { padding: var(--sp-16) var(--page-x) var(--sp-40); }
-.sec { margin-bottom: var(--card-gap); }
 .dial { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); padding: var(--sp-16) 0; }
 .dial-phase { font-size: var(--fs-caption); color: var(--ink-3); }
 .dial.focus .dial-phase { color: var(--brand-text); }
-.dial.break .dial-phase { color: var(--success); }
+.dial.break .dial-phase { color: var(--ok-strong); }
 .dial-time { font-size: 56px; font-weight: var(--fw-semibold); color: var(--ink); line-height: 1.1; }
 .dial-bar { width: 70%; height: 6px; border-radius: var(--r-full); background: var(--fill); overflow: hidden; }
 .dial-fill { height: 100%; border-radius: var(--r-full); background: var(--brand); transition: width 0.4s linear; }
-.dial.break .dial-fill { background: var(--success); }
+.dial.break .dial-fill { background: var(--ok); }
 .dial-round { font-size: var(--fs-caption); color: var(--ink-3); }
-.ops { display: flex; flex-direction: column; gap: var(--sp-4); }
-.stat-row { display: flex; align-items: center; justify-content: space-around; }
-.stat { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
-.stat-n { font-size: var(--fs-h1); font-weight: var(--fw-semibold); color: var(--ink); }
-.stat-k { font-size: var(--fs-caption); color: var(--ink-3); }
-.tip { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
+.ops { display: flex; flex-direction: column; gap: var(--sp-12); max-width: 360px; margin: 0 auto; width: 100%; }
+.tip { display: block; margin-top: var(--sp-12); font-size: var(--fs-caption); color: var(--ink-3); text-align: center; }
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .wrap.pomo-page { max-width: 520px; margin: 0 auto; }
+}
+/* #endif */
 </style>

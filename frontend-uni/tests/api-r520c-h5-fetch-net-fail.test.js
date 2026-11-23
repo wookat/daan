@@ -42,9 +42,9 @@ describe('api.js H5 原生 fetch 网络失败 → 中文口径', () => {
     expect(API).not.toMatch(/const \{ done, value \} = await reader\.read\(\)/);
     expect((API.match(/const \{ done, value \} = await readNet\(reader\)/g) || []).length).toBe(3);
   });
-  it('fetchNet / readNet 只吞网络层异常并改抛 netFailMessage(\'\')，不改 HTTP 非 2xx / SSE error 路径', () => {
-    expect(API).toMatch(/async function fetchNet\(url, init\) \{\s*try \{\s*return await fetch\(url, init\);\s*\} catch \(e\) \{\s*throw new Error\(netFailMessage\(''\)\);/);
-    expect(API).toMatch(/async function readNet\(reader\) \{\s*try \{\s*return await reader\.read\(\);\s*\} catch \(e\) \{\s*throw new Error\(netFailMessage\(''\)\);/);
+  it('fetchNet / readNet 只吞网络层异常并改抛 netFailMessage(\'\')（AbortError 透传），不改 HTTP 非 2xx / SSE error 路径', () => {
+    expect(API).toMatch(/async function fetchNet\(url, init\) \{\s*try \{\s*return await fetch\(url, init\);\s*\} catch \(e\) \{\s*if \(e && e\.name === 'AbortError'\) throw e;\s*throw new Error\(netFailMessage\(''\)\);/);
+    expect(API).toMatch(/async function readNet\(reader\) \{\s*try \{\s*return await reader\.read\(\);\s*\} catch \(e\) \{\s*if \(e && e\.name === 'AbortError'\) throw e;\s*throw new Error\(netFailMessage\(''\)\);/);
     expect(API).toContain("if (!resp.ok) {\n    let msg = 'HTTP ' + resp.status;");
     expect(API).toContain("else if (type === 'error') throw new Error(data.message || state.errMsg || '生成失败');");
   });

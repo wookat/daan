@@ -204,7 +204,8 @@ export default {
   onShow() {
     this.askSeenTick++;
     this.logged = !!getToken();
-    this.load();
+    if (this.tab === 'note') this.switchNote();
+    else this.load();
     // 与 book.vue 同口径（R546）：进深页时 router 用自己缓存的地址覆写本条目，返回后地址栏丢 tab/mod，回来重写一次；
     // 深链 ?folder= 尚未落地（load 里才应用）时让位，否则会把入参抹掉
     if (this._pendingFolder == null) this.syncUrl();
@@ -461,20 +462,23 @@ export default {
 .mynote-t { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
 .detail { margin-top: var(--sp-12); border-top: 1px solid var(--line); padding-top: var(--sp-12); }
 .opt { display: block; font-size: var(--fs-sub); color: var(--ink-2); }
-.opt.ans { color: var(--ok); font-weight: 600; }
+.opt.ans { color: var(--ok-strong); font-weight: 600; }
 .ansline { display: block; font-size: var(--fs-sub); color: var(--ink-3); margin: var(--sp-8) 0; }
 .exp { display: block; font-size: var(--fs-sub); color: var(--ink-2); background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-12); }
-.ops { display: flex; gap: var(--sp-4); margin-top: var(--sp-8); flex-wrap: wrap; }
+.ops { display: flex; gap: var(--sp-8); margin-top: var(--sp-8); flex-wrap: wrap; }
 .ngrid { display: flex; flex-direction: column; }
 
 /* 桌面（H5）：≥1024 KgTwoCol 双栏（收藏夹辅栏 + 列表主列），笔记两列 */
 /* #ifdef H5 */
 @media (min-width: 768px) {
+  .wrap { max-width: 680px; margin: 0 auto; }
   .folder:hover, .qitem:hover, .fops:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; }
-  .ngrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--sp-24); align-items: start; }
+  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .seg { max-width: 420px; }
+  .ngrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--card-gap) var(--sp-24); align-items: start; }
+  .ngrid .qitem { margin-top: 0 !important; margin-bottom: 0 !important; }
 }
 /* #endif */
 </style>

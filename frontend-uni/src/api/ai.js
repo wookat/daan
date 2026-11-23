@@ -258,52 +258,62 @@ export function interviewSession(id) {
 // #ifdef H5
 // H5 流式点评：onMeta({scores,total,summary}) 一次，onThinking({secs,chars}) 推理中逐秒，onDelta(fullText) 增量，onDone({session_id})。
 export async function streamInterview({ questionId, answer, durationSec, onMeta, onDelta, onThinking, signal }) {
-  const resp = await fetchNet(BASE_URL + '/api/interview/answer/stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
-    body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
-    signal,
-  });
-  if (!resp.ok) {
-    let detail = `HTTP ${resp.status}`;
-    try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
-    throw new Error(detail);
-  }
-  const reader = resp.body.getReader();
-  const dec = new TextDecoder();
-  const state = { buf: '', full: '', meta: null, done: null, errMsg: '点评失败' };
-  for (;;) {
-    const { done, value } = await readNet(reader);
-    if (done) break;
-    feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta, onThinking);
-  }
-  if (!state.meta) throw new Error('点评失败：无响应');
-  return { ...state.meta, review: state.full, session_id: state.done && state.done.session_id };
+  const doIt = async () => {
+    const resp = await fetchNet(BASE_URL + '/api/interview/answer/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
+      body: JSON.stringify({ uid: anonUid(), question_id: questionId, answer, duration_sec: durationSec || 0 }),
+      signal,
+    });
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
+      throw new Error(detail);
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    const state = { buf: '', full: '', meta: null, done: null, errMsg: '点评失败' };
+    for (;;) {
+      const { done, value } = await readNet(reader);
+      if (done) break;
+      feedSse(dec.decode(value, { stream: true }), state, onMeta, onDelta, onThinking);
+    }
+    const tail = dec.decode();
+    if (tail) feedSse(tail, state, onMeta, onDelta, onThinking);
+    if (!state.meta) throw new Error('点评失败：无响应');
+    return { ...state.meta, review: state.full, session_id: state.done && state.done.session_id };
+  };
+  return withAuthRetry(doIt);
 }
 
 // H5 中断 session 重新生成点评：onThinking({secs,chars}) 推理中，onDelta(fullText) 增量，完成返回 { review }。
 export async function streamInterviewReviewRegen({ sessionId, onDelta, onThinking, signal }) {
-  const resp = await fetchNet(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
-    body: JSON.stringify({ uid: anonUid() }),
-    signal,
-  });
-  if (!resp.ok) {
-    let detail = `HTTP ${resp.status}`;
-    try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
-    throw new Error(detail);
-  }
-  const reader = resp.body.getReader();
-  const dec = new TextDecoder();
-  const state = { buf: '', full: '', errMsg: '点评失败' };
-  for (;;) {
-    const { done, value } = await readNet(reader);
-    if (done) break;
-    feedSse(dec.decode(value, { stream: true }), state, null, onDelta, onThinking);
-  }
-  if (!state.full) throw new Error('点评失败：无响应');
-  return { review: state.full };
+  const doIt = async () => {
+    const resp = await fetchNet(BASE_URL + '/api/interview/sessions/' + sessionId + '/review/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Access-Code': getAccessCode(), ...authHeader() },
+      body: JSON.stringify({ uid: anonUid() }),
+      signal,
+    });
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try { detail = (await resp.json()).detail || detail; } catch (e) { /* ignore */ }
+      throw new Error(detail);
+    }
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    const state = { buf: '', full: '', errMsg: '点评失败' };
+    for (;;) {
+      const { done, value } = await readNet(reader);
+      if (done) break;
+      feedSse(dec.decode(value, { stream: true }), state, null, onDelta, onThinking);
+    }
+    const tail = dec.decode();
+    if (tail) feedSse(tail, state, null, onDelta, onThinking);
+    if (!state.full) throw new Error('点评失败：无响应');
+    return { review: state.full };
+  };
+  return withAuthRetry(doIt);
 }
 // #endif
 

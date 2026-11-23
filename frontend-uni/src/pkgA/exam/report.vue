@@ -88,7 +88,7 @@
           <view class="curve">
             <view v-for="(a, i) in history" :key="a.id" class="curve-col" role="button" :aria-label="'第 ' + (i + 1) + ' 次 ' + a.score + ' 分'" @click="openAttempt(a)">
               <text class="curve-v num">{{ a.score }}</text>
-              <view class="curve-bar" :class="{ cur: a.id === report.attempt.id }" :style="{ height: Math.max(8, a.score) + '%' }"></view>
+              <view class="curve-bar-w"><view class="curve-bar" :class="{ cur: a.id === report.attempt.id }" :style="{ height: Math.max(8, a.score) + '%' }"></view></view>
               <text class="curve-x num">{{ i + 1 }}</text>
             </view>
           </view>
@@ -189,6 +189,7 @@
             <text class="lg"><text class="dot ok"></text>答对</text>
             <text class="lg"><text class="dot bad"></text>答错</text>
             <text class="lg"><text class="dot"></text>未答</text>
+            <text v-if="markCount" class="lg"><text class="dot mk"></text>考中标记</text>
           </view>
           <view class="share-col">
             <kg-button v-if="shareText" variant="ghost" size="md" block icon="copy" @click="copyShare">邀考友挑战本卷</kg-button>
@@ -201,7 +202,7 @@
     </kg-two-col>
 
     <!-- 解析浮层 -->
-    <kg-sheet :model-value="!!detail" :title="detail ? '第 ' + detail.no + ' 题 · ' + (detail.correct ? '答对' : (detail.picked ? '答错' : '未答')) : ''" @update:model-value="!$event && (detail = null)">
+    <kg-sheet :model-value="!!detail" size="lg" :title="detail ? '第 ' + detail.no + ' 题 · ' + (detail.correct ? '答对' : (detail.picked ? '答错' : '未答')) : ''" @update:model-value="!$event && (detail = null)">
       <template v-if="detail">
         <view class="d-tools">
           <kg-tag v-if="detail.marked" tone="warn">考试时标记过本题</kg-tag>
@@ -209,7 +210,7 @@
             <l-icon name="star" :size="24" :tone="detailFaved ? 'warn' : 'ink-2'" :fill="detailFaved ? 'currentColor' : 'none'" />
           </view>
         </view>
-        <kg-question-card :q="detailQ" :show-meta="false">
+        <kg-question-card :key="detail.no" :q="detailQ" :show-meta="false">
           <kg-option-group :options="detailOpts" :model-value="(detail.picked || '').split('')" :answer="(detail.answer || '').split('')" revealed readonly />
         </kg-question-card>
         <kg-analysis-card
@@ -241,7 +242,7 @@
         <view class="d-links">
           <kg-button v-if="detailAskSeen" variant="text" size="md" @click="openSeenAsk">回看 AI 详解</kg-button>
           <kg-button v-if="detailAskable" variant="text" size="md" @click="askDetail">看不懂？AI 详解本题</kg-button>
-          <kg-button v-if="detail.question_id" variant="text" size="md" tone="neutral" :disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</kg-button>
+          <kg-button v-if="detail.question_id" variant="text" size="md" :disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</kg-button>
         </view>
         <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
       </template>
@@ -301,12 +302,22 @@ import { weakModule } from '../../exam/exam-weak.js';
 import { nextPaper } from '../../exam/exam-next.js';
 import { moduleLabel } from '../../utils/module-meta.js';
 import { rankLine, reportHeroLine, weakNote, redoDesc } from '../../exam/exam-copy.js';
+import { withBasePath } from '../../utils/hash-url.js';
 const PACE_TAG = { over: '超时', fast: '偏快', ok: '合理', skip: '未作答' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
+const TPL_NAME_TO_ID = [
+  ['国考卷型', 'guokao'],
+  ['省考联考', 'liankao'],
+  ['江苏 A 类', 'jiangsu-a'],
+  ['京考卷型', 'beijing'],
+  ['沪考卷型', 'shanghai'],
+  ['粤考卷型', 'guangdong'],
+  ['迷你模考', 'mini'],
+];
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, navMode: 'all', favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'], askSeenTick: 0 };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, navMode: 'all', favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'], askSeenTick: 0, themeTick: 0 };
   },
   computed: {
     accuracy() {
@@ -403,6 +414,7 @@ export default {
     },
     /** 模块雷达：≥3 个模块时按 per_module 正确率画多边形（clip-path，深色安全） */
     radarOption() {
+      void this.themeTick;
       const ms = this.modules;
       if (ms.length < 3) return null;
       const c = visColors();
@@ -520,6 +532,8 @@ export default {
     },
   },
   onLoad(opt) {
+    this._onTheme = () => { this.themeTick += 1; };
+    uni.$on('themeChanged', this._onTheme);
     if (opt && opt.attempt_id) {
       this.load(opt.attempt_id);
     } else {
@@ -536,6 +550,10 @@ export default {
     // #endif
   },
   onUnload() {
+    if (this._onTheme) {
+      uni.$off('themeChanged', this._onTheme);
+      this._onTheme = null;
+    }
     // #ifdef H5
     if (this._rpKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._rpKeyHandler);
@@ -601,6 +619,9 @@ export default {
       this.aid = aid;
       this.loading = true;
       this.loadErr = '';
+      this.rankData = null;
+      this.nextReco = null;
+      this.detail = null;
       try {
         const d = await request('/api/exam/report/' + aid + '?uid=' + encodeURIComponent(anonUid()));
         this.report = d;
@@ -674,13 +695,18 @@ export default {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
-      if (!this.detail) return;
+      if (!this.detail || this.reportOpen) return;
       if (e.key === 'ArrowLeft') { e.preventDefault(); this.stepQ(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); this.stepQ(1); }
     },
     // #endif
     openAttempt(a) {
       if (a.id === this.report.attempt.id) return;
+      // #ifdef H5
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.replaceState(window.history.state, '', withBasePath('#/pkgA/exam/report?attempt_id=' + a.id));
+      }
+      // #endif
       this.load(a.id);
     },
     goList() {
@@ -688,7 +714,15 @@ export default {
     },
     retake() {
       const p = this.report.paper;
-      uni.redirectTo({ url: p.kind === 'mock' ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + p.id });
+      if (p.kind === 'mock') {
+        const hit = TPL_NAME_TO_ID.find(([name]) => String(p.title || '').startsWith(name));
+        const url = hit && hit[1] !== 'mini'
+          ? '/pkgA/exam/exam?template=' + encodeURIComponent(hit[1])
+          : '/pkgA/exam/exam?mini=1';
+        uni.redirectTo({ url });
+        return;
+      }
+      uni.redirectTo({ url: '/pkgA/exam/exam?paper_id=' + p.id });
     },
     fmtMin,
     imgUrl(p) {
@@ -795,6 +829,7 @@ export default {
 .curve { display: flex; align-items: flex-end; gap: var(--sp-8); height: 120px; padding: var(--sp-4) 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 24px; }
 .curve-v { font-size: var(--fs-caption); color: var(--ink-2); margin-bottom: var(--sp-4); }
+.curve-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .curve-bar { width: 60%; max-width: 24px; background: var(--brand-soft-2); border-radius: var(--r-xs) var(--r-xs) 0 0; }
 .curve-bar.cur { background: var(--brand); }
 .curve-x { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
@@ -836,9 +871,13 @@ export default {
 
 /* #ifdef H5 */
 .page :deep(.kg-two__aside) { display: none; }
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
   .page :deep(.kg-two__aside) { display: block; }
+  .page :deep(.kg-two__aside .qgrid) { max-height: 46vh; overflow-y: auto; }
   .answers-mobile, .share-mobile { display: none; }
   .wrow, .qn, .curve-col, .cta, .rz-row, .chip, .kg-tool { cursor: pointer; }
 }

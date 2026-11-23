@@ -29,7 +29,7 @@ export function orderPrecache(files, routeDeps, first = PRECACHE_FIRST_ROUTES) {
 if (process.argv[1] && process.argv[1].endsWith('gen-precache-manifest.mjs')) {
   const dist = join(process.cwd(), 'dist/build/h5');
   const files = readdirSync(join(dist, 'assets'))
-    .filter((f) => /\.(js|css)$/.test(f))
+    .filter((f) => /\.(js|css)$/.test(f) && !/(?:^|-)dev-design\b|^design-[\w-]+\.css$/.test(f))
     .sort()
     .map((f) => `${H5_BASE}assets/${f}`);
   const indexJs = files.find((f) => /\/index-[\w-]+\.js$/.test(f));

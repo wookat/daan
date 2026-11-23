@@ -3,8 +3,8 @@
     <view v-if="items.length" class="list">
       <view v-for="g in groups" :key="g.day" class="group">
         <kg-section-header :title="g.day + ' · ' + g.list.length + ' 组'" />
-        <kg-card v-for="{ s, i } in g.list" :key="s.start" class="item" :padding="12">
-          <view class="row" role="button" @click="toggle(i)">
+        <kg-card v-for="{ s } in g.list" :key="s.start" class="item" :padding="12">
+          <view class="row" role="button" @click="toggle(s)">
             <view class="row-main">
               <view class="row-top">
                 <text class="time num">{{ fmtTime(s.start) }}</text>
@@ -13,9 +13,9 @@
               <text class="meta"><text class="num">{{ s.n }}</text> 题 · 用时 <text class="num">{{ fmtDur(s.secs) }}</text></text>
             </view>
             <text class="pct num" :class="pctCls(s)">{{ pct(s) }}%</text>
-            <l-icon name="chevron-right" :size="20" tone="faint" class="arrow" :class="{ open: openIdx === i }" />
+            <l-icon name="chevron-right" :size="20" tone="faint" class="arrow" :class="{ open: openKey === s.start }" />
           </view>
-          <view v-if="openIdx === i" class="detail">
+          <view v-if="openKey === s.start" class="detail">
             <kg-skeleton v-if="detailLoading" preset="lines" />
             <template v-else>
               <view v-for="(d, j) in detail" :key="j" class="d-item">
@@ -29,7 +29,13 @@
                   <l-icon v-if="d.question" name="chevron-right" :size="16" tone="faint" class="arrow" :class="{ open: openDetailIdx === j }" />
                 </view>
                 <view v-if="openDetailIdx === j && d.question" class="d-exp">
-                  <text v-for="(v, k) in d.question.options" :key="k" class="d-opt q-text" :class="{ ans: k === d.question.answer, bad: !d.correct && k === d.picked }">{{ k }}. {{ v }}</text>
+                  <image v-if="d.question.image" :src="imgUrl(d.question.image)" class="d-img" mode="widthFix" @click.stop="previewImg(d.question.image)" />
+                  <view v-for="(v, k) in d.question.options" :key="k" class="d-opt-row">
+                    <text class="d-opt q-text" :class="{ ans: k === d.question.answer, bad: !d.correct && k === d.picked }">{{ k }}. {{ v }}</text>
+                    <view v-if="optImgs(d.question, k).length" class="d-oimgs">
+                      <image v-for="(u, ui) in optImgs(d.question, k)" :key="ui" :src="imgUrl(u)" class="d-oimg" mode="widthFix" @click.stop="previewImg(u)" />
+                    </view>
+                  </view>
                   <text class="d-ansline">正确答案 {{ d.question.answer }}<template v-if="d.picked"> · 我的答案 {{ d.picked }}</template></text>
                   <text v-if="d.question.hs_explanation || d.question.explanation" class="d-expl q-text">{{ d.question.hs_explanation || d.question.explanation }}</text>
                   <view class="d-ops" @click.stop>
@@ -65,7 +71,7 @@
 
 <script>
 import { fmtMDHM, fmtDayLabel, fmtDurShort } from '../../utils/fmt.js';
-import { request, snapPeek, anonUid, trackEvent } from '../../api/api.js';
+import { request, snapPeek, anonUid, trackEvent, BASE_URL } from '../../api/api.js';
 import { askPrefill, askAnswerLetter } from '../../ask/ask-prefill.js';
 import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { MODULES, moduleLabel } from '../../utils/module-meta.js';
@@ -75,10 +81,10 @@ const EXTRA_NAMES = { shenlun: '申论', shizheng: '时事政治' };
 
 export default {
   data() {
-    return { items: [], loaded: false, loadErr: '', openIdx: -1, detail: [], detailLoading: false, openDetailIdx: -1, seenAsk: null };
+    return { items: [], loaded: false, loadErr: '', openKey: null, detail: [], detailLoading: false, openDetailIdx: -1, seenAsk: null };
   },
   computed: {
-    /** 按日期分组（仅展示层）：保留 items 原顺序与原下标，toggle 仍按原下标 */
+    /** 按日期分组（仅展示层）：保留 items 原顺序与原下标 */
     groups() {
       const out = [];
       this.items.forEach((s, i) => {
@@ -106,6 +112,10 @@ export default {
   },
   onShow() {
     this.load();
+    if (this.openDetailIdx >= 0 && this.detail[this.openDetailIdx] && this.detail[this.openDetailIdx].question) {
+      const q = this.detail[this.openDetailIdx].question;
+      this.seenAsk = findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), q.id);
+    }
   },
   methods: {
     modName(m) {
@@ -115,8 +125,21 @@ export default {
     fmtDay(ts) {
       return fmtDayLabel(ts);
     },
+    imgUrl(p) {
+      if (!p) return '';
+      return /^https?:/.test(p) ? p : (BASE_URL || (typeof location !== 'undefined' ? location.origin : '')) + p;
+    },
+    optImgs(q, k) {
+      if (!q || !q.option_imgs) return [];
+      const oi = typeof q.option_imgs === 'string' ? (() => { try { return JSON.parse(q.option_imgs); } catch (e) { return {}; } })() : q.option_imgs;
+      return Array.isArray(oi && oi[k]) ? oi[k] : [];
+    },
+    previewImg(p) {
+      uni.previewImage({ urls: [this.imgUrl(p)] });
+    },
     async load() {
       this.loadErr = '';
+      if (!this.items.length) this.loaded = false;
       const p = '/api/practice/history?uid=' + encodeURIComponent(anonUid());
       // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
       const snap = snapPeek(p);
@@ -127,32 +150,40 @@ export default {
       try {
         const d = await request(p);
         this.items = d.items || [];
+        if (this.openKey != null && !this.items.some((x) => x.start === this.openKey)) {
+          this.openKey = null;
+          this.detail = [];
+          this.openDetailIdx = -1;
+        }
       } catch (e) {
-        this.loadErr = e.message || '网络异常';
+        if (!snap && !this.items.length) this.loadErr = e.message || '网络异常';
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
       this.loaded = true;
     },
-    async toggle(i) {
-      if (this.openIdx === i) {
-        this.openIdx = -1;
+    async toggle(s) {
+      if (!s) return;
+      if (this.openKey === s.start) {
+        this.openKey = null;
         return;
       }
-      this.openIdx = i;
+      const seq = (this._detSeq = (this._detSeq || 0) + 1);
+      this.openKey = s.start;
       this.openDetailIdx = -1;
       this.seenAsk = null;
       this.detail = [];
       this.detailLoading = true;
-      const s = this.items[i];
       try {
         const d = await request(
           '/api/practice/history/detail?uid=' + encodeURIComponent(anonUid()) + '&start=' + s.start + '&end=' + s.end
         );
+        if (seq !== this._detSeq) return;
         this.detail = d.items || [];
       } catch (e) {
+        if (seq !== this._detSeq) return;
         uni.showToast({ title: e.message || '加载失败', icon: 'none' });
       }
-      this.detailLoading = false;
+      if (seq === this._detSeq) this.detailLoading = false;
     },
     toggleDetail(j) {
       const d = this.detail[j];
@@ -227,6 +258,9 @@ export default {
 .d-row { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-12) 0; }
 .d-mark { flex-shrink: 0; margin-top: 2px; }
 .d-exp { padding: 0 0 var(--sp-12) var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-8); }
+.d-img, .d-oimg { max-width: 100%; border-radius: var(--r-sm); display: block; }
+.d-opt-row { display: flex; flex-direction: column; gap: var(--sp-4); }
+.d-oimgs { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
 .d-opt { font-size: var(--fs-sub); color: var(--ink-2); }
 .d-opt.ans { color: var(--ok-strong); font-weight: 600; }
 .d-opt.bad { color: var(--bad-strong); }
@@ -242,7 +276,11 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
+  .wrap { max-width: 680px; margin: 0 auto; }
   .row:hover, .d-row.opener:hover { cursor: pointer; }
+}
+@media (min-width: 1024px) {
+  .wrap { max-width: 1044px; margin: 0 auto; }
 }
 /* #endif */
 </style>

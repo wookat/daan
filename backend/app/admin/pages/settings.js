@@ -47,7 +47,7 @@
         <input class="ipt" id="ann-body" aria-label="公告内容" style="flex:1;min-width:200px" placeholder="公告内容（可留空）">
         <button class="btn btn-primary" id="ann-add">发布公告</button>
       </div>
-      <div id="st-ann" style="margin:0 -20px -16px"></div>
+      <div id="st-ann" style="margin:0 -16px -16px"></div>
     </div>
     <div class="card" style="padding:0">
       <div class="card-h" style="padding:14px 16px 0"><span class="t">真题卷库</span></div>

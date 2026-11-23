@@ -57,7 +57,12 @@ export default {
 .kg-abar__tools :deep(.kg-tool) { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
 @keyframes kg-abar-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @media (min-width: 1024px) {
-  .kg-abar { position: sticky; }
+  .kg-abar {
+    position: sticky;
+    margin-top: var(--card-gap);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+  }
   /* 仅移动端的工具（如答题卡：≥1024 由右栏常驻卡承担） */
   .kg-abar__tools :deep(.kg-tool--m) { display: none; }
 }

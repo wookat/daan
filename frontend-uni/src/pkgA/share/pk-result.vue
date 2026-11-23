@@ -43,18 +43,18 @@
       <kg-card variant="flat" class="sec">
         <kg-stat-row :items="[
           { label: creatorName + ' 答对', value: d.creator.correct, unit: '/' + d.n_questions, tone: d.winner === 'creator' ? 'brand' : undefined },
-          { label: '用时对比', value: fmtMs(d.creator.time_ms) + ' vs ' + fmtMs(d.opponent.time_ms) },
+          { label: '发起用时', value: fmtMs(d.creator.time_ms) },
           { label: opponentName + ' 答对', value: d.opponent.correct, unit: '/' + d.n_questions, tone: d.winner === 'opponent' ? 'brand' : undefined },
         ]" />
       </kg-card>
 
       <kg-card variant="flat" class="sec cta">
         <text class="cta-t">不服来战？</text>
-        <text class="cta-s">同组 10 题拼手速，答对 +80 分，越快加成越高</text>
+        <text class="cta-s">同组 {{ d.n_questions || 10 }} 题拼手速，答对 +80 分，越快加成越高</text>
       </kg-card>
 
       <view class="reg-tip">
-        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册答岸，10万+ 题库免费刷</kg-button>
+        <kg-button variant="text" size="md" @click="goLogin">登录 / 注册答岸，16万+ 题库免费刷</kg-button>
       </view>
 
       <kg-action-bar layout="actions" primary-text="发起我的 PK 对局" @primary="goChallenge" />
@@ -136,7 +136,7 @@ export default {
 <style scoped>
 .page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
 .sec { margin-top: var(--card-gap); }
-.hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand); opacity: 0.85; margin-top: var(--sp-8); }
+.hero-s { display: block; font-size: var(--fs-sub); color: var(--on-brand-2); margin-top: var(--sp-8); }
 .vs { display: flex; align-items: stretch; gap: var(--sp-8); }
 .p { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
 .av-wrap { position: relative; padding-top: var(--sp-16); }
@@ -148,7 +148,8 @@ export default {
 .sc { font-size: var(--fs-display); font-weight: 600; color: var(--ink); line-height: var(--lh-display); }
 .p.win .sc { color: var(--brand-text); }
 .meta { font-size: var(--fs-caption); color: var(--ink-2); text-align: center; }
-.mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); padding: 0 var(--sp-4); }
+.mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); padding: 0 var(--sp-4); flex-shrink: 0; max-width: 112px; }
+.mid :deep(.kg-tag) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .mid-vs { font-size: var(--fs-h2); font-weight: 600; color: var(--ink-3); }
 .cta { text-align: center; }
 .cta-t { display: block; font-size: var(--fs-h2); font-weight: 600; color: var(--ink); }
@@ -156,6 +157,9 @@ export default {
 .reg-tip { display: flex; justify-content: center; padding: var(--sp-12) 0; }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 680px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 760px; margin: 0 auto; padding-bottom: var(--sp-24); }
 }

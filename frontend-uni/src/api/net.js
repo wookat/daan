@@ -5,6 +5,7 @@ export async function fetchNet(url, init) {
   try {
     return await fetch(url, init);
   } catch (e) {
+    if (e && e.name === 'AbortError') throw e;
     throw new Error(netFailMessage(''));
   }
 }
@@ -13,6 +14,7 @@ export async function readNet(reader) {
   try {
     return await reader.read();
   } catch (e) {
+    if (e && e.name === 'AbortError') throw e;
     throw new Error(netFailMessage(''));
   }
 }

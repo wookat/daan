@@ -176,6 +176,9 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "答岸",
     "navigationBarBackgroundColor": "#f6f7fb",
-    "backgroundColor": "#f5f6fa"
+    "backgroundColor": "#f6f7fb",
+    "rpxCalcMaxDeviceWidth": 480,
+    "rpxCalcBaseDeviceWidth": 375,
+    "rpxCalcIncludeWidth": 750
   }
 }

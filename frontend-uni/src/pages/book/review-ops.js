@@ -143,18 +143,18 @@ export const reviewOps = {
       }
       this.picked = o;
       await this.record(o === this.curLetter);
-      this.saveReviewSnap();
+      if (this.reviewing) this.saveReviewSnap();
     },
 
     async confirmMulti() {
       if (this.answered || !this.picked) return;
       await this.record(this.picked === this.curLetter);
-      this.saveReviewSnap();
+      if (this.reviewing) this.saveReviewSnap();
     },
 
     async selfJudge(correct) {
       await this.record(correct);
-      this.saveReviewSnap();
+      if (this.reviewing) this.saveReviewSnap();
     },
 
     async record(correct) {
@@ -202,7 +202,7 @@ export const reviewOps = {
           .slice(0, room)
           .map(similarItemFromQuestion)
           .filter(Boolean);
-        if (add.length) {
+        if (add.length && this.reviewing) {
           this.rItems.push(...add);
           m._appended = add.length;
           this.$forceUpdate();
@@ -220,7 +220,7 @@ export const reviewOps = {
       this.$forceUpdate();
       try {
         await request('/api/mistakes/' + mid, { method: 'PATCH', data: { uid: anonUid(), error_reason: rz } });
-        this.saveReviewSnap();
+        if (this.reviewing) this.saveReviewSnap();
         trackEvent('review_reason_tag', rz || '未标注');
       } catch (e) { /* 非关键路径 */ }
     },
@@ -236,7 +236,7 @@ export const reviewOps = {
         item._mid = mid;
         item._saved = true;
         this.$forceUpdate();
-        this.saveReviewSnap();
+        if (this.reviewing) this.saveReviewSnap();
       } catch (e) { /* 非关键路径 */ }
     },
 

@@ -1,10 +1,10 @@
 <template>
-  <view class="ds">
+  <view v-if="isDev" class="ds">
     <view class="ds__top">
       <text class="ds__h">设计系统总览（foundation）</text>
       <text class="ds__sub">token 与 Kg* 组件全部状态 · 供 QA / 页面组对照 · 不入 tabBar</text>
       <view class="ds__ctl">
-        <wd-segmented v-model:value="themeLabel" :options="themeOpts" size="small" @change="onTheme" />
+        <wd-segmented ref="seg" v-model:value="themeLabel" :options="themeOpts" size="small" @change="onTheme" />
         <kg-tag tone="neutral" style="flex-shrink: 0">{{ tokenCount }} tokens</kg-tag>
       </view>
     </view>
@@ -47,18 +47,18 @@
     <!-- 3. 间距/圆角/阴影/动效 -->
     <kg-section-header title="3 · 间距 · 圆角 · 阴影 · 动效" />
     <kg-card>
-      <view class="row wrap">
+      <view class="row ds-wrap">
         <view v-for="s in spacings" :key="s" class="sp">
           <view class="sp__b" :style="{ width: `var(--sp-${s})`, height: `var(--sp-${s})` }" />
           <text class="sp__n num">{{ s }}</text>
         </view>
       </view>
-      <view class="row wrap" style="margin-top: var(--sp-16)">
+      <view class="row ds-wrap" style="margin-top: var(--sp-16)">
         <view v-for="r in radii" :key="r" class="rd" :style="{ borderRadius: `var(--r-${r})` }">
           <text class="sp__n">--r-{{ r }}</text>
         </view>
       </view>
-      <view class="row wrap" style="margin-top: var(--sp-16)">
+      <view class="row ds-wrap" style="margin-top: var(--sp-16)">
         <view v-for="s in ['sh-1', 'sh-2', 'sh-3']" :key="s" class="sh" :style="{ boxShadow: `var(--${s})` }">
           <text class="sp__n">--{{ s }}<text v-if="dark">（深色 none）</text></text>
         </view>
@@ -73,14 +73,14 @@
     <!-- 4. 按钮 -->
     <kg-section-header title="4 · KgButton 4 级 × 3 尺寸 × 态" />
     <kg-card>
-      <view v-for="v in ['primary', 'secondary', 'ghost', 'text']" :key="v" class="row wrap" style="margin-bottom: var(--sp-12)">
+      <view v-for="v in ['primary', 'secondary', 'ghost', 'text']" :key="v" class="row ds-wrap" style="margin-bottom: var(--sp-12)">
         <kg-button :variant="v" size="lg">{{ v }} lg</kg-button>
         <kg-button :variant="v" size="md" icon="plus">md</kg-button>
         <kg-button :variant="v" size="sm">sm</kg-button>
         <kg-button :variant="v" size="md" disabled>disabled</kg-button>
         <kg-button :variant="v" size="md" loading>loading</kg-button>
       </view>
-      <view class="row wrap">
+      <view class="row ds-wrap">
         <kg-button tone="bad">删除</kg-button>
         <kg-button variant="secondary" tone="bad">bad secondary</kg-button>
         <kg-button block>block</kg-button>
@@ -94,7 +94,7 @@
     <!-- 5. Tag / Chip / Segmented -->
     <kg-section-header title="5 · KgTag · KgChipRow · wd-segmented" />
     <kg-card>
-      <view class="row wrap">
+      <view class="row ds-wrap">
         <kg-tag v-for="t in ['brand', 'ok', 'bad', 'warn', 'info', 'neutral']" :key="t" :tone="t">{{ t }}</kg-tag>
         <kg-tag tone="brand" icon="check">带图标</kg-tag>
         <kg-tag v-for="m in modules" :key="m.key" tone="module" :module="m.key">{{ m.short }}</kg-tag>
@@ -109,13 +109,13 @@
 
     <!-- 6. 卡片 -->
     <kg-section-header title="6 · KgCard flat / raised / soft" more="查看全部" />
-    <view class="row wrap" style="align-items: stretch">
+    <view class="row ds-wrap" style="align-items: stretch">
       <kg-card v-for="v in ['flat', 'raised', 'soft']" :key="v" :variant="v" style="flex: 1; min-width: 140px">
         <template #header><text class="ds__b">{{ v }}</text></template>
         <text class="ds__note">正文 --ink-2</text>
       </kg-card>
     </view>
-    <view class="row wrap" style="margin-top: var(--sp-12); align-items: stretch">
+    <view class="row ds-wrap" style="margin-top: var(--sp-12); align-items: stretch">
       <kg-card clickable chevron style="flex: 1; min-width: 140px"><text>可点 + chevron</text></kg-card>
       <kg-card clickable selected style="flex: 1; min-width: 140px"><text>选中态</text></kg-card>
       <kg-card :padding="12" style="flex: 1; min-width: 140px"><text>紧凑 12</text></kg-card>
@@ -127,7 +127,7 @@
       <kg-progress :value="42" aria-label="线性 4px" />
       <view style="height: var(--sp-12)" />
       <kg-progress :value="72" :thickness="8" module="ziliao" aria-label="线性 8px 模块色" />
-      <view class="row wrap" style="margin-top: var(--sp-16); align-items: center">
+      <view class="row ds-wrap" style="margin-top: var(--sp-16); align-items: center">
         <kg-progress shape="ring" :value="35" :size="48" aria-label="环 48" />
         <kg-progress shape="ring" :value="65" :size="72" module="yanyu" aria-label="环 72">65%</kg-progress>
         <kg-progress shape="ring" :value="90" :size="96" :thickness="8" aria-label="环 96">
@@ -139,7 +139,7 @@
     <kg-card>
       <kg-stat-row :items="[{ label: '已练', value: 1284, unit: '题' }, { label: '正确率', value: 76, unit: '%' }, { label: '连签', value: 12, unit: '天' }, { label: '错题', value: 33 }]" />
     </kg-card>
-    <view class="row wrap" style="margin-top: var(--sp-12); align-items: stretch">
+    <view class="row ds-wrap" style="margin-top: var(--sp-12); align-items: stretch">
       <kg-stat-card label="本周正确率" :value="81" unit="%" :ring="81" style="flex: 1; min-width: 140px" />
       <kg-stat-card label="未解锁（0 数据）" :value="0" style="flex: 1; min-width: 140px" />
     </view>
@@ -153,7 +153,7 @@
     <kg-section-header title="8 · KgModuleCard row / grid · KgStreakBadges" />
     <kg-module-card module="ziliao" :progress="{ done: 120, acc: 78 }" badge="推荐" />
     <view style="height: var(--sp-8)" />
-    <view class="row wrap" style="align-items: stretch">
+    <view class="row ds-wrap" style="align-items: stretch">
       <kg-module-card v-for="m in modules" :key="m.key" :module="m.key" layout="grid" style="flex: 1; min-width: 96px" />
     </view>
     <view style="height: var(--sp-12)" />
@@ -197,10 +197,10 @@
     <!-- 11. 图标 -->
     <kg-section-header title="11 · l-icon tone × 16/20/24/32" />
     <kg-card>
-      <view class="row wrap" style="align-items: center">
+      <view class="row ds-wrap" style="align-items: center">
         <l-icon v-for="t in tones" :key="t" name="flame" :size="24" :tone="t" />
       </view>
-      <view class="row wrap" style="align-items: center; margin-top: var(--sp-12)">
+      <view class="row ds-wrap" style="align-items: center; margin-top: var(--sp-12)">
         <l-icon v-for="s in [16, 20, 24, 32]" :key="s" name="book-open" :size="s" tone="brand" />
         <text class="ds__note">legacy color prop 仍兼容（deprecated，走 base64 image 路径），此页不演示裸值</text>
       </view>
@@ -217,7 +217,7 @@
       <template #aside><kg-card variant="soft"><text>aside 320px sticky</text></kg-card></template>
     </kg-two-col>
     <view style="height: var(--sp-12)" />
-    <view class="row wrap">
+    <view class="row ds-wrap">
       <kg-button variant="secondary" @click="sheet = true">打开 KgSheet</kg-button>
       <kg-button variant="secondary" @click="bar = bar === 'answer' ? 'actions' : bar === 'actions' ? 'input' : 'answer'">底栏 layout：{{ bar }}</kg-button>
     </view>
@@ -234,15 +234,18 @@
 <script>
 import { MODULE_KEYS, moduleMeta } from '../../utils/module-meta.js';
 import { ICON_TONES } from '../../utils/icon-tone.js';
-import { getThemeMode, setThemeMode, isDark, THEME_LABELS } from '../../services/theme.js';
+import { getThemeMode, isDark, THEME_LABELS } from '../../services/theme.js';
+import { segResizeMixin } from '../../utils/seg-resize.js';
 
 /**
- * 开发用总览页（任务 3）：只读展示 token 与 Kg* 全部状态，不入 tabBar、不埋点。
+ * 开发用总览页（任务 3）：仅开发态可见；生产直入重定向首页，避免对外暴露与污染用户主题偏好。
  * 路由 #/pkgA/dev/design。截图随 PR。
  */
 export default {
+  mixins: [segResizeMixin],
   data() {
     return {
+      isDev: Boolean(import.meta.env && import.meta.env.DEV),
       themeLabel: THEME_LABELS[getThemeMode()],
       themeOpts: Object.values(THEME_LABELS),
       dark: false,
@@ -255,12 +258,12 @@ export default {
       ],
       modules: MODULE_KEYS.map((k) => moduleMeta(k)),
       fonts: [
-        { k: 'display', label: '展示 Display', px: 32, w: 600 },
-        { k: 'h1', label: '标题一 H1', px: 24, w: 600 },
-        { k: 'h2', label: '标题二 H2', px: 20, w: 600 },
-        { k: 'h3', label: '标题三 H3', px: 17, w: 500 },
-        { k: 'body', label: '正文 Body', px: 15, w: 400 },
-        { k: 'sub', label: '辅助 Sub', px: 13, w: 400 },
+        { k: 'display', label: '展示 Display', px: 26, w: 600 },
+        { k: 'h1', label: '标题一 H1', px: 20, w: 600 },
+        { k: 'h2', label: '标题二 H2', px: 17, w: 600 },
+        { k: 'h3', label: '标题三 H3', px: 15, w: 500 },
+        { k: 'body', label: '正文 Body', px: 13, w: 400 },
+        { k: 'sub', label: '辅助 Sub', px: 12, w: 400 },
         { k: 'caption', label: '说明 Caption', px: 12, w: 400 },
       ],
       spacings: [4, 8, 12, 16, 20, 24, 32, 40, 48],
@@ -304,7 +307,13 @@ export default {
       bar: 'answer',
     };
   },
+  onLoad() {
+    if (!this.isDev) {
+      uni.switchTab({ url: '/pages/home/home' });
+    }
+  },
   onShow() {
+    if (!this.isDev) return;
     this.dark = isDark();
     // #ifdef H5
     this.tokenCount = Array.from(document.styleSheets)
@@ -316,8 +325,15 @@ export default {
   methods: {
     onTheme({ value }) {
       const mode = Object.keys(THEME_LABELS).find((k) => THEME_LABELS[k] === value) || 'system';
-      setThemeMode(mode);
-      this.dark = isDark();
+      // 仅本地视觉预览，不写 localStorage 也不 POST /api/profile
+      // #ifdef H5
+      const sysDark = !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      const nextDark = mode === 'dark' || (mode === 'system' && sysDark);
+      document.documentElement.classList.toggle('theme-dark', nextDark);
+      document.documentElement.classList.toggle('tc-light', mode === 'light');
+      document.documentElement.dataset.theme = nextDark ? 'dark' : 'light';
+      this.dark = nextDark;
+      // #endif
     },
     bump() { this.moved = !this.moved; },
     onExclude(k) {
@@ -344,7 +360,7 @@ export default {
 .ty__s { color: var(--ink); flex: 1; min-width: 0; }
 .ty__m { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-3); }
 .row { display: flex; gap: var(--sp-8); align-items: center; }
-.wrap { flex-wrap: wrap; }
+.ds-wrap { flex-wrap: wrap; }
 .sp { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
 .sp__b { background: var(--brand-soft-2); border-radius: var(--r-xs); }
 .sp__n { font-size: var(--fs-caption); color: var(--ink-3); }

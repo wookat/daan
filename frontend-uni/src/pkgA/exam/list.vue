@@ -63,9 +63,9 @@
           v-else-if="!shown.length"
           icon="inbox"
           :title="kind === 'mokao' ? '暂无模考卷' : '暂无成套真题卷'"
-          :desc="year || region || st ? '试试放宽筛选条件' : (kind === 'mokao' ? '模考大赛卷持续录入中' : '真题卷持续录入中，先来一场迷你模考')"
-          :cta-text="year || region || st ? '清除筛选' : '迷你模考'"
-          @cta="year || region || st ? clearFilters() : startMini()"
+          :desc="year || region || st || onlyComplete ? '试试放宽筛选条件' : (kind === 'mokao' ? '模考大赛卷持续录入中' : '真题卷持续录入中，先来一场迷你模考')"
+          :cta-text="year || region || st || onlyComplete ? '清除筛选' : '迷你模考'"
+          @cta="year || region || st || onlyComplete ? clearFilters() : startMini()"
         />
 
         <view v-else class="plist kg-cards">
@@ -280,7 +280,7 @@ export default {
     this.kind = p.kind;
     if (p.st) {
       this.st = p.st;
-      this.syncUrl();
+      if (!p.year && !p.region) this.syncUrl();
     }
   },
   onShow() {
@@ -290,6 +290,7 @@ export default {
   },
   methods: {
     async load() {
+      const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
       this.loadErr = '';
       const q = ['kind=' + this.kind, 'uid=' + encodeURIComponent(anonUid())];
       if (this.year) q.push('year=' + this.year);
@@ -304,15 +305,17 @@ export default {
       this.loading = !snap;
       try {
         const d = await request(p);
+        if (seq !== this._loadSeq) return;
         this.items = d.items || [];
         this.filters = d.filters || { years: [], regions: [] };
         if (this.applyPendingFilter()) return;
         this.applyPendingPin();
       } catch (e) {
-        this.loadErr = e.message || '网络异常';
+        if (seq !== this._loadSeq) return;
+        if (!snap && !this.items.length) this.loadErr = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
-      this.loading = false;
+      if (seq === this._loadSeq) this.loading = false;
     },
     async loadAttempts() {
       const p = '/api/exam/attempts?uid=' + encodeURIComponent(anonUid()) + '&limit=10';
@@ -424,6 +427,7 @@ export default {
       this.year = null;
       this.region = null;
       this.st = '';
+      this.onlyComplete = false;
       this.pinnedId = 0;
       this.pageN = 1;
       this.syncUrl();
@@ -608,14 +612,17 @@ export default {
 
 /* #ifdef H5 */
 .page :deep(.kg-two__aside) { display: none; }
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+  .plist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+  .plist .paper { display: flex; flex-direction: column; }
+  .plist .paper .paper-top { flex: 1; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; }
   .page :deep(.kg-two__aside) { display: block; }
   .region-row { display: none; }
-  .plist { display: grid; grid-template-columns: repeat(2, 1fr); align-items: stretch; }
-  .plist .paper { display: flex; flex-direction: column; }
-  .plist .paper .paper-top { flex: 1; }
-  .paper-top, .more, .arow, .menu-it, .rg { cursor: pointer; }
+  .paper-top, .more, .arow, .menu-it, .rg, .flt-comp, .tpl-it, .boost-row { cursor: pointer; }
 }
 /* #endif */
 </style>

@@ -157,7 +157,7 @@
                 <kg-tag tone="brand">{{ f.submodule || modName(f.module) }}</kg-tag>
                 <kg-tag v-if="f.is_real" tone="neutral">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</kg-tag>
               </view>
-              <view class="q" :class="{ clamp: !f._open }">{{ (f.question || '').slice(0, 200) }}</view>
+              <view class="q" :class="{ clamp: !f._open }">{{ f._open ? (f.question || '') : (f.question || '').slice(0, 200) }}</view>
               <template v-if="f._open">
                 <kg-fit-img v-if="f.image" :src="imgUrl(f.image)" mode="widthFix" class="optimg" />
                 <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><kg-fit-img v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" /></view>
@@ -244,7 +244,7 @@
               <kg-tag v-else-if="nextReviewText(m)" :tone="isDue(m) ? 'warn' : 'neutral'" class="mright">{{ nextReviewText(m) }}</kg-tag>
               <text class="meta mtime">{{ fmt(m.created_at) }}</text>
             </view>
-            <view class="q" :class="{ clamp: !m.open }">{{ (m.question_text || '').slice(0, 200) }}</view>
+            <view class="q" :class="{ clamp: !m.open }">{{ m.open ? (m.question_text || '') : (m.question_text || '').slice(0, 200) }}</view>
             <kg-fit-img v-if="m.open && m.image" :src="imgUrl(m.image)" mode="widthFix" class="optimg" />
             <view v-if="m.open && m.options" class="mopts">
               <view v-for="(v, k) in m.options" :key="k" class="moptrow">
@@ -544,9 +544,9 @@
         <text class="bb-n">已选 {{ selCount }}</text>
         <kg-button variant="text" size="md" aria-label="退出批量" @click="toggleBatch">退出</kg-button>
         <view class="bb-acts">
-          <kg-button v-if="tab === 'todo'" variant="primary" size="md" aria-label="重练所选错题" :disabled="!selCount || batchBusy" @click="redoSel">重练</kg-button>
+          <kg-button v-if="tab !== 'done'" variant="primary" size="md" aria-label="重练所选错题" :disabled="!selCount || batchBusy" @click="redoSel">重练</kg-button>
           <kg-button variant="secondary" size="md" aria-label="导出所选为 PDF" :disabled="!selCount || batchBusy || exporting" @click="openExportSel">导出</kg-button>
-          <kg-button v-if="tab === 'todo'" variant="secondary" size="md" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握</kg-button>
+          <kg-button v-if="tab !== 'done'" variant="secondary" size="md" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握</kg-button>
           <kg-button v-else variant="secondary" size="md" :disabled="!selCount || batchBusy" @click="batchMaster(false)">恢复复习</kg-button>
           <kg-button variant="secondary" size="md" tone="bad" :disabled="!selCount || batchBusy" @click="batchDel">删除</kg-button>
         </view>
@@ -997,7 +997,7 @@ export default {
     if (p.rz) this.rzFilter = p.rz;
     if (p.sort) this.sortBy = p.sort;
     if (p.review) uni.setStorageSync('autoStartReview', 1);
-    if (opts && opts.ai) this.aiOpen = true;
+    if (opts && opts.ai) this._pendingAiOpen = true;
     this._onAuth = () => {
       if (anonUid() === this._acctUid) return;
       this.resetAccountState();
@@ -1017,7 +1017,11 @@ export default {
     this.askSeenTick++;
     if (uni.getStorageSync('bookAiOpen')) {
       uni.removeStorageSync('bookAiOpen');
-      this.aiOpen = true;
+      this._pendingAiOpen = true;
+    }
+    if (this._pendingAiOpen) {
+      this._pendingAiOpen = false;
+      this.aiAnalysis(false);
     }
     this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
     this.favs = (uni.getStorageSync('favQuestions') || []).map((f) => ({ ...f, _open: false }));
@@ -1086,6 +1090,7 @@ export default {
   },
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    if (this._snapPostTimer) { clearTimeout(this._snapPostTimer); this._snapPostTimer = null; }
     // #ifdef H5
     if (this._offLanded) {
       this._offLanded();
@@ -1189,7 +1194,7 @@ export default {
         }
         return;
       }
-      if (this.batchMode || this.manualOpen || this.entryOpen || this.celebrate || this.reinforce || this.aiOpen) return;
+      if (this.batchMode || this.manualOpen || this.entryOpen || this.celebrate || this.reinforce || this.aiOpen || this.filterOpen || this.reportOpen || this.scanOpen || this.exportConfirm) return;
       const list = this.shownPage;
       if (!list.length) return;
       if (k === 'j' || k === 'k' || k === 'ArrowDown' || k === 'ArrowUp') {
@@ -2018,7 +2023,7 @@ export default {
 .mopt--bad { color: var(--bad-strong); }
 .anscmp { margin-top: var(--sp-8); font-size: var(--fs-sub); display: flex; gap: var(--sp-8); align-items: center; flex-wrap: wrap; }
 .anscmp .ca { color: var(--ok); font-weight: 600; }
-.optimg { max-width: 560rpx; margin: var(--sp-8) var(--sp-8) 0 0; border-radius: var(--r-xs); display: inline-block; vertical-align: middle; }
+.optimg { max-width: 100%; margin: var(--sp-8) var(--sp-8) 0 0; border-radius: var(--r-xs); display: inline-block; vertical-align: middle; }
 .mstat { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); }
 .attempts { margin-top: var(--sp-8); background: var(--fill); border-radius: var(--r-xs); padding: var(--sp-8) var(--sp-12); }
 .att-h { font-size: var(--fs-caption); color: var(--ink-3); margin-bottom: var(--sp-4); }
@@ -2133,8 +2138,11 @@ export default {
 .fabmenu .kg-btn { width: 176px; }
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  /* 桌面端左栏 tabbar、无底部栏，不再需要 50px 避让——贴着右下角即可，否则悬浮压内容 */
+  /* 宽屏左栏 tabbar、无底部栏，清掉底部 TabBar 避让 */
+  .wrap.book { padding-bottom: var(--sp-40); }
   .fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
+  .batchbar { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
+  .next-btn { bottom: calc(env(safe-area-inset-bottom) + var(--sp-12)); }
 }
 /* #endif */
 /* #ifndef H5 */
@@ -2182,6 +2190,7 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 1024px) {
   .wrap.book { max-width: 1064px; padding-top: var(--sp-24); }
+  .sticky-bar { margin: 0 0 var(--sp-8); padding-left: 0; padding-right: 0; }
   .trendcard, .kbdcard { display: block; }
   .wrap.is-review { max-width: 760px; margin: 0 auto; }
 }

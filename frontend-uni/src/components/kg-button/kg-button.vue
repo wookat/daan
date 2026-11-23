@@ -90,9 +90,14 @@ export default {
 /* 复用 wd-button 自带的 ::after（text 变体下它 display:none、宽 200% 做 hairline），全部覆写成命中层 */
 .kg-btn.kg-btn--sm::after, .kg-btn.kg-btn--md::after, .kg-btn.kg-btn--lg::after { content: ''; display: block; position: absolute; left: 0; right: 0; width: auto; top: 50%; height: var(--hit-min); border: none; transform: translateY(-50%); }
 @media (min-width: 1024px) {
-  .kg-btn.kg-btn--primary:hover { background: var(--brand-press) !important; }
-  .kg-btn.kg-btn--secondary:hover { background: var(--brand-soft-2) !important; }
-  .kg-btn.kg-btn--ghost:hover { background: var(--fill) !important; }
+  .kg-btn.kg-btn--tone-brand.kg-btn--primary:hover { background: var(--brand-press) !important; }
+  .kg-btn.kg-btn--tone-brand.kg-btn--secondary:hover { background: var(--brand-soft-2) !important; }
+  .kg-btn.kg-btn--tone-brand.kg-btn--ghost:hover { background: var(--fill) !important; }
+  .kg-btn.kg-btn--tone-bad.kg-btn--primary:hover { background: var(--bad-strong) !important; }
+  .kg-btn.kg-btn--tone-bad.kg-btn--secondary:hover { background: var(--bad-soft) !important; opacity: 0.9; }
+  .kg-btn.kg-btn--tone-bad.kg-btn--ghost:hover { background: var(--bad-soft) !important; }
+  .kg-btn.kg-btn--tone-inverse.kg-btn--primary:hover { background: var(--brand-soft) !important; color: var(--brand-text) !important; }
+  .kg-btn.kg-btn--tone-inverse.kg-btn--ghost:hover { background: rgba(255, 255, 255, 0.24) !important; }
   .kg-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 }
 </style>

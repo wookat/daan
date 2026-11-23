@@ -6,32 +6,32 @@
     </view>
     <view class="r-main">
       <view v-if="beatView.pct != null" class="r-beat">
-        <text class="r-beat-n">{{ beatView.pct }}%</text>
+        <text class="r-beat-n num">{{ beatView.pct }}%</text>
         <text class="r-beat-l">{{ beatView.label }}</text>
       </view>
       <view v-else class="r-beat">
         <text class="r-beat-tiny">{{ beatView.line }}</text>
       </view>
       <view class="r-kv">
-        <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v">{{ data.rank }}<text class="r-v-s">/{{ data.total }}</text></text></view>
-        <view class="r-kv-i"><text class="r-k">平均分</text><text class="r-v">{{ data.avg }}</text></view>
+        <view class="r-kv-i"><text class="r-k">排名</text><text class="r-v num">{{ data.rank }}<text class="r-v-s">/{{ data.total }}</text></text></view>
+        <view class="r-kv-i"><text class="r-k">平均分</text><text class="r-v num">{{ data.avg }}</text></view>
       </view>
     </view>
     <!-- 分数分布 -->
     <view class="r-dist">
       <view v-for="(n, i) in data.distribution" :key="i" class="r-col">
         <view class="r-bar-w"><view class="r-bar" :class="{ me: i === data.my_bucket }" :style="{ height: barH(n) + '%' }" /></view>
-        <text class="r-col-l">{{ i * 10 }}</text>
+        <text class="r-col-l num">{{ i * 10 }}</text>
       </view>
     </view>
-    <text class="r-hint">你在 {{ data.my_bucket * 10 }}-{{ data.my_bucket * 10 + 10 }} 分段（蓝色）</text>
+    <text class="r-hint">你在 {{ data.my_bucket * 10 }}-{{ data.my_bucket * 10 + 10 }} 分段（高亮）</text>
     <!-- 同卷排行榜（每人取最高分口径，与超过比例一致） -->
     <view v-if="boardRows" class="r-board">
       <text class="r-board-t">同卷排行榜</text>
       <view v-for="b in boardRows" :key="b.rank + b.name" class="r-brow" :class="{ me: b.me }">
-        <text class="r-brank">{{ b.rank }}</text>
+        <text class="r-brank num">{{ b.rank }}</text>
         <text class="r-bname">{{ b.name }}<text v-if="b.me && b.name !== '我'" class="r-bme">（我）</text></text>
-        <text class="r-bscore">{{ b.score }} 分</text>
+        <text class="r-bscore num">{{ b.score }} 分</text>
       </view>
     </view>
   </kg-card>
@@ -54,6 +54,12 @@ export default {
     },
     boardRows() {
       return examBoardRows(this.data);
+    },
+  },
+  watch: {
+    attemptId() {
+      this.data = null;
+      this.load();
     },
   },
   mounted() {

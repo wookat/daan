@@ -1,6 +1,6 @@
 <template>
   <view v-if="visible" class="mask" :class="{ 'above-tabbar': aboveTabbar }" @click="$emit('close')">
-    <view class="sheet" @click.stop>
+    <view class="sheet" role="dialog" aria-modal="true" aria-label="导出 PDF" @click.stop>
       <view class="sheet-h">
         <text class="sheet-t">导出 PDF</text>
         <view class="sheet-x" @click="$emit('close')">✕</view>
@@ -14,14 +14,14 @@
         <text class="info-v">{{ countText }}</text>
       </view>
       <view class="exp-opts">
-        <text class="expchip" :class="{ on: withAns && !only }" @click="only = false; withAns = !withAns">含解析</text>
-        <text class="expchip" :class="{ on: only }" @click="only = !only">仅答案</text>
-        <text class="expchip" :class="{ on: withSheet && !only }" @click="only = false; withSheet = !withSheet">含答题卡</text>
+        <text class="expchip" :class="{ on: withAns && !only }" role="button" :aria-pressed="String(withAns && !only)" @click="only = false; withAns = !withAns">含解析</text>
+        <text class="expchip" :class="{ on: only }" role="button" :aria-pressed="String(only)" @click="only = !only">仅答案</text>
+        <text class="expchip" :class="{ on: withSheet && !only }" role="button" :aria-pressed="String(withSheet && !only)" @click="only = false; withSheet = !withSheet">含答题卡</text>
         <text v-if="reviewable" class="expchip" :class="{ on: withMine && (only || withAns) }" @click="toggleMine">含我的错答/错因</text>
       </view>
       <view class="opt-note">{{ optNote }}</view>
       <view v-if="sheetlessNote" class="opt-note sheetless">{{ sheetlessNote }}</view>
-      <view class="confirm-btn" :class="{ dim: busy }" :aria-disabled="String(!!busy)" @click="onConfirm">{{ busy ? '正在生成 PDF…' : '确认导出' }}</view>
+      <view class="confirm-btn" :class="{ dim: busy }" role="button" :aria-disabled="String(!!busy)" @click="onConfirm">{{ busy ? '正在生成 PDF…' : '确认导出' }}</view>
     </view>
   </view>
 </template>
@@ -110,24 +110,31 @@ export default {
 </script>
 
 <style scoped>
-.mask { position: fixed; inset: 0; background: var(--mask); z-index: var(--z-overlay); display: flex; align-items: flex-end; }
+.mask { position: fixed; inset: 0; background: var(--mask); z-index: var(--z-overlay); display: flex; align-items: flex-end; justify-content: center; }
 /* #ifdef H5 */
 /* H5 底部 TabBar 常驻：整个弹层收在 TabBar 上方（仅 tab 页需要） */
 @media (max-width: 767px) {
-  .mask.above-tabbar { bottom: calc(50px + env(safe-area-inset-bottom)); }
+  .mask.above-tabbar { bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)); }
 }
 /* #endif */
-.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: 32rpx 32rpx 0 0; padding: 32rpx 28rpx calc(36rpx + env(safe-area-inset-bottom)); max-height: 76vh; overflow-y: auto; }
-.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20rpx; }
-.sheet-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
-.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: var(--fs-sub); color: var(--ink-2); margin: -6px -8rpx -6px 0; }
-.info-row { display: flex; align-items: baseline; gap: 20rpx; margin-bottom: 12rpx; }
+.sheet { width: 100%; box-sizing: border-box; background: var(--card); border-radius: var(--r-lg) var(--r-lg) 0 0; padding: var(--sp-16) var(--sp-16) calc(var(--sp-20) + env(safe-area-inset-bottom)); max-height: 76vh; overflow-y: auto; }
+.sheet-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
+.sheet-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
+.sheet-x { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 40px; font-size: var(--fs-sub); color: var(--ink-2); margin: -6px -4px -6px 0; border-radius: var(--r-full); }
+.info-row { display: flex; align-items: baseline; gap: var(--sp-12); margin-bottom: var(--sp-8); }
 .info-k { flex-shrink: 0; font-size: var(--fs-caption); color: var(--ink-2); }
 .info-v { font-size: var(--fs-sub); color: var(--ink); font-weight: 500; }
-.exp-opts { display: flex; gap: 12rpx; margin-top: 20rpx; }
-.expchip { flex: 1; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1rpx solid var(--line); border-radius: 12rpx; font-size: var(--fs-caption); color: var(--ink-2); background: var(--fill); }
+.exp-opts { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-12); }
+.expchip { flex: 1 1 auto; min-height: 44px; padding: 0 var(--sp-8); box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: var(--fs-caption); color: var(--ink-2); background: var(--fill); white-space: nowrap; }
 .expchip.on { border-color: var(--brand-text); color: var(--brand-text); background: var(--brand-soft); font-weight: 600; }
-.opt-note { margin-top: 14rpx; font-size: var(--fs-caption); color: var(--ink-3); }
-.confirm-btn { margin-top: 24rpx; min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--brand); color: var(--on-brand); border-radius: 999rpx; font-size: var(--fs-sub); font-weight: 600; }
+.opt-note { margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); }
+.confirm-btn { margin-top: var(--sp-16); min-height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: var(--brand); color: var(--on-brand); border-radius: var(--r-full); font-size: var(--fs-sub); font-weight: 600; }
 .confirm-btn.dim { opacity: 0.6; }
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .mask { align-items: center; }
+  .sheet { width: min(480px, 92vw); border-radius: var(--r-lg); padding: var(--sp-20); }
+  .sheet-x, .expchip, .confirm-btn { cursor: pointer; }
+}
+/* #endif */
 </style>

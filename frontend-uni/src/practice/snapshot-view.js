@@ -17,6 +17,12 @@ export function snapshotViewMixin({ noun, reload }) {
         return snapshotNotice(this.snapAt, this.netOnline, Date.now(), noun);
       },
     },
+    beforeUnmount() {
+      this.unbindNet();
+    },
+    onUnload() {
+      this.unbindNet();
+    },
     methods: {
       /** 一轮刷新开始：清本轮已见快照时刻（横幅保留到本轮主回包裁决） */
       beginSnapshotRound() {

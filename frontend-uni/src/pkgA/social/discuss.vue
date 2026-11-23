@@ -9,9 +9,9 @@
       @cta="goPlaza"
     />
     <kg-two-col v-else aside-first>
-      <template #aside>
+      <template v-if="q" #aside>
         <!-- 题目摘要卡 -->
-        <kg-card v-if="q" class="qcard">
+        <kg-card class="qcard">
           <view class="qtags">
             <kg-tag tone="module" :module="q.module">{{ modName(q.module) }}</kg-tag>
             <kg-tag v-if="q.is_real" tone="neutral">{{ [q.exam_year, q.exam_region, '真题'].filter(Boolean).join(' ') }}</kg-tag>
@@ -172,14 +172,15 @@ export default {
     this.loadInbox();
   },
   onLoad(opts) {
-    this.qid = Number(opts.qid || 0);
+    const rawId = Number((opts && opts.qid) || 0);
+    this.qid = Number.isInteger(rawId) && rawId > 0 ? rawId : 0;
     if (!this.qid) {
       this.noQid = true;
       this.loading = false;
       return;
     }
     this.draft = uni.getStorageSync('dcDraft:' + this.qid) || '';
-    if (opts.focus === '1') {
+    if (opts && opts.focus === '1') {
       this._wantFocus = true;
       setTimeout(() => this.focusCompose(), 300);
     }
@@ -276,12 +277,15 @@ export default {
     },
     startReply(top, sub) {
       if (!this.ensureLogin()) return;
-      this.replyTo = { id: top.id, nickname: (sub || top).nickname };
+      this.replyTo = { id: top.id, nickname: (sub || top).nickname, subNick: sub ? sub.nickname : '' };
     },
     async submit() {
-      const content = this.draft.trim();
-      if (!content || this.busy) return;
+      const raw = this.draft.trim();
+      if (!raw || this.busy) return;
       if (!this.ensureLogin()) return;
+      const content = this.replyTo && this.replyTo.subNick && !raw.startsWith('@')
+        ? `@${this.replyTo.subNick} ${raw}`
+        : raw;
       this.busy = true;
       try {
         const d = await postComment(this.qid, content, this.replyTo && this.replyTo.id);
@@ -297,7 +301,7 @@ export default {
         this.total += 1;
         uni.showToast({ title: '已发布', icon: 'none' });
       } catch (e) {
-        uni.showToast({ title: e.message, icon: 'none' });
+        uni.showToast({ title: e.message || '发布失败', icon: 'none' });
       }
       this.busy = false;
     },
@@ -308,7 +312,7 @@ export default {
         c.liked = d.liked;
         c.likes = d.likes;
       } catch (e) {
-        uni.showToast({ title: e.message, icon: 'none' });
+        uni.showToast({ title: e.message || '操作失败', icon: 'none' });
       }
     },
     report(c, parent) {
@@ -319,13 +323,14 @@ export default {
           try {
             const d = await reportComment(c.id, REPORT_REASONS[tapIndex]);
             if (d.hidden) {
+              const dropN = parent ? 1 : 1 + ((c.replies && c.replies.length) || 0);
               if (parent) parent.replies = parent.replies.filter((x) => x.id !== c.id);
               else this.items = this.items.filter((x) => x.id !== c.id);
-              this.total = Math.max(0, this.total - 1);
+              this.total = Math.max(0, this.total - dropN);
             }
             uni.showToast({ title: d.already ? '你已举报过这条评论' : '已收到举报，我们会尽快处理', icon: 'none' });
           } catch (e) {
-            uni.showToast({ title: e.message, icon: 'none' });
+            uni.showToast({ title: e.message || '举报失败', icon: 'none' });
           }
         },
       });
@@ -337,11 +342,12 @@ export default {
           if (!r.confirm) return;
           try {
             await deleteOwnComment(c.id);
+            const dropN = parent ? 1 : 1 + ((c.replies && c.replies.length) || 0);
             if (parent) parent.replies = parent.replies.filter((x) => x.id !== c.id);
             else this.items = this.items.filter((x) => x.id !== c.id);
-            this.total = Math.max(0, this.total - 1);
+            this.total = Math.max(0, this.total - dropN);
           } catch (e) {
-            uni.showToast({ title: e.message, icon: 'none' });
+            uni.showToast({ title: e.message || '删除失败', icon: 'none' });
           }
         },
       });
@@ -396,11 +402,14 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
+  .wrap { max-width: 680px; margin: 0 auto; }
   .msg:hover, .op:hover, .rx:hover { cursor: pointer; }
+  .ibar { max-width: 680px; margin: 0 auto; border: 1px solid var(--line); border-radius: var(--r-md) var(--r-md) 0 0; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; }
-  .ibar { margin-top: var(--sp-16); border: 1px solid var(--line); border-radius: var(--r-md); }
+  .wrap { max-width: 1044px !important; margin: 0 auto; }
+  .wrap.has-bar { padding-bottom: var(--sp-24); }
+  .ibar { max-width: none; margin-top: var(--sp-16); border: 1px solid var(--line); border-radius: var(--r-md); }
 }
 /* #endif */
 </style>

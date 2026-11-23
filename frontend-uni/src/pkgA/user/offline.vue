@@ -2,10 +2,7 @@
   <view class="page">
     <kg-two-col aside-first>
       <template #aside>
-        <view v-if="!online" class="offbar" role="status">
-          <l-icon name="plane" :size="16" tone="warn" />
-          <text class="offbar-t">当前离线 · 可继续刷已下载题包，作答将在联网后自动同步</text>
-        </view>
+        <kg-banner v-if="!online" tone="warn" icon="plane" :closable="false" text="当前离线 · 可继续刷已下载题包，作答将在联网后自动同步" class="offbar-b" />
 
         <kg-card class="card">
           <view class="row-sb">
@@ -90,6 +87,22 @@ export default {
   onShow() {
     this.refresh();
     uni.getNetworkType({ success: (r) => { this.online = r.networkType !== 'none'; } });
+    // #ifdef H5
+    if (!this._onNet && typeof window !== 'undefined') {
+      this._onNet = () => { this.online = navigator.onLine !== false; };
+      window.addEventListener('online', this._onNet);
+      window.addEventListener('offline', this._onNet);
+    }
+    // #endif
+  },
+  onUnload() {
+    // #ifdef H5
+    if (this._onNet && typeof window !== 'undefined') {
+      window.removeEventListener('online', this._onNet);
+      window.removeEventListener('offline', this._onNet);
+      this._onNet = null;
+    }
+    // #endif
   },
   methods: {
     refresh() {
@@ -111,6 +124,10 @@ export default {
     },
     async download(m) {
       if (this.busy) return;
+      if (!this.online) {
+        uni.showToast({ title: '当前无网络，联网后再下载或更新题包', icon: 'none' });
+        return;
+      }
       this.busy = m;
       try {
         await downloadPack(m);
@@ -126,25 +143,39 @@ export default {
       this.refresh();
     },
     remove(m) {
-      removePack(m);
-      this.refresh();
-      uni.showToast({ title: '已删除题包', icon: 'none' });
+      uni.showModal({
+        title: '删除离线题包',
+        content: '删除后无网络时将无法使用该模块离线刷题，确定删除吗？',
+        confirmText: '删除',
+        success: (r) => {
+          if (!r.confirm) return;
+          removePack(m);
+          this.refresh();
+          uni.showToast({ title: '已删除题包', icon: 'none' });
+        },
+      });
     },
     async syncNow() {
       if (this.syncing) return;
+      if (!this.online) {
+        uni.showToast({ title: '当前无网络，联网后将自动同步', icon: 'none' });
+        return;
+      }
+      const before = this.pending;
       this.syncing = true;
       await flushOfflineQueue();
       this.syncing = false;
       this.refresh();
+      if (this.pending === 0 && before > 0) uni.showToast({ title: '同步完成', icon: 'success' });
+      else if (this.pending >= before && before > 0) uni.showToast({ title: '同步暂未完成，请稍后重试', icon: 'none' });
     },
   },
 };
 </script>
 
 <style scoped>
-.page { padding: var(--sp-16) var(--page-x) var(--sp-48); }
-.offbar { display: flex; align-items: flex-start; gap: var(--sp-8); background: var(--warn-soft); border-radius: var(--r-sm); padding: var(--sp-12); margin-bottom: var(--card-gap); }
-.offbar-t { flex: 1; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--warn-strong); }
+.page { padding: var(--sp-16) var(--page-x) var(--sp-48); box-sizing: border-box; }
+.offbar-b { margin-bottom: var(--card-gap); }
 .card { margin-bottom: var(--card-gap); }
 .row-sb { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); }
 .h { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
@@ -153,13 +184,21 @@ export default {
 .hint { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-8); line-height: var(--lh-caption); }
 .sync { display: flex; align-items: center; gap: var(--sp-12); background: var(--brand-soft); }
 .sync-t { flex: 1; min-width: 0; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--brand-text); }
-.pkg { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--sp-8); }
+.pkg { display: flex; align-items: center; gap: var(--sp-12); margin-bottom: var(--card-gap); }
 .ico { width: 44px; height: 44px; border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .grow { flex: 1; min-width: 0; }
 .nm-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-4) var(--sp-8); }
 .nm-row :deep(.kg-tag) { flex-shrink: 0; }
 .nm { font-size: var(--fs-body); font-weight: 600; color: var(--ink); line-height: var(--lh-sub); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .sub2 { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
-.acts { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
+.acts { display: flex; align-items: center; gap: var(--sp-8); flex-shrink: 0; }
 .hint2 { display: block; font-size: var(--fs-caption); color: var(--ink-3); line-height: var(--lh-caption); margin: var(--sp-8) var(--sp-4); }
+/* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 680px; margin: 0 auto; }
+}
+@media (min-width: 1024px) {
+  .page { max-width: 1044px; margin: 0 auto; }
+}
+/* #endif */
 </style>

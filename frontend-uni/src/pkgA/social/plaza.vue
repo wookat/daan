@@ -35,8 +35,8 @@
         />
         <kg-skeleton v-else preset="cards" />
       </template>
-      <template #aside>
-        <kg-card v-if="items.length" variant="flat">
+      <template v-if="items.length" #aside>
+        <kg-card variant="flat">
           <kg-stat-row :items="[{ label: '热议题目', value: items.length }, { label: '讨论总数', value: totalCnt }]" />
         </kg-card>
       </template>

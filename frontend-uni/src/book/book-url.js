@@ -1,8 +1,8 @@
 // 错题本 URL 同步：tab/模块/来源/排序状态生成可刷新恢复的 hash 深链
 export const BOOK_PATH = '/#/pages/book/book';
 
-const TABS = ['done', 'fav'];
-const MODS = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi', 'shenlun'];
+const TABS = ['done', 'sticky', 'fav'];
+const MODS = ['ziliao', 'shuliang', 'yanyu', 'panduan', 'changshi', 'shenlun', '时政'];
 const SRCS = ['exam', 'practice'];
 const SORTS = ['old', 'due', 'times', 'type', 'reason'];
 const RZS = ['粗心大意', '概念不清', '方法不会', '纯蒙的', '未标注'];

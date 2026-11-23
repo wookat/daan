@@ -13,14 +13,10 @@
           </view>
         </kg-hero-card>
 
-        <kg-banner v-if="r.small_sample" tone="warn" :closable="false" :text="'本场参赛 ' + r.total + ' 人，样本较少，排名仅供参考；历史同卷共 ' + r.history_pool.n + ' 人作答、平均 ' + r.history_pool.avg + ' 分（含比赛窗口外练习）'" class="sec" />
+        <kg-banner v-if="r.small_sample" tone="warn" :closable="false" :text="'本场参赛 ' + r.total + ' 人，样本较少，排名仅供参考' + (r.history_pool && r.history_pool.n ? '；历史同卷共 ' + r.history_pool.n + ' 人作答、平均 ' + r.history_pool.avg + ' 分（含比赛窗口外练习）' : '')" class="sec" />
 
         <kg-card variant="flat" class="sec">
-          <kg-stat-row :items="[
-            { label: '排名', value: r.rank + '/' + r.total, tone: 'brand' },
-            { label: '超过考友', value: r.pct, unit: '%' },
-            { label: '全场平均', value: r.avg, unit: '分' },
-          ]" />
+          <kg-stat-row :items="statItems" />
         </kg-card>
 
         <kg-card v-if="r.target_score != null || r.top25_score != null" variant="flat" class="sec">
@@ -35,9 +31,9 @@
           </view>
         </kg-card>
 
-        <kg-card v-if="r.modules.length" variant="flat" class="sec">
+        <kg-card v-if="(r.modules || []).length" variant="flat" class="sec">
           <text class="h">模块表现</text>
-          <view v-for="m in r.modules" :key="m.module" class="mrow">
+          <view v-for="m in r.modules || []" :key="m.module" class="mrow">
             <text class="mrow-name">{{ modName(m.module) }}</text>
             <view class="mrow-main">
               <kg-progress :value="m.n ? Math.round((m.correct / m.n) * 100) : 0" :module="m.module" />
@@ -49,8 +45,8 @@
 
         <kg-card variant="flat" class="sec">
           <text class="h">本卷薄弱考点</text>
-          <text v-if="!r.weak_tags.length" class="note">{{ weakNoteText }}</text>
-          <view v-for="t in r.weak_tags" :key="t.tag3" class="wrow" role="button" hover-class="row--hover" @click="goPractice(t.tag3)">
+          <text v-if="!(r.weak_tags && r.weak_tags.length)" class="note">{{ weakNoteText }}</text>
+          <view v-for="t in r.weak_tags || []" :key="t.tag3" class="wrow" role="button" hover-class="row--hover" @click="goPractice(t.tag3)">
             <view class="wrow-l">
               <text class="wrow-t">{{ t.name || t.tag3 }}</text>
               <text class="wrow-s">错 {{ t.wrong }}/{{ t.n }} 题</text>
@@ -60,26 +56,26 @@
           </view>
         </kg-card>
 
-        <kg-card v-if="r.history.length > 1" variant="flat" class="sec">
+        <kg-card v-if="(r.history || []).length > 1" variant="flat" class="sec">
           <text class="h">历届大赛成绩</text>
           <view class="curve">
-            <view v-for="(a, i) in r.history" :key="a.id" class="curve-col">
+            <view v-for="(a, i) in r.history || []" :key="a.id" class="curve-col">
               <text class="curve-v num">{{ a.score }}</text>
-              <view class="curve-bar" :class="{ cur: a.id === r.event.id }" :style="{ height: Math.max(8, a.score) + '%' }" />
+              <view class="curve-bar-w"><view class="curve-bar" :class="{ cur: a.id === r.event.id }" :style="{ height: Math.max(8, a.score) + '%' }" /></view>
               <text class="curve-x num">{{ i + 1 }}</text>
             </view>
           </view>
-          <text class="note">同系列最近 {{ r.history.length }} 场成绩（分）</text>
+          <text class="note">同系列最近 {{ (r.history || []).length }} 场成绩（分）</text>
         </kg-card>
 
         <kg-action-bar layout="actions" primary-text="弱项练 5 题" secondary-text="逐题回顾" @primary="goWeakPractice" @secondary="openAttempt" />
       </template>
 
       <template #aside>
-        <kg-card variant="flat" class="sec dist-card">
+        <kg-card v-if="(r.distribution || []).length" variant="flat" class="sec dist-card">
           <text class="h">分数分布</text>
           <view class="dist">
-            <view v-for="(n, i) in r.distribution" :key="i" class="dist-col">
+            <view v-for="(n, i) in r.distribution || []" :key="i" class="dist-col">
               <view class="dist-bar-w"><view class="dist-bar" :class="{ me: i === r.my_bucket }" :style="{ height: barH(n) + '%' }" /></view>
               <text class="dist-l num">{{ i * 10 }}</text>
             </view>
@@ -101,6 +97,7 @@ export default {
     return { loading: true, err: '', loadErr: '', r: null, eventId: null };
   },
   onLoad(opt) {
+    opt = opt || {};
     this.eventId = opt.event_id ? Number(opt.event_id) : null;
     if (!this.eventId) {
       this.err = '链接缺少赛事参数，请从模考大赛页进入';
@@ -110,6 +107,15 @@ export default {
     this.load();
   },
   computed: {
+    statItems() {
+      const r = this.r;
+      if (!r) return [];
+      const items = [{ label: '排名', value: r.rank + '/' + r.total, tone: 'brand' }];
+      if (!r.small_sample && r.total >= 10) items.push({ label: '超过考友', value: r.pct, unit: '%' });
+      else items.push({ label: '参赛人数', value: r.total, unit: '人' });
+      items.push({ label: '全场平均', value: r.avg, unit: '分' });
+      return items;
+    },
     weakNoteText() {
       const [correct, total] = contestCorrectTotal(this.r);
       return weakNote(correct, total);
@@ -135,11 +141,13 @@ export default {
       this.load();
     },
     barH(n) {
-      const max = Math.max(...this.r.distribution, 1);
+      const dist = (this.r && this.r.distribution) || [];
+      const max = Math.max(...dist, 1);
       return n ? 15 + (n / max) * 85 : 4;
     },
     fmtSecs(s) {
       if (!s) return '0 分';
+      if (s < 60) return Math.round(s) + ' 秒';
       return Math.round(s / 60) + ' 分';
     },
     goPractice(tag3, count) {
@@ -147,14 +155,19 @@ export default {
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     goWeakPractice() {
-      const t = this.r.weak_tags[0];
+      const list = (this.r && this.r.weak_tags) || [];
+      const t = list[0];
       this.goPractice(t ? t.tag3 : null, 5);
     },
     openAttempt() {
+      if (!this.r || !this.r.attempt_id) {
+        uni.showToast({ title: '暂无法查看逐题详情', icon: 'none' });
+        return;
+      }
       uni.navigateTo({ url: '/pkgA/exam/report?attempt_id=' + this.r.attempt_id });
     },
     goContest() {
-      uni.reLaunch({ url: '/pkgA/exam/contest' });
+      uni.redirectTo({ url: '/pkgA/exam/contest' });
     },
   },
 };
@@ -193,14 +206,17 @@ export default {
 .curve { display: flex; align-items: flex-end; gap: var(--sp-8); height: 120px; padding: var(--sp-4) 0; }
 .curve-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 24px; }
 .curve-v { font-size: var(--fs-caption); color: var(--ink-2); margin-bottom: var(--sp-4); }
+.curve-bar-w { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .curve-bar { width: 60%; max-width: 24px; background: var(--brand-soft-2); border-radius: var(--r-xs) var(--r-xs) 0 0; }
 .curve-bar.cur { background: var(--brand); }
 .curve-x { font-size: var(--fs-caption); color: var(--ink-3); margin-top: var(--sp-4); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
   .page { max-width: 1064px; margin: 0 auto; padding-bottom: var(--sp-24); }
-  .dist-card { margin-top: 0; }
   .wrow { cursor: pointer; }
 }
 /* #endif */

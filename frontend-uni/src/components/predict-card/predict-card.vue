@@ -24,12 +24,12 @@
       </view>
       <view class="p-hero">
         <view class="p-score-w">
-          <text class="p-score">{{ data.score }}</text>
+          <text class="p-score num">{{ data.score }}</text>
           <text class="p-unit">分</text>
         </view>
         <view class="p-meta">
-          <text v-if="data.delta_week != null" class="p-delta" :class="{ down: data.delta_week < 0 }">{{ data.delta_week >= 0 ? '↑' : '↓' }} 较上周{{ data.delta_week >= 0 ? '+' : '' }}{{ data.delta_week }}</text>
-          <text class="p-n">基于 {{ data.n }} 题作答{{ data.n_exam ? ' · ' + data.n_exam + ' 次模考' : '' }}</text>
+          <text v-if="data.delta_week != null" class="p-delta num" :class="{ down: data.delta_week < 0 }">{{ data.delta_week >= 0 ? '↑' : '↓' }} 较上周{{ data.delta_week >= 0 ? '+' : '' }}{{ data.delta_week }}</text>
+          <text class="p-n num">基于 {{ data.n }} 题作答{{ data.n_exam ? ' · ' + data.n_exam + ' 次模考' : '' }}</text>
         </view>
       </view>
       <!-- 进步曲线（周） -->
@@ -39,7 +39,7 @@
         <view v-for="m in data.modules" :key="m.module" class="p-mod">
           <text class="p-mod-n">{{ m.name }}</text>
           <view class="p-mod-bar"><view class="p-mod-fill" :style="{ width: (m.score / m.max) * 100 + '%' }" /></view>
-          <text class="p-mod-s">{{ m.score }}<text class="p-mod-mx">/{{ m.max }}</text></text>
+          <text class="p-mod-s num">{{ m.score }}<text class="p-mod-mx">/{{ m.max }}</text></text>
           <text class="p-mod-t" :class="m.trend > 0.03 ? 'up' : m.trend < -0.03 ? 'down' : ''">{{ m.trend > 0.03 ? '↑' : m.trend < -0.03 ? '↓' : '—' }}</text>
         </view>
       </view>
@@ -54,10 +54,11 @@ import { visColors } from '../kg-echart/kg-echart.vue';
 export default {
   name: 'PredictCard',
   data() {
-    return { data: null, loading: true };
+    return { data: null, loading: true, themeTick: 0 };
   },
   computed: {
     historyOption() {
+      void this.themeTick;
       const c = visColors();
       const h = this.data && this.data.history;
       if (!h || h.length < 2) return {};
@@ -92,9 +93,21 @@ export default {
     },
   },
   mounted() {
+    this._onTheme = () => { this.themeTick += 1; };
+    uni.$on('themeChanged', this._onTheme);
     this.load();
   },
+  beforeUnmount() {
+    if (this._onTheme) {
+      uni.$off('themeChanged', this._onTheme);
+      this._onTheme = null;
+    }
+  },
   methods: {
+    reset() {
+      this.data = null;
+      this.loading = true;
+    },
     // 页面 onShow 会重新调用以刷新作答进度；已有数据时静默更新不闪骨架屏
     async load() {
       this.loading = !this.data;

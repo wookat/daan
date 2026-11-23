@@ -36,8 +36,8 @@
     />
 
     <template v-else-if="r">
-      <kg-two-col aside-first>
-        <template #aside>
+      <kg-two-col>
+        <template #main>
           <!-- 1. 头部概览 -->
           <kg-hero-card variant="plain" :label="r.range" :value="r.summary.n" unit="题" class="hero">
             <kg-stat-row :items="heroStats" class="hero-stats" />
@@ -62,9 +62,7 @@
             <view class="cmp-row"><text class="cmp-k">学习时长</text><text class="cmp-v num">{{ mins(r.compare.secs[0]) }}</text><text class="cmp-p num">上周 {{ mins(r.compare.secs[1]) }}</text></view>
             <view class="cmp-row"><text class="cmp-k">学习天数</text><text class="cmp-v num">{{ r.compare.days[0] }} 天</text><text class="cmp-p num">上周 {{ r.compare.days[1] }} 天</text></view>
           </kg-card>
-        </template>
 
-        <template #main>
           <!-- 4. 掌握度变化 -->
           <kg-card v-if="r.mastery.up.length || r.mastery.down.length" class="sec">
             <text class="h">考点掌握变化</text>
@@ -94,7 +92,7 @@
           <!-- 6. 典型错题 -->
           <kg-card v-if="r.typical && r.typical.length" class="sec">
             <text class="h">本周典型错题</text>
-            <view v-for="t in r.typical" :key="t.mid" class="tp-item">
+            <view v-for="t in r.typical" :key="t.mid" class="tp-item" role="button" @click="openTypical(t)">
               <view class="tp-meta">
                 <kg-tag v-if="t.module" tone="brand">{{ t.module }}</kg-tag>
                 <kg-tag v-if="t.tag3" tone="neutral">{{ t.tag3 }}</kg-tag>
@@ -103,7 +101,9 @@
               <text class="tp-stem">{{ t.stem }}</text>
             </view>
           </kg-card>
+        </template>
 
+        <template #aside>
           <!-- 7. 模考回顾 -->
           <kg-card class="sec">
             <text class="h">模考回顾</text>
@@ -134,7 +134,7 @@
             </view>
           </kg-card>
 
-          <!-- 8. 分享 -->
+          <!-- 9. 分享 -->
           <kg-button variant="primary" size="lg" block icon="share-2" @click="sharing = true; buildShare()">生成分享图</kg-button>
         </template>
       </kg-two-col>
@@ -243,6 +243,7 @@ export default {
     };
   },
   onLoad(opt) {
+    opt = opt || {};
     this.week = opt.week || '';
     this.load();
   },
@@ -253,7 +254,7 @@ export default {
     pct(v) { return Math.round((v || 0) * 100); },
     mins(s) { return Math.round((s || 0) / 60) + ' 分钟'; },
     async load() {
-      const p = '/api/report/weekly?uid=' + encodeURIComponent(anonUid()) + (this.week ? '&week=' + this.week : '');
+      const p = '/api/report/weekly?uid=' + encodeURIComponent(anonUid()) + (this.week ? '&week=' + encodeURIComponent(this.week) : '');
 
       // 快照即显：uid API 长尾下先用最近成功快照铺屏，真实响应到达后覆盖
       const snap = snapPeek(p);
@@ -265,7 +266,7 @@ export default {
       try {
         this.applyReport(await request(p));
       } catch (e) {
-        this.error = e.message || '网络异常';
+        if (!snap && !this.r) this.error = e.message || '网络异常';
         uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
       }
       this.loading = false;
@@ -317,7 +318,19 @@ export default {
       this.empty = false;
       this.pending = false;
       this.error = '';
+      this.r = null;
+      this.nextEvent = null;
+      this.shareImg = '';
+      this.shareErr = '';
       this.load();
+    },
+    openTypical(t) {
+      if (t && t.tag3) {
+        uni.setStorageSync('practiceLaunch', { kind: 'start', tag3: t.tag3, count: 5, adaptive: true });
+        uni.navigateTo({ url: '/pages/practice/practice' });
+        return;
+      }
+      uni.switchTab({ url: '/pages/book/book' });
     },
     goPrevWeek() {
       this.week = this.prevWeek;
@@ -334,16 +347,19 @@ export default {
     },
     goAction(a) {
       if (a.type === 'review') {
+        uni.setStorageSync('autoStartReview', 1);
         uni.switchTab({ url: '/pages/book/book' });
       } else if (a.type === 'mock') {
         this.goContest();
       } else {
+        const safeDecode = (s) => { try { return decodeURIComponent(s); } catch (e) { return s; } };
         const m = /tag3=([^&]+)/.exec(a.url || '');
+        const subM = /submodule=([^&]+)/.exec(a.url || '');
         uni.setStorageSync('practiceLaunch', {
           kind: 'start',
-          tag3: m ? decodeURIComponent(m[1]) : null,
+          tag3: m ? safeDecode(m[1]) : null,
           module: (/module=([^&]+)/.exec(a.url || '') || [])[1] || null,
-          submodule: decodeURIComponent((/submodule=([^&]+)/.exec(a.url || '') || [])[1] || '') || null,
+          submodule: subM ? safeDecode(subM[1]) : null,
           adaptive: true,
         });
         uni.navigateTo({ url: '/pages/practice/practice' });
@@ -465,7 +481,7 @@ export default {
 .rs-fill { height: 100%; background: var(--bad); border-radius: var(--r-full); }
 .rs-v { flex-shrink: 0; font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
 .rs-p { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
-.rs-note { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-4); line-height: 1.5; }
+.rs-note { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); line-height: 1.5; }
 .mk-line { display: block; font-size: var(--fs-body); color: var(--ink); margin-bottom: var(--sp-8); }
 .mk-line.sub { font-size: var(--fs-sub); color: var(--ink-2); }
 .mk-n { font-size: var(--fs-h2); font-weight: 600; color: var(--brand-text); }
@@ -478,7 +494,7 @@ export default {
 .tp-item { padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
 .tp-item:first-of-type { border-top: none; }
 .tp-meta { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-4); }
-.tp-reason { font-size: var(--fs-caption); color: var(--warn); }
+.tp-reason { font-size: var(--fs-caption); color: var(--warn-strong); }
 .tp-stem { display: block; margin-top: var(--sp-4); font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); }
 .plan-focus { display: flex; flex-wrap: wrap; gap: var(--sp-8); margin-top: var(--sp-4); }
 .plan-target { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-3); }
@@ -489,10 +505,11 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .act-row:hover { cursor: pointer; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .act-row:hover, .tp-item:hover { cursor: pointer; }
 }
 @media (min-width: 1024px) {
-  .wrap { max-width: 1044px !important; }
+  .wrap { max-width: 1044px !important; margin: 0 auto; }
 }
 /* #endif */
 </style>

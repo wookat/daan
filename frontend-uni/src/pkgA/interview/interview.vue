@@ -1,7 +1,9 @@
 <template>
   <view class="page">
+    <kg-skeleton v-if="sessionLoading" preset="cards" />
+
     <!-- 第一步：选分类 -->
-    <kg-two-col v-if="step === 'pick'" aside-first>
+    <kg-two-col v-else-if="step === 'pick'" aside-first>
       <template #aside>
         <kg-hero-card
           label="AI 结构化面试陪练 · 已练"
@@ -41,7 +43,7 @@
     </kg-two-col>
 
     <!-- 第二步：作答 -->
-    <kg-two-col v-else-if="step === 'answer'" aside-first>
+    <kg-two-col v-else-if="step === 'answer'" aside-first class="ans-two">
       <template #aside>
         <kg-card class="q-card">
           <view class="q-meta">
@@ -52,7 +54,10 @@
         </kg-card>
         <view class="timer-row">
           <view class="timer"><l-icon name="timer" :size="16" tone="ink-2" /><text class="num">{{ fmtDur(elapsed) }}</text></view>
-          <kg-button variant="text" size="sm" icon="shuffle" @click="draw(pickedCategory, question.id)">换一题</kg-button>
+          <view class="timer-acts">
+            <kg-button variant="text" size="sm" @click="backToPick">换题型</kg-button>
+            <kg-button variant="text" size="sm" icon="shuffle" @click="draw(pickedCategory, question.id)">换一题</kg-button>
+          </view>
         </view>
       </template>
       <template #main>
@@ -68,7 +73,6 @@
         </kg-card>
         <text class="cnt"><text v-if="answer" class="cnt-save">已自动保存 · </text><text class="num">{{ answer.length }}</text> / 5000</text>
         <view class="btn-row">
-          <kg-button variant="ghost" size="lg" icon="mic" disabled @click="voiceStub">语音（即将上线）</kg-button>
           <kg-button variant="primary" size="lg" class="grow" :disabled="answer.trim().length < 20 || submitting" :loading="submitting" @click="submit">
             {{ submitting ? '考官点评中…' : '提交作答' }}
           </kg-button>
@@ -142,6 +146,7 @@ export default {
   data() {
     return {
       step: 'pick',
+      sessionLoading: false,
       categories: [],
       catLoading: false,
       bankTotal: 0,
@@ -149,6 +154,7 @@ export default {
       question: {},
       answer: '',
       elapsed: 0,
+      drawing: false,
       submitting: false,
       streaming: false,
       report: { scores: {}, total: 0, summary: '', duration: 0, answerLen: 0, category: '' },
@@ -199,18 +205,30 @@ export default {
       this.catLoading = false;
     },
     async draw(category, excludeId) {
+      if (this.drawing) return;
+      this.drawing = true;
       this.pickedCategory = category || '';
       try {
         const d = await interviewDraw(category, excludeId);
         this.question = d.question;
         this.answer = '';
         this.review = '';
+        this.reviewMissing = false;
+        this._sid = null;
         this.points = [];
+        uni.removeStorageSync('ivDraft');
         this.step = 'answer';
         this.startTimer();
       } catch (e) {
         uni.showToast({ title: e.message || '抽题失败', icon: 'none' });
+      } finally {
+        this.drawing = false;
       }
+    },
+    backToPick() {
+      this.stopTimer();
+      this.step = 'pick';
+      if (!this.categories.length && !this.catLoading) this.loadCategories();
     },
     startTimer() {
       this.stopTimer();
@@ -236,9 +254,6 @@ export default {
       uni.showToast({ title: '已恢复上次未提交的作答', icon: 'none' });
       this.loadCategories();
       return true;
-    },
-    voiceStub() {
-      uni.showToast({ title: '语音作答即将上线，先用文字练起来吧', icon: 'none' });
     },
     async submit() {
       if (this.submitting) return;
@@ -279,9 +294,11 @@ export default {
       } catch (e) {
         if (e && e.name === 'AbortError') return;
         uni.showToast({ title: e.message || '点评失败，请重试', icon: 'none' });
-        if (this.step === 'report' && this.review.trim().length < 300) {
-          this.reviewMissing = true;
-        } else if (this.step !== 'report') {
+        if (this.step === 'report') {
+          uni.removeStorageSync('ivDraft');
+          if (this._sid) this.loadPoints(this._sid);
+          if (this.review.trim().length < 300) this.reviewMissing = true;
+        } else {
           this.startTimer();
         }
       } finally {
@@ -297,6 +314,7 @@ export default {
       } catch (e) { /* 非关键路径 */ }
     },
     async loadSession(sid) {
+      this.sessionLoading = true;
       try {
         const d = await interviewSession(sid);
         this._sid = sid;
@@ -318,6 +336,8 @@ export default {
       } catch (e) {
         uni.showToast({ title: e.message || '记录加载失败', icon: 'none' });
         this.loadCategories();
+      } finally {
+        this.sessionLoading = false;
       }
     },
     // #ifdef H5
@@ -328,6 +348,8 @@ export default {
         return;
       }
       this.streaming = true;
+      this.review = '';
+      this.reviewMissing = false;
       this.thinkSecs = 0;
       if (this._streamAc) this._streamAc.abort();
       this._streamAc = typeof AbortController !== 'undefined' ? new AbortController() : null;
@@ -352,7 +374,10 @@ export default {
     retry() {
       this.answer = '';
       this.review = '';
+      this.reviewMissing = false;
+      this._sid = null;
       this.points = [];
+      uni.removeStorageSync('ivDraft');
       this.step = 'answer';
       this.startTimer();
     },
@@ -375,6 +400,7 @@ export default {
 .stem { display: block; font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
 
 .timer-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-12); }
+.timer-acts { display: flex; align-items: center; gap: var(--sp-8); }
 .timer { display: flex; align-items: center; gap: var(--sp-4); font-size: var(--fs-sub); color: var(--ink-2); }
 .ans-card { margin-bottom: var(--sp-4); }
 .ans-box { width: 100%; box-sizing: border-box; min-height: 160px; background: transparent; color: var(--ink); font-size: var(--fs-body); line-height: var(--lh-body); }
@@ -399,7 +425,13 @@ export default {
 .regen-tip { font-size: var(--fs-sub); color: var(--ink-2); }
 
 /* #ifdef H5 */
+@media (min-width: 768px) {
+  .page { max-width: 720px; margin: 0 auto; }
+}
 @media (min-width: 1024px) {
+  .page { max-width: 1064px; margin: 0 auto; }
+  .ans-two { flex-direction: row-reverse; }
+  .ans-two :deep(.kg-two__aside) { width: 400px; }
   .ans-box { min-height: 320px; }
 }
 /* #endif */

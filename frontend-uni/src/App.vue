@@ -241,11 +241,15 @@ uni-tabbar .uni-tabbar-border {
 .theme-dark uni-tabbar .uni-tabbar-border {
   background-color: var(--line) !important;
 }
-/* tabbar 文字色兜底覆盖（兼顾静态配置与 setTabBarStyle） */
-.theme-dark uni-tabbar .uni-tabbar__label {
+/* tabbar 文字色兜底覆盖（兼顾静态配置与 setTabBarStyle，深色下保留三套主题皮肤激活态字色） */
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(107, 114, 128)'],
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(138, 142, 160)'] {
   color: var(--ink-3) !important;
 }
-.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'] {
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(46, 91, 255)'],
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(143, 168, 255)'],
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(74, 222, 128)'],
+.theme-dark uni-tabbar .uni-tabbar__label[style*='rgb(251, 146, 60)'] {
   color: var(--brand-text) !important;
 }
 /* 仅对静态 PNG 回退图施加滤镜；内联 SVG data:URI 已原生输出目标浅/深/主题色，不叠加滤镜 */
@@ -375,11 +379,11 @@ uni-modal .uni-modal__btn_primary {
   uni-page-body .cellcard {
     border: 1px solid var(--line);
   }
-  uni-page-body .searchbar {
+  uni-page-body .wrap.home .searchbar {
     border: 1px solid var(--line);
     box-shadow: none;
   }
-  uni-page-body .searchbar:hover {
+  uni-page-body .wrap.home .searchbar:hover {
     border-color: var(--brand-text);
     cursor: pointer;
   }
@@ -433,14 +437,14 @@ uni-modal .uni-modal__btn_primary {
   uni-tabbar + .uni-placeholder {
     display: none;
   }
-  uni-page[type="tabBar"] uni-page-body .banner,
-  uni-page[type="tabBar"] uni-page-body .mask {
+  uni-page[type="tabBar"] uni-page-body .mask,
+  uni-page[type="tabBar"] uni-page-body .batchbar {
     left: 208px !important;
   }
 }
 
 /* 大桌面（≥1280px）：整体应用壳限宽居中（参考粉笔 1100–1180px），
-   侧栏与各固定元素跟随壳体而非视口边缘 */
+   侧栏、顶栏返回键与各固定元素跟随壳体而非视口边缘 */
 @media (min-width: 1280px) {
   uni-app {
     max-width: 1140px;
@@ -449,22 +453,22 @@ uni-modal .uni-modal__btn_primary {
   body {
     overflow-x: hidden;
   }
+  .uni-page-head {
+    padding-left: max(16px, calc((100vw - 1064px) / 2)) !important;
+    padding-right: max(16px, calc((100vw - 1064px) / 2)) !important;
+  }
   .uni-tabbar {
     left: calc((100vw - 1140px) / 2) !important;
   }
-  uni-page-body .banner,
   uni-page-body .mask,
   uni-page-body .inputbar,
-  uni-page-body .batchbar,
-  uni-page-body .navrow {
+  uni-page-body .batchbar {
     left: calc((100vw - 1140px) / 2) !important;
     right: calc((100vw - 1140px) / 2) !important;
   }
-  uni-page[type="tabBar"] uni-page-body .banner,
   uni-page[type="tabBar"] uni-page-body .mask,
   uni-page[type="tabBar"] uni-page-body .inputbar,
-  uni-page[type="tabBar"] uni-page-body .batchbar,
-  uni-page[type="tabBar"] uni-page-body .navrow {
+  uni-page[type="tabBar"] uni-page-body .batchbar {
     left: calc((100vw - 1140px) / 2 + 208px) !important;
   }
   uni-page-body .fabmenu {
@@ -482,19 +486,15 @@ uni-modal .uni-modal__btn_primary {
   .uni-tabbar {
     left: max(40px, calc((100vw - 1400px) / 2)) !important;
   }
-  uni-page-body .banner,
   uni-page-body .mask,
   uni-page-body .inputbar,
-  uni-page-body .batchbar,
-  uni-page-body .navrow {
+  uni-page-body .batchbar {
     left: max(40px, calc((100vw - 1400px) / 2)) !important;
     right: max(40px, calc((100vw - 1400px) / 2)) !important;
   }
-  uni-page[type="tabBar"] uni-page-body .banner,
   uni-page[type="tabBar"] uni-page-body .mask,
   uni-page[type="tabBar"] uni-page-body .inputbar,
-  uni-page[type="tabBar"] uni-page-body .batchbar,
-  uni-page[type="tabBar"] uni-page-body .navrow {
+  uni-page[type="tabBar"] uni-page-body .batchbar {
     left: max(248px, calc((100vw - 1400px) / 2 + 208px)) !important;
   }
   uni-page-body .fabmenu {

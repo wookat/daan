@@ -1,74 +1,68 @@
 <template>
   <view class="page reminders">
-    <kg-two-col aside-first>
-      <template #aside>
-        <wd-cell-group custom-class="cellcard" border>
-          <wd-cell title="每日刷题提醒" :label="'每天 ' + time + ' · 未完成今日目标时提醒'" center>
-            <template #icon><view class="ico"><l-icon name="alarm-clock" :size="20" tone="brand-text" /></view></template>
-            <wd-switch :model-value="on" size="24px" @change="toggle" />
+    <view class="rem-col">
+      <wd-cell-group custom-class="cellcard" border>
+        <wd-cell title="每日刷题提醒" :label="'每天 ' + time + ' · 未完成今日目标时提醒'" center>
+          <template #icon><view class="ico"><l-icon name="alarm-clock" :size="20" tone="brand-text" /></view></template>
+          <wd-switch :model-value="on" size="24px" @change="toggle" />
+        </wd-cell>
+        <wd-datetime-picker
+          type="time"
+          :model-value="time"
+          :disabled="!on"
+          title="提醒时间"
+          @confirm="onTimeConfirm"
+        >
+          <wd-cell title="提醒时间" label="建议安排在晚间黄金学习时段" is-link :clickable="on" center :custom-class="on ? '' : 'is-dim'">
+            <template #icon><view class="ico"><l-icon name="clock" :size="20" tone="brand-text" /></view></template>
+            <text class="time-v num">{{ time }}</text>
           </wd-cell>
-          <wd-datetime-picker
-            type="time"
-            :model-value="time"
-            :disabled="!on"
-            title="提醒时间"
-            @confirm="onTimeConfirm"
-          >
-            <wd-cell title="提醒时间" label="建议安排在晚间黄金学习时段" is-link :clickable="on" center :custom-class="on ? '' : 'is-dim'">
-              <template #icon><view class="ico"><l-icon name="clock" :size="20" tone="brand-text" /></view></template>
-              <text class="time-v num">{{ time }}</text>
-            </wd-cell>
-          </wd-datetime-picker>
-        </wd-cell-group>
+        </wd-datetime-picker>
+      </wd-cell-group>
 
-        <!-- #ifdef H5 -->
-        <kg-card v-if="on && perm !== 'granted'" class="warn-card">
-          <view class="warn-t">
-            <l-icon name="bell" :size="16" tone="warn" />
-            <text>{{ perm === 'denied' ? '浏览器通知权限被拒绝' : '需要开启浏览器通知权限' }}</text>
-          </view>
-          <text class="warn-s">{{ perm === 'denied' ? '请在浏览器地址栏左侧站点设置中允许「通知」后刷新页面。' : '开启后才能在提醒时间收到今日目标进度提示。' }}</text>
-          <kg-button v-if="perm !== 'denied'" variant="primary" size="md" block class="warn-btn" @click="askPerm">开启通知权限</kg-button>
-        </kg-card>
-        <kg-card v-if="perm === 'unsupported'" class="warn-card">
-          <view class="warn-t"><l-icon name="bell" :size="16" tone="warn" /><text>当前浏览器不支持通知</text></view>
-          <text class="warn-s">提醒仅在支持 Notification 的浏览器（且页面保持打开）时生效。</text>
-        </kg-card>
-        <!-- #endif -->
+      <!-- #ifdef H5 -->
+      <kg-card v-if="perm === 'unsupported'" class="warn-card">
+        <view class="warn-t"><l-icon name="bell" :size="16" tone="warn" /><text>当前浏览器不支持通知</text></view>
+        <text class="warn-s">提醒仅在支持 Notification 的浏览器（且页面保持打开）时生效。</text>
+      </kg-card>
+      <kg-card v-else-if="on && perm !== 'granted'" class="warn-card">
+        <view class="warn-t">
+          <l-icon name="bell" :size="16" tone="warn" />
+          <text>{{ perm === 'denied' ? '浏览器通知权限被拒绝' : '需要开启浏览器通知权限' }}</text>
+        </view>
+        <text class="warn-s">{{ perm === 'denied' ? '请在浏览器地址栏左侧站点设置中允许「通知」后刷新页面。' : '开启后才能在提醒时间收到今日目标进度提示。' }}</text>
+        <kg-button v-if="perm !== 'denied'" variant="primary" size="md" block class="warn-btn" @click="askPerm">开启通知权限</kg-button>
+      </kg-card>
 
-        <!-- #ifdef H5 -->
-        <wd-cell-group v-if="pushSupported" custom-class="cellcard" border>
-          <wd-cell title="每日一练离线推送" label="每天早上推送全站同题 10 题，关闭页面也能收到" center>
-            <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
-            <wd-switch :model-value="pushOn" :disabled="pushBusy" size="24px" @change="togglePush" />
-          </wd-cell>
-        </wd-cell-group>
-        <!-- #endif -->
+      <wd-cell-group v-if="pushSupported" custom-class="cellcard" border>
+        <wd-cell title="每日一练离线推送" label="每天早上推送全站同题 10 题，关闭页面也能收到" center>
+          <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
+          <wd-switch :model-value="pushOn" :disabled="pushBusy" size="24px" @change="togglePush" />
+        </wd-cell>
+      </wd-cell-group>
+      <!-- #endif -->
 
-        <!-- #ifdef MP-WEIXIN -->
-        <wd-cell-group v-if="mpSubscribeAvailable" custom-class="cellcard" border>
-          <wd-cell title="微信订阅提醒" label="一次授权可收到一条服务通知" is-link clickable center @click="mpSubscribe">
-            <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
-            <text class="time-v">去订阅</text>
-          </wd-cell>
-        </wd-cell-group>
-        <!-- #endif -->
-      </template>
+      <!-- #ifdef MP-WEIXIN -->
+      <wd-cell-group v-if="mpSubscribeAvailable" custom-class="cellcard" border>
+        <wd-cell title="微信订阅提醒" label="一次授权可收到一条服务通知" is-link clickable center @click="mpSubscribe">
+          <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
+          <text class="time-v">去订阅</text>
+        </wd-cell>
+      </wd-cell-group>
+      <!-- #endif -->
 
-      <template #main>
-        <kg-section-header title="提醒样式预览" />
-        <kg-card class="push">
-          <view class="hd"><text class="appico">岸</text><text>答岸 · <text class="num">{{ time }}</text></text></view>
-          <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡' }}</text>
-          <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
-        </kg-card>
+      <kg-section-header title="提醒样式预览" />
+      <kg-card class="push">
+        <view class="hd"><text class="appico">岸</text><text>答岸 · <text class="num">{{ time }}</text></text></view>
+        <text class="tt">{{ done >= goal ? '今日目标已达成，保持手感再练一组？' : '今晚还差 ' + previewLeft + ' 题就能守住连续打卡' }}</text>
+        <text class="bd">今日目标 {{ goal }} 题已完成 {{ done }} 题{{ done >= goal ? '' : '，练完守住连续打卡～' }}</text>
+      </kg-card>
 
-        <kg-card class="tip" :padding="12">
-          <l-icon name="lightbulb" :size="16" tone="brand-text" />
-          <text class="tip-t">提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励。注：上方「每日刷题提醒」为页内定时，H5 需保持页面打开；如需关闭页面仍能收到，请开启「每日一练离线推送」。</text>
-        </kg-card>
-      </template>
-    </kg-two-col>
+      <kg-card class="tip" :padding="12">
+        <l-icon name="lightbulb" :size="16" tone="brand-text" />
+        <text class="tip-t">提醒只在「有事可做」时打扰你：当天已达成目标则改为轻量鼓励。注：上方「每日刷题提醒」为页内定时，H5 需保持页面打开；如需关闭页面仍能收到，请开启「每日一练离线推送」。</text>
+      </kg-card>
+    </view>
   </view>
 </template>
 
@@ -234,4 +228,10 @@ export default {
 
 .tip { display: flex; align-items: flex-start; gap: var(--sp-8); background: var(--brand-soft); }
 .tip-t { flex: 1; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--brand-text); }
+/* #ifdef H5 */
+/* T5 工具设置页：单列居中 max 520px，消除桌面端主次倒置与「上方」文案错位 */
+@media (min-width: 768px) {
+  .rem-col { max-width: 520px; margin: 0 auto; }
+}
+/* #endif */
 </style>

@@ -14,13 +14,13 @@ function methodBody(name) {
 }
 
 describe('批量条动作', () => {
-  it('待复习 tab 有「重练」/「导出」，已掌握 tab 只有「导出」（无重练）', () => {
+  it('待复习/易错 tab 有「重练」/「导出」/「标已掌握」，已掌握 tab 只有「导出」/「恢复复习」（无重练）', () => {
     const bar = /<view v-if="batchMode && tab !== 'fav'" class="batchbar">([\s\S]*?)\n {6}<\/view>\n/.exec(BOOK)[1];
-    expect(bar).toContain(`v-if="tab === 'todo'" variant="primary" size="md" aria-label="重练所选错题" :disabled="!selCount || batchBusy" @click="redoSel">重练<`);
+    expect(bar).toContain(`v-if="tab !== 'done'" variant="primary" size="md" aria-label="重练所选错题" :disabled="!selCount || batchBusy" @click="redoSel">重练<`);
     expect(bar).toContain(`aria-label="导出所选为 PDF" :disabled="!selCount || batchBusy || exporting" @click="openExportSel">导出<`);
     expect(bar).not.toMatch(/v-if="tab === 'done'"[^>]*redoSel/);
     // 既有三动作保留
-    expect(bar).toContain('@click="batchMaster(true)">标已掌握<');
+    expect(bar).toContain(`v-if="tab !== 'done'" variant="secondary" size="md" :disabled="!selCount || batchBusy" @click="batchMaster(true)">标已掌握<`);
     expect(bar).toContain('@click="batchMaster(false)">恢复复习<');
     expect(bar).toContain('@click="batchDel">删除<');
   });

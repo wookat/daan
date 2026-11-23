@@ -188,7 +188,7 @@
               <text class="hub-t">错题 AI 分析</text>
               <text class="hub-s">按你的错题分布生成诊断与复习建议</text>
             </view>
-            <l-icon name="chevron-right" :size="18" tone="faint" />
+            <l-icon name="chevron-right" :size="16" tone="faint" />
           </view>
           <view class="hub-row" role="button" @click="goCoach">
             <l-icon name="compass" :size="20" tone="brand" />
@@ -196,7 +196,7 @@
               <text class="hub-t">AI 学习教练</text>
               <text class="hub-s">读取做题数据，生成个性化备考建议</text>
             </view>
-            <l-icon name="chevron-right" :size="18" tone="faint" />
+            <l-icon name="chevron-right" :size="16" tone="faint" />
           </view>
         </kg-card>
       </template>
@@ -314,7 +314,18 @@ export default {
       return failBannerText(this.error);
     },
   },
+  onLoad() {
+    this._acctUid = anonUid();
+    this._onAuth = () => {
+      if (anonUid() === this._acctUid) return;
+      this.resetAccountState();
+    };
+    uni.$on('authChanged', this._onAuth);
+  },
   onShow() {
+    if (anonUid() !== this._acctUid) {
+      this.resetAccountState();
+    }
     // #ifdef H5
     if (!this._onPaste) {
       this._onPaste = (e) => this.handlePaste(e);
@@ -347,8 +358,7 @@ export default {
       uni.removeStorageSync('redoAnswer');
       this.pendingQid = askQid(uni.getStorageSync('redoQid'));
       uni.removeStorageSync('redoQid');
-      this.imagePaths = [];
-      this.imageFiles = [];
+      this.clearImage();
       this.textOpen = true;
       uni.removeStorageSync('redoQuestion');
       uni.showToast({ title: '题目已填入，先自己做一遍再点讲解', icon: 'none', duration: 2500 });
@@ -359,20 +369,24 @@ export default {
       this.openSimSeed(seed);
     }
   },
-  // #ifdef H5
   onHide() {
+    // #ifdef H5
     this.removePaste();
+    // #endif
   },
   onUnload() {
+    if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    // #ifdef H5
     this.removePaste();
+    this._revokeBlobs(this.imagePaths);
+    // #endif
     if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this._curPushT) { clearTimeout(this._curPushT); this._curPushT = null; }
     if (this._simTimers) {
       this._simTimers.forEach((t) => clearInterval(t));
       this._simTimers.clear();
     }
-    this._revokeBlobs(this.imagePaths);
   },
-  // #endif
   methods: {
     viewUrl(r) {
       return askViewUrl(r && r.qid);
@@ -456,21 +470,27 @@ export default {
       });
     },
     // #endif
-    // 统一入列：path（小程序临时路径）或 File（H5），去重+上限 4 张
+    // 统一入列：path（小程序临时路径）或 File（H5），去重+上限 4 张（含异步压缩中计数，防并发拖入绕过上限）
     pushImage(path, file) {
-      if (this.imagePaths.length >= 4) {
+      const pending = this._pendingImgN || 0;
+      if (this.imagePaths.length + pending >= 4) {
         uni.showToast({ title: '最多上传 4 张图片', icon: 'none' });
         return;
       }
       const add = (p, f) => {
+        if (this.imagePaths.length >= 4) return;
         this.imagePaths = this.imagePaths.concat([p]);
         this.imageFiles = this.imageFiles.concat([f]);
       };
       // #ifdef H5
       if (file) {
+        this._pendingImgN = pending + 1;
         this.compressImageFile(file).then((cf) => {
+          this._pendingImgN = Math.max(0, (this._pendingImgN || 1) - 1);
           const url = cf === file ? URL.createObjectURL(file) : URL.createObjectURL(cf);
           add(url, cf);
+        }).catch(() => {
+          this._pendingImgN = Math.max(0, (this._pendingImgN || 1) - 1);
         });
         return;
       }
@@ -558,6 +578,9 @@ export default {
       } catch (e) { /* 接口失败时忽略 */ }
     },
     clearImage() {
+      // #ifdef H5
+      this._revokeBlobs(this.imagePaths);
+      // #endif
       this.imagePaths = [];
       this.imageFiles = [];
     },
@@ -722,6 +745,8 @@ export default {
       const qid = txt ? this.pendingQid || 0 : 0;
       this.pendingQid = 0;
       this.startTimer();
+      let inserted = false;
+      let live = null;
       try {
         let d;
         const rec = {
@@ -768,8 +793,7 @@ export default {
           return;
         }
         // #endif
-        let inserted = false;
-        let live = rec; // 插入后改用响应式代理，保证增量更新触发渲染
+        live = rec; // 插入后改用响应式代理，保证增量更新触发渲染
         d = await streamExplain({
           files: imgFiles,
           filePaths: imgs,
@@ -798,6 +822,7 @@ export default {
         this.qtext = '';
         this.persistSession();
       } catch (e) {
+        if (inserted && live) live.streaming = false;
         this.error = e.message;
         // 失败时重新展开文本面板，已粘贴的题目原文保留可重试
         if (txt) this.textOpen = true;
@@ -888,6 +913,7 @@ export default {
         uni.showToast({ title: '出题失败：' + e.message, icon: 'none' });
       }
       clearInterval(t);
+      if (this._simTimers) this._simTimers.delete(t);
       r.simLoading = false;
     },
     pick(r, o) {
@@ -902,20 +928,24 @@ export default {
     async saveSim(r) {
       if (r.sim.saved) return;
       const qtext = (r.sim.raw || '').replace(/^##\s*练习题\s*/, '').replace(/##\s*提示[\s\S]*$/, '').trim();
-      await request('/api/mistakes', {
-        method: 'POST',
-        data: {
-          uid: anonUid(),
-          module: r.module,
-          question_type: r.question_type,
-          question_text: qtext,
-          user_answer: r.sim.picked,
-          correct_answer: r.sim.correct,
-          explanation: ((r.sim.raw || '') + '\n' + (r.sim.rawAns || '')).trim(),
-        },
-      });
-      r.sim.saved = true;
-      uni.showToast({ title: '已存入错题本', icon: 'success' });
+      try {
+        await request('/api/mistakes', {
+          method: 'POST',
+          data: {
+            uid: anonUid(),
+            module: r.module,
+            question_type: r.question_type,
+            question_text: qtext,
+            user_answer: r.sim.picked,
+            correct_answer: r.sim.correct,
+            explanation: ((r.sim.raw || '') + '\n' + (r.sim.rawAns || '')).trim(),
+          },
+        });
+        r.sim.saved = true;
+        uni.showToast({ title: '已存入错题本', icon: 'success' });
+      } catch (e) {
+        uni.showToast({ title: '存入失败：' + ((e && e.message) || '请稍后重试'), icon: 'none' });
+      }
     },
     sendFollowup() {
       const q = this.fuText.trim();
@@ -1017,13 +1047,41 @@ export default {
         data: { uid: anonUid(), sid: sess.id, ts: sess.ts, title: sess.title, n: sess.n, items: sess.items },
       }).catch(() => {});
     },
+    // 登录态变化（uid 已换）：清空上一账号本地会话，杜绝跨账号串数据与云端污染
+    resetAccountState() {
+      if (this._curPushT) { clearTimeout(this._curPushT); this._curPushT = null; }
+      this._acctUid = anonUid();
+      this._curCleared = false;
+      this.results = [];
+      this.sessions = [];
+      this.recent = [];
+      this.curSid = 0;
+      this.error = '';
+      this.pendingQid = 0;
+      uni.removeStorageSync('askCurSession');
+      uni.removeStorageSync('askCurSid');
+      uni.removeStorageSync('askSessions');
+      uni.removeStorageSync('askDelTombs');
+      uni.removeStorageSync('recentExplains');
+      this.restoreCurSession();
+      this.syncSessions();
+    },
     syncSessions() {
+      const uid = anonUid();
       const tombs = pruneTombstones(uni.getStorageSync('askDelTombs'));
       uni.setStorageSync('askDelTombs', tombs);
-      request('/api/ask/sessions?uid=' + encodeURIComponent(anonUid()))
+      request('/api/ask/sessions?uid=' + encodeURIComponent(uid))
         .then((r) => {
+          if (anonUid() !== uid) return;
           this.sessions = mergeAskSessions(this.sessions, filterTombstoned((r && r.items) || [], tombs));
           uni.setStorageSync('askSessions', this.sessions);
+          if (this._pendingOpenSid) {
+            const idx = this.sessions.findIndex((s) => s && s.id === this._pendingOpenSid);
+            if (idx >= 0) {
+              this._pendingOpenSid = 0;
+              this.loadSession(idx);
+            }
+          }
         })
         .catch(() => {});
       for (const k of Object.keys(tombs)) this.dropRemoteSession(Number(k));
@@ -1043,7 +1101,12 @@ export default {
       uni.removeStorageSync('askOpenSid');
       if (!sid) return;
       const i = this.sessions.findIndex((s) => s && s.id === sid);
-      if (i >= 0) this.loadSession(i);
+      if (i >= 0) {
+        this._pendingOpenSid = 0;
+        this.loadSession(i);
+      } else {
+        this._pendingOpenSid = sid;
+      }
     },
     restoreCurSession() {
       if (this.results.length) return;
@@ -1131,7 +1194,7 @@ export default {
 .hub-row { display: flex; align-items: center; gap: var(--sp-12); padding: var(--sp-12) 0; min-height: var(--hit-min); cursor: pointer; }
 .hub-row + .hub-row { border-top: 1px solid var(--line); }
 .hub-main { flex: 1; display: flex; flex-direction: column; gap: var(--sp-4); min-width: 0; }
-.hub-t { font-size: var(--fs-body); color: var(--ink-1); font-weight: var(--fw-semibold); }
+.hub-t { font-size: var(--fs-body); color: var(--ink); font-weight: var(--fw-semibold); }
 .hub-s { font-size: var(--fs-caption); color: var(--ink-4); line-height: 1.5; }
 .rec-row { display: flex; align-items: center; gap: var(--sp-12); min-height: 56px; border-bottom: 1px solid var(--line); }
 .rec-row:last-of-type { border-bottom: none; }
@@ -1202,14 +1265,22 @@ export default {
 
 /* #ifdef H5 */
 @media (min-width: 768px) {
-  .askbar { left: 208px; bottom: 0; }
+  .askbar {
+    left: calc(208px + var(--page-x));
+    right: var(--page-x);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + var(--sp-12));
+    max-width: 648px;
+    margin: 0 auto;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+  }
   .bubble { max-width: 72%; }
 }
-/* 桌面（无摄像头）：取景/拍题引导隐藏，改粘贴/上传；输入条始终固定视口底部 */
+/* 桌面（无摄像头）：取景/拍题引导隐藏，改粘贴/上传；输入条始终固定视口底部并与内容列等宽居中 */
 @media (min-width: 1024px) {
   .wrap.ask { max-width: 1064px; padding-top: var(--sp-24); }
   .mob-empty { display: none; }
-  .kg-abar.askbar { position: fixed; }
+  .kg-abar.askbar { position: fixed; max-width: 1032px; margin: 0 auto; }
   .deskstart { display: flex; gap: var(--sp-16); align-items: stretch; margin-bottom: var(--card-gap); }
   /* 兄弟卡默认 margin-top 是给纵向堆叠用的；横向双卡会吃掉顶部对齐 */
   .deskstart .ds-col + .ds-col { margin-top: 0; }
@@ -1222,6 +1293,9 @@ export default {
   .ds-drop:hover { border-color: var(--brand); }
   .ds-d1 { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
   .ds-d2 { font-size: var(--fs-caption); color: var(--ink-3); }
+}
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .deskstart { flex-direction: column; }
 }
 /* #endif */
 </style>
