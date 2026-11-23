@@ -88,7 +88,7 @@
                 </view>
               </view>
             </view>
-            <scroll-view scroll-y class="d-l-body">
+            <scroll-view scroll-y class="d-l-body" :show-scrollbar="false">
               <text class="d-h">作答要求</text>
               <text class="d-q">{{ detail.question }}</text>
               <view class="d-toggle" role="button" :aria-expanded="showMat ? 'true' : 'false'" @click="showMat = !showMat">
@@ -112,7 +112,7 @@
               <text v-if="qWordLim" class="d-save num" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text>
               <text v-else-if="myAnswer" class="d-save">已自动保存 · <text class="num">{{ myAnswer.length }}</text> 字</text>
             </view>
-            <scroll-view scroll-y class="d-ans-body">
+            <scroll-view scroll-y class="d-ans-body" :show-scrollbar="false">
               <textarea v-model="myAnswer" class="d-ta" :maxlength="3000" placeholder="在此作答后点击下方按钮，AI 按采分点批改（大作文为结构点评+参考档位）。草稿自动保存，换设备可续写" placeholder-style="color: var(--ink-4)" auto-height @input="saveDraft" />
               <kg-button variant="primary" size="lg" block :disabled="grading || !myAnswer.trim()" :loading="grading" class="grade-btn" @click="grade">{{ grading ? 'AI 批改中…' : '提交 AI 批改' }}</kg-button>
               <view v-if="gradeResult" class="d-grade">

@@ -40,8 +40,10 @@ export default {
     overscroll-behavior: contain;
     padding-bottom: var(--sp-16);
     box-sizing: border-box;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
+  .kg-two__aside::-webkit-scrollbar { display: none; width: 0; height: 0; }
   :deep(.kg-two__aside > :first-child),
   :deep(.kg-two__main > :first-child) { margin-top: 0 !important; }
 }

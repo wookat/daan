@@ -260,12 +260,18 @@ uni-actionsheet .uni-actionsheet {
   z-index: var(--z-toast) !important;
 }
 /* 隐藏浏览器默认滚动条：滚动功能保留、条体不渲染，对齐小程序无滚动条体感 */
+html,
+body,
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
 *::-webkit-scrollbar {
   display: none;
+  width: 0;
+  height: 0;
 }
 body {
   background: var(--bg);

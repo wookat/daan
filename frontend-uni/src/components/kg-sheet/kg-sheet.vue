@@ -17,7 +17,7 @@
           <l-icon name="x" :size="24" tone="ink-2" />
         </view>
       </view>
-      <scroll-view scroll-y class="kg-sheet__body"><slot /></scroll-view>
+      <scroll-view scroll-y class="kg-sheet__body" :show-scrollbar="false"><slot /></scroll-view>
       <view v-if="$slots.footer" class="kg-sheet__ft"><slot name="footer" /></view>
     </view>
   </wd-popup>

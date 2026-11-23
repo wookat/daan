@@ -110,9 +110,24 @@ describe('Frontend 6 UX & Layout Fixes', () => {
   it('shenlun detail fixes title header outside scroll-view and measures split via window.innerHeight', () => {
     const sl = read('../src/pkgA/shenlun/shenlun.vue');
     expect(sl).toContain('<view class="d-l-hd">');
-    expect(sl).toContain('<scroll-view scroll-y class="d-l-body">');
+    expect(sl).toContain('<scroll-view scroll-y class="d-l-body" :show-scrollbar="false">');
     expect(sl).toContain('window.innerHeight');
     expect(sl).not.toMatch(/\.paper-tag\s*\{[^}]*overflow:\s*hidden/);
+  });
+
+  it('suppresses browser and OS native scrollbars globally without scrollbar-width: thin', () => {
+    const app = read('../src/App.vue');
+    const two = read('../src/components/kg-two-col/kg-two-col.vue');
+    const sl = read('../src/pkgA/shenlun/shenlun.vue');
+    const sheet = read('../src/components/kg-sheet/kg-sheet.vue');
+    const landing = read('../../landing/index.html');
+    expect(app).toContain('html::-webkit-scrollbar');
+    expect(app).toContain('width: 0;');
+    expect(two).toContain('scrollbar-width: none');
+    expect(two).not.toContain('scrollbar-width: thin');
+    expect(sl).toContain('<scroll-view scroll-y class="d-ans-body" :show-scrollbar="false">');
+    expect(sheet).toContain(':show-scrollbar="false"');
+    expect(landing).toContain('scrollbar-width:none');
   });
 
   it('login uses responsive 440/880 centered layout and stats consumes /api/stats_bundle with square heatmap', () => {
