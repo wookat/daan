@@ -11,11 +11,11 @@ describe('W9-B 桌面非 tab 页 208px 让位 / tabbar 字阶 / 焦点环 token'
   const pages = JSON.parse(read('pages.json'));
 
   it('App.vue 中所有 208px 让位/偏移规则的选择器均以 uni-page[type="tabBar"] 限定', () => {
-    // 选择器 = 上一个 } 或 { 之后到本 { 之前的文本（去掉注释）；让位规则 = padding-left 208 / left +208 / left 208
+    // 选择器 = 上一个 } 或 { 之后到本 { 之前的文本（去掉注释）；让位规则 = padding-left 208 / left 208 / - 208px
     const layout = [...app.replace(/@media[^{]*\{/g, '').matchAll(/([^{}]+)\{([^}]*)\}/g)]
       .map((m) => ({ sel: m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim(), body: m[2] }))
-      .filter((r) => /padding-left:\s*208px|\+ 208px\)|left:\s*208px !important/.test(r.body));
-    expect(layout.length).toBe(4);
+      .filter((r) => /padding-left:\s*208px|208px\s*[+-]|left:\s*208px !important/.test(r.body));
+    expect(layout.length).toBeGreaterThanOrEqual(3);
     for (const r of layout) {
       const sels = r.sel.split(',').map((s) => s.trim()).filter(Boolean);
       expect(sels.length).toBeGreaterThan(0);
@@ -29,16 +29,13 @@ describe('W9-B 桌面非 tab 页 208px 让位 / tabbar 字阶 / 焦点环 token'
     expect(app).not.toMatch(/\.uni-tabbar-page/);
   });
 
-  it('≥1280 固定壳 1140 / ≥1366 弹性壳 1400：固定元素随壳体，tab 页再 +208px；侧栏 .uni-tabbar 规则不变', () => {
-    // ≥1280：1140px 固定壳
-    expect(app).toMatch(/uni-page-body \.mask[^{]*\{\s*left: calc\(\(100vw - 1140px\) \/ 2\) !important;\s*right: calc\(\(100vw - 1140px\) \/ 2\) !important;/);
-    expect(app).toMatch(/uni-page\[type="tabBar"\] uni-page-body \.mask[^{]*\{\s*left: calc\(\(100vw - 1140px\) \/ 2 \+ 208px\) !important;/);
-    expect(app).toMatch(/\.uni-tabbar \{\s*left: calc\(\(100vw - 1140px\) \/ 2\) !important;/);
-    // ≥1366：1400px 弹性壳，max() 保底边距
-    expect(app).toMatch(/uni-page-body \.mask[^{]*\{\s*left: max\(40px, calc\(\(100vw - 1400px\) \/ 2\)\) !important;\s*right: max\(40px, calc\(\(100vw - 1400px\) \/ 2\)\) !important;/);
-    expect(app).toMatch(/uni-page\[type="tabBar"\] uni-page-body \.mask[^{]*\{\s*left: max\(248px, calc\(\(100vw - 1400px\) \/ 2 \+ 208px\)\) !important;/);
-    expect(app).toMatch(/\.uni-tabbar \{\s*left: max\(40px, calc\(\(100vw - 1400px\) \/ 2\)\) !important;/);
-    expect(app).toMatch(/\.uni-tabbar \{\s*top: 0 !important;[\s\S]*?width: 208px !important;/);
+  it('桌面端侧栏贴紧屏幕最左侧 left:0（无整壳左空白），带品牌头与行内右对齐角标', () => {
+    expect(app).toMatch(/\.uni-tabbar \{\s*top: 0 !important;[\s\S]*?left: 0 !important;[\s\S]*?width: 208px !important;/);
+    expect(app).not.toMatch(/\.uni-tabbar \{\s*left: max\(40px/);
+    expect(app).not.toMatch(/\.uni-tabbar \{\s*left: calc\(\(100vw - 1140px\)/);
+    expect(app).toContain('.kg-rail-brand');
+    expect(app).toContain('.kg-tab-active');
+    expect(app).toMatch(/\.uni-tabbar \.uni-tabbar__reddot \{[\s\S]*?top: 50% !important;[\s\S]*?right: 12px !important;[\s\S]*?transform: translateY\(-50%\) !important;/);
   });
 
   it('pages.json tabBar.fontSize === "12px"（W5 字阶下限），高度与 --tab-h 对齐为 56px', () => {

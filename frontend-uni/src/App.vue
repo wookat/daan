@@ -3,6 +3,7 @@
 import { initReminderLoop } from './services/reminder.js'
 import { installSheetHistory } from './utils/sheet-history.js'
 import { flushH5TabBarIcons } from './utils/tabbar-icons.js'
+import daanLogoUrl from './static/brand/daan.svg'
 // #endif
 import { applyTheme, watchSystemTheme } from './services/theme.js'
 import { flushOfflineQueue, watchNetwork } from './services/offline.js'
@@ -16,6 +17,54 @@ export default {
     if (m) window.location.replace(window.location.pathname + h.replace('#/pages/', '#/pkgA/'))
     initReminderLoop()
     installSheetHistory(this.$router)
+    const TAB_ORDER = ['/pages/home/home', '/pages/book/book', '/pages/ask/ask', '/pages/stats/stats', '/pages/profile/profile']
+    const router = this.$router
+    const syncDesktopRail = (bar, rawPath) => {
+      if (!bar) return
+      if (!bar.querySelector('.kg-rail-brand')) {
+        const brand = document.createElement('div')
+        brand.className = 'kg-rail-brand'
+        brand.setAttribute('role', 'button')
+        brand.setAttribute('tabindex', '0')
+        brand.setAttribute('aria-label', '答岸 首页')
+        const mark = document.createElement('span')
+        mark.className = 'kg-rail-brand__mark'
+        const img = document.createElement('img')
+        img.src = daanLogoUrl
+        img.alt = ''
+        img.setAttribute('aria-hidden', 'true')
+        img.className = 'kg-rail-brand__img'
+        mark.appendChild(img)
+        const txt = document.createElement('span')
+        txt.className = 'kg-rail-brand__txt'
+        const title = document.createElement('span')
+        title.className = 'kg-rail-brand__title'
+        title.textContent = '答岸'
+        const sub = document.createElement('span')
+        sub.className = 'kg-rail-brand__sub'
+        sub.textContent = '考公刷题助手'
+        txt.appendChild(title)
+        txt.appendChild(sub)
+        brand.appendChild(mark)
+        brand.appendChild(txt)
+        const goHome = () => uni.switchTab({ url: '/pages/home/home' })
+        brand.addEventListener('click', goHome)
+        brand.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goHome() }
+        })
+        bar.prepend(brand)
+      }
+      const p = String(
+        rawPath ||
+          (router && router.currentRoute && router.currentRoute.value && router.currentRoute.value.path) ||
+          (window.location.hash || '').replace(/^#/, '').split('?')[0] ||
+          '/'
+      )
+      const idx = p === '/' ? 0 : TAB_ORDER.indexOf(p)
+      bar.querySelectorAll('.uni-tabbar__item').forEach((item, i) => {
+        item.classList.toggle('kg-tab-active', idx === i)
+      })
+    }
     // 无障碍：uni 运行时生成的页面结构无 main landmark，给当前页 uni-page-body 挂 role="main"
     const markMain = () => {
       const bodies = document.querySelectorAll('uni-page-body')
@@ -30,9 +79,12 @@ export default {
         else el.removeAttribute('role')
       })
       const bar = document.querySelector('.uni-tabbar')
-      if (bar && !bar.getAttribute('role')) {
-        bar.setAttribute('role', 'navigation')
-        bar.setAttribute('aria-label', '主导航')
+      if (bar) {
+        if (!bar.getAttribute('role')) {
+          bar.setAttribute('role', 'navigation')
+          bar.setAttribute('aria-label', '主导航')
+        }
+        syncDesktopRail(bar)
       }
       const cur = bodies[bodies.length - 1]
       if (cur && !cur.querySelector('h1')) {
@@ -71,10 +123,12 @@ export default {
     }
     new MutationObserver(scheduleMarkMain).observe(document.body, { childList: true, subtree: true })
     // 空闲期后台预热其余 4 个主 Tab 的异步路由分包（不抢占首屏 LCP，消除首次切 Tab ~1s 停顿）
-    const router = this.$router
     if (router && typeof router.afterEach === 'function') {
       router.afterEach((to) => {
-        if (to && to.meta && to.meta.isTabBar) flushH5TabBarIcons()
+        if (to && to.meta && to.meta.isTabBar) {
+          flushH5TabBarIcons()
+          syncDesktopRail(document.querySelector('.uni-tabbar'), to.path)
+        }
       })
     }
     if (router && typeof router.getRoutes === 'function') {
@@ -389,7 +443,13 @@ uni-modal .uni-modal__btn_primary {
   }
 }
 
-/* 桌面端：底部 tabbar 变左侧侧栏；208px 让位只给 tab 页（uni-page[type="tabBar"]），非 tab 页无侧栏不留空栏 */
+/* 移动端底栏隐藏桌面侧栏品牌头 */
+.kg-rail-brand {
+  display: none;
+}
+
+/* 桌面端：底部 tabbar 变左侧贴边侧栏（始终贴齐 left: 0）；208px 让位只给 tab 页（uni-page[type="tabBar"]），
+   非 tab 页无侧栏不留空栏；右侧工作区在任意宽屏（1280/1440/1920+）自适应居中 */
 @media (min-width: 768px) {
   .uni-tabbar {
     top: 0 !important;
@@ -400,10 +460,54 @@ uni-modal .uni-modal__btn_primary {
     height: 100% !important;
     flex-direction: column !important;
     justify-content: flex-start !important;
-    padding-top: 32px;
+    padding: 0 0 var(--sp-16);
     border-right: 1px solid var(--line);
     box-shadow: none;
     box-sizing: border-box;
+  }
+  .kg-rail-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    width: 100%;
+    padding: var(--sp-20) var(--sp-16) var(--sp-16);
+    margin-bottom: var(--sp-8);
+    border-bottom: 1px solid var(--line);
+    box-sizing: border-box;
+    cursor: pointer;
+    text-align: left;
+  }
+  .kg-rail-brand__mark {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-sm);
+    background: var(--brand-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .kg-rail-brand__img {
+    width: 22px;
+    height: 18px;
+    display: block;
+  }
+  .kg-rail-brand__txt {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .kg-rail-brand__title {
+    font-size: var(--fs-h3);
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .kg-rail-brand__sub {
+    font-size: var(--fs-caption);
+    color: var(--ink-3);
+    line-height: 1.3;
+    margin-top: 2px;
   }
   .uni-tabbar .uni-tabbar-border {
     display: none !important;
@@ -411,24 +515,54 @@ uni-modal .uni-modal__btn_primary {
   .uni-tabbar .uni-tabbar__item {
     flex: none !important;
     width: 100%;
-    height: 52px;
+    height: 48px;
+    padding: 2px 10px;
+    box-sizing: border-box;
   }
   .uni-tabbar .uni-tabbar__bd {
     width: 100%;
     flex-direction: row !important;
     justify-content: flex-start;
     align-items: center;
-    padding: 0 24px;
+    padding: 0 14px;
     gap: 10px;
-    height: 52px !important;
+    height: 44px !important;
+    border-radius: var(--r-sm);
+    box-sizing: border-box;
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+  .uni-tabbar .uni-tabbar__bd:hover {
+    background: var(--fill);
+  }
+  .uni-tabbar .uni-tabbar__item.kg-tab-active .uni-tabbar__bd {
+    background: var(--brand-soft);
+  }
+  .uni-tabbar .uni-tabbar__item.kg-tab-active .uni-tabbar__label {
+    font-weight: 600;
   }
   .uni-tabbar .uni-tabbar__icon {
     margin-top: 0 !important;
+    flex-shrink: 0;
   }
   .uni-tabbar .uni-tabbar__label {
     margin-top: 0 !important;
     font-size: 15px !important;
-    line-height: 52px !important;
+    line-height: 44px !important;
+  }
+  /* 桌面侧栏角标收在菜单行内右侧垂直居中，修复 uni-h5 默认 right:0 translate(40%) 压到侧栏右边框线 */
+  .uni-tabbar .uni-tabbar__reddot {
+    top: 50% !important;
+    right: 12px !important;
+    transform: translateY(-50%) !important;
+  }
+  .uni-tabbar .uni-tabbar__badge {
+    min-width: 20px;
+    height: 20px;
+    line-height: 20px;
+    padding: 0 6px;
+    border-radius: var(--r-full);
+    font-size: var(--fs-caption);
+    font-weight: 600;
   }
   uni-page[type="tabBar"] uni-page-wrapper {
     padding-left: 208px;
@@ -437,19 +571,20 @@ uni-modal .uni-modal__btn_primary {
   uni-tabbar + .uni-placeholder {
     display: none;
   }
-  uni-page[type="tabBar"] uni-page-body .mask,
-  uni-page[type="tabBar"] uni-page-body .batchbar {
+  uni-page[type="tabBar"] uni-page-body .mask {
     left: 208px !important;
+    right: 0 !important;
+  }
+  uni-page[type="tabBar"] uni-page-body .inputbar,
+  uni-page[type="tabBar"] uni-page-body .batchbar {
+    left: calc(208px + var(--page-x)) !important;
+    right: var(--page-x) !important;
   }
 }
 
-/* 大桌面（≥1280px）：整体应用壳限宽居中（参考粉笔 1100–1180px），
-   侧栏、顶栏返回键与各固定元素跟随壳体而非视口边缘 */
+/* 大桌面（≥1280px）：侧栏保持贴紧视口最左 left:0；非 tab 子页顶栏返回键与居中内容列对齐，
+   tab 页悬浮按钮贴齐居中内容列右下角，避免在 1920px 超宽屏下漂到最右边缘 */
 @media (min-width: 1280px) {
-  uni-app {
-    max-width: 1140px;
-    margin: 0 auto;
-  }
   body {
     overflow-x: hidden;
   }
@@ -457,48 +592,8 @@ uni-modal .uni-modal__btn_primary {
     padding-left: max(16px, calc((100vw - 1064px) / 2)) !important;
     padding-right: max(16px, calc((100vw - 1064px) / 2)) !important;
   }
-  .uni-tabbar {
-    left: calc((100vw - 1140px) / 2) !important;
-  }
-  uni-page-body .mask,
-  uni-page-body .inputbar,
-  uni-page-body .batchbar {
-    left: calc((100vw - 1140px) / 2) !important;
-    right: calc((100vw - 1140px) / 2) !important;
-  }
-  uni-page[type="tabBar"] uni-page-body .mask,
-  uni-page[type="tabBar"] uni-page-body .inputbar,
-  uni-page[type="tabBar"] uni-page-body .batchbar {
-    left: calc((100vw - 1140px) / 2 + 208px) !important;
-  }
-  uni-page-body .fabmenu {
-    right: calc((100vw - 1140px) / 2 + 24px) !important;
-  }
-}
-
-/* 超宽桌面（≥1366px）：壳体弹性拓宽至 1400px，两侧保底 40px 呼吸边距，
-   侧栏与各固定元素跟随壳体边缘而非视口边缘 */
-@media (min-width: 1366px) {
-  uni-app {
-    max-width: 1400px;
-    width: calc(100vw - 80px);
-  }
-  .uni-tabbar {
-    left: max(40px, calc((100vw - 1400px) / 2)) !important;
-  }
-  uni-page-body .mask,
-  uni-page-body .inputbar,
-  uni-page-body .batchbar {
-    left: max(40px, calc((100vw - 1400px) / 2)) !important;
-    right: max(40px, calc((100vw - 1400px) / 2)) !important;
-  }
-  uni-page[type="tabBar"] uni-page-body .mask,
-  uni-page[type="tabBar"] uni-page-body .inputbar,
-  uni-page[type="tabBar"] uni-page-body .batchbar {
-    left: max(248px, calc((100vw - 1400px) / 2 + 208px)) !important;
-  }
-  uni-page-body .fabmenu {
-    right: max(64px, calc((100vw - 1400px) / 2 + 24px)) !important;
+  uni-page[type="tabBar"] uni-page-body .fabmenu {
+    right: max(24px, calc((100vw - 208px - 1064px) / 2 + 16px)) !important;
   }
 }
 /* #endif */

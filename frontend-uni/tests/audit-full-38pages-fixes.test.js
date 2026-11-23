@@ -121,4 +121,14 @@ describe('Batch D & E：全站零 rpx、零失效 Beacon、旧组件现代化与
     const exp = read('src/components/export-confirm/export-confirm.vue');
     expect(exp).toContain('var(--tab-h)');
   });
+
+  it('landing/index.html 账号态埋点携带 Bearer authToken 防 403，且 exam.vue 到期后停止上报进度防 400', () => {
+    const lpHtml = readRepo('landing/index.html');
+    expect(lpHtml).toContain('readUniStr');
+    expect(lpHtml).toContain('isAccountUid');
+    expect(lpHtml).toContain('hdrs.Authorization');
+
+    const exam = read('src/pkgA/exam/exam.vue');
+    expect(exam).toMatch(/pushProgress\(\)\s*\{\s*if\s*\(!this\.attemptId \|\| this\.submitting \|\| \(this\._endAt && Date\.now\(\) >= this\._endAt\)\) return;/);
+  });
 });

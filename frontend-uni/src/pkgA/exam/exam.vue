@@ -408,6 +408,7 @@ export default {
         endAt: this._endAt,
       });
       clearTimeout(this._progTimer);
+      if (this._endAt && Date.now() >= this._endAt) return;
       this._progTimer = setTimeout(() => this.pushProgress(), 1500);
     },
     flushProgress() {
@@ -415,7 +416,7 @@ export default {
       this.pushProgress();
     },
     pushProgress() {
-      if (!this.attemptId || this.submitting) return;
+      if (!this.attemptId || this.submitting || (this._endAt && Date.now() >= this._endAt)) return;
       const picks = {};
       const marks = [];
       const secs = {};

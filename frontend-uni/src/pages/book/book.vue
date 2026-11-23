@@ -2190,6 +2190,7 @@ export default {
 /* #ifdef H5 */
 @media (min-width: 1024px) {
   .wrap.book { max-width: 1064px; padding-top: var(--sp-24); }
+  .batchbar { max-width: 1032px; margin: 0 auto; }
   .sticky-bar { margin: 0 0 var(--sp-8); padding-left: 0; padding-right: 0; }
   .trendcard, .kbdcard { display: block; }
   .wrap.is-review { max-width: 760px; margin: 0 auto; }

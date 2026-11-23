@@ -341,6 +341,13 @@ def tiku_papers():
     )
 
 
+@router.get("/papers/page/{page}", include_in_schema=False)
+@router.get("/papers/page/{page}/", include_in_schema=False)
+def tiku_papers_page_redirect(page: int):
+    target = f"/tiku/papers/?page={page}" if page > 1 else "/tiku/papers/"
+    return RedirectResponse(target, status_code=301)
+
+
 def _exam_list_query(p: dict) -> str:
     parts = []
     if p.get("id"):

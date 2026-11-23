@@ -192,7 +192,12 @@ async def api_explain_stream(
                     yield "data: " + json.dumps({"d": hit["explanation"]}, ensure_ascii=False) + "\n\n"
                     yield "event: done\ndata: {}\n\n"
                     return
-            extracted = await run_in_threadpool(_linked) or await engine.extract_question(imgs, None, text)
+            extracted = await run_in_threadpool(_linked)
+            if extracted is None:
+                ex_box: list[dict] = []
+                async for ping in sse.pump_keepalive(engine.extract_question(imgs, None, text), ex_box):
+                    yield ping
+                extracted = ex_box[0]
             ua = user_answer or extracted.get("user_answer")
             key = cache_key(extracted.get("question_text"), ua)
             raw_key = cache_key(text, ua) if text else None

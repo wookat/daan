@@ -756,34 +756,53 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 </script>
 
 <script>
-// 落地页访问埋点：与 App 同一 /api/track 通道、兼容 uni.getStorageSync 包装的 anonUid，
-// 用于管理端「官网访问 → 进入 App」转化与入口来源（ref=referrer）统计。
+// 落地页访问埋点：与 App 同一 /api/track 通道、兼容 uni.getStorageSync 包装的 anonUid/authToken，
+// 账号态 uid（u<数字>）带 Bearer authToken 走 fetch，避免 sendBeacon 无认证头触发 403。
 (function () {
   try {
-    var raw = localStorage.getItem('anonUid');
-    var uid = '';
-    if (raw) {
+    function readUniStr(k) {
+      var raw = localStorage.getItem(k);
+      if (!raw) return '';
       try {
         var parsed = JSON.parse(raw);
-        uid = parsed && typeof parsed.data === 'string' ? parsed.data : String(raw);
+        return parsed && typeof parsed.data === 'string' ? parsed.data : String(raw);
       } catch (e) {
-        uid = raw;
+        return raw;
       }
     }
+    var uid = readUniStr('anonUid');
+    var token = readUniStr('authToken');
     if (!uid) {
       uid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
       localStorage.setItem('anonUid', JSON.stringify({ type: 'string', data: uid }));
     }
+    var isAccountUid = /^u\d+$/.test(uid);
+    var sendUid = uid;
+    var authHeaders = {};
+    if (isAccountUid) {
+      if (token) {
+        authHeaders.Authorization = 'Bearer ' + token;
+      } else {
+        var devUid = readUniStr('deviceAnonUid');
+        if (!devUid || /^u\d+$/.test(devUid)) {
+          devUid = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+          localStorage.setItem('deviceAnonUid', JSON.stringify({ type: 'string', data: devUid }));
+        }
+        sendUid = devUid;
+      }
+    }
     var sid = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     var data = JSON.stringify({
-      uid: uid, event: 'lp_view', source: 'landing',
+      uid: sendUid, event: 'lp_view', source: 'landing',
       ref: (document.referrer || '').slice(0, 200) || null,
       platform: 'h5', session_id: sid
     });
-    if (navigator.sendBeacon) {
+    if (!authHeaders.Authorization && navigator.sendBeacon) {
       navigator.sendBeacon('/api/track', new Blob([data], { type: 'application/json' }));
     } else {
-      fetch('/api/track', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: data, keepalive: true }).catch(function () {});
+      var hdrs = { 'Content-Type': 'application/json' };
+      if (authHeaders.Authorization) hdrs.Authorization = authHeaders.Authorization;
+      fetch('/api/track', { method: 'POST', headers: hdrs, body: data, keepalive: true }).catch(function () {});
     }
   } catch (e) { /* 埋点失败不影响页面 */ }
 })();
