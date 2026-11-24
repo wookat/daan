@@ -31,7 +31,7 @@ describe('R414 模考页/报告页多选（源文件锁）', () => {
   const report = read('../src/pkgA/exam/report.vue');
   it('多选题点选只切换、不自动跳题；单选保持点选即跳', () => {
     expect(exam).toMatch(/pick\(k\)\s*\{[\s\S]*?if \(this\.cur\.multi\) \{\s*this\.cur\._picked = togglePickLetter\(this\.cur\._picked, k\);\s*this\.saveProgress\(\);\s*return;/);
-    expect(exam).toMatch(/this\.cur\._picked = this\.cur\._picked === k \? '' : k;[\s\S]*?setTimeout\(\(\) => this\.next\(\), 180\)/);
+    expect(exam).toMatch(/this\.cur\._picked = this\.cur\._picked === k \? '' : k;[\s\S]*?setTimeout\(\(\) => this\.next\(\), (?:180|350)\)/);
     // W5 起选项走 kg-option-group：多选把 _picked 字母串拆成数组喂 modelValue、multiple 跟 cur.multi；选中态由 option-state.js 判定
     expect(exam).toMatch(/<kg-option-group[\s\S]*?:model-value="cur\.multi \? \(cur\._picked \|\| ''\)\.split\(''\) : \(cur\._picked \|\| ''\)"[\s\S]*?:multiple="!!cur\.multi"[\s\S]*?@select="pick"/);
     expect(optionState('B', { picked: ['B', 'D'], multiple: true })).toBe('selected');

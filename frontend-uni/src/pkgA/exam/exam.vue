@@ -12,21 +12,24 @@
             <text class="clock-t num">{{ fmtLeft }}</text>
           </view>
         </view>
+        <kg-banner v-if="timeAlertText" tone="warn" icon="clock" :text="timeAlertText" class="time-alert" @close="timeAlertText = ''" />
         <kg-progress :value="idx + 1" :max="items.length" class="prog" />
 
         <view @touchstart="touchStart" @touchend="touchEnd">
-          <kg-question-card :key="cur.id" :q="qCard" :index="idx" :total="items.length" :font-level="fontLv" :show-meta="false">
-            <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
-            <kg-option-group
-              :options="optList"
-              :model-value="cur.multi ? (cur._picked || '').split('') : (cur._picked || '')"
-              :multiple="!!cur.multi"
-              :excluded="cur._excl || []"
-              :font-level="fontLv"
-              @select="pick"
-              @exclude="toggleExcl"
-            />
-          </kg-question-card>
+          <view :key="cur.id" :class="'kg-q-enter-' + navDir">
+            <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv" :show-meta="false">
+              <view v-if="cur.multi" class="multi-tip">多选题：可选多项{{ cur._picked ? '，已选 ' + cur._picked : '' }}，选完点「下一题」</view>
+              <kg-option-group
+                :options="optList"
+                :model-value="cur.multi ? (cur._picked || '').split('') : (cur._picked || '')"
+                :multiple="!!cur.multi"
+                :excluded="cur._excl || []"
+                :font-level="fontLv"
+                @select="pick"
+                @exclude="toggleExcl"
+              />
+            </kg-question-card>
+          </view>
         </view>
 
         <kg-action-bar
@@ -41,7 +44,7 @@
               <l-icon name="chevron-left" :size="24" tone="ink-2" />
             </view>
             <view class="kg-tool" :class="{ on: cur._marked }" role="button" :aria-label="cur._marked ? '取消标记' : '标记本题'" :aria-pressed="cur._marked ? 'true' : 'false'" hover-class="tool-hover" @click="toggleMark">
-              <l-icon name="bookmark" :size="24" :tone="cur._marked ? 'warn' : 'ink-2'" :fill="cur._marked ? 'currentColor' : 'none'" />
+              <l-icon :key="cur.id + '-m-' + (cur._marked ? 1 : 0)" :class="{ 'kg-icon-pop': cur._marked }" name="bookmark" :size="24" :tone="cur._marked ? 'warn' : 'ink-2'" :fill="cur._marked ? 'currentColor' : 'none'" />
             </view>
             <view class="kg-tool kg-tool--m" role="button" aria-label="答题卡" hover-class="tool-hover" @click="cardOpen = true">
               <l-icon name="clipboard-list" :size="24" tone="ink-2" />
@@ -77,6 +80,10 @@
             >{{ i + 1 }}</view>
           </view>
           <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}</text>
+          <view class="autonext-row">
+            <text class="autonext-t">单选后自动跳下一题</text>
+            <kg-switch :model-value="autoNext" aria-label="单选后自动跳下一题" @update:model-value="setAutoNext" />
+          </view>
           <kg-button block size="lg" @click="confirmSubmit">交卷</kg-button>
           <text class="kbd-note">A–D 选择 · ←/→ 翻题 · Enter 下一题/交卷</text>
         </kg-card>
@@ -89,6 +96,10 @@
         <text class="lg"><text class="dot done"></text>已答</text>
         <text class="lg"><text class="dot"></text>未答</text>
         <text class="lg"><text class="dot mark"></text>标记</text>
+      </view>
+      <view class="autonext-row">
+        <text class="autonext-t">单选后自动跳下一题</text>
+        <kg-switch :model-value="autoNext" aria-label="单选后自动跳下一题" @update:model-value="setAutoNext" />
       </view>
       <view class="acard-grid">
         <view
@@ -115,12 +126,39 @@
         </view>
       </template>
     </kg-sheet>
+
+    <kg-confirm-sheet
+      :model-value="submitConfirmOpen"
+      title="确认交卷？"
+      :desc="submitConfirmDesc"
+      confirm-text="确认交卷"
+      :cancel-text="firstUnanswered >= 0 ? '再检查一下' : '取消'"
+      :danger="false"
+      @confirm="runSubmitConfirm"
+      @cancel="submitConfirmOpen = false"
+    >
+      <view v-if="firstUnanswered >= 0" class="cfm-jump">
+        <kg-button variant="text" size="md" block @click="jumpFirstUnanswered">直达第 {{ firstUnanswered + 1 }} 题（未答） ›</kg-button>
+      </view>
+    </kg-confirm-sheet>
+
+    <kg-confirm-sheet
+      :model-value="!!terminalErrMsg"
+      title="交卷失败"
+      :desc="terminalErrMsg"
+      confirm-text="返回卷库"
+      cancel-text="留在当前页"
+      :danger="false"
+      @confirm="goListFromTerminal"
+      @cancel="terminalErrMsg = ''"
+    />
   </view>
 </template>
 
 <script>
 import { request, anonUid, imgUrl } from '../../api/api.js';
 import { submitFailPlan } from '../../exam/exam-policy.js';
+import { toastInfo, toastErrFrom, humanErrorText } from '../../utils/toast.js';
 import { dayKey } from '../../home/checkin.js';
 import { splitMaterial } from '../../utils/material.js';
 import { crossedTimeAlert } from '../../exam/exam-alert.js';
@@ -148,6 +186,11 @@ export default {
       qsecs: 0,
       qTimer: null,
       submitting: false,
+      submitConfirmOpen: false,
+      terminalErrMsg: '',
+      timeAlertText: '',
+      navDir: 'next',
+      autoNext: uni.getStorageSync('examAutoNext') !== '0',
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
     };
   },
@@ -187,6 +230,11 @@ export default {
       return splitMaterial(q.question, q.material_hash);
     },
     answeredCount() { return this.items.filter((q) => q._picked).length; },
+    firstUnanswered() { return this.items.findIndex((q) => !q._picked); },
+    submitConfirmDesc() {
+      const blank = this.items.length - this.answeredCount;
+      return blank ? '还有 ' + blank + ' 题未作答，交卷后不能再修改' : '已全部作答，交卷查看成绩报告';
+    },
     lowTime() { return this.leftSecs > 0 && this.leftSecs <= 300; },
     fmtLeft() {
       const s = Math.max(0, this.leftSecs);
@@ -207,15 +255,17 @@ export default {
       ) &&
       countAnswered(saved.items) > 0
     ) {
-      const resume = await new Promise((resolve) => {
-        this._resumeAct = { resolve, picked: false };
-        this.resumeAsk = resumeAsk('exam', {
-          title: saved.paper && saved.paper.title,
-          done: countAnswered(saved.items),
-          total: saved.items.length,
-        });
-        this.resumeOpen = true;
-      });
+      const resume = opt.resume === '1'
+        ? true
+        : await new Promise((resolve) => {
+            this._resumeAct = { resolve, picked: false };
+            this.resumeAsk = resumeAsk('exam', {
+              title: saved.paper && saved.paper.title,
+              done: countAnswered(saved.items),
+              total: saved.items.length,
+            });
+            this.resumeOpen = true;
+          });
       if (resume) {
         this._progPushed = true;
         this.attemptId = saved.attemptId;
@@ -245,6 +295,15 @@ export default {
       this._exKeyHandler = (e) => this.onExKeydown(e);
       window.addEventListener('keydown', this._exKeyHandler);
     }
+    if (!this._onBeforeUnload && typeof window !== 'undefined') {
+      this._onBeforeUnload = (e) => {
+        if (!this.loading && !this.submitting && this.attemptId && this.answeredCount > 0) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      };
+      window.addEventListener('beforeunload', this._onBeforeUnload);
+    }
     // #endif
   },
   onUnload() {
@@ -252,12 +311,17 @@ export default {
     if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
     if (this._navTimer) { clearTimeout(this._navTimer); this._navTimer = null; }
     if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
+    if (this._markPopT) { clearTimeout(this._markPopT); this._markPopT = null; }
     this.saveProgress();
     this.flushProgress();
     // #ifdef H5
     if (this._exKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._exKeyHandler);
       this._exKeyHandler = null;
+    }
+    if (this._onBeforeUnload && typeof window !== 'undefined') {
+      window.removeEventListener('beforeunload', this._onBeforeUnload);
+      this._onBeforeUnload = null;
     }
     // #endif
   },
@@ -307,7 +371,7 @@ export default {
         this.startClock();
         this.saveProgress();
       } catch (e) {
-        uni.showToast({ title: '开考失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '开考失败，请稍后重试');
         // 深链直达时无历史栈，navigateBack 会静默失败卡在加载页，兜底回卷库
         this._navTimer = setTimeout(() => {
           this._navTimer = null;
@@ -325,12 +389,12 @@ export default {
         const alert = crossedTimeAlert(prev, this.leftSecs);
         if (alert) {
           const blank = this.items.length - this.answeredCount;
-          uni.showToast({ title: alert.label + (blank ? '，还有 ' + blank + ' 题未作答' : ''), icon: 'none', duration: 3500 });
+          this.timeAlertText = alert.label + (blank ? '，还有 ' + blank + ' 题未作答' : '');
         }
         this.qsecs++;
         if (this.leftSecs <= 0) {
           this.stopClock();
-          uni.showToast({ title: '时间到，自动交卷', icon: 'none' });
+          toastInfo('时间到，自动交卷');
           this.submit();
         }
       }, 1000);
@@ -354,9 +418,13 @@ export default {
       this.cur._picked = this.cur._picked === k ? '' : k;
       this.saveProgress();
       if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
-      if (this.cur._picked && this.idx + 1 < this.items.length) {
-        this._pickTimer = setTimeout(() => this.next(), 180);
+      if (this.autoNext && this.cur._picked && this.idx + 1 < this.items.length) {
+        this._pickTimer = setTimeout(() => this.next(), 350);
       }
+    },
+    setAutoNext(v) {
+      this.autoNext = !!v;
+      uni.setStorageSync('examAutoNext', this.autoNext ? '1' : '0');
     },
     toggleExcl(k) {
       const r = toggleExcl(this.cur._excl, k, this.cur._picked);
@@ -371,6 +439,7 @@ export default {
     goto(i) {
       if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
       if (i < 0 || i >= this.items.length || i === this.idx) return;
+      this.navDir = i > this.idx ? 'next' : 'prev';
       this.flushQSecs();
       this.idx = i;
       this.saveProgress();
@@ -437,14 +506,21 @@ export default {
     confirmSubmit() {
       this.cardOpen = false;
       if (this._pickTimer) { clearTimeout(this._pickTimer); this._pickTimer = null; }
-      const blank = this.items.length - this.answeredCount;
-      uni.showModal({
-        title: '确认交卷？',
-        content: blank ? '还有 ' + blank + ' 题未作答，交卷后不能再修改' : '已全部作答，交卷查看成绩报告',
-        confirmText: '交卷',
-        cancelText: '再检查',
-        success: (r) => { if (r.confirm) { this._submitTries = 0; this.submit(); } },
-      });
+      this.submitConfirmOpen = true;
+    },
+    runSubmitConfirm() {
+      this.submitConfirmOpen = false;
+      this._submitTries = 0;
+      this.submit();
+    },
+    jumpFirstUnanswered() {
+      const idx = this.firstUnanswered;
+      this.submitConfirmOpen = false;
+      if (idx >= 0) this.goto(idx);
+    },
+    goListFromTerminal() {
+      this.terminalErrMsg = '';
+      uni.reLaunch({ url: '/pkgA/exam/list' });
     },
     async submit() {
       if (this.submitting) return;
@@ -485,26 +561,27 @@ export default {
         this._submitTries += 1;
         if (plan.action === 'terminal') {
           uni.removeStorageSync(PROG_KEY);
-          uni.showModal({
-            title: '交卷失败',
-            content: '试卷会话已失效，本次作答无法判分（' + e.message + '）',
-            showCancel: false,
-            confirmText: '返回卷库',
-            success: () => uni.reLaunch({ url: '/pkgA/exam/list' }),
-          });
+          this.submitting = false;
+          this.terminalErrMsg = '试卷会话已失效，本次作答无法判分（' + humanErrorText(e, '请返回卷库重新开考') + '）';
           return;
         }
         this.submitting = false;
         if (plan.action === 'retry') {
-          uni.showToast({ title: '交卷失败：' + e.message + '，' + Math.round(plan.delayMs / 1000) + ' 秒后自动重试', icon: 'none', duration: 3000 });
+          toastErrFrom(e, '交卷失败，' + Math.round(plan.delayMs / 1000) + ' 秒后自动重试');
           this._retryTimer = setTimeout(() => { this._retryTimer = null; this.submit(); }, plan.delayMs);
           return;
         }
         if (this._endAt > Date.now()) this.startClock();
-        uni.showToast({ title: '交卷失败：' + e.message + '，作答已保留，可再次交卷', icon: 'none', duration: 3000 });
+        toastErrFrom(e, '交卷失败，作答已保留，可再次交卷');
       }
     },
     async gotoReport(attemptId) {
+      // #ifdef H5
+      if (this._onBeforeUnload && typeof window !== 'undefined') {
+        window.removeEventListener('beforeunload', this._onBeforeUnload);
+        this._onBeforeUnload = null;
+      }
+      // #endif
       if (this._eventId) {
         try {
           await request('/api/mock/events/' + this._eventId + '/attach', {
@@ -527,6 +604,7 @@ export default {
       if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (this.submitConfirmOpen || this.terminalErrMsg) return;
       if (this.loading || !this.items.length || this.submitting || this.cardOpen || this.resumeOpen) return;
       const k = e.key;
       if (/^[a-dA-D]$/.test(k)) {
@@ -592,11 +670,14 @@ export default {
 .page { padding: var(--sp-16) var(--page-x) calc(var(--bar-h) + var(--sp-24) + env(safe-area-inset-bottom, 0px)); }
 .topbar { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); }
 .pos { flex: 1; font-size: var(--fs-sub); color: var(--ink-2); }
-.clock { display: inline-flex; align-items: center; gap: var(--sp-4); }
+.clock { display: inline-flex; align-items: center; gap: var(--sp-4); padding: 2px var(--sp-10); border-radius: var(--r-full); transition: background-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard); }
 .clock-t { font-size: var(--fs-h3); color: var(--ink); }
+.clock.low { background: var(--bad-soft); animation: kg-nudge var(--dur-base) var(--ease-standard); }
 .clock.low .clock-t { color: var(--bad-strong); }
-.clock.low { animation: clock-pulse 1s ease-in-out infinite; }
-@keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.time-alert { margin-top: var(--sp-8); }
+.autonext-row { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-8) 0; border-top: 1px solid var(--line); }
+.autonext-t { font-size: var(--fs-sub); color: var(--ink-2); }
+.cfm-jump { margin-bottom: var(--sp-8); }
 .prog { margin: var(--sp-8) 0 var(--sp-16); }
 .kg-tool.on { background: var(--warn-soft); }
 .kg-tool.dis { opacity: 0.4; }

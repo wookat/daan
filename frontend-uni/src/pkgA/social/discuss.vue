@@ -62,7 +62,7 @@
               <text class="tx q-text">{{ c.content }}</text>
               <view class="ft">
                 <view class="op up" :class="{ on: c.liked }" role="button" aria-label="点赞" @click="like(c)">
-                  <l-icon name="thumbs-up" :size="16" :tone="c.liked ? 'brand-text' : 'muted'" />
+                  <l-icon :key="c.id + '-lk-' + (c.liked ? 1 : 0)" :class="{ 'kg-icon-pop': c.liked }" name="thumbs-up" :size="16" :tone="c.liked ? 'brand-text' : 'muted'" />
                   <text class="num">{{ c.likes || '赞' }}</text>
                 </view>
                 <text class="op" role="button" @click="startReply(c)">回复{{ c.replies.length ? ' ' + c.replies.length : '' }}</text>
@@ -73,7 +73,7 @@
                 <text class="rtx q-text"><text class="rnm">{{ r.nickname }}：</text>{{ r.content }}</text>
                 <view class="rft">
                   <view class="op sm up" :class="{ on: r.liked }" role="button" aria-label="点赞" @click="like(r)">
-                    <l-icon name="thumbs-up" :size="16" :tone="r.liked ? 'brand-text' : 'muted'" />
+                    <l-icon :key="r.id + '-lk-' + (r.liked ? 1 : 0)" :class="{ 'kg-icon-pop': r.liked }" name="thumbs-up" :size="16" :tone="r.liked ? 'brand-text' : 'muted'" />
                     <text class="num">{{ r.likes || '赞' }}</text>
                   </view>
                   <text class="op sm" role="button" @click="startReply(c, r)">回复</text>
@@ -114,6 +114,25 @@
         </kg-action-bar>
       </template>
     </kg-two-col>
+
+    <kg-sheet v-model="reportOpen" title="选择举报原因">
+      <view class="rpt-opts">
+        <view v-for="reason in reportReasons" :key="reason" class="rpt-opt" role="button" @click="confirmReport(reason)">
+          <text class="rpt-opt-t">{{ reason }}</text>
+        </view>
+      </view>
+    </kg-sheet>
+
+    <kg-confirm-sheet
+      :open="!!delTarget"
+      title="删除这条讨论？"
+      desc="删除后将无法恢复"
+      confirm-text="删除"
+      danger
+      :loading="delLoading"
+      @confirm="confirmDeleteOwn"
+      @cancel="delTarget = null"
+    />
   </view>
 </template>
 
@@ -122,6 +141,7 @@ import { fmtAgo } from '../../utils/fmt.js';
 import { deleteOwnComment, fetchCommentInbox, fetchComments, getToken, likeComment, postComment, reportComment, request } from '../../api/api.js';
 import { MODULES, moduleLabel } from '../../utils/module-meta.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
+import { toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 
 const SORT_OPTS = [
   { label: '最热', value: 'hot' },
@@ -149,6 +169,11 @@ export default {
       logged: !!getToken(),
       autoFocus: false,
       inboxUnread: 0,
+      reportReasons: REPORT_REASONS,
+      reportOpen: false,
+      reportTarget: null,
+      delTarget: null,
+      delLoading: false,
     };
   },
   computed: {
@@ -223,7 +248,7 @@ export default {
         this.total = d.total;
       } catch (e) {
         this.loadErr = e.message || '网络异常';
-        uni.showToast({ title: e.message, icon: 'none' });
+        toastErrFrom(e, '加载讨论失败');
       }
       this.loading = false;
     },
@@ -299,9 +324,9 @@ export default {
           this.items.unshift({ ...d.item, replies: [] });
         }
         this.total += 1;
-        uni.showToast({ title: '已发布', icon: 'none' });
+        toastOk('已发布');
       } catch (e) {
-        uni.showToast({ title: e.message || '发布失败', icon: 'none' });
+        toastErrFrom(e, '发布失败');
       }
       this.busy = false;
     },
@@ -312,45 +337,52 @@ export default {
         c.liked = d.liked;
         c.likes = d.likes;
       } catch (e) {
-        uni.showToast({ title: e.message || '操作失败', icon: 'none' });
+        toastErrFrom(e, '操作失败');
       }
     },
     report(c, parent) {
       if (!this.ensureLogin()) return;
-      uni.showActionSheet({
-        itemList: REPORT_REASONS,
-        success: async ({ tapIndex }) => {
-          try {
-            const d = await reportComment(c.id, REPORT_REASONS[tapIndex]);
-            if (d.hidden) {
-              const dropN = parent ? 1 : 1 + ((c.replies && c.replies.length) || 0);
-              if (parent) parent.replies = parent.replies.filter((x) => x.id !== c.id);
-              else this.items = this.items.filter((x) => x.id !== c.id);
-              this.total = Math.max(0, this.total - dropN);
-            }
-            uni.showToast({ title: d.already ? '你已举报过这条评论' : '已收到举报，我们会尽快处理', icon: 'none' });
-          } catch (e) {
-            uni.showToast({ title: e.message || '举报失败', icon: 'none' });
-          }
-        },
-      });
+      this.reportTarget = { c, parent };
+      this.reportOpen = true;
+    },
+    async confirmReport(reason) {
+      const t = this.reportTarget;
+      this.reportOpen = false;
+      this.reportTarget = null;
+      if (!t || !t.c) return;
+      try {
+        const d = await reportComment(t.c.id, reason);
+        if (d.hidden) {
+          const dropN = t.parent ? 1 : 1 + ((t.c.replies && t.c.replies.length) || 0);
+          if (t.parent) t.parent.replies = t.parent.replies.filter((x) => x.id !== t.c.id);
+          else this.items = this.items.filter((x) => x.id !== t.c.id);
+          this.total = Math.max(0, this.total - dropN);
+        }
+        toastInfo(d.already ? '你已举报过这条评论' : '已收到举报，我们会尽快处理');
+      } catch (e) {
+        toastErrFrom(e, '举报失败');
+      }
     },
     removeOwn(c, parent) {
-      uni.showModal({
-        title: '删除这条讨论？',
-        success: async (r) => {
-          if (!r.confirm) return;
-          try {
-            await deleteOwnComment(c.id);
-            const dropN = parent ? 1 : 1 + ((c.replies && c.replies.length) || 0);
-            if (parent) parent.replies = parent.replies.filter((x) => x.id !== c.id);
-            else this.items = this.items.filter((x) => x.id !== c.id);
-            this.total = Math.max(0, this.total - dropN);
-          } catch (e) {
-            uni.showToast({ title: e.message || '删除失败', icon: 'none' });
-          }
-        },
-      });
+      this.delTarget = { c, parent };
+    },
+    async confirmDeleteOwn() {
+      const t = this.delTarget;
+      if (!t || !t.c || this.delLoading) return;
+      this.delLoading = true;
+      try {
+        await deleteOwnComment(t.c.id);
+        const dropN = t.parent ? 1 : 1 + ((t.c.replies && t.c.replies.length) || 0);
+        if (t.parent) t.parent.replies = t.parent.replies.filter((x) => x.id !== t.c.id);
+        else this.items = this.items.filter((x) => x.id !== t.c.id);
+        this.total = Math.max(0, this.total - dropN);
+        this.delTarget = null;
+        toastOk('已删除');
+      } catch (e) {
+        toastErrFrom(e, '删除失败');
+      } finally {
+        this.delLoading = false;
+      }
     },
   },
 };
@@ -399,6 +431,11 @@ export default {
 .rx { width: var(--hit-min); height: 40px; margin: -6px 0; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); }
 .inputrow { display: flex; gap: var(--sp-12); align-items: flex-end; }
 .ipt { flex: 1; min-width: 0; min-height: var(--input-h); max-height: 120px; overflow-y: auto; border-radius: var(--r-lg); background: var(--fill); color: var(--ink); font-size: var(--fs-sub); line-height: 20px; padding: var(--sp-12) var(--sp-16); box-sizing: border-box; }
+.rpt-opts { display: flex; flex-direction: column; }
+.rpt-opt { display: flex; align-items: center; min-height: var(--hit-min); padding: var(--sp-8) var(--sp-4); border-bottom: 1px solid var(--line); cursor: pointer; transition: opacity var(--dur-instant) var(--ease-standard); }
+.rpt-opt:last-child { border-bottom: none; }
+.rpt-opt:active { opacity: 0.65; }
+.rpt-opt-t { font-size: var(--fs-body); color: var(--ink); }
 
 /* #ifdef H5 */
 @media (min-width: 768px) {

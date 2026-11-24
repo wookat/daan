@@ -129,11 +129,23 @@
         <kg-button variant="primary" size="lg" block :disabled="creating || !newName.trim()" :loading="creating" @click="createTeam">创建并生成邀请码</kg-button>
       </template>
     </kg-sheet>
+
+    <kg-confirm-sheet
+      :open="leaveOpen"
+      title="退出当前小队？"
+      desc="退出后将不再显示在队友面板中，可凭邀请码重新加入"
+      confirm-text="退出小队"
+      danger
+      :loading="leaveLoading"
+      @confirm="confirmLeaveTeam"
+      @cancel="leaveOpen = false"
+    />
   </view>
 </template>
 
 <script>
 import { teamMine, teamCreate, teamJoin, teamLeave, teamPanel, trackEvent } from '../../api/api.js';
+import { toastOk, toastErrFrom } from '../../utils/toast.js';
 
 const SITE = 'https://kaogong.zalize.com';
 
@@ -152,6 +164,8 @@ export default {
       creating: false,
       panel: null,
       curTeamId: null,
+      leaveOpen: false,
+      leaveLoading: false,
     };
   },
   computed: {
@@ -208,7 +222,7 @@ export default {
         this.loaded = true;
       } catch (e) {
         uni.hideLoading();
-        uni.showToast({ title: e.message || '加载失败', icon: 'none' });
+        toastErrFrom(e, '加载失败');
         if (!this.loaded) this.loadHome();
       }
     },
@@ -219,17 +233,17 @@ export default {
     },
     async createTeam() {
       const name = (this.newName || '').trim();
-      if (!name) return uni.showToast({ title: '请输入小队名', icon: 'none' });
+      if (!name) return toastErrFrom(null, '请输入小队名');
       if (this.creating) return;
       this.creating = true;
       try {
         const d = await teamCreate(name);
         this.showCreate = false;
         this.newName = '';
-        uni.showToast({ title: '小队已创建', icon: 'none' });
+        toastOk('小队已创建');
         this.openPanel(d.team);
       } catch (e) {
-        uni.showToast({ title: e.message || '创建失败', icon: 'none' });
+        toastErrFrom(e, '创建失败');
       }
       this.creating = false;
     },
@@ -244,7 +258,7 @@ export default {
       this.joining = true;
       try {
         const d = await teamJoin(code);
-        uni.showToast({ title: d.already ? '你已在该小队' : '加入成功！', icon: 'none' });
+        toastOk(d.already ? '你已在该小队' : '已加入小队');
         this.joinCode = '';
         this.openPanel(d.team);
       } catch (e) {
@@ -253,22 +267,23 @@ export default {
       this.joining = false;
     },
     leaveTeam() {
-      uni.showModal({
-        title: '退出小队',
-        content: '退出后将不再显示在队友面板中，可凭邀请码重新加入。',
-        success: async (r) => {
-          if (!r.confirm) return;
-          try {
-            await teamLeave(this.curTeamId);
-            uni.showToast({ title: '已退出小队', icon: 'none' });
-            this.view = 'home';
-            this.panel = null;
-            this.loadHome();
-          } catch (e) {
-            uni.showToast({ title: e.message || '退出失败', icon: 'none' });
-          }
-        },
-      });
+      this.leaveOpen = true;
+    },
+    async confirmLeaveTeam() {
+      if (this.leaveLoading) return;
+      this.leaveLoading = true;
+      try {
+        await teamLeave(this.curTeamId);
+        this.leaveOpen = false;
+        toastOk('已退出小队');
+        this.view = 'home';
+        this.panel = null;
+        this.loadHome();
+      } catch (e) {
+        toastErrFrom(e, '退出失败');
+      } finally {
+        this.leaveLoading = false;
+      }
     },
     inviteUrl() {
       return `${SITE}/app/#/pages/team/join?code=${this.panel.team.invite_code}`;
@@ -278,7 +293,7 @@ export default {
       trackEvent('team_invite_copy', 'team', t.invite_code);
       uni.setClipboardData({
         data: `我在答岸建了刷题小队「${t.name}」，一起打卡刷题冲上岸！邀请码 ${t.invite_code}，点链接直接加入：${this.inviteUrl()}`,
-        success: () => uni.showToast({ title: '邀请链接已复制，发给考友吧', icon: 'none' }),
+        success: () => toastOk('邀请链接已复制'),
       });
     },
     copyWeekReport() {
@@ -290,17 +305,17 @@ export default {
       this.panel.members.forEach((m) => {
         (m.week || []).slice(0, upto).forEach((n) => { if (n > 0) dayCnt += 1; });
       });
-      const king = rank[0] && rank[0].week_n > 0 ? `，卷王是「${rank[0].nickname}」（${rank[0].week_n} 题）` : '';
+      const king = rank[0] && rank[0].week_n > 0 ? `，本周榜首「${rank[0].nickname}」（${rank[0].week_n} 题）` : '';
       trackEvent('team_report_copy', 'team', t.invite_code);
       uni.setClipboardData({
-        data: `📊刷题小队「${t.name}」本周战报：全队共刷 ${totalN} 题，打卡 ${dayCnt} 人天${king}。一起打卡冲上岸，邀请码 ${t.invite_code}，点链接加入：${this.inviteUrl()}`,
-        success: () => uni.showToast({ title: '周战报已复制，发到微信群吧', icon: 'none' }),
+        data: `刷题小队「${t.name}」本周战报：全队共刷 ${totalN} 题，打卡 ${dayCnt} 人天${king}。一起打卡冲上岸，邀请码 ${t.invite_code}，点链接加入：${this.inviteUrl()}`,
+        success: () => toastOk('周战报已复制'),
       });
     },
     remind(m) {
       uni.setClipboardData({
         data: `「${m.nickname}」今天还没刷题哦！我在答岸小队「${this.panel.team.name}」等你打卡，别掉队：${this.inviteUrl()}`,
-        success: () => uni.showToast({ title: '催打卡文案已复制，发给 TA 吧', icon: 'none' }),
+        success: () => toastOk('催打卡文案已复制'),
       });
     },
     memDesc(m) {
