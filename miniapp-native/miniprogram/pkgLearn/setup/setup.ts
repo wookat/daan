@@ -6,6 +6,7 @@ import {
   fetchSubmodules,
   fetchSubmoduleProgress,
   saveGroupSize,
+  savePracticePref,
   type SubmoduleCount,
   type SubmoduleProgress,
 } from '../../api/learn';
@@ -46,6 +47,16 @@ const SRC_OPTS: Opt[] = [
   { label: '题库模式', value: 0 },
   { label: '真题模式', value: 1 },
 ];
+const SZ_OPTS: Opt[] = [
+  { label: '包含数字推理', value: 0 },
+  { label: '排除数字推理', value: 1 },
+];
+
+function calcSubAllShown(module: string, allN: number, subs: { submodule: string; n: number }[], excludeSz: number): number {
+  if (module !== 'shuliang' || !excludeSz) return allN;
+  const sz = subs.find((s) => s.submodule === '数字推理');
+  return Math.max(0, allN - ((sz && sz.n) || 0));
+}
 
 function buildMods(counts: Record<string, number>): ModVM[] {
   const st = loadPStats().byModule;
@@ -87,10 +98,12 @@ Page({
     goalOpts: GOAL_OPTS,
     groupOpts: GROUP_OPTS,
     srcOpts: SRC_OPTS,
+    szOpts: SZ_OPTS,
     yearOpts: [] as Opt[],
     regionOpts: [] as Opt[],
     dailyGoal: 20,
     groupSize: 10,
+    excludeSz: 0,
     realMode: 0,
     realYear: '' as string | number,
     realRegion: '',
@@ -102,6 +115,7 @@ Page({
     subModule: '',
     subModuleName: '',
     subAllN: 0,
+    subAllShown: 0,
     subs: [] as SubVM[],
     subLoading: false,
     subErr: '',
@@ -115,6 +129,7 @@ Page({
     this.setData({
       dailyGoal: getDailyGoal(),
       groupSize: Number(wx.getStorageSync('groupSize')) || 10,
+      excludeSz: wx.getStorageSync('excludeShuzituili') ? 1 : 0,
       realMode: wx.getStorageSync('realMode') ? 1 : 0,
       realYear: wx.getStorageSync('realYear') || '',
       realRegion: String(wx.getStorageSync('realRegion') || ''),
@@ -185,6 +200,21 @@ Page({
     this.setData({ groupSize: n });
     saveGroupSize(n).catch(() => {});
   },
+  applyExcludeSz(on: boolean) {
+    const val = on ? 1 : 0;
+    wx.setStorageSync('excludeShuzituili', on ? '1' : '');
+    this.setData({
+      excludeSz: val,
+      subAllShown: calcSubAllShown(this.data.subModule, this.data.subAllN, this.data.subs, val),
+    });
+    savePracticePref('exclude_shuzituili', on).catch(() => {});
+  },
+  onExcludeSz(e: WechatMiniprogram.CustomEvent<{ value: number }>) {
+    this.applyExcludeSz(Number(e.detail.value) === 1);
+  },
+  onToggleExcludeSz() {
+    this.applyExcludeSz(!this.data.excludeSz);
+  },
 
   // ---- 开练 ----
   launch(module: string, submodule?: string) {
@@ -204,11 +234,13 @@ Page({
   async openModule(module: string) {
     if (!module) return;
     const meta = moduleMeta(module);
+    const allN = this._counts[module] || 0;
     this.setData({
       subOpen: true,
       subModule: module,
       subModuleName: meta.label,
-      subAllN: this._counts[module] || 0,
+      subAllN: allN,
+      subAllShown: allN,
       subs: [],
       subLoading: true,
       subErr: '',
@@ -220,7 +252,12 @@ Page({
         this.launch(module);
         return;
       }
-      this.setData({ subs: buildSubs(items, {}), subLoading: false });
+      const subs = buildSubs(items, {});
+      this.setData({
+        subs,
+        subAllShown: calcSubAllShown(module, allN, subs, this.data.excludeSz),
+        subLoading: false,
+      });
       fetchSubmoduleProgress(module)
         .then((p) => {
           if (this.data.subModule === module) this.setData({ subs: buildSubs(items, p.items || {}) });

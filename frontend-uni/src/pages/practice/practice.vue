@@ -524,6 +524,7 @@ export default {
       realYear: uni.getStorageSync('realYear') || null,
       realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
+      excludeSz: uni.getStorageSync('excludeShuzituili') ? true : false,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       hsRated: {},
       matOpen: {},
@@ -787,6 +788,7 @@ export default {
     this.realYear = uni.getStorageSync('realYear') || null;
     this.realRegion = uni.getStorageSync('realRegion') || null;
     this.groupSize = uni.getStorageSync('groupSize') || 10;
+    this.excludeSz = uni.getStorageSync('excludeShuzituili') ? true : false;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     this.syncDailyGoal();
     if (this._urlLaunch) {
@@ -984,7 +986,7 @@ export default {
             uni.setStorageSync('dailyGoal', g);
           }
           const p = adoptServerPracticePrefs(
-            { groupSize: this.groupSize, timedMode: this.timedMode, autoNext: this.autoNext },
+            { groupSize: this.groupSize, timedMode: this.timedMode, autoNext: this.autoNext, excludeSz: this.excludeSz },
             d && d.profile
           );
           if (p.groupSize != null) {
@@ -998,6 +1000,11 @@ export default {
           if (p.autoNext != null) {
             this.autoNext = p.autoNext;
             uni.setStorageSync('autoNextOff', p.autoNext ? '' : '1');
+          }
+          if (p.excludeSz != null) {
+            this.excludeSz = p.excludeSz;
+            uni.setStorageSync('excludeShuzituili', p.excludeSz ? '1' : '');
+            uni.removeStorageSync('prefetchPack');
           }
         })
         .catch(() => {});
@@ -1610,6 +1617,9 @@ export default {
       const adQ = adaptive && uid ? '&adaptive=1' : '';
       const grpQ = module === 'ziliao' && !submodule && !tag3 && !this.realMode ? '&grouped=1' : '';
       const tagQ = tag3 ? '&tag3=' + encodeURIComponent(tag3) : '';
+      const exclSubVal = this.excludeSz && !submodule && !tag3 && (!module || module === 'shuliang') ? '数字推理' : '';
+      const exclSubQ = exclSubVal ? '&exclude_sub=' + encodeURIComponent(exclSubVal) : '';
+      const exclMixQ = this.excludeSz && (!module || module === 'shuliang') ? '&exclude_sub=' + encodeURIComponent('数字推理') : '';
       const leadQid = this._leadQid || null;
       const leadPick = this._leadPick || null;
       this._leadQid = null;
@@ -1626,27 +1636,29 @@ export default {
           : await request(
               '/api/questions?limit=' + limit + realQ + uidQ + mixQ + adQ + grpQ + tagQ +
                 (module ? '&module=' + module : '') +
-                (submodule ? '&submodule=' + encodeURIComponent(submodule) : ''),
+                (submodule ? '&submodule=' + encodeURIComponent(submodule) : '') +
+                exclSubQ,
               { timeout: 20000 }
             );
         if (!d.items.length && tag3) {
           d = await request(
             '/api/questions?limit=' + limit + realQ + uidQ + adQ +
               (module ? '&module=' + module : '') +
-              (submodule ? '&submodule=' + encodeURIComponent(submodule) : '')
+              (submodule ? '&submodule=' + encodeURIComponent(submodule) : '') +
+              exclSubQ
           );
         }
         if (!d.items.length && submodule) {
           this.lastSubmodule = null;
-          d = await request('/api/questions?limit=' + limit + realQ + uidQ + mixQ + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + realQ + uidQ + mixQ + (module ? '&module=' + module : '') + exclMixQ);
         }
         if (!d.items.length && this.realMode && (this.realYear || this.realRegion)) {
           uni.showToast({ title: '该年份/地区暂无此模块真题，已放宽筛选', icon: 'none' });
-          d = await request('/api/questions?limit=' + limit + '&real=1' + uidQ + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + '&real=1' + uidQ + (module ? '&module=' + module : '') + exclMixQ);
         }
         if (!d.items.length && this.realMode) {
           uni.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });
-          d = await request('/api/questions?limit=' + limit + uidQ + mixQ + (module ? '&module=' + module : ''));
+          d = await request('/api/questions?limit=' + limit + uidQ + mixQ + (module ? '&module=' + module : '') + exclMixQ);
         }
         const lead = await leadP;
         const items = mergeLead(lead, d.items);

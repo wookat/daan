@@ -33,15 +33,15 @@ describe('normalizeFlag', () => {
 describe('adoptServerPracticePrefs', () => {
   it('服务端合法且与本地不同时返回差异', () => {
     const out = adoptServerPracticePrefs(
-      { groupSize: 10, timedMode: false, autoNext: true },
-      { group_size: 30, timed_mode: 1, auto_next: 0 }
+      { groupSize: 10, timedMode: false, autoNext: true, excludeSz: false },
+      { group_size: 30, timed_mode: 1, auto_next: 0, exclude_shuzituili: 1 }
     );
-    expect(out).toEqual({ groupSize: 30, timedMode: true, autoNext: false });
+    expect(out).toEqual({ groupSize: 30, timedMode: true, autoNext: false, excludeSz: true });
   });
   it('服务端与本地一致时无差异', () => {
     const out = adoptServerPracticePrefs(
-      { groupSize: 20, timedMode: true, autoNext: false },
-      { group_size: 20, timed_mode: 1, auto_next: 0 }
+      { groupSize: 20, timedMode: true, autoNext: false, excludeSz: true },
+      { group_size: 20, timed_mode: 1, auto_next: 0, exclude_shuzituili: 1 }
     );
     expect(out).toEqual({});
   });

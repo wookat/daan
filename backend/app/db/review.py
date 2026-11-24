@@ -475,7 +475,8 @@ def due_review_count(uid: str | None = None, created_before: float | None = None
 
 
 def due_mix_questions(
-    uid: str, limit: int, module: str | None = None, submodule: str | None = None, exclude: set | None = None
+    uid: str, limit: int, module: str | None = None, submodule: str | None = None, exclude: set | None = None,
+    exclude_subs: tuple[str, ...] | list[str] | None = None,
 ) -> list[dict]:
     """普通练习混入的到期错题：本 uid 未掌握且已到期（next_review NULL/≤now）、题库仍有效的行测题，
     最早到期优先；同题多条错题只取最早一条；本次练习会话（近 30 分钟）已作答过的不重出。
@@ -497,6 +498,12 @@ def due_mix_questions(
     if submodule:
         where.append("q.submodule=?")
         args.append(submodule)
+    elif exclude_subs:
+        excl_subs = tuple(sorted({s.strip() for s in exclude_subs if s and s.strip()}))
+        if excl_subs:
+            ph = ",".join("?" * len(excl_subs))
+            where.append(f"(q.submodule IS NULL OR q.submodule NOT IN ({ph}))")
+            args.extend(excl_subs)
     rows = conn.execute(
         "SELECT q.*, m.id AS due_mid, m.module AS m_module, COALESCE(m.review_streak,0) AS due_streak "
         f"FROM mistakes m JOIN questions q ON q.id=m.question_id WHERE {' AND '.join(where)} "

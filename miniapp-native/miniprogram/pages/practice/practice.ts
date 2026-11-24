@@ -327,6 +327,10 @@ Page({
         wx.removeStorageSync('redoSet');
         d = { items: Array.isArray(set) ? set : [] };
       } else {
+        const exclSub =
+          wx.getStorageSync('excludeShuzituili') && (!args.module || args.module === 'shuliang')
+            ? '数字推理'
+            : null;
         const base = {
           limit,
           module: args.module,
@@ -339,17 +343,18 @@ Page({
           grouped: args.module === 'ziliao' && !args.submodule && !args.tag3 && !args.real,
           mode: args.mode === 'reinforce' ? ('reinforce' as const) : ('' as const),
           mixDue: args.mode !== 'reinforce',
+          excludeSub: args.submodule || args.tag3 ? null : exclSub,
         };
         d = await drawQuestions(base);
         // 逐级放宽（practice.vue start 同序）：去 tag3 → 去 submodule → 去年份地区 → 去真题
-        if (!d.items.length && args.tag3) d = await drawQuestions({ ...base, tag3: null });
+        if (!d.items.length && args.tag3) d = await drawQuestions({ ...base, tag3: null, excludeSub: args.submodule ? null : exclSub });
         if (!d.items.length && args.submodule) {
           this._submodule = null;
-          d = await drawQuestions({ ...base, tag3: null, submodule: null });
+          d = await drawQuestions({ ...base, tag3: null, submodule: null, excludeSub: exclSub });
         }
         if (!d.items.length && args.real && (args.year || args.region)) {
           wx.showToast({ title: '该年份/地区暂无此模块真题，已放宽筛选', icon: 'none' });
-          d = await drawQuestions({ limit, module: args.module, real: true });
+          d = await drawQuestions({ limit, module: args.module, real: true, excludeSub: exclSub });
         }
         if (!d.items.length && args.real) {
           wx.showToast({ title: '真题还在搜集中，已切回题库模式', icon: 'none' });

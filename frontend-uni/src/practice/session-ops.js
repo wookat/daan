@@ -18,21 +18,23 @@ export const sessionOps = {
       const module = this.lastModule || '';
       const limit = this.groupSize || 10;
       const uid = uni.getStorageSync('anonUid') || '';
+      const exclSub = this.excludeSz && (!module || module === 'shuliang') ? '数字推理' : '';
       const pk = uni.getStorageSync('prefetchPack');
-      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
+      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && (pk.exclSub || '') === exclSub && Date.now() - pk.ts < 5 * 60 * 1000) return;
       const seenIds = this.items.map((q) => q.id).filter((id) => Number.isInteger(id));
       const seen = new Set(seenIds);
       // 当组未答完的到期题尚无 answer_log，服务端要靠 exclude 才不会再次混入下一组
       request(
         '/api/questions?limit=' + limit +
           (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1&exclude=' + seenIds.join(',') : '') +
-          (module ? '&module=' + module : ''),
+          (module ? '&module=' + module : '') +
+          (exclSub ? '&exclude_sub=' + encodeURIComponent(exclSub) : ''),
         { timeout: 45000 }
       )
         .then((d) => {
           const items = ((d && d.items) || []).filter((q) => !seen.has(q.id));
           // 不足一组不缓存（否则「再来一组」只出 N-1 题），交给启动时实时拉取
-          if (items.length >= limit) uni.setStorageSync('prefetchPack', { module, limit, uid, items, ts: Date.now() });
+          if (items.length >= limit) uni.setStorageSync('prefetchPack', { module, limit, uid, exclSub, items, ts: Date.now() });
         })
         .catch(() => {});
     },
@@ -42,6 +44,8 @@ export const sessionOps = {
       const pk = uni.getStorageSync('prefetchPack');
       if (!pk || !pk.items || !pk.items.length) return null;
       if (pk.module !== (module || '') || pk.limit !== limit || pk.uid !== (uid || '')) return null;
+      const wantExclSub = this.excludeSz && (!module || module === 'shuliang') ? '数字推理' : '';
+      if ((pk.exclSub || '') !== wantExclSub) return null;
       if (Date.now() - pk.ts > 10 * 60 * 1000) return null;
       uni.removeStorageSync('prefetchPack');
       return pk.items;

@@ -137,7 +137,10 @@ def today_plan(uid: str, profile=_UNSET, recommend_items: list[dict] | None = No
             })
 
     # 专项练习：优先弱项（今日主攻模块置前）
-    weak = list(recommend_items[:4]) if recommend_items is not None else db.recommend_stats(uid, top=4)["items"]
+    raw_weak = list(recommend_items) if recommend_items is not None else db.recommend_stats(uid, top=6)["items"]
+    if profile.get("exclude_shuzituili") == 1:
+        raw_weak = [w for w in raw_weak if w.get("submodule") != "数字推理"]
+    weak = raw_weak[:4]
     focus = (db.get_user_state(uid) or {}).get("focus_module") or ""
     if focus:
         weak.sort(key=lambda w: 0 if w.get("module") == focus else 1)

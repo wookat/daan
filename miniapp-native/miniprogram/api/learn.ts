@@ -52,6 +52,8 @@ export interface LearnDrawParams {
   mode?: 'reinforce' | '';
   /** 普通练习混入 ≤2 道本人到期错题（服务端在真题/考点/自适应筛选下忽略） */
   mixDue?: boolean;
+  /** 随机抽题时排除指定二级题型（如「数字推理」），逗号分隔 */
+  excludeSub?: string | null;
 }
 export function drawQuestions(p: LearnDrawParams): Promise<{ items: Question[] }> {
   let q = '/api/questions?limit=' + p.limit + '&uid=' + encodeURIComponent(anonUid());
@@ -67,13 +69,20 @@ export function drawQuestions(p: LearnDrawParams): Promise<{ items: Question[] }
   if (p.tag3) q += '&tag3=' + encodeURIComponent(p.tag3);
   if (p.module) q += '&module=' + p.module;
   if (p.submodule) q += '&submodule=' + encodeURIComponent(p.submodule);
+  const exclSub =
+    p.excludeSub !== undefined
+      ? p.excludeSub
+      : !p.submodule && !p.tag3 && (!p.module || p.module === 'shuliang') && wx.getStorageSync('excludeShuzituili')
+      ? '数字推理'
+      : null;
+  if (exclSub && !p.submodule && !p.tag3) q += '&exclude_sub=' + encodeURIComponent(exclSub);
   return request<{ items: Question[] }>(q, { timeout: 20000 });
 }
 
 export function saveGroupSize(n: number): Promise<void> {
   return request<void>('/api/profile', { method: 'POST', data: { uid: anonUid(), group_size: n } });
 }
-export function savePracticePref(key: 'auto_next' | 'timed_mode', on: boolean): Promise<void> {
+export function savePracticePref(key: 'auto_next' | 'timed_mode' | 'exclude_shuzituili', on: boolean): Promise<void> {
   return request<void>('/api/profile', { method: 'POST', data: { uid: anonUid(), [key]: on ? 1 : 0 } });
 }
 

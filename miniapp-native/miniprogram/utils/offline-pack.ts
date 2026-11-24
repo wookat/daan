@@ -64,7 +64,7 @@ export function fmtBytes(b: number): string {
 }
 
 export async function downloadPack(module: string): Promise<OfflinePack> {
-  const d = await drawQuestions({ limit: PACK_SIZE, module });
+  const d = await drawQuestions({ limit: PACK_SIZE, module, excludeSub: null });
   const items = (d.items || []).filter((q) => q.question && q.options && q.answer);
   if (!items.length) throw new Error('该模块暂无题目');
   const pack: OfflinePack = { module, ts: Date.now(), items };

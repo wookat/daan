@@ -9,7 +9,7 @@ export function normalizeFlag(v) {
   return typeof v === 'number' && (v === 0 || v === 1) ? v : null;
 }
 
-// 返回需覆盖本地的差异对象 {groupSize?, timedMode?, autoNext?}；
+// 返回需覆盖本地的差异对象 {groupSize?, timedMode?, autoNext?, excludeSz?}；
 // 服务端值缺失/非法/与本地一致时对应键不出现；不修改输入。
 export function adoptServerPracticePrefs(local, profile) {
   const out = {};
@@ -21,5 +21,7 @@ export function adoptServerPracticePrefs(local, profile) {
   if (tm != null && (tm === 1) !== !!l.timedMode) out.timedMode = tm === 1;
   const an = normalizeFlag(profile.auto_next);
   if (an != null && (an === 1) !== !!l.autoNext) out.autoNext = an === 1;
+  const es = normalizeFlag(profile.exclude_shuzituili);
+  if (es != null && (es === 1) !== !!l.excludeSz) out.excludeSz = es === 1;
   return out;
 }

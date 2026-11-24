@@ -11,14 +11,14 @@ def _cleanup():
 
 def test_practice_prefs_roundtrip(client):
     uid = "test-pprefs-uid"
-    r = client.post("/api/profile", json={"uid": uid, "group_size": 30, "timed_mode": 1, "auto_next": 0})
+    r = client.post("/api/profile", json={"uid": uid, "group_size": 30, "timed_mode": 1, "auto_next": 0, "exclude_shuzituili": 1})
     assert r.status_code == 200
     p = r.json()["profile"]
-    assert p["group_size"] == 30 and p["timed_mode"] == 1 and p["auto_next"] == 0
+    assert p["group_size"] == 30 and p["timed_mode"] == 1 and p["auto_next"] == 0 and p["exclude_shuzituili"] == 1
     # 覆盖更新
-    client.post("/api/profile", json={"uid": uid, "group_size": 50, "timed_mode": 0, "auto_next": 1})
+    client.post("/api/profile", json={"uid": uid, "group_size": 50, "timed_mode": 0, "auto_next": 1, "exclude_shuzituili": 0})
     p = client.get(f"/api/profile?uid={uid}").json()["profile"]
-    assert p["group_size"] == 50 and p["timed_mode"] == 0 and p["auto_next"] == 1
+    assert p["group_size"] == 50 and p["timed_mode"] == 0 and p["auto_next"] == 1 and p["exclude_shuzituili"] == 0
     _cleanup()
 
 
@@ -44,7 +44,7 @@ def test_group_size_validation(client):
 
 def test_flag_validation(client):
     uid = "test-pprefs-uid4"
-    for key in ("timed_mode", "auto_next"):
+    for key in ("timed_mode", "auto_next", "exclude_shuzituili"):
         for bad in (2, -1, "1", "0", 0.5, 1.0, True, False):
             r = client.post("/api/profile", json={"uid": uid, key: bad})
             assert r.status_code == 400, (key, bad)
@@ -85,8 +85,8 @@ def test_practice_prefs_legacy_schema_migration(client):
     conn.commit()
     conn.close()
     uid = "test-pprefs-legacy"
-    r = client.post("/api/profile", json={"uid": uid, "group_size": 10, "timed_mode": 1, "auto_next": 1})
+    r = client.post("/api/profile", json={"uid": uid, "group_size": 10, "timed_mode": 1, "auto_next": 1, "exclude_shuzituili": 1})
     assert r.status_code == 200
     p = client.get(f"/api/profile?uid={uid}").json()["profile"]
-    assert p["group_size"] == 10 and p["timed_mode"] == 1 and p["auto_next"] == 1
+    assert p["group_size"] == 10 and p["timed_mode"] == 1 and p["auto_next"] == 1 and p["exclude_shuzituili"] == 1
     _cleanup()

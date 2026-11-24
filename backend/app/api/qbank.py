@@ -57,6 +57,15 @@ def parse_exclude(raw: str | None, cap: int = 100) -> set[int]:
     return out
 
 
+def parse_exclude_sub(raw: str | None, cap: int = 10) -> tuple[str, ...]:
+    out: list[str] = []
+    for tok in (raw or "").split(",")[:cap]:
+        t = tok.strip()[:30]
+        if t and t not in out:
+            out.append(t)
+    return tuple(sorted(out))
+
+
 def interleave_due(items: list[dict], due: list[dict], limit: int) -> list[dict]:
     """把到期错题均匀插进新题组（不占首题，n=10/k=2 → 第 5、8 位），总量仍 ≤ limit；
     新题不足时错题只补空位不再顶掉新题。"""
@@ -195,6 +204,7 @@ def api_questions(
     mode: str | None = None,
     mix_due: int = 0,
     exclude: str | None = None,
+    exclude_sub: str | None = None,
 ):
     if mode == "reinforce" and uid:
         # 错题同考点强化：严格只出该 uid 未做过的新题，中等难度优先
@@ -211,9 +221,10 @@ def api_questions(
             "counts": db.question_counts(),
         }
     n = clamp_limit(limit, 50)
+    excl_subs = parse_exclude_sub(exclude_sub)
     items = _draw_questions(
         module, n, submodule=submodule, real_only=bool(real), year=year, region=region,
-        uid=uid, adaptive=bool(adaptive), tag3=tag3,
+        uid=uid, adaptive=bool(adaptive), tag3=tag3, exclude_subs=excl_subs,
     )
     # 到期错题混入：仅普通练习（无真题/年份/地区/考点/自适应筛选）且客户端显式 mix_due=1；
     # random_questions 排除已答过的题，普通练习本身永远抽不到自己的错题，答对推进复习只能靠这里
@@ -222,6 +233,7 @@ def api_questions(
         due = db.due_mix_questions(
             uid.strip()[:64], due_mix_slots(n), module=module, submodule=submodule,
             exclude={q["id"] for q in items} | parse_exclude(exclude),
+            exclude_subs=excl_subs,
         )
         items = interleave_due(items, due, n)
     return {"items": items, "counts": db.question_counts()}

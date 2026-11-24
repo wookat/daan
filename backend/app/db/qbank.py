@@ -10,11 +10,11 @@ from app.services import difficulty
 __all__ = ["_draw", "_pick_invalidate", "_pick_pools", "_pick_rebuild", "_pick_scan", "export_questions", "get_explain_cache", "grouped_ziliao_questions", "question_counts", "questions_by_ids", "random_questions", "rate_explain", "rate_question_hs", "real_filters", "save_explain_cache", "set_question_hs_explanation", "submodule_counts"]
 
 
-def _pick_rebuild(module, submodule, tag3, year, region):
-    key = (module, submodule, tag3, year, region)
+def _pick_rebuild(module, submodule, tag3, year, region, exclude_subs: tuple[str, ...] = ()):
+    key = (module, submodule, tag3, year, region, exclude_subs)
     try:
         conn = db.get_conn()
-        pools = _pick_scan(conn, module, submodule, tag3, year, region)
+        pools = _pick_scan(conn, module, submodule, tag3, year, region, exclude_subs)
         conn.close()
         with db._pick_lock:
             db._pick_cache[key] = (time.time(), pools)
@@ -25,10 +25,10 @@ def _pick_rebuild(module, submodule, tag3, year, region):
             db._pick_refreshing.discard(key)
 
 
-def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
+def _pick_pools(conn, module, submodule, tag3, year, region, exclude_subs: tuple[str, ...] = ()) -> dict:
     """按筛选维度缓存候选 id 池（按 is_real×has_hs 分层），使每次抽题只读 limit 行，
     不再每请求全索引 ORDER BY RANDOM() 扫描（页缓存被挤出时单次扫描可达秒级）。"""
-    key = (module, submodule, tag3, year, region)
+    key = (module, submodule, tag3, year, region, exclude_subs)
     with db._pick_lock:
         ent = db._pick_cache.get(key)
         if ent:
@@ -38,7 +38,7 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
                 # 过期先返回旧池（stale-while-revalidate），后台重建，避免用户请求承担秒级重扫
                 db._pick_refreshing.add(key)
                 threading.Thread(
-                    target=_pick_rebuild, args=(module, submodule, tag3, year, region), daemon=True
+                    target=_pick_rebuild, args=(module, submodule, tag3, year, region, exclude_subs), daemon=True
                 ).start()
             return ent[1]
     # 冷 miss：单线程构建，并发请求等锁后直接吃缓存，避免同键多请求各自全表扫描（惊群）
@@ -47,7 +47,7 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
             ent = db._pick_cache.get(key)
             if ent:
                 return ent[1]
-        pools = _pick_scan(conn, module, submodule, tag3, year, region)
+        pools = _pick_scan(conn, module, submodule, tag3, year, region, exclude_subs)
         with db._pick_lock:
             if len(db._pick_cache) >= 512:
                 db._pick_cache.clear()
@@ -55,7 +55,7 @@ def _pick_pools(conn, module, submodule, tag3, year, region) -> dict:
         return pools
 
 
-def _pick_scan(conn, module, submodule, tag3, year, region) -> dict:
+def _pick_scan(conn, module, submodule, tag3, year, region, exclude_subs: tuple[str, ...] = ()) -> dict:
     where = ["disabled=0"]
     args: list = []
     for col, val in (
@@ -68,6 +68,10 @@ def _pick_scan(conn, module, submodule, tag3, year, region) -> dict:
         if val:
             where.append(f"{col}=?")
             args.append(val)
+    if exclude_subs and not submodule and not tag3:
+        ph = ",".join("?" * len(exclude_subs))
+        where.append(f"(submodule IS NULL OR submodule NOT IN ({ph}))")
+        args.extend(exclude_subs)
     src = "questions INDEXED BY idx_q_tag3_pick" if tag3 else "questions INDEXED BY idx_q_pick"
     pools: dict = {(1, 1): [], (1, 0): [], (0, 1): [], (0, 0): []}
     for r in conn.execute(
@@ -77,9 +81,9 @@ def _pick_scan(conn, module, submodule, tag3, year, region) -> dict:
     return pools
 
 
-def _pick_invalidate(module, submodule, tag3, year, region):
+def _pick_invalidate(module, submodule, tag3, year, region, exclude_subs: tuple[str, ...] = ()):
     with db._pick_lock:
-        db._pick_cache.pop((module, submodule, tag3, year, region), None)
+        db._pick_cache.pop((module, submodule, tag3, year, region, exclude_subs), None)
 
 
 def _draw(tiers: list[list[int]], n: int, exclude: set) -> list[int]:
@@ -106,10 +110,16 @@ def random_questions(
     uid: str | None = None,
     adaptive: bool = False,
     tag3: str | None = None,
+    exclude_subs: tuple[str, ...] | list[str] | None = None,
 ) -> list[dict]:
     # limit<=0 是「不抽题」语义：混真题分层的 max(1, round(limit*0.6)) 地板在 limit=0 时会漏出 1 题
     if limit <= 0:
         return []
+    excl_subs: tuple[str, ...] = (
+        tuple(sorted({s.strip() for s in exclude_subs if s and s.strip()}))
+        if exclude_subs and not submodule and not tag3
+        else ()
+    )
     conn = db.get_conn()
     where = []
     args: list = []
@@ -162,6 +172,9 @@ def random_questions(
     if tag3:
         where.append("tag3=?")
         args.append(tag3)
+    if excl_subs:
+        where.append(f"(submodule IS NULL OR submodule NOT IN ({','.join('?' * len(excl_subs))}))")
+        args.extend(excl_subs)
     if real_only:
         where.append("is_real=1")
     if year:
@@ -183,7 +196,7 @@ def random_questions(
         src = "questions INDEXED BY idx_q_pick"
     ids: list[int] = []
     if not adaptive:
-        pools = _pick_pools(conn, module, submodule, tag3, year, region)
+        pools = _pick_pools(conn, module, submodule, tag3, year, region, excl_subs)
         real_tiers = [pools[(1, 1)], pools[(1, 0)]]
         any_tiers = [pools[(1, 1)] + pools[(0, 1)], pools[(1, 0)] + pools[(0, 0)]]
         exclude: set = set(done)
@@ -223,6 +236,8 @@ def random_questions(
                 base_args.append(submodule)
             if tag3:
                 base_args.append(tag3)
+            if excl_subs:
+                base_args.extend(excl_subs)
             if year:
                 base_args.append(year)
             if region:
@@ -247,7 +262,7 @@ def random_questions(
         else []
     )
     if len(rows) < len(ids):
-        _pick_invalidate(module, submodule, tag3, year, region)
+        _pick_invalidate(module, submodule, tag3, year, region, excl_subs)
     conn.close()
     by_id = {}
     for r in rows:

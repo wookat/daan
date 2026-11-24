@@ -61,7 +61,10 @@ def growth_stats(uid: str) -> dict:
     }
 
 
-def daily_plan(uid: str, recommend_items: list[dict] | None = None) -> dict:
+_UNSET = object()
+
+
+def daily_plan(uid: str, recommend_items: list[dict] | None = None, profile=_UNSET) -> dict:
     """昨日学习摘要 + 今日推荐（规则版：待复习错题 + 弱项题型）。"""
     conn = db.get_conn()
     db._ensure_answer_log(conn)
@@ -92,7 +95,11 @@ def daily_plan(uid: str, recommend_items: list[dict] | None = None) -> dict:
     conn.close()
     state = db.get_user_state(uid)
     focus = (state or {}).get("focus_module") or ""
+    if profile is _UNSET:
+        profile = db.get_user_profile(uid)
     weak = list(recommend_items) if recommend_items is not None else db.recommend_stats(uid, top=6)["items"]
+    if profile and profile.get("exclude_shuzituili") == 1:
+        weak = [w for w in weak if w.get("submodule") != "数字推理"]
     if focus:
         weak.sort(key=lambda w: 0 if w.get("module") == focus else 1)
     return {

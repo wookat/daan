@@ -23,6 +23,10 @@
         <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
         <kg-chip-row size="sm" options="{{groupOpts}}" value="{{groupSize}}" scrollToSelected="{{false}}" bind:change="onGroup" />
       </view>
+      <view class="setrow">
+        <view class="set-kwrap"><text class="set-k">数量关系题型</text><text class="set-sub">部分省考不考数字推理</text></view>
+        <kg-chip-row size="sm" options="{{szOpts}}" value="{{excludeSz}}" scrollToSelected="{{false}}" bind:change="onExcludeSz" />
+      </view>
       <text class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</text>
       <kg-button variant="primary" size="lg" block icon="shuffle" bind:click="onStartMixed">按以上设置开始练习（混合模块）</kg-button>
     </kg-card>
@@ -86,17 +90,28 @@
   <view class="sub-list">
     <kg-card clickable chevron class="sub-chip is-all" padding="{{12}}" bind:click="onSubAll">
       <view class="sub-row">
-        <text class="sub-name">全部随机</text>
-        <text class="sub-n num">{{subAllN}} 题</text>
+        <view class="grow">
+          <text class="sub-name">全部随机</text>
+          <text wx:if="{{subModule === 'shuliang' && excludeSz}}" class="sub-prog">已排除数字推理</text>
+        </view>
+        <text class="sub-n num">{{subAllShown}} 题</text>
       </view>
     </kg-card>
+    <view wx:if="{{subModule === 'shuliang'}}" class="sub-filter" bind:tap="onToggleExcludeSz">
+      <view class="grow">
+        <text class="sub-filter-t">不考数字推理</text>
+        <text class="sub-filter-s">全部随机与混合刷题将跳过此题型</text>
+      </view>
+      <view class="sub-sw {{excludeSz ? 'is-on' : ''}}"><view class="sub-sw-dot" /></view>
+    </view>
     <view wx:if="{{subLoading}}" class="skel"><t-skeleton theme="paragraph" animation="gradient" /></view>
     <kg-empty wx:elif="{{subErr}}" compact icon="wifi-off" title="题型加载失败：{{subErr}}" ctaText="重试" bind:cta="onSubRetry" />
-    <kg-card wx:for="{{subs}}" wx:key="submodule" clickable chevron class="sub-chip" padding="{{12}}" data-s="{{item.submodule}}" bind:click="onSubPick">
+    <kg-card wx:for="{{subs}}" wx:key="submodule" clickable chevron class="sub-chip {{subModule === 'shuliang' && excludeSz && item.submodule === '数字推理' ? 'is-excluded' : ''}}" padding="{{12}}" data-s="{{item.submodule}}" bind:click="onSubPick">
       <view class="sub-row">
         <view class="grow">
           <text class="sub-name">{{item.submodule}}</text>
-          <text wx:if="{{item.prog}}" class="sub-prog">{{item.prog}}</text>
+          <text wx:if="{{subModule === 'shuliang' && excludeSz && item.submodule === '数字推理'}}" class="sub-prog">已从随机排除（仍可点此单练）</text>
+          <text wx:elif="{{item.prog}}" class="sub-prog">{{item.prog}}</text>
         </view>
         <text class="sub-n num">{{item.n}} 题</text>
       </view>

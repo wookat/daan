@@ -84,7 +84,7 @@ def api_profile_save(body: dict):
             if isinstance(v, bool) or not isinstance(v, int) or v not in PROFILE_GROUP_SIZES:
                 raise HTTPException(400, "每组题量无效")
             fields["group_size"] = v
-    for flag in ("timed_mode", "auto_next"):
+    for flag in ("timed_mode", "auto_next", "exclude_shuzituili"):
         if flag in body:
             v = body.get(flag)
             if v is None:
@@ -142,7 +142,7 @@ def api_home_bundle(uid: str):
     reco_items = db.recommend_stats(u, top=6)["items"]
     summary, badges = checkin_summary_and_badges(u, profile=profile)
     return {
-        "plan": db.daily_plan(u, recommend_items=reco_items),
+        "plan": db.daily_plan(u, recommend_items=reco_items, profile=profile),
         "profile": profile,
         "plan_today": plan.today_plan(u, profile=profile, recommend_items=reco_items) if profile else None,
         "badges": badges,

@@ -736,6 +736,7 @@ PROFILE_FIELDS = (
     "group_size",
     "timed_mode",
     "auto_next",
+    "exclude_shuzituili",
     "theme_mode",
     "theme_accent",
 )

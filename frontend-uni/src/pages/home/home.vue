@@ -274,6 +274,10 @@
         <view class="set-kwrap"><text class="set-k">每组题量</text><text class="set-sub">单次练习连做几道</text></view>
         <kg-chip-row size="sm" :options="groupOptions" :model-value="groupSize" :scroll-to-selected="false" @update:model-value="setGroup" />
       </view>
+      <view class="setrow">
+        <view class="set-kwrap"><text class="set-k">数量关系题型</text><text class="set-sub">部分省考不考数字推理</text></view>
+        <kg-chip-row size="sm" :options="[{ label: '包含数字推理', value: 0 }, { label: '排除数字推理', value: 1 }]" :model-value="excludeSz ? 1 : 0" :scroll-to-selected="false" @update:model-value="(v) => setExcludeSz(!!v)" />
+      </view>
       <text class="custom-note">以上设置同样作用于模块列表；模考与真题卷不受影响</text>
       <template #footer>
         <view class="sheet-acts">
@@ -301,15 +305,26 @@
       <view class="sub-list">
         <kg-card clickable chevron class="sub-chip is-all" @click="startPreset(subSelect)">
           <view class="sub-row">
-            <text class="sub-name">全部随机</text>
-            <text class="sub-n num">{{ (counts.find((c) => c.module === subSelect) || {}).n || 0 }} 题</text>
+            <view class="grow">
+              <text class="sub-name">全部随机</text>
+              <text v-if="subSelect === 'shuliang' && excludeSz" class="sub-prog">已排除数字推理</text>
+            </view>
+            <text class="sub-n num">{{ subAllCount }} 题</text>
           </view>
         </kg-card>
-        <kg-card v-for="s in submodules" :key="s.submodule" clickable chevron class="sub-chip" @click="startPreset(subSelect, s.submodule)">
+        <view v-if="subSelect === 'shuliang'" class="sub-filter" role="switch" :aria-checked="excludeSz ? 'true' : 'false'" @click="setExcludeSz(!excludeSz)">
+          <view class="grow">
+            <text class="sub-filter-t">不考数字推理</text>
+            <text class="sub-filter-s">全部随机与混合刷题将跳过此题型</text>
+          </view>
+          <view class="sub-sw" :class="{ 'is-on': excludeSz }"><view class="sub-sw-dot" /></view>
+        </view>
+        <kg-card v-for="s in submodules" :key="s.submodule" clickable chevron class="sub-chip" :class="{ 'is-excluded': subSelect === 'shuliang' && excludeSz && s.submodule === '数字推理' }" @click="startPreset(subSelect, s.submodule)">
           <view class="sub-row">
             <view class="grow">
               <text class="sub-name">{{ s.submodule }}</text>
-              <text v-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round((100 * subProg[s.submodule].c) / subProg[s.submodule].n) }}%</text>
+              <text v-if="subSelect === 'shuliang' && excludeSz && s.submodule === '数字推理'" class="sub-prog">已从随机排除（仍可点此单练）</text>
+              <text v-else-if="subProg[s.submodule]" class="sub-prog">已做 {{ subProg[s.submodule].n }} 题 · 正确率 {{ Math.round((100 * subProg[s.submodule].c) / subProg[s.submodule].n) }}%</text>
             </view>
             <text class="sub-n num">{{ s.n }} 题</text>
           </view>
@@ -367,6 +382,7 @@ export default {
       realYear: uni.getStorageSync('realYear') || null,
       realRegion: uni.getStorageSync('realRegion') || null,
       groupSize: uni.getStorageSync('groupSize') || 10,
+      excludeSz: uni.getStorageSync('excludeShuzituili') ? true : false,
       dailyGoal: uni.getStorageSync('dailyGoal') || 20,
       announce: undefined,
       annOpen: false,
@@ -398,6 +414,12 @@ export default {
     },
     groupOptions() {
       return [10, 20, 30, 50].map((n) => ({ label: String(n), value: n }));
+    },
+    subAllCount() {
+      const total = (this.counts.find((c) => c.module === this.subSelect) || {}).n || 0;
+      if (this.subSelect !== 'shuliang' || !this.excludeSz) return total;
+      const sz = (this.submodules || []).find((s) => s.submodule === '数字推理');
+      return Math.max(0, total - ((sz && sz.n) || 0));
     },
     showLanding() {
       if (this.landingHide) return false;
@@ -519,6 +541,7 @@ export default {
     this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
     this.daily = uni.getStorageSync('dailyPlan') || { days: {} };
     this.groupSize = uni.getStorageSync('groupSize') || 10;
+    this.excludeSz = uni.getStorageSync('excludeShuzituili') ? true : false;
     this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
     if (!this.counts.length) this.counts = uni.getStorageSync('countsSnap') || [];
     this.loadCounts();
@@ -626,15 +649,17 @@ export default {
       if (module === 'ziliao') return;
       const limit = this.groupSize || 10;
       const uid = anonUid() || '';
+      const exclSub = this.excludeSz && (!module || module === 'shuliang') ? '数字推理' : '';
       const pk = uni.getStorageSync('prefetchPack');
-      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && Date.now() - pk.ts < 5 * 60 * 1000) return;
+      if (pk && pk.module === module && pk.limit === limit && pk.uid === uid && (pk.exclSub || '') === exclSub && Date.now() - pk.ts < 5 * 60 * 1000) return;
       request(
         '/api/questions?limit=' + limit + (uid ? '&uid=' + encodeURIComponent(uid) + '&mix_due=1' : '') +
-          (module ? '&module=' + module : ''),
+          (module ? '&module=' + module : '') +
+          (exclSub ? '&exclude_sub=' + encodeURIComponent(exclSub) : ''),
         { timeout: 15000 }
       )
         .then((d) => {
-          if (d.items && d.items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, items: d.items, ts: Date.now() });
+          if (d.items && d.items.length) uni.setStorageSync('prefetchPack', { module, limit, uid, exclSub, items: d.items, ts: Date.now() });
         })
         .catch(() => {});
     },
@@ -1009,11 +1034,23 @@ export default {
       uni.setStorageSync('groupSize', n);
       request('/api/profile', { method: 'POST', data: { uid: anonUid(), group_size: n } }).catch(() => {});
     },
+    setExcludeSz(v) {
+      this.excludeSz = !!v;
+      uni.setStorageSync('excludeShuzituili', v ? '1' : '');
+      uni.removeStorageSync('prefetchPack');
+      request('/api/profile', { method: 'POST', data: { uid: anonUid(), exclude_shuzituili: v ? 1 : 0 } }).catch(() => {});
+      if (this.subSelect === 'shuliang') this.prefetchModule('shuliang');
+    },
     adoptPrefs(profile) {
-      const p = adoptServerPracticePrefs({ groupSize: this.groupSize }, profile);
+      const p = adoptServerPracticePrefs({ groupSize: this.groupSize, excludeSz: this.excludeSz }, profile);
       if (p.groupSize != null) {
         this.groupSize = p.groupSize;
         uni.setStorageSync('groupSize', p.groupSize);
+      }
+      if (p.excludeSz != null) {
+        this.excludeSz = p.excludeSz;
+        uni.setStorageSync('excludeShuzituili', p.excludeSz ? '1' : '');
+        uni.removeStorageSync('prefetchPack');
       }
     },
     async loadPlan() {
@@ -1093,7 +1130,8 @@ export default {
             (this.realRegion ? '&region=' + encodeURIComponent(this.realRegion) : '')
           : '';
         const uid = uni.getStorageSync('anonUid');
-        const d = await request('/api/questions?limit=' + limit + realQ + (uid ? '&uid=' + encodeURIComponent(uid) : ''));
+        const exclQ = this.excludeSz ? '&exclude_sub=' + encodeURIComponent('数字推理') : '';
+        const d = await request('/api/questions?limit=' + limit + realQ + exclQ + (uid ? '&uid=' + encodeURIComponent(uid) : ''));
         const ids = (d.items || []).map((q) => q.id).filter(Boolean);
         if (!ids.length) throw new Error('没有可导出的题目');
         const date = new Date();
@@ -1228,6 +1266,14 @@ export default {
 .sub-list { display: flex; flex-direction: column; gap: var(--sp-8); }
 .sub-row { display: flex; align-items: center; gap: var(--sp-12); }
 .sub-chip.is-all { background: var(--brand-soft); border-color: transparent; }
+.sub-chip.is-excluded { opacity: 0.62; }
+.sub-filter { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-md); background: var(--fill); cursor: pointer; }
+.sub-filter-t { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
+.sub-filter-s { font-size: var(--fs-caption); color: var(--ink-3); }
+.sub-sw { width: 42px; height: 24px; border-radius: var(--r-full); background: var(--line-strong); padding: 2px; box-sizing: border-box; flex-shrink: 0; transition: background var(--dur-fast) var(--ease-out); display: flex; align-items: center; }
+.sub-sw.is-on { background: var(--brand); }
+.sub-sw-dot { width: 20px; height: 20px; border-radius: var(--r-full); background: var(--on-brand); transform: translateX(0); transition: transform var(--dur-fast) var(--ease-out); }
+.sub-sw.is-on .sub-sw-dot { transform: translateX(18px); }
 .sub-name { font-size: var(--fs-body); font-weight: 500; color: var(--ink); flex: 1; }
 .sub-prog { font-size: var(--fs-caption); color: var(--ink-3); }
 .sub-n { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }
