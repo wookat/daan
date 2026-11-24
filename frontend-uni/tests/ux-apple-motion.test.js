@@ -137,4 +137,21 @@ describe('共享 UX / 动效原语与双端对齐契约', () => {
     expect(authPy).not.toContain('"无效的匿名 uid"');
     expect(ssoPy).not.toContain('并发初始化冲突');
   });
+
+  it('所有 kg-confirm-sheet 调用均绑定 :model-value 而非失效的 :open', () => {
+    const srcDir = path.join(here, '../src');
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((ent) => {
+      const p = path.join(d, ent.name);
+      return ent.isDirectory() ? walk(p) : (ent.name.endsWith('.vue') ? [p] : []);
+    });
+    const hits = [];
+    for (const f of walk(srcDir)) {
+      const txt = fs.readFileSync(f, 'utf8');
+      const matches = txt.match(/<kg-confirm-sheet\b[^>]*>/gs) || [];
+      for (const m of matches) {
+        if (/[:\s]open\s*=/.test(m)) hits.push(path.relative(srcDir, f));
+      }
+    }
+    expect(hits).toEqual([]);
+  });
 });

@@ -212,7 +212,7 @@ import { withBasePath } from '../../utils/hash-url.js';
 import { askPrefill } from '../../ask/ask-prefill.js';
 import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { MODULES } from '../../utils/module-meta.js';
-import { toastOk, toastErrFrom, showUndoToast } from '../../utils/toast.js';
+import { toastOk, toastErrFrom, showUndoToast, dismissUndoToast } from '../../utils/toast.js';
 
 const MODS = { shenlun: '申论' };
 
@@ -256,6 +256,7 @@ export default {
   },
   onUnload() {
     this._unmounted = true;
+    dismissUndoToast(true);
     clearTimeout(this.timer);
     this.timer = null;
     clearTimeout(this._copyTimer);
@@ -362,9 +363,8 @@ export default {
         text: '已清空搜索历史',
         actionText: '撤销',
         onUndo: () => {
-          if (this._unmounted) return;
-          this.hist = backup;
           uni.setStorageSync('kgSearchHist', backup);
+          if (!this._unmounted) this.hist = backup;
         },
       });
     },

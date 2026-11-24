@@ -131,7 +131,7 @@
     </kg-sheet>
 
     <kg-confirm-sheet
-      :open="leaveOpen"
+      :model-value="leaveOpen"
       title="退出当前小队？"
       desc="退出后将不再显示在队友面板中，可凭邀请码重新加入"
       confirm-text="退出小队"

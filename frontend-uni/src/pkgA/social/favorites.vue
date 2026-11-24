@@ -164,7 +164,7 @@
     </kg-sheet>
 
     <kg-confirm-sheet
-      :open="!!delFolderTarget"
+      :model-value="!!delFolderTarget"
       :title="delFolderTarget ? '删除「' + delFolderTarget.name + '」？' : ''"
       desc="夹内收藏会移回默认收藏夹"
       confirm-text="删除"
@@ -175,7 +175,7 @@
     />
 
     <kg-confirm-sheet
-      :open="!!unfavTarget"
+      :model-value="!!unfavTarget"
       title="取消收藏这道题？"
       desc="取消后可随时在题库重新收藏"
       confirm-text="取消收藏"

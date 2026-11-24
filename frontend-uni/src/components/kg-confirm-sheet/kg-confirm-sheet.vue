@@ -39,11 +39,17 @@ export default {
   methods: {
     onUpdate(v) {
       this.$emit('update:modelValue', v);
-      if (!v && !this._picked) this.$emit('cancel');
+      if (!v && !this._picked) {
+        this._picked = true;
+        this.$emit('cancel');
+      }
       if (v) this._picked = false;
     },
     onClose() {
-      if (!this._picked) this.$emit('cancel');
+      if (!this._picked) {
+        this._picked = true;
+        this.$emit('cancel');
+      }
       this._picked = false;
     },
     onConfirm() {

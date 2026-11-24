@@ -3,7 +3,7 @@
     <view class="kg-undo">
       <view class="kg-undo__in">
         <text class="kg-undo__t">{{ item.text }}</text>
-        <view class="kg-undo__btn" role="button" @click="undo">
+        <view class="kg-undo__btn" role="button" tabindex="0" @click="undo" @keydown.enter.prevent="undo" @keydown.space.prevent="undo">
           <l-icon name="undo-2" :size="16" tone="brand-text" />
           <text class="kg-undo__btn-t">{{ item.actionText }}</text>
         </view>

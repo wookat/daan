@@ -394,6 +394,7 @@ export default {
         this.qsecs++;
         if (this.leftSecs <= 0) {
           this.stopClock();
+          this.submitConfirmOpen = false;
           toastInfo('时间到，自动交卷');
           this.submit();
         }
@@ -592,7 +593,7 @@ export default {
           uni.redirectTo({ url: '/pkgA/exam/contest-report?event_id=' + this._eventId });
           return;
         } catch (e) {
-          uni.showToast({ title: '未计入比赛：' + e.message, icon: 'none', duration: 2500 });
+          uni.showToast({ title: '未计入比赛：' + humanErrorText(e, '请稍后查看'), icon: 'none', duration: 2500 });
         }
       }
       uni.hideLoading();

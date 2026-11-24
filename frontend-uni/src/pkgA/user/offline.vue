@@ -48,7 +48,7 @@
     </kg-two-col>
 
     <kg-confirm-sheet
-      :open="!!removeTarget"
+      :model-value="!!removeTarget"
       :title="removeTarget ? '删除「' + removeName + '」离线题包？' : ''"
       desc="删除后无网络时将无法使用该模块离线刷题"
       confirm-text="删除"

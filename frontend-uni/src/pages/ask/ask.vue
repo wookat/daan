@@ -1099,7 +1099,7 @@ export default {
       for (const k of Object.keys(tombs)) this.dropRemoteSession(Number(k));
     },
     dropRemoteSession(sid) {
-      request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
+      return request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
         .then(() => {
           uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), sid));
         })
@@ -1183,22 +1183,19 @@ export default {
       uni.setStorageSync('askSessions', this.sessions);
       if (s) {
         uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
-        this.dropRemoteSession(s.id);
+        const dropP = this.dropRemoteSession(s.id);
         if (s.id === (this.curSid || Number(uni.getStorageSync('askCurSid')) || 0)) this.clearCurrent();
-        showUndoToast({ text: '已删除会话', onUndo: () => this.restoreSession(s, i, wasCur, prevResults, activeSid) });
+        showUndoToast({ text: '已删除会话', onUndo: () => this.restoreSession(s, i, wasCur, prevResults, activeSid, dropP) });
       }
     },
-    restoreSession(s, i, wasCur, prevResults, prevSid) {
+    async restoreSession(s, i, wasCur, prevResults, prevSid, dropP) {
       if (!s) return;
       uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), s.id));
       const pos = Math.min(Math.max(i, 0), this.sessions.length);
       this.sessions.splice(pos, 0, s);
       uni.setStorageSync('askSessions', this.sessions);
-      request('/api/ask/sessions', {
-        method: 'POST',
-        data: { uid: anonUid(), sid: s.id, ts: s.ts, title: s.title, n: s.n, items: s.items },
-      }).catch(() => {});
       if (wasCur) {
+        if (!this._curCleared && this.results && this.results.length) this.archiveCurrent();
         this.curSid = prevSid || s.id;
         uni.setStorageSync('askCurSid', this.curSid);
         this._curCleared = false;
@@ -1206,6 +1203,11 @@ export default {
         this.persistSession();
       }
       toastOk('已恢复会话');
+      if (dropP) await dropP.catch(() => {});
+      request('/api/ask/sessions', {
+        method: 'POST',
+        data: { uid: anonUid(), sid: s.id, ts: s.ts, title: s.title, n: s.n, items: s.items },
+      }).catch(() => {});
     },
   },
 };

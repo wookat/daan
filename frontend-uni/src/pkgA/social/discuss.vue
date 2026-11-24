@@ -124,7 +124,7 @@
     </kg-sheet>
 
     <kg-confirm-sheet
-      :open="!!delTarget"
+      :model-value="!!delTarget"
       title="删除这条讨论？"
       desc="删除后将无法恢复"
       confirm-text="删除"

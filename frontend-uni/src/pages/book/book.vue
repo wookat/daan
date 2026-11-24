@@ -1566,19 +1566,20 @@ export default {
       this._favSeq = (this._favSeq || 0) + 1;
       uni.setStorageSync('favQuestions', this.favs.map(({ _open, _everOpen, ...x }) => x));
       if (!this.favs.length) this.tab = 'todo';
-      this.unfavCloud(f);
-      showUndoToast({ text: '已取消收藏', onUndo: () => this.restoreUnfav(f, i) });
+      const unfavP = this.unfavCloud(f);
+      showUndoToast({ text: '已取消收藏', onUndo: () => this.restoreUnfav(f, i, unfavP) });
     },
-    restoreUnfav(f, i) {
+    async restoreUnfav(f, i, unfavP) {
       if (!f) return;
       const pos = Math.min(Math.max(i, 0), this.favs.length);
       this.favs.splice(pos, 0, f);
       this._favSeq = (this._favSeq || 0) + 1;
       uni.setStorageSync('favQuestions', this.favs.map(({ _open, _everOpen, ...x }) => x));
       this.tab = 'fav';
-      const qid = cloudFavId(f);
-      if (qid) setFav(qid).catch(() => {});
       toastOk('已恢复收藏');
+      const resolvedQid = unfavP ? await unfavP.catch(() => null) : null;
+      const qid = cloudFavId(f) || resolvedQid;
+      if (qid) setFav(qid).catch(() => {});
     },
     // 本机收藏与云收藏（question_favs）同步取消；题库题按 id，历史无 id 条目按题干回查云列表
     async unfavCloud(f) {
@@ -1586,7 +1587,9 @@ export default {
         let qid = cloudFavId(f);
         if (!qid && f && f.question) qid = cloudFavId(f, (await fetchFavs()).items);
         if (qid) await removeFav(qid);
+        return qid || null;
       } catch (e) { /* 云端同步失败不回滚本机；下次收藏页合并仍以云端为准 */ }
+      return null;
     },
     isDue(m) {
       return !m.next_review || m.next_review <= Date.now() / 1000;
@@ -1623,7 +1626,7 @@ export default {
       try {
         await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
       } catch (e) {
-        uni.showToast({ title: '操作失败：' + (e.message || '请稍后重试'), icon: 'none' });
+        toastErrFrom(e, '操作失败，请稍后重试');
         return;
       }
       const wait = motionDuration(190);

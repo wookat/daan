@@ -329,7 +329,7 @@ import { parseWordLimit, wordState } from '../../shenlun/shenlun-words.js';
 import { adoptServerDraft } from '../../shenlun/shenlun-draft.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
 import { withBasePath } from '../../utils/hash-url.js';
-import { toastOk, toastInfo, toastErrFrom, showUndoToast } from '../../utils/toast.js';
+import { toastOk, toastInfo, toastErrFrom, showUndoToast, dismissUndoToast } from '../../utils/toast.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '热点', '金句', '案例', '政策理论', '范文', '我的笔记'];
@@ -467,6 +467,7 @@ export default {
   },
   onUnload() {
     this._unmounted = true;
+    dismissUndoToast(true);
     this.flushDraft();
     // #ifdef H5
     if (this._slKeyHandler && typeof window !== 'undefined') {
@@ -709,8 +710,11 @@ export default {
       uni.setStorageSync('slQFavs', this.qFavs);
       const uid = anonUid();
       if (uid) request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: q.id, on: r.added } }).catch(() => {});
-      if (!r.added) showUndoToast({ text: '已取消收藏题目', onUndo: () => this.toggleQFav(q) });
-      else toastOk('已收藏题目');
+      if (!r.added) showUndoToast({ text: '已取消收藏题目', onUndo: () => { if (!this.qFavIds.includes(Number(q && q.id))) this.toggleQFav(q); } });
+      else {
+        dismissUndoToast(false);
+        toastOk('已收藏题目');
+      }
     },
     async syncQFavs() {
       const uid = anonUid();
@@ -761,8 +765,11 @@ export default {
       uni.setStorageSync('slMatFavs', this.favMats);
       const uid = anonUid();
       if (uid) request('/api/shenlun/mat_favs', { method: 'POST', data: { uid, mid: m.id, on } }).catch(() => {});
-      if (!on) showUndoToast({ text: '已取消收藏素材', onUndo: () => this.toggleFav(m) });
-      else toastOk('已收藏素材');
+      if (!on) showUndoToast({ text: '已取消收藏素材', onUndo: () => { if (!this.favIds.includes(m.id)) this.toggleFav(m); } });
+      else {
+        dismissUndoToast(false);
+        toastOk('已收藏素材');
+      }
     },
     async syncFavs() {
       const uid = anonUid();

@@ -132,7 +132,14 @@ export default {
         else this._settleT = setTimeout(() => { this.settled = true; }, fallbackMs);
       } else {
         this.settled = false;
-        this.resetDrag();
+        if (this.dragDismiss) {
+          this._dragResetT = setTimeout(() => {
+            this._dragResetT = null;
+            if (!this.modelValue) this.resetDrag();
+          }, 48);
+        } else {
+          this.resetDrag();
+        }
       }
       // #ifdef H5
       if (v) {
@@ -183,6 +190,7 @@ export default {
     clearTimers() {
       if (this._settleT) { clearTimeout(this._settleT); this._settleT = null; }
       if (this._snapT) { clearTimeout(this._snapT); this._snapT = null; }
+      if (this._dragResetT) { clearTimeout(this._dragResetT); this._dragResetT = null; }
     },
     onEntered() {
       if (this._settleT) { clearTimeout(this._settleT); this._settleT = null; }
@@ -309,9 +317,13 @@ export default {
         this.dragY = ctx.sheetH + 40;
         this.setOverlayOpacity(0);
         this._snapT = setTimeout(() => {
+          this._snapT = null;
           this.$emit('update:modelValue', false);
           this.$emit('close');
-          this.resetDrag();
+          this._dragResetT = setTimeout(() => {
+            this._dragResetT = null;
+            if (!this.modelValue || this.dragDismiss) this.resetDrag();
+          }, 160);
         }, dur);
       } else {
         const dur = motionDuration(240);
