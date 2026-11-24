@@ -93,6 +93,7 @@
                   <kg-button variant="ghost" size="sm" icon="thumbs-up" @click="rate(r, true)">有用</kg-button>
                   <kg-button variant="ghost" size="sm" tone="bad" icon="thumbs-down" @click="rate(r, false)">有误</kg-button>
                 </view>
+                <kg-button v-else variant="text" size="sm" @click="r.rated = ''">重评</kg-button>
               </view>
               <!-- 追问建议 + 操作 chips -->
               <view v-if="!r.streaming" class="chips">
@@ -213,10 +214,10 @@
         class="ib-inp"
         :placeholder="results.length ? '有疑问？追问 AI' : '拍题或粘贴题目'"
         confirm-type="send"
-        :disabled="!results.length"
+        :disabled="loading"
         @confirm="sendFollowup"
       />
-      <kg-button variant="primary" size="lg" icon="send" aria-label="发送" :disabled="!results.length || !fuText.trim()" @click="sendFollowup" />
+      <kg-button variant="primary" size="lg" icon="send" aria-label="发送" :disabled="loading || !fuText.trim()" @click="sendFollowup" />
     </kg-action-bar>
 
     <!-- 新题文字输入 sheet -->
@@ -263,6 +264,7 @@
         <kg-button variant="text" size="sm" tone="bad" @click.stop="delSession(si)">删除</kg-button>
       </view>
     </kg-sheet>
+    <kg-undo-bar above-tabbar />
   </view>
 </template>
 
@@ -273,6 +275,7 @@ import { request, uploadExplain, streamExplain, filePathToB64, anonUid, hasAcces
 import { failBannerText } from '../../api/api-policy.js';
 import { isNativeApp, pickImageNative } from '../../services/native.js';
 import { setBookBadge } from '../../utils/tabbar-badge.js';
+import { toastOk, toastInfo, toastErrFrom, showUndoToast } from '../../utils/toast.js';
 import { mergeAskSessions, upsertLocalSession, addTombstone, removeTombstone, pruneTombstones, filterTombstoned, sanitizeCurItems, parseRemoteCur } from '../../ask/ask-sessions.js';
 import { askQid, askViewUrl, thinkingSecs, thinkingLabel } from '../../ask/ask-link.js';
 
@@ -298,10 +301,10 @@ export default {
       pendingQid: 0,
       recent: uni.getStorageSync('recentExplains') || [],
       simDiffOpts: [
-        { v: 'easier', t: '降干扰' },
-        { v: 'same', t: '持平' },
-        { v: 'harder', t: '加复杂度' },
-        { v: 'combo', t: '加综合度' },
+        { v: 'easier', t: '更基础' },
+        { v: 'same', t: '同难度' },
+        { v: 'harder', t: '拔高一点' },
+        { v: 'combo', t: '综合变式' },
       ],
       wenzeChips: ['这道题陷阱在哪', '换个方法怎么解', '给一道变式'],
     };
@@ -411,7 +414,7 @@ export default {
       }
     },
     handlePaste(e) {
-      if (this.loading || window.innerWidth < 1024) return;
+      if (this.loading) return;
       const items = (e.clipboardData && e.clipboardData.items) || [];
       let took = false;
       for (const it of items) {
@@ -698,10 +701,10 @@ export default {
     },
     startTimer() {
       let secs = 0;
-      this.loadingText = '⏳ AI 识题中…（0秒）';
+      this.loadingText = 'AI 识题中…（0秒）';
       this.timer = setInterval(() => {
         secs++;
-        this.loadingText = secs < 8 ? `⏳ AI 识题中…（${secs}秒）`
+        this.loadingText = secs < 8 ? `AI 识题中…（${secs}秒）`
           : secs < 25 ? `已识题，正在匹配花生十三方法…（${secs}秒）`
           : `正在生成分步讲解，马上好…（${secs}秒）`;
       }, 1000);
@@ -853,8 +856,9 @@ export default {
         });
         r.saved = true;
         this.persistSession();
+        toastOk('已存入错题本');
       } catch (e) {
-        uni.showToast({ title: '存入失败：' + ((e && e.message) || '请稍后重试'), icon: 'none' });
+        toastErrFrom(e, '存入失败，请稍后重试');
       }
     },
     openSimSeed(seed) {
@@ -910,7 +914,7 @@ export default {
         };
         this.scrollBottom();
       } catch (e) {
-        uni.showToast({ title: '出题失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '出题失败，请稍后重试');
       }
       clearInterval(t);
       if (this._simTimers) this._simTimers.delete(t);
@@ -942,14 +946,20 @@ export default {
           },
         });
         r.sim.saved = true;
-        uni.showToast({ title: '已存入错题本', icon: 'success' });
+        toastOk('已存入错题本');
       } catch (e) {
-        uni.showToast({ title: '存入失败：' + ((e && e.message) || '请稍后重试'), icon: 'none' });
+        toastErrFrom(e, '存入失败，请稍后重试');
       }
     },
-    sendFollowup() {
+    async sendFollowup() {
       const q = this.fuText.trim();
-      if (!q || !this.results.length) return;
+      if (!q || this.loading) return;
+      if (!this.results.length) {
+        if (!(await this.ensureAccess())) return;
+        this.fuText = '';
+        await this.doExplain('', null, q);
+        return;
+      }
       this.fuText = '';
       this.quickFollowup(this.results[0], q);
     },
@@ -974,7 +984,7 @@ export default {
         r.fu.push({ role: 'ai', content: ans, html: md(ans) });
         this.persistSession();
       } catch (e) {
-        uni.showToast({ title: '追问失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '追问失败，请稍后重试');
       }
       r.fuLoading = false;
       this.$forceUpdate();
@@ -1016,8 +1026,10 @@ export default {
       }, 1500);
     },
     newSession() {
+      const had = this.results.length > 0;
       this.archiveCurrent();
       this.clearCurrent();
+      if (had) toastInfo('已开启新对话，旧记录可在历史会话查看');
     },
     clearCurrent() {
       this.results = [];
@@ -1087,7 +1099,7 @@ export default {
       for (const k of Object.keys(tombs)) this.dropRemoteSession(Number(k));
     },
     dropRemoteSession(sid) {
-      request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
+      return request('/api/ask/sessions/' + sid + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
         .then(() => {
           uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), sid));
         })
@@ -1164,13 +1176,38 @@ export default {
     },
     delSession(i) {
       const s = this.sessions[i];
+      const activeSid = this.curSid || Number(uni.getStorageSync('askCurSid')) || 0;
+      const wasCur = !!(s && s.id === activeSid);
+      const prevResults = wasCur ? [...this.results] : [];
       this.sessions.splice(i, 1);
       uni.setStorageSync('askSessions', this.sessions);
       if (s) {
         uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
-        this.dropRemoteSession(s.id);
+        const dropP = this.dropRemoteSession(s.id);
         if (s.id === (this.curSid || Number(uni.getStorageSync('askCurSid')) || 0)) this.clearCurrent();
+        showUndoToast({ text: '已删除会话', onUndo: () => this.restoreSession(s, i, wasCur, prevResults, activeSid, dropP) });
       }
+    },
+    async restoreSession(s, i, wasCur, prevResults, prevSid, dropP) {
+      if (!s) return;
+      uni.setStorageSync('askDelTombs', removeTombstone(uni.getStorageSync('askDelTombs'), s.id));
+      const pos = Math.min(Math.max(i, 0), this.sessions.length);
+      this.sessions.splice(pos, 0, s);
+      uni.setStorageSync('askSessions', this.sessions);
+      if (wasCur) {
+        if (!this._curCleared && this.results && this.results.length) this.archiveCurrent();
+        this.curSid = prevSid || s.id;
+        uni.setStorageSync('askCurSid', this.curSid);
+        this._curCleared = false;
+        this.results = prevResults && prevResults.length ? prevResults : this.adoptItems(s.items);
+        this.persistSession();
+      }
+      toastOk('已恢复会话');
+      if (dropP) await dropP.catch(() => {});
+      request('/api/ask/sessions', {
+        method: 'POST',
+        data: { uid: anonUid(), sid: s.id, ts: s.ts, title: s.title, n: s.n, items: s.items },
+      }).catch(() => {});
     },
   },
 };
@@ -1207,7 +1244,7 @@ export default {
 
 /* 消息流 */
 .msgs { display: flex; flex-direction: column; }
-.msg { display: flex; margin-bottom: var(--sp-12); }
+.msg { display: flex; margin-bottom: var(--sp-12); animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
 .msg.user { justify-content: flex-end; }
 .msg.ai { justify-content: flex-start; }
 .bubble { max-width: 86%; border-radius: var(--r-lg); padding: var(--sp-12) var(--sp-16); font-size: var(--fs-body); line-height: var(--lh-body); box-sizing: border-box; }
@@ -1229,7 +1266,8 @@ export default {
 .label { font-size: var(--fs-caption); color: var(--ink-3); display: block; margin: var(--sp-12) 0 var(--sp-8); }
 .sheet-err { margin-bottom: var(--sp-12); }
 .ans-chips { display: flex; gap: var(--sp-8); }
-.ans-chip { flex: 1; min-height: var(--hit-min); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-body); font-weight: 600; color: var(--ink-2); background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r-sm); }
+.ans-chip { flex: 1; min-height: var(--hit-min); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-body); font-weight: 600; color: var(--ink-2); background: var(--card); border: 1px solid var(--line-strong); border-radius: var(--r-sm); cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard); }
+.ans-chip:active:not(.locked) { transform: scale(0.96); }
 .ans-chip.on { color: var(--brand-text); background: var(--brand-soft); border-color: var(--brand); }
 .ans-chip.ok { color: var(--ok-strong); background: var(--ok-soft); border-color: var(--ok); }
 .ans-chip.bad { color: var(--bad); background: var(--bad-soft); border-color: var(--bad); }
@@ -1237,11 +1275,16 @@ export default {
 .ans-chip.locked { cursor: default; }
 .diff-row { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; margin-top: var(--sp-8); }
 .diff-k { font-size: var(--fs-caption); color: var(--ink-3); }
-.diff-chip { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--fs-sub); }
+.diff-chip { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: var(--fs-sub); cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard); }
+.diff-chip:active { transform: scale(0.97); }
 .diff-chip.on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .wenze-row { display: flex; gap: var(--sp-8); flex-wrap: wrap; margin-top: var(--sp-8); }
-.wenze-chip { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px dashed var(--line-strong); background: transparent; color: var(--ink-2); font-size: var(--fs-sub); }
-.wenze-chip:hover { border-color: var(--brand); color: var(--brand-text); }
+.wenze-chip { display: inline-flex; align-items: center; height: var(--chip-h); padding: 0 var(--sp-12); border-radius: var(--r-full); border: 1px dashed var(--line-strong); background: transparent; color: var(--ink-2); font-size: var(--fs-sub); cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+.wenze-chip:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .wenze-chip:hover { border-color: var(--brand); color: var(--brand-text); }
+  .ds-drop:hover { border-color: var(--brand); }
+}
 .ta { width: 100%; min-height: 96px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: var(--sp-12); font-size: var(--fs-body); box-sizing: border-box; background: var(--fill); color: var(--ink); }
 .preview { width: 100%; border-radius: var(--r-sm); margin-top: var(--sp-4); }
 
@@ -1289,8 +1332,8 @@ export default {
   .ds-t { font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
   .ds-ta { flex: 1; min-height: 120px; }
   .ds-act { margin-top: var(--sp-16); }
-  .ds-drop { flex: 1; min-height: 180px; border: 2px dashed var(--brand-soft-2); border-radius: var(--r-md); background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); cursor: pointer; }
-  .ds-drop:hover { border-color: var(--brand); }
+  .ds-drop { flex: 1; min-height: 180px; border: 2px dashed var(--brand-soft-2); border-radius: var(--r-md); background: var(--brand-soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-8); cursor: pointer; transition: border-color var(--dur-fast) var(--ease-standard), transform var(--dur-instant) var(--ease-standard); }
+  .ds-drop:active { transform: scale(0.99); }
   .ds-d1 { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
   .ds-d2 { font-size: var(--fs-caption); color: var(--ink-3); }
 }

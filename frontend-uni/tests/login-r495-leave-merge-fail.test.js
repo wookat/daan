@@ -14,10 +14,10 @@ function method(name) {
 }
 
 describe('login.vue 成功后离开 + 合并失败提示', () => {
-  it('leave() 按页面栈深度分流：>1 才 navigateBack，否则 switchTab 统计页', () => {
+  it('leave() 按页面栈深度分流：>1 才 navigateBack，否则 switchTab 首页', () => {
     const body = method('leave');
     expect(body).toMatch(/if \(getCurrentPages\(\)\.length > 1\) uni\.navigateBack\(/);
-    expect(body).toMatch(/else uni\.switchTab\(\{ url: '\/pages\/stats\/stats' \}\)/);
+    expect(body).toMatch(/else uni\.switchTab\(\{ url: '\/pages\/home\/home' \}\)/);
   });
 
   it('submit / ssoLogin 成功路径都走 this.leave()，不再直接 navigateBack', () => {

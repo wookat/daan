@@ -41,6 +41,7 @@ import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs, REVIEW_SNAP_KEY, t
 import { nextReviewText, reviewVerdict, streakProgressText, similarRoom, reviewDueLeft, reviewDoneCopy } from '../../utils/review-verdict';
 import { MODULE_NAMES, modName } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
+import { confirmDanger, toastOk, toastErrFrom } from '../../utils/toast';
 
 interface MRow extends Mistake {
   modName: string;
@@ -614,26 +615,24 @@ Page({
       this.load();
     }
   },
-  onBatchDel() {
+  async onBatchDel() {
     const { selCount, batchBusy, selIds } = this.data;
     if (!selCount || batchBusy) return;
-    wx.showModal({
+    if (!(await confirmDanger({
       title: '删除选中的 ' + selCount + ' 道错题？',
       content: '删除后不可恢复，也不再进入复习队列',
-      success: async (res) => {
-        if (!res.confirm) return;
-        this.setData({ batchBusy: true });
-        try {
-          await Promise.all(Object.keys(selIds).map((id) => deleteMistake(Number(id))));
-          wx.showToast({ title: '已删除 ' + selCount + ' 题', icon: 'none' });
-        } catch (err) {
-          wx.showToast({ title: '部分删除失败：' + (err as Error).message, icon: 'none' });
-        } finally {
-          this.setData({ selIds: {}, selCount: 0, batchBusy: false });
-          this.load();
-        }
-      },
-    });
+      confirmText: '确认删除',
+    }))) return;
+    this.setData({ batchBusy: true });
+    try {
+      await Promise.all(Object.keys(selIds).map((id) => deleteMistake(Number(id))));
+      toastOk('已删除 ' + selCount + ' 题');
+    } catch (err) {
+      toastErrFrom(err, '部分删除失败，请重试');
+    } finally {
+      this.setData({ selIds: {}, selCount: 0, batchBusy: false });
+      this.load();
+    }
   },
   // ---------- AI 错题分析 ----------
   async onAiAnalysis() {
@@ -1054,19 +1053,20 @@ Page({
             },
           });
         } else if (r.tapIndex === 1) {
-          wx.showModal({
-            title: '删除收藏夹',
+          confirmDanger({
+            title: '删除收藏夹？',
             content: `删除「${name}」？夹内收藏会移回默认夹`,
-            success: async (m) => {
-              if (!m.confirm) return;
-              try {
-                await deleteFavFolder(fid);
-                if (this.data.folderId === fid) this.setData({ folderId: null });
-                this.load();
-              } catch (err) {
-                wx.showToast({ title: (err as Error).message, icon: 'none' });
-              }
-            },
+            confirmText: '删除',
+          }).then(async (ok) => {
+            if (!ok) return;
+            try {
+              await deleteFavFolder(fid);
+              if (this.data.folderId === fid) this.setData({ folderId: null });
+              toastOk('已删除收藏夹');
+              this.load();
+            } catch (err) {
+              toastErrFrom(err, '删除失败');
+            }
           });
         }
       },

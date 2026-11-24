@@ -53,8 +53,8 @@ export default {
 .kg-inv { display: flex; flex-direction: column; gap: var(--sp-4); }
 .kg-inv__row { display: flex; align-items: center; gap: var(--sp-8); height: var(--input-h); padding: 0 var(--sp-4) 0 var(--sp-12); background: var(--fill); border-radius: var(--r-sm); border: 1px solid transparent; transition: border-color var(--dur-fast) var(--ease-standard); }
 .kg-inv__row:focus-within { border-color: var(--brand); }
-.kg-inv__row.is-err { border-color: var(--bad); }
+.kg-inv__row.is-err { border-color: var(--bad); animation: kg-nudge var(--dur-sheet) var(--ease-decel); }
 .kg-inv__in { flex: 1; min-width: 0; height: 100%; font-size: var(--fs-body); color: var(--ink); letter-spacing: 2px; }
 .kg-inv__ph { color: var(--ink-4); letter-spacing: 0; }
-.kg-inv__err { font-size: var(--fs-sub); color: var(--bad-strong); padding-left: var(--sp-4); }
+.kg-inv__err { font-size: var(--fs-sub); color: var(--bad-strong); padding-left: var(--sp-4); animation: kg-fade-in var(--dur-fast) var(--ease-decel); }
 </style>

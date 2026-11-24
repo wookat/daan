@@ -8,6 +8,7 @@ import { buildMedals, type Medal } from '../../utils/kg-medals';
 import { listPacks } from '../../utils/offline-pack';
 import { loadPStats, streakDays } from '../../utils/stats';
 import { syncTabBar } from '../../utils/tabbar';
+import { confirmDanger, toastInfo, toastOk } from '../../utils/toast';
 
 Page({
   data: {
@@ -213,25 +214,26 @@ Page({
     wx.switchTab({ url: '/pages/book/book' });
   },
   onCopyUid() {
-    wx.setClipboardData({ data: this.data.uid });
+    if (!this.data.user) {
+      this.onLogin();
+      return;
+    }
+    toastInfo('云端同步已开启，更换设备登录即可恢复');
   },
   onLogin() {
     wx.navigateTo({ url: '/pages/login/login' });
   },
   async onLogout() {
-    const res = await new Promise<boolean>((resolve) => {
-      wx.showModal({
-        title: '退出登录',
-        content: '退出后回到本机匿名记录，账号数据仍保留在云端',
-        success: (r) => resolve(!!r.confirm),
-        fail: () => resolve(false),
-      });
+    const res = await confirmDanger({
+      title: '退出登录？',
+      content: '退出后回到本机匿名记录，账号数据仍保留在云端',
+      confirmText: '退出登录',
     });
     if (!res) return;
     await authLogout();
     clearAuth();
     this.setData({ badgeInfo: null, nextMilestone: null, inboxUnread: 0, pkN: 0, mistakeN: 0, mastered: 0 });
     this.refresh();
-    wx.showToast({ title: '已退出登录', icon: 'none' });
+    toastOk('已退出登录');
   },
 });

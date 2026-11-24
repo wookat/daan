@@ -46,12 +46,23 @@
         <text class="hint2">离线时进入「刷题 → 专项练习」会自动使用已下载题包出题，本地判分；错题与作答记录联网后自动同步（去重）。错题本离线可查看最近缓存内容。</text>
       </template>
     </kg-two-col>
+
+    <kg-confirm-sheet
+      :model-value="!!removeTarget"
+      :title="removeTarget ? '删除「' + removeName + '」离线题包？' : ''"
+      desc="删除后无网络时将无法使用该模块离线刷题"
+      confirm-text="删除"
+      danger
+      @confirm="confirmRemove"
+      @cancel="removeTarget = ''"
+    />
   </view>
 </template>
 
 <script>
 import { PACK_MODULES, PACK_SIZE, downloadPack, removePack, listPacks, packUsageBytes, pendingCount, flushOfflineQueue } from '../../services/offline.js';
 import { moduleMeta } from '../../utils/module-meta.js';
+import { toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 
 export default {
   data() {
@@ -64,6 +75,7 @@ export default {
       syncing: false,
       online: true,
       usageBytes: 0,
+      removeTarget: '',
     };
   },
   computed: {
@@ -74,6 +86,10 @@ export default {
     usagePct() {
       // 以 5MB 为参考上限（小程序 storage 共 10MB）
       return Math.min(100, (this.usageBytes / (5 * 1024 * 1024)) * 100);
+    },
+    removeName() {
+      const m = this.mods.find((x) => x.module === this.removeTarget);
+      return m ? m.name : this.removeTarget;
     },
     mpHint() {
       // #ifdef MP-WEIXIN
@@ -125,7 +141,7 @@ export default {
     async download(m) {
       if (this.busy) return;
       if (!this.online) {
-        uni.showToast({ title: '当前无网络，联网后再下载或更新题包', icon: 'none' });
+        toastInfo('当前无网络，联网后再下载或更新题包');
         return;
       }
       this.busy = m;
@@ -135,30 +151,28 @@ export default {
         // 预热练习页资源，配合 Service Worker 缓存，保证断网后能进入做题页
         import('../../pages/practice/practice.vue').catch(() => {});
         // #endif
-        uni.showToast({ title: '题包已就绪，可离线刷题', icon: 'none' });
+        toastOk('题包已就绪');
       } catch (e) {
-        uni.showToast({ title: '下载失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '下载失败，请稍后重试');
       }
       this.busy = '';
       this.refresh();
     },
     remove(m) {
-      uni.showModal({
-        title: '删除离线题包',
-        content: '删除后无网络时将无法使用该模块离线刷题，确定删除吗？',
-        confirmText: '删除',
-        success: (r) => {
-          if (!r.confirm) return;
-          removePack(m);
-          this.refresh();
-          uni.showToast({ title: '已删除题包', icon: 'none' });
-        },
-      });
+      this.removeTarget = m;
+    },
+    confirmRemove() {
+      const m = this.removeTarget;
+      if (!m) return;
+      removePack(m);
+      this.removeTarget = '';
+      this.refresh();
+      toastOk('已删除题包');
     },
     async syncNow() {
       if (this.syncing) return;
       if (!this.online) {
-        uni.showToast({ title: '当前无网络，联网后将自动同步', icon: 'none' });
+        toastInfo('当前无网络，联网后将自动同步');
         return;
       }
       const before = this.pending;
@@ -166,8 +180,8 @@ export default {
       await flushOfflineQueue();
       this.syncing = false;
       this.refresh();
-      if (this.pending === 0 && before > 0) uni.showToast({ title: '同步完成', icon: 'success' });
-      else if (this.pending >= before && before > 0) uni.showToast({ title: '同步暂未完成，请稍后重试', icon: 'none' });
+      if (this.pending === 0 && before > 0) toastOk('同步完成');
+      else if (this.pending >= before && before > 0) toastInfo('同步暂未完成，请稍后重试');
     },
   },
 };

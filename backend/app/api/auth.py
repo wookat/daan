@@ -7,6 +7,7 @@ from collections import OrderedDict
 import hashlib
 import hmac
 import ipaddress
+import logging
 import os
 import re
 import secrets
@@ -19,6 +20,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from app import db
 
 router = APIRouter(prefix="/api/auth")
+logger = logging.getLogger(__name__)
 
 TOKEN_TTL = 90 * 86400
 PBKDF2_ITERS = 200_000
@@ -419,7 +421,7 @@ def api_wxlogin(body: dict, request: Request):
     appid = os.environ.get("WX_MINIAPP_APPID", "wx01f2f29cfe51baba")
     secret = os.environ.get("WX_MINIAPP_SECRET", "")
     if not secret:
-        raise HTTPException(503, "微信登录暂未开通（服务端未配置小程序密钥）")
+        raise HTTPException(503, "微信登录暂未开放，请使用邮箱或手机号登录")
     rate_limit(f"wxlogin:{client_ip(request)}", 20, 300)
     try:
         r = httpx.get(
@@ -434,10 +436,12 @@ def api_wxlogin(body: dict, request: Request):
         )
         data = r.json()
     except Exception:
+        logger.warning("wx jscode2session request failed", exc_info=True)
         raise HTTPException(502, "微信登录服务暂不可用，请稍后再试") from None
     openid = data.get("openid")
     if not openid:
-        raise HTTPException(401, f"微信登录失败：{data.get('errmsg') or '无效 code'}")
+        logger.warning("wx jscode2session rejected errcode=%s errmsg=%s", data.get("errcode"), data.get("errmsg"))
+        raise HTTPException(401, "微信授权已失效，请重新点击登录")
     conn = db.get_conn()
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_phone ON users(phone)")
     placeholder = f"wx:{openid}"
@@ -515,7 +519,7 @@ def api_merge_anon(body: dict, authorization: str | None = Header(None)):
     if not anon or anon == target:
         return {"ok": True, "merged": {}, "skipped": True}
     if re.fullmatch(r"u\d+", anon):
-        raise HTTPException(400, "无效的匿名 uid")
+        raise HTTPException(400, "本机记录标识无效，请刷新后重试")
     conn = db.get_conn()
     merged = merge_uid_rows(conn, anon, target)
     conn.execute(

@@ -63,10 +63,12 @@ Page({
   async onSubmit() {
     const { mode, email, password, password2, nickname, busy } = this.data;
     if (busy) return;
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(cleanEmail)) {
       this.setData({ err: '请输入正确的邮箱地址' });
       return;
     }
+    if (cleanEmail !== email) this.setData({ email: cleanEmail });
     if (password.length < 6) {
       this.setData({ err: '密码至少 6 位' });
       return;
@@ -80,8 +82,8 @@ Page({
       const anon = wx.getStorageSync<string>('anonUid') || '';
       const r =
         mode === 'login'
-          ? await authLogin(email, password)
-          : await authRegister(email, password, nickname.trim());
+          ? await authLogin(cleanEmail, password)
+          : await authRegister(cleanEmail, password, nickname.trim());
       setAuth(r.token, r.user);
       if (mode === 'register') {
         const src = wx.getStorageSync<string>('regSource');
@@ -97,7 +99,12 @@ Page({
       }
       setTimeout(() => wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/profile/profile' }) }), 1200);
     } catch (e) {
-      this.setData({ err: (e as Error).message });
+      const msg = (e as Error).message || '请求失败';
+      if (mode === 'register' && /已注册|409/.test(msg)) {
+        this.setData({ mode: 'login', password2: '', err: '该邮箱已注册，已为你切换到登录，直接点登录即可' });
+      } else {
+        this.setData({ err: msg });
+      }
     } finally {
       this.setData({ busy: false });
     }

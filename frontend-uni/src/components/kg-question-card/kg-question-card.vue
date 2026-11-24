@@ -3,7 +3,7 @@
     <view v-if="showMeta" class="kg-q__meta">
       <kg-tag v-if="q.module" tone="module" :module="q.module">{{ modLabel }}</kg-tag>
       <text v-if="q.tag3" class="kg-q__kp" role="button" @click="$emit('tag', q.tag3)">{{ q.tag3 }}</text>
-      <text v-if="stars" class="kg-q__stars" aria-label="难度">{{ stars }}</text>
+      <text v-if="stars && !q.difficultyLabel" class="kg-q__stars" aria-label="难度">{{ stars }}</text>
       <kg-tag v-if="q.difficultyLabel" :tone="diffTone">难度·{{ q.difficultyLabel }}</kg-tag>
       <text v-if="accText" class="kg-q__acc num">{{ accText }}</text>
       <kg-tag v-if="q.isReal" tone="warn">真题</kg-tag>
@@ -13,9 +13,11 @@
       <view class="kg-q__mat-hd" role="button" :aria-expanded="matOpen ? 'true' : 'false'" @click="matOpen = !matOpen">
         <kg-tag v-if="q.groupSeq" tone="neutral">同材料题组 {{ q.groupSeq }}</kg-tag>
         <text class="kg-q__mat-t">材料</text>
-        <l-icon :name="matOpen ? 'chevron-down' : 'chevron-right'" :size="16" tone="muted" />
+        <l-icon class="kg-q__mat-ico" :class="{ 'is-open': matOpen }" name="chevron-right" :size="16" tone="muted" />
       </view>
-      <text v-show="matOpen" class="kg-q__mat-b q-text">{{ q.material }}</text>
+      <kg-collapse :open="matOpen">
+        <text class="kg-q__mat-b q-text">{{ q.material }}</text>
+      </kg-collapse>
     </view>
     <view class="kg-q__stem q-text" :style="{ fontSize: stemSize }">
       <text v-if="total" class="kg-q__idx num">{{ index + 1 }}.</text>
@@ -83,6 +85,15 @@ export default {
 .kg-q__mat { background: var(--fill); border-radius: var(--r-sm); padding: var(--sp-8) var(--sp-12); margin-bottom: var(--sp-12); }
 .kg-q__mat-hd { display: flex; align-items: center; gap: var(--sp-8); min-height: 28px; }
 .kg-q__mat-t { flex: 1; font-size: var(--fs-sub); color: var(--ink-3); }
+.kg-q__mat-ico { transition: transform var(--dur-fast) var(--ease-standard); }
+.kg-q__mat-ico.is-open { transform: rotate(90deg); }
+.kg-q__kp { transition: color var(--dur-fast) var(--ease-standard); }
+/* #ifdef H5 */
+.kg-q__mat-hd, .kg-q__kp { cursor: pointer; }
+@media (hover: hover) and (pointer: fine) {
+  .kg-q__kp:hover { color: var(--brand-text); text-decoration: underline; }
+}
+/* #endif */
 .kg-q__mat-b { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink-2); line-height: var(--lh-question); }
 .kg-q__stem { color: var(--ink); line-height: var(--lh-question); }
 .kg-q__idx { color: var(--ink-3); margin-right: var(--sp-4); }

@@ -113,7 +113,7 @@
           <view class="gw-row" v-for="w in growthRows" :key="w.week">
             <text class="gw-wk">{{ w.label }}</text>
             <view class="bar thin">
-              <view class="fill is-ok" :class="{ 'is-bad': w.pct < 60, 'is-warn': w.pct >= 60 && w.pct < 80 }" :style="{ width: w.pct + '%' }" />
+              <view class="fill is-ok" :class="{ 'is-bad': w.pct < 60, 'is-warn': w.pct >= 60 && w.pct < 80 }" :style="{ transform: 'scaleX(' + (Math.max(0, Math.min(100, w.pct)) / 100) + ')' }" />
             </view>
             <text class="gw-pct num">{{ w.pct }}%<text class="gw-n">（{{ w.n }}题）</text></text>
           </view>
@@ -151,7 +151,7 @@
           <kg-echart :option="speedOption" :height="170" />
           <view class="trend-x">
             <text>旧</text>
-            <text>近 {{ speedData.length }} 次平均 {{ speedAvg }}s/题（越短越好）</text>
+            <text>近 {{ speedData.length }} 次平均 {{ speedAvg }}s/题（越快越稳）</text>
             <text>新</text>
           </view>
         </kg-card>
@@ -197,7 +197,9 @@
           </kg-section-header>
           <view class="medals">
             <view v-for="md in medals" :key="md.name" class="medal" :class="{ 'is-got': md.got }">
-              <view class="m-ring" :style="medalRingStyle(md)"><view class="m-ring-in"><l-icon :name="md.icon" :size="22" :tone="md.got ? 'warn' : 'faint'" /></view></view>
+              <kg-progress shape="ring" :size="48" :value="md.got ? 100 : (md.pct || 0)" :tone="md.got ? 'warn' : 'muted'" class="m-ring" :aria-label="md.name + (md.got ? ' 已达成' : '')">
+                <l-icon :name="md.icon" :size="20" :tone="md.got ? 'warn' : 'faint'" />
+              </kg-progress>
               <text class="m-name">{{ md.name }}</text>
               <text class="m-sub">{{ md.got ? '已达成' : md.progress }}</text>
             </view>
@@ -237,10 +239,12 @@
         <!-- 掌握度地图入口 -->
         <kg-card class="sec" clickable chevron @click="goMasteryMap">
           <view class="km-entry">
-            <view class="km-cov" :style="kmCovStyle"><view class="km-cov-in num">{{ kmCov != null ? kmCov + '%' : '--' }}</view></view>
+            <kg-progress shape="ring" :size="48" :value="kmCov || 0" class="km-ring" aria-label="考点覆盖率">
+              <text class="km-cov-t num">{{ kmCov != null ? kmCov + '%' : '--' }}</text>
+            </kg-progress>
             <view class="grow">
               <text class="km-entry-t">考点掌握度地图</text>
-              <text class="km-entry-s">三级考点五档色阶，看清每个考点的掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
+              <text class="km-entry-s">按一级到三级考点看清每处掌握度{{ kmCov != null ? '，已覆盖 ' + kmCov + '% 考点' : '' }}</text>
             </view>
           </view>
         </kg-card>
@@ -280,12 +284,19 @@
         <!-- 错因分布 -->
         <kg-card v-if="byReason.length" class="sec">
           <kg-section-header title="错因分布" />
-          <view v-for="r in byReason" :key="r.error_reason" class="brow">
+          <view
+            v-for="r in byReason"
+            :key="r.error_reason"
+            class="brow brow-link"
+            role="button"
+            :aria-label="'查看' + r.error_reason + '错题'"
+            @click="goReasonBook(r.error_reason)"
+          >
             <view class="blabel">
               <text>{{ r.error_reason }}</text>
-              <text class="bn num">×{{ r.n }}</text>
+              <text class="bn num">×{{ r.n }} ›</text>
             </view>
-            <view class="bar"><view class="fill is-warn" :style="{ width: (r.n / reasonTotal) * 100 + '%' }" /></view>
+            <view class="bar"><view class="fill is-warn" :style="{ transform: 'scaleX(' + (reasonTotal ? Math.min(1, r.n / reasonTotal) : 0) + ')' }" /></view>
           </view>
         </kg-card>
 
@@ -293,7 +304,7 @@
         <kg-card v-if="slStats && slStats.total" class="sec">
           <kg-section-header title="申论学习" more="作答记录" @more="goShenlun" />
           <view class="sl-row">
-            <text class="sl-num num">{{ slStats.total }}</text>
+            <kg-number :value="slStats.total" class="sl-num" />
             <text class="sl-lab">次 AI 批改</text>
             <text v-if="slStats.last_at" class="sl-last">最近 {{ slLast }}</text>
           </view>
@@ -305,13 +316,13 @@
               <text>近期问题点（{{ slStats.issues.length }}）</text>
               <l-icon name="chevron-down" :size="16" tone="muted" class="chev" :class="{ 'is-open': slIssuesOpen }" />
             </view>
-            <view v-if="slIssuesOpen">
+            <kg-collapse :open="slIssuesOpen">
               <view v-for="(it, i) in slStats.issues" :key="i" class="sl-issue">
                 <kg-tag :tone="it.kind === '提升建议' ? 'warn' : 'bad'">{{ it.kind === '提升建议' ? '建议' : '遗漏' }}</kg-tag>
                 <text class="sl-it">{{ it.text }}</text>
               </view>
               <text class="note">来自你最近的 AI 批改结果，供针对性强化</text>
-            </view>
+            </kg-collapse>
           </template>
         </kg-card>
       </template>
@@ -326,11 +337,12 @@ import { examTrend } from '../../exam/exam-trend.js';
 import { snapshotViewMixin } from '../../practice/snapshot-view.js';
 import { setBookBadge } from '../../utils/tabbar-badge.js';
 import { visColors } from '../../utils/vis-colors.js';
+import { motionDuration } from '../../a11y/a11y-motion.js';
 
 // 统一柱状图底座：带坐标虚线、悬停提示与数值标签
 function barOption(c, data, { yMax = 100, labels = null, markY = null, markLabel = '', unit = '', showLabel = false } = {}) {
   return {
-    animationDuration: 400,
+    animationDuration: motionDuration(360),
     tooltip: {
       trigger: 'axis',
       confine: true,
@@ -707,10 +719,6 @@ export default {
     hasRadar() {
       return this.axes.some((a) => a.n > 0);
     },
-    kmCovStyle() {
-      const pct = this.kmCov || 0;
-      return { background: `conic-gradient(var(--brand) 0% ${pct}%, var(--brand-soft) ${pct}% 100%)` };
-    },
     subMap() {
       const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断' };
       const bySub = this.pstats.bySub || {};
@@ -732,7 +740,7 @@ export default {
       void this.themeTick;
       const c = visColors();
       return {
-        animationDuration: 400,
+        animationDuration: motionDuration(360),
         radar: {
           indicator: this.axes.map((a) => ({ name: `${a.name} ${a.n ? a.pct + '%' : '未练'}`, max: 100 })),
           radius: '60%',
@@ -955,13 +963,12 @@ export default {
       const mod = (t && t.module) || (m ? MAP[m[1]] : '');
       this.goPractice(mod || '');
     },
-    medalRingStyle(md) {
-      const color = md.got ? 'var(--warn)' : 'var(--ink-4)';
-      const pct = md.got ? 100 : md.pct;
-      return { background: `conic-gradient(${color} 0% ${pct}%, var(--fill) ${pct}% 100%)` };
-    },
     goBook() {
       uni.setStorageSync('autoStartReview', 1);
+      uni.switchTab({ url: '/pages/book/book' });
+    },
+    goReasonBook(reason) {
+      if (reason) uni.setStorageSync('bookRzIntent', reason);
       uni.switchTab({ url: '/pages/book/book' });
     },
     async loadMastery() {
@@ -1135,20 +1142,22 @@ export default {
 .radar-side :deep(.kg-btn) { margin-top: var(--sp-8); }
 
 /* 分布条 */
-.mrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 56px; border-bottom: 1px solid var(--line); }
+.mrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 56px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .mrow:last-of-type { border-bottom: none; }
 .mrow-main { flex: 1; min-width: 0; }
 .brow { margin: var(--sp-8) 0; }
+.brow-link { cursor: pointer; padding: var(--sp-4) 0; border-radius: var(--r-xs); transition: transform var(--dur-instant) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard); }
+.brow-link:active, .top-chip:active, .km-chip:active { transform: scale(0.985); }
 .blabel { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-sub); color: var(--ink); margin-bottom: var(--sp-4); }
 .bn { font-size: var(--fs-caption); color: var(--ink-3); }
 .bar { background: var(--prog-track); border-radius: var(--r-full); height: 8px; position: relative; overflow: hidden; }
 .bar.thin { height: 6px; flex: 1; }
-.fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brand); border-radius: var(--r-full); transition: width var(--dur-slow) var(--ease-standard); }
+.fill { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; transform-origin: left center; will-change: transform; background: var(--brand); border-radius: var(--r-full); transition: transform var(--dur-slow) var(--ease-decel); }
 .fill.is-ok { background: var(--ok); }
 .fill.is-warn { background: var(--warn); }
 .fill.is-bad { background: var(--bad); }
 .top-chips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
-.top-chip { display: flex; align-items: center; gap: var(--sp-4); background: var(--brand-soft); border-radius: var(--r-full); padding: 0 var(--sp-12); min-height: 32px; }
+.top-chip { display: flex; align-items: center; gap: var(--sp-4); background: var(--brand-soft); border-radius: var(--r-full); padding: 0 var(--sp-12); min-height: 32px; cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard); }
 .tc-name { font-size: var(--fs-sub); color: var(--brand-text); font-weight: 600; }
 .tc-n { font-size: var(--fs-caption); color: var(--ink-3); }
 .top-chip.is-more { background: var(--fill); color: var(--ink-2); font-size: var(--fs-sub); font-weight: 600; }
@@ -1159,8 +1168,7 @@ export default {
 .medal { width: 25%; box-sizing: border-box; text-align: center; padding: var(--sp-8) var(--sp-4); }
 .medal .m-name { color: var(--ink-3); }
 .medal.is-got .m-name { color: var(--ink); }
-.m-ring { width: 44px; height: 44px; border-radius: var(--r-full); margin: 0 auto var(--sp-4); display: flex; align-items: center; justify-content: center; }
-.m-ring-in { width: 36px; height: 36px; border-radius: var(--r-full); background: var(--card); display: flex; align-items: center; justify-content: center; }
+.m-ring { margin: 0 auto var(--sp-4); }
 .m-name { display: block; font-size: var(--fs-caption); font-weight: 600; margin-top: var(--sp-4); }
 .m-sub { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
 
@@ -1168,8 +1176,8 @@ export default {
 .km-entry { display: flex; align-items: center; gap: var(--sp-12); padding-right: var(--sp-24); }
 .km-entry-t { display: block; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
 .km-entry-s { display: block; font-size: var(--fs-caption); color: var(--ink-3); margin-top: 2px; }
-.km-cov { width: 46px; height: 46px; border-radius: var(--r-full); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.km-cov-in { width: 34px; height: 34px; border-radius: var(--r-full); background: var(--card); display: flex; align-items: center; justify-content: center; font-size: var(--fs-caption); font-weight: 600; color: var(--brand-text); }
+.km-ring { flex-shrink: 0; }
+.km-cov-t { font-size: var(--fs-caption); font-weight: 600; color: var(--brand-text); }
 .km-group { margin-bottom: var(--sp-12); }
 .km-mod { display: block; font-size: var(--fs-sub); font-weight: 600; color: var(--ink-2); margin-bottom: var(--sp-4); }
 .km-items { display: flex; flex-wrap: wrap; gap: var(--sp-8); }

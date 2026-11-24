@@ -249,15 +249,15 @@ export default {
 .pct { font-size: var(--fs-h2); font-weight: 600; color: var(--ink); flex-shrink: 0; }
 .pct.hi { color: var(--ok-strong); }
 .pct.lo { color: var(--bad-strong); }
-.arrow { flex-shrink: 0; transition: transform var(--dur-fast); }
+.arrow { flex-shrink: 0; transition: transform var(--dur-fast) var(--ease-standard); }
 .arrow.open { transform: rotate(90deg); }
 
-.detail { border-top: 1px solid var(--line); margin-top: var(--sp-12); padding-top: var(--sp-8); }
+.detail { border-top: 1px solid var(--line); margin-top: var(--sp-12); padding-top: var(--sp-8); animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
 .d-item { border-bottom: 1px solid var(--line); }
 .d-item:last-of-type { border-bottom: none; }
 .d-row { display: flex; align-items: flex-start; gap: var(--sp-8); padding: var(--sp-12) 0; }
 .d-mark { flex-shrink: 0; margin-top: 2px; }
-.d-exp { padding: 0 0 var(--sp-12) var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-8); }
+.d-exp { padding: 0 0 var(--sp-12) var(--sp-24); display: flex; flex-direction: column; gap: var(--sp-8); animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
 .d-img, .d-oimg { max-width: 100%; border-radius: var(--r-sm); display: block; }
 .d-opt-row { display: flex; flex-direction: column; gap: var(--sp-4); }
 .d-oimgs { display: flex; flex-wrap: wrap; gap: var(--sp-8); }

@@ -8,7 +8,7 @@ import { getToken } from '../../utils/auth';
 import { dropFavItem } from '../../utils/fav-list';
 import { favModulePlan } from '../../utils/fav-module-opts';
 import { MODULE_KEYS, MODULES, moduleLabel } from '../../utils/module-meta';
-import { toastInfo } from '../../utils/toast';
+import { confirmDanger, toastErrFrom, toastInfo, toastOk } from '../../utils/toast';
 
 // 收藏页模块筛选项：题库 5 模块（module-meta 单一来源）+ 本地时政收藏
 const MOD_KEYS = [...MODULE_KEYS, '时政'];
@@ -82,11 +82,17 @@ Page({
     modOpts: [{ label: '全部模块', value: '' }],
     modChipsVisible: false,
     curFolderName: '全部收藏',
+    folderOpsOpen: false,
+    folderOpsTitle: '收藏夹操作',
+    moveOpen: false,
+    moveFolderId: null as number | null,
   },
 
   items: [] as FavQ[],
   open: {} as Record<string, boolean>,
   pendingFolder: null as number | null,
+  _opsFolder: null as FavFolder | null,
+  _moveItem: null as FavQ | null,
 
   onLoad(opts: Record<string, string>) {
     if (opts.mod) this.setData({ modFilter: opts.mod });
@@ -229,42 +235,45 @@ Page({
     const fid = Number(e.currentTarget.dataset.fid);
     const f = this.data.folders.find((x) => x.id === fid);
     if (!f || !f.id) return; // 默认夹不可改
-    wx.showActionSheet({
-      itemList: ['重命名', '删除（夹内收藏移回默认夹）'],
-      success: (r) => {
-        if (r.tapIndex === 0) {
-          wx.showModal({
-            title: '重命名收藏夹',
-            editable: true,
-            placeholderText: f.name,
-            success: async (m) => {
-              if (!m.confirm || !m.content) return;
-              try {
-                await renameFavFolder(f.id, m.content.trim());
-                this.load();
-              } catch (err) {
-                toastInfo((err as Error).message);
-              }
-            },
-          });
-        } else if (r.tapIndex === 1) {
-          wx.showModal({
-            title: `删除「${f.name}」？`,
-            content: '夹内收藏会移回默认收藏夹',
-            success: async (m) => {
-              if (!m.confirm) return;
-              try {
-                await deleteFavFolder(f.id);
-                if (this.data.folderId === f.id) this.setData({ folderId: null });
-                this.load();
-              } catch (err) {
-                toastInfo((err as Error).message);
-              }
-            },
-          });
+    this._opsFolder = f;
+    this.setData({ folderOpsOpen: true, folderOpsTitle: f.name });
+  },
+  onCloseFolderOps() {
+    this.setData({ folderOpsOpen: false });
+  },
+  onSheetRenameFolder() {
+    const f = this._opsFolder;
+    this.setData({ folderOpsOpen: false });
+    if (!f) return;
+    wx.showModal({
+      title: '重命名收藏夹',
+      editable: true,
+      placeholderText: f.name,
+      success: async (m) => {
+        if (!m.confirm || !m.content) return;
+        try {
+          await renameFavFolder(f.id, m.content.trim());
+          toastOk('已重命名');
+          this.load();
+        } catch (err) {
+          toastErrFrom(err, '重命名失败');
         }
       },
     });
+  },
+  async onSheetDeleteFolder() {
+    const f = this._opsFolder;
+    this.setData({ folderOpsOpen: false });
+    if (!f) return;
+    if (!(await confirmDanger({ title: `删除「${f.name}」？`, content: '夹内收藏会移回默认收藏夹', confirmText: '删除' }))) return;
+    try {
+      await deleteFavFolder(f.id);
+      if (this.data.folderId === f.id) this.setData({ folderId: null });
+      toastOk('已删除收藏夹');
+      this.load();
+    } catch (err) {
+      toastErrFrom(err, '删除失败');
+    }
   },
 
   rowOf(e: WechatMiniprogram.BaseEvent): FavQ | undefined {
@@ -304,21 +313,26 @@ Page({
   onMove(e: WechatMiniprogram.BaseEvent) {
     const it = this.rowOf(e);
     if (!it || it.id == null) return;
-    const folders = this.data.folders;
-    wx.showActionSheet({
-      itemList: folders.map((f) => (f.icon || '') + ' ' + f.name),
-      success: async (r) => {
-        const f = folders[r.tapIndex];
-        try {
-          await setFav(it.id as number, f.id || null);
-          it.folder_id = f.id;
-          this.load();
-          toastInfo('已移入「' + f.name + '」');
-        } catch (err) {
-          toastInfo((err as Error).message);
-        }
-      },
-    });
+    this._moveItem = it;
+    this.setData({ moveOpen: true, moveFolderId: it.folder_id ?? 0 });
+  },
+  onCloseMove() {
+    this.setData({ moveOpen: false });
+  },
+  async onConfirmMove(e: WechatMiniprogram.BaseEvent) {
+    const it = this._moveItem;
+    const fid = Number(e.currentTarget.dataset.fid);
+    const f = this.data.folders.find((x) => x.id === fid);
+    this.setData({ moveOpen: false });
+    if (!it || !f) return;
+    try {
+      await setFav(it.id as number, f.id || null);
+      it.folder_id = f.id;
+      this.load();
+      toastOk('已移入「' + f.name + '」');
+    } catch (err) {
+      toastErrFrom(err, '移动失败');
+    }
   },
 
   onDiscuss(e: WechatMiniprogram.BaseEvent) {
@@ -327,29 +341,24 @@ Page({
     wx.navigateTo({ url: '/pkgSocial/discuss/discuss?qid=' + it.id });
   },
 
-  onUnfav(e: WechatMiniprogram.BaseEvent) {
+  async onUnfav(e: WechatMiniprogram.BaseEvent) {
     const it = this.rowOf(e);
     if (!it) return;
-    wx.showModal({
-      title: '取消收藏这道题？',
-      success: async (r) => {
-        if (!r.confirm) return;
-        try {
-          if (!it._local) await deleteFav(it.id as number);
-          // 云条目也清本机同题（题页/报告页收藏同时写本机 favQuestions 与云端，只删云端的话 load() 合并时会以本机条目复活），与 H5 同口径
-          const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
-          wx.setStorageSync('favQuestions', locals);
-          // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
-          const next = dropFavItem(this.items, this.data.folders, it);
-          this.items = next.items;
-          this.setData({ folders: next.folders, hasItems: this.items.length > 0 });
-          this.render();
-          this.load({ known: true });
-        } catch (err) {
-          toastInfo((err as Error).message);
-        }
-      },
-    });
+    if (!(await confirmDanger({ title: '取消收藏这道题？', content: '取消后可随时在题库重新收藏', confirmText: '取消收藏' }))) return;
+    try {
+      if (!it._local) await deleteFav(it.id as number);
+      // 云条目也清本机同题（题页/报告页收藏同时写本机 favQuestions 与云端，只删云端的话 load() 合并时会以本机条目复活），与 H5 同口径
+      const locals = ((wx.getStorageSync('favQuestions') as LocalFav[]) || []).filter((x) => x.question !== it.question);
+      wx.setStorageSync('favQuestions', locals);
+      // 云端已确认删除：列表先本地收缩，再后台对账（不铺骨架）
+      const next = dropFavItem(this.items, this.data.folders, it);
+      this.items = next.items;
+      this.setData({ folders: next.folders, hasItems: this.items.length > 0 });
+      this.render();
+      this.load({ known: true });
+    } catch (err) {
+      toastErrFrom(err, '取消收藏失败');
+    }
   },
 
   onRedo() {

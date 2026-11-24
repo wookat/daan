@@ -64,17 +64,19 @@
         </view>
         <view v-if="mode === 'register'" class="field">
           <wd-input v-model="nickname" label="昵称" label-width="72px" maxlength="20" placeholder="选填，给自己起个名字" clearable />
-          <text class="fnote">邮箱验证码功能即将上线，当前注册无需验证码</text>
         </view>
 
         <kg-button variant="primary" size="lg" block :disabled="busy" :loading="busy" class="primary" @click="submit">
           {{ mode === 'login' ? '登录' : '注册并合并本机记录' }}
         </kg-button>
         <!-- #ifdef H5 -->
-        <kg-button variant="secondary" size="lg" block :disabled="busy" class="sso" @click="ssoLogin">Zalize 统一账号一键登录</kg-button>
-        <text class="note">已在 account.zalize.com 登录过心动简历/速申等站点？支持一键登录并合并</text>
+        <kg-button variant="secondary" size="lg" block :disabled="busy" class="sso" @click="ssoLogin">统一账号一键登录</kg-button>
+        <text class="note">已有 Zalize 账号可直接登录，本机记录自动合并</text>
         <!-- #endif -->
-        <text v-if="err" class="err" role="alert">{{ err }}</text>
+        <view v-if="err" :key="errKey" class="errbox kg-nudge-box">
+          <text class="err" role="alert">{{ err }}</text>
+          <kg-button v-if="errSwitchLogin" variant="text" size="sm" @click="switchToLogin">直接用此邮箱登录 ›</kg-button>
+        </view>
       </kg-card>
     </view>
   </view>
@@ -83,6 +85,7 @@
 <script>
 import { authLogin, authRegister, authSso, mergeAnon, setAuth, trackEvent } from '../../api/api.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
+import { toastOk, humanErrorText } from '../../utils/toast.js';
 const MERGE_FAIL_TIP = '已登录，但本机记录合并失败；退出后重新登录会再次合并';
 
 const MODE_OPTS = [
@@ -101,6 +104,8 @@ export default {
       nickname: '',
       busy: false,
       err: '',
+      errKey: 0,
+      errSwitchLogin: false,
       fieldErr: { email: '', password: '', password2: '' },
     };
   },
@@ -122,16 +127,28 @@ export default {
   methods: {
     leave() {
       // H5 的 navigateBack 只是 history.go(-1) 且永不 fail：深链/刷新直达（页面栈仅 1 页）时会停在登录页
-      if (getCurrentPages().length > 1) uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/stats/stats' }) });
-      else uni.switchTab({ url: '/pages/stats/stats' });
+      if (getCurrentPages().length > 1) uni.navigateBack({ fail: () => uni.switchTab({ url: '/pages/home/home' }) });
+      else uni.switchTab({ url: '/pages/home/home' });
     },
     onModeChange(opt) {
       const o = MODE_OPTS.find((x) => x.label === (opt && opt.value));
       if (o) {
         this.mode = o.value;
         this.err = '';
+        this.errSwitchLogin = false;
         this.fieldErr = { email: '', password: '', password2: '' };
       }
+    },
+    switchToLogin() {
+      this.mode = 'login';
+      this.err = '';
+      this.errSwitchLogin = false;
+      this.fieldErr = { email: '', password: '', password2: '' };
+    },
+    setErr(msg, switchLogin = false) {
+      this.err = msg;
+      this.errSwitchLogin = switchLogin;
+      this.errKey += 1;
     },
     checkEmail() {
       const mail = (this.email || '').trim();
@@ -168,7 +185,7 @@ export default {
       } catch (e) {
         if (e.message === '未登录 Zalize 统一账号') {
           if (fromCallback === true) {
-            this.err = '统一账号未生效，请检查浏览器 Cookie 设置或改用邮箱登录';
+            this.setErr('统一账号未生效，请检查浏览器 Cookie 设置或改用邮箱登录');
             return;
           }
           // #ifdef H5
@@ -178,21 +195,26 @@ export default {
           return;
           // #endif
         }
-        this.err = e.message || '登录失败';
+        this.setErr(humanErrorText(e, '登录失败，请稍后重试'));
       } finally {
         this.busy = false;
       }
     },
     async submit() {
       this.err = '';
+      this.errSwitchLogin = false;
       const okMail = this.checkEmail();
       const okPwd = this.checkPassword();
       const okPwd2 = this.mode !== 'register' || this.checkPassword2();
-      if (!okMail || !okPwd || !okPwd2) return;
+      if (!okMail || !okPwd || !okPwd2) {
+        this.errKey += 1;
+        return;
+      }
       this.busy = true;
       try {
         const anon = uni.getStorageSync('anonUid') || '';
-        const mail = this.email.trim();
+        const mail = this.email.trim().toLowerCase();
+        this.email = mail;
         const r =
           this.mode === 'login'
             ? await authLogin(mail, this.password)
@@ -213,11 +235,13 @@ export default {
             uni.showToast({ title: MERGE_FAIL_TIP, icon: 'none', duration: 2500 });
           }
         } else {
-          uni.showToast({ title: this.mode === 'login' ? '登录成功' : '注册成功', icon: 'success' });
+          toastOk(this.mode === 'login' ? '登录成功' : '注册成功');
         }
         this._leaveTimer = setTimeout(() => this.leave(), 1200);
       } catch (e) {
-        this.err = e.message || '操作失败';
+        const msg = humanErrorText(e, '操作失败，请稍后重试');
+        const exists = this.mode === 'register' && (/409|已注册|存在/.test(String((e && e.message) || msg)));
+        this.setErr(exists ? '该邮箱已经注册过账号' : msg, exists);
       } finally {
         this.busy = false;
       }
@@ -242,12 +266,12 @@ export default {
 .auth-card { width: 100%; box-sizing: border-box; }
 .seg { margin-bottom: var(--sp-16); }
 .field { margin-bottom: var(--sp-12); }
-.ferr { display: block; margin-top: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); }
-.fnote { display: block; margin-top: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sub); color: var(--ink-3); }
+.ferr { display: block; margin-top: var(--sp-4); padding-left: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
 .primary { margin-top: var(--sp-8); }
 .sso { margin-top: var(--sp-12); }
 .note { display: block; max-width: 340px; margin: var(--sp-12) auto 0; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-3); text-align: center; }
-.err { display: block; margin-top: var(--sp-12); font-size: var(--fs-sub); color: var(--bad-strong); text-align: center; }
+.errbox { display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); margin-top: var(--sp-12); animation: kg-nudge var(--dur-base) var(--ease-standard) both; }
+.err { display: block; font-size: var(--fs-sub); color: var(--bad-strong); text-align: center; }
 
 /* #ifdef H5 */
 @media (min-width: 1024px) {

@@ -38,7 +38,7 @@
         <kg-card v-if="goal" variant="flat" class="sec">
           <view class="gap-row">
             <text class="gap-k">目标分 <text class="num">{{ goal.target }}</text></text>
-            <text class="gap-v" :class="{ ok: goal.gap <= 0 }">{{ goal.gap <= 0 ? '已达标 🎉' : '还差 ' + goal.gap + ' 分' }}</text>
+            <text class="gap-v" :class="{ ok: goal.gap <= 0 }">{{ goal.gap <= 0 ? '已达标' : '还差 ' + goal.gap + ' 分' }}</text>
           </view>
         </kg-card>
 
@@ -77,7 +77,7 @@
               <text class="prow-name">{{ p.name }}</text>
               <kg-tag :tone="p.status === 'over' ? 'bad' : p.status === 'ok' ? 'ok' : 'neutral'">{{ p.tag }}</kg-tag>
             </view>
-            <view class="prow-bar"><view class="prow-fill" :class="p.status" :style="{ width: p.pct + '%' }"></view></view>
+            <view class="prow-bar"><view class="prow-fill" :class="p.status" :style="{ transform: 'scaleX(' + Math.max(0, Math.min(1, (p.pct || 0) / 100)) + ')' }"></view></view>
             <text class="prow-v num">用时 {{ fmtMin(p.secs) }} · 参考 {{ fmtMin(p.refSecs) }}{{ p.refNote }}</text>
           </view>
           <text class="note">参考用时按各模块题量占比折算自本卷限时</text>
@@ -148,7 +148,7 @@
             @click="goBookReason(g.name)"
           >
             <text class="rz-name">{{ g.name }} ›</text>
-            <view class="rz-bar"><view class="rz-fill" :style="{ width: Math.round((g.n / reasonRecap.total) * 100) + '%' }" /></view>
+            <view class="rz-bar"><view class="rz-fill" :style="{ transform: 'scaleX(' + (reasonRecap.total ? Math.min(1, g.n / reasonRecap.total) : 0) + ')' }" /></view>
             <text class="rz-n num">{{ g.n }}</text>
           </view>
           <text class="note">点击错因直达错题本对应待掌握错题（不限本卷）；解析浮层里可逐题标注错因</text>
@@ -163,7 +163,7 @@
         </view>
 
         <view class="share-row share-mobile">
-          <kg-button v-if="shareText" variant="ghost" size="md" icon="copy" @click="copyShare">邀考友挑战本卷</kg-button>
+          <kg-button v-if="shareText" variant="ghost" size="md" :icon="shareCopied ? 'check' : 'copy'" @click="copyShare">{{ shareCopied ? '已复制挑战链接' : '邀考友挑战本卷' }}</kg-button>
           <kg-button v-if="report.attempt && report.attempt.id" variant="ghost" size="md" icon="share-2" @click="goPoster">生成成绩海报</kg-button>
         </view>
 
@@ -192,7 +192,7 @@
             <text v-if="markCount" class="lg"><text class="dot mk"></text>考中标记</text>
           </view>
           <view class="share-col">
-            <kg-button v-if="shareText" variant="ghost" size="md" block icon="copy" @click="copyShare">邀考友挑战本卷</kg-button>
+            <kg-button v-if="shareText" variant="ghost" size="md" block :icon="shareCopied ? 'check' : 'copy'" @click="copyShare">{{ shareCopied ? '已复制挑战链接' : '邀考友挑战本卷' }}</kg-button>
             <kg-button v-if="report.attempt && report.attempt.id" variant="ghost" size="md" block icon="share-2" @click="goPoster">生成成绩海报</kg-button>
           </view>
           <text class="kbd-note">←/→ 在解析间切题</text>
@@ -203,14 +203,14 @@
 
     <!-- 解析浮层 -->
     <kg-sheet :model-value="!!detail" size="lg" :title="detail ? '第 ' + detail.no + ' 题 · ' + (detail.correct ? '答对' : (detail.picked ? '答错' : '未答')) : ''" @update:model-value="!$event && (detail = null)">
-      <template v-if="detail">
+      <view v-if="detail" :key="detail.no" :class="'kg-q-enter-' + navDir">
         <view class="d-tools">
           <kg-tag v-if="detail.marked" tone="warn">考试时标记过本题</kg-tag>
           <view class="kg-tool" role="button" :aria-label="detailFaved ? '取消收藏本题' : '收藏本题'" @click="toggleDetailFav">
-            <l-icon name="star" :size="24" :tone="detailFaved ? 'warn' : 'ink-2'" :fill="detailFaved ? 'currentColor' : 'none'" />
+            <l-icon :class="{ 'kg-icon-pop': detailFavPop }" name="star" :size="24" :tone="detailFaved ? 'warn' : 'ink-2'" :fill="detailFaved ? 'currentColor' : 'none'" />
           </view>
         </view>
-        <kg-question-card :key="detail.no" :q="detailQ" :show-meta="false">
+        <kg-question-card :q="detailQ" :show-meta="false">
           <kg-option-group :options="detailOpts" :model-value="(detail.picked || '').split('')" :answer="(detail.answer || '').split('')" revealed readonly />
         </kg-question-card>
         <kg-analysis-card
@@ -245,7 +245,7 @@
           <kg-button v-if="detail.question_id" variant="text" size="md" :disabled="detailReported" @click="openQcReport">{{ detailReported ? '已提交纠错，感谢反馈' : '题目有问题？纠错' }}</kg-button>
         </view>
         <q-social-bar v-if="detail.question_id" :question-id="detail.question_id" />
-      </template>
+      </view>
       <template #footer>
         <view class="dnav">
           <kg-button variant="ghost" size="md" :disabled="!hasPrevQ" aria-label="上一题解析" @click="stepQ(-1)">上一题</kg-button>
@@ -303,6 +303,8 @@ import { nextPaper } from '../../exam/exam-next.js';
 import { moduleLabel } from '../../utils/module-meta.js';
 import { rankLine, reportHeroLine, weakNote, redoDesc } from '../../exam/exam-copy.js';
 import { withBasePath } from '../../utils/hash-url.js';
+import { motionDuration } from '../../a11y/a11y-motion.js';
+import { toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 const PACE_TAG = { over: '超时', fast: '偏快', ok: '合理', skip: '未作答' };
 const MOD_ORDER = ['changshi', 'yanyu', 'shuliang', 'panduan', 'ziliao'];
 const TPL_NAME_TO_ID = [
@@ -317,7 +319,7 @@ const TPL_NAME_TO_ID = [
 
 export default {
   data() {
-    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, navMode: 'all', favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'], askSeenTick: 0, themeTick: 0 };
+    return { loading: true, loadErr: '', aid: null, report: null, history: [], targetScore: null, detail: null, matOpen: false, navMode: 'all', navDir: 'fade', shareCopied: false, detailFavPop: false, favs: uni.getStorageSync('favQuestions') || [], rankData: null, nextReco: null, reportOpen: false, reportType: '', reportDetail: '', reportBusy: false, reportedIds: {}, reportTypes: ['答案错误', '解析错误', '题干或选项错字', '图片缺失', '分类错误', '重复题', '其他'], reasonOpts: ['粗心大意', '概念不清', '方法不会', '纯蒙的'], askSeenTick: 0, themeTick: 0 };
   },
   computed: {
     accuracy() {
@@ -337,8 +339,15 @@ export default {
     markCount() {
       return markedNos(this.report && this.report.items).length;
     },
+    filteredNavCount() {
+      const items = (this.report && this.report.items) || [];
+      if (this.navMode === 'wrong') return items.filter((it) => !it.correct).length;
+      if (this.navMode === 'marked') return items.filter((it) => it.marked).length;
+      return items.length;
+    },
     navModeLabel() {
-      return this.navMode === 'wrong' ? '只看错题/未答' : this.navMode === 'marked' ? '只看标记题' : '全部题目';
+      const label = this.navMode === 'wrong' ? '错题/未答' : this.navMode === 'marked' ? '标记题' : '全部题目';
+      return this.filteredNavCount ? label + ' · ' + this.filteredNavCount : label;
     },
     navModeAria() {
       const nxt = nextNavMode(this.navMode, this.markCount > 0);
@@ -419,7 +428,7 @@ export default {
       if (ms.length < 3) return null;
       const c = visColors();
       return {
-        animationDuration: 400,
+        animationDuration: motionDuration(360),
         radar: {
           indicator: ms.map((m) => ({ name: m.name + ' ' + m.pct + '%', max: 100 })),
           radius: '62%',
@@ -550,6 +559,8 @@ export default {
     // #endif
   },
   onUnload() {
+    if (this._favPopT) { clearTimeout(this._favPopT); this._favPopT = null; }
+    if (this._shareCopyT) { clearTimeout(this._shareCopyT); this._shareCopyT = null; }
     if (this._onTheme) {
       uni.$off('themeChanged', this._onTheme);
       this._onTheme = null;
@@ -608,9 +619,9 @@ export default {
         });
         this.reportedIds = { ...this.reportedIds, [qid]: true };
         this.reportOpen = false;
-        uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+        toastOk('感谢反馈，我们会尽快核查');
       } catch (e) {
-        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '提交失败，请稍后重试');
       } finally {
         this.reportBusy = false;
       }
@@ -633,7 +644,7 @@ export default {
       } catch (e) {
         // 仅网络层失败置错误态；HTTP 业务错误（如报告不存在）保持空态引导
         if (isNetErr(e)) this.loadErr = e.message || '网络异常';
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '报告加载失败，请稍后重试');
       }
       this.loading = false;
     },
@@ -665,13 +676,24 @@ export default {
       if (!this.nextReco) return;
       uni.navigateTo({ url: '/pkgA/exam/list?pid=' + this.nextReco.id });
     },
-    openQ(it) { this.matOpen = false; this.detail = it; },
+    openQ(it, dir = 'fade') {
+      this.matOpen = false;
+      this.navDir = dir;
+      this.detail = it;
+    },
     toggleDetailFav() {
       const d = this.detail;
       if (!d) return;
       const { list, added } = toggleFav(this.favs, d);
       this.favs = list;
       uni.setStorageSync('favQuestions', list);
+      if (added) {
+        this.detailFavPop = true;
+        if (this._favPopT) clearTimeout(this._favPopT);
+        this._favPopT = setTimeout(() => { this.detailFavPop = false; }, 280);
+      } else {
+        this.detailFavPop = false;
+      }
       if (d.question_id) {
         (added ? setFav(d.question_id) : removeFav(d.question_id)).catch(() => {
           if (!added) return;
@@ -679,7 +701,8 @@ export default {
           uni.setStorageSync('favQuestions', this.favs);
         });
       }
-      uni.showToast({ title: added ? '已收藏，可在收藏与笔记查看' : '已取消收藏', icon: 'none', duration: 900 });
+      if (added) toastOk('已收藏，可在收藏与笔记查看');
+      else toastInfo('已取消收藏');
     },
     cycleNavMode() {
       this.navMode = nextNavMode(this.navMode, this.markCount > 0);
@@ -687,7 +710,7 @@ export default {
     stepQ(dir) {
       if (!this.report || !this.detail) return;
       const nxt = reviewStep(this.report.items, this.detail.no, dir, this.navMode);
-      if (nxt) this.openQ(nxt);
+      if (nxt) this.openQ(nxt, dir > 0 ? 'next' : 'prev');
     },
     // #ifdef H5
     onRpKeydown(e) {
@@ -736,7 +759,12 @@ export default {
       trackEvent('share_copy', 'exam_report', String(this.report.paper.id));
       uni.setClipboardData({
         data: this.shareText,
-        success: () => uni.showToast({ title: '挑战链接已复制，发给考友吧', icon: 'none' }),
+        success: () => {
+          this.shareCopied = true;
+          if (this._shareCopyT) clearTimeout(this._shareCopyT);
+          this._shareCopyT = setTimeout(() => { this.shareCopied = false; }, 1800);
+          toastOk('挑战链接已复制，发给考友吧');
+        },
       });
     },
     goPoster() {
@@ -764,7 +792,7 @@ export default {
         await request('/api/mistakes/' + d.mistake_id, { method: 'PATCH', data: { uid: anonUid(), error_reason: next } });
       } catch (e) {
         d.error_reason = prev;
-        uni.showToast({ title: '错因保存失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '错因保存失败，请稍后重试');
       }
     },
     reinforceDetail() {
@@ -823,7 +851,7 @@ export default {
 .prow-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-8); }
 .prow-name { font-size: var(--fs-sub); color: var(--ink-2); }
 .prow-bar { height: 8px; background: var(--brand-soft-2); border-radius: var(--r-full); overflow: hidden; }
-.prow-fill { height: 100%; background: var(--brand); border-radius: var(--r-full); transition: width 0.4s ease; }
+.prow-fill { width: 100%; height: 100%; background: var(--brand); border-radius: var(--r-full); transform-origin: left center; transition: transform var(--dur-slow) var(--ease-decel); }
 .prow-fill.over { background: var(--bad); }
 .prow-v { display: block; font-size: var(--fs-caption); color: var(--ink-2); margin-top: var(--sp-4); }
 .curve { display: flex; align-items: flex-end; gap: var(--sp-8); height: 120px; padding: var(--sp-4) 0; }
@@ -854,7 +882,7 @@ export default {
 .rz-row { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); }
 .rz-name { width: 80px; font-size: var(--fs-sub); color: var(--brand-text); flex: none; }
 .rz-bar { flex: 1; height: 8px; border-radius: var(--r-full); background: var(--fill); overflow: hidden; }
-.rz-fill { height: 100%; border-radius: var(--r-full); background: var(--warn); }
+.rz-fill { width: 100%; height: 100%; border-radius: var(--r-full); background: var(--warn); transform-origin: left center; transition: transform var(--dur-slow) var(--ease-decel); }
 .rz-n { width: 28px; text-align: right; font-size: var(--fs-sub); color: var(--ink-2); flex: none; }
 .share-row { display: flex; gap: var(--sp-8); flex-wrap: wrap; margin-top: var(--sp-16); }
 .share-col { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-16); }

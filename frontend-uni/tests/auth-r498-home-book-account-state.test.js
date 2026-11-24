@@ -69,7 +69,7 @@ describe('book.vue 登录态变化后错题/到期/掌握度不留屏', () => {
   it('标为已掌握 / 删除的写请求失败有用户可见反馈，不再以未捕获 rejection 进 monitor 上报', () => {
     const master = block(book, 'master', 4);
     expect(master).toMatch(/try \{\n\s*await request\('\/api\/mistakes\/' \+ m\.id, \{ method: 'PATCH'/);
-    expect(master).toMatch(/catch \(e\) \{\n\s*uni\.showToast\(\{ title: '操作失败：' \+ \(e\.message \|\| '请稍后重试'\), icon: 'none' \}\);\n\s*return;/);
+    expect(master).toMatch(/catch \(e\) \{\n\s*(?:toastErrFrom\(e,|uni\.showToast\(\{ title: '操作失败：')[^\n]*\n\s*return;/);
     const del = block(book, 'del', 4);
     expect(del).toMatch(/try \{\n\s*await request\('\/api\/mistakes\/' \+ m\.id \+ '\?uid='/);
     expect(del).toMatch(/catch \(e\) \{\n\s*uni\.showToast\(\{ title: '删除失败：'/);

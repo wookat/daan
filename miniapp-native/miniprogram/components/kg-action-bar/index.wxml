@@ -1,5 +1,5 @@
 <view class="kg-abar kg-abar--{{layout}}" role="toolbar">
-  <view wx:if="{{layout === 'answer'}}" class="kg-abar__prog"><view class="kg-abar__prog-fill" style="width:{{pct}}%" /></view>
+  <view wx:if="{{layout === 'answer'}}" class="kg-abar__prog"><view class="kg-abar__prog-fill" style="transform:scaleX({{pct / 100}})" /></view>
   <view class="kg-abar__row">
     <view wx:if="{{layout === 'answer' && total}}" class="kg-abar__idx num">{{index + 1}}/{{total}}</view>
     <slot />

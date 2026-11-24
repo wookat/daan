@@ -26,6 +26,10 @@
         <text slot="note" class="time-v">{{subOn ? '已订阅' : '去订阅'}}</text>
       </t-cell>
     </t-cell-group>
+    <kg-card wx:else variant="soft" padding="12" class="tip">
+      <l-icon name="info" size="16" tone="muted" />
+      <text class="tip-t">当前版本暂未开通微信服务通知离线推送，每日提醒仅在你打开小程序时按设定的时间触发提示。</text>
+    </kg-card>
 
     <kg-section-header title="提醒样式预览" />
     <kg-card variant="raised" class="push">

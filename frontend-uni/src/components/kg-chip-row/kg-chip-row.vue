@@ -56,12 +56,19 @@ export default {
   height: var(--chip-h); padding: 0 14px; border-radius: var(--r-full);
   background: var(--card); border: 1px solid var(--line); color: var(--ink-2);
   font-size: var(--fs-sub); font-weight: 500; line-height: 1;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-spring-snappy);
   position: relative;
 }
 .kg-chip::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: var(--hit-min); transform: translateY(-50%); }
 .kg-chips--sm .kg-chip { height: 28px; padding: 0 var(--sp-12); }
+.kg-chip:active { transform: scale(0.95); }
 .kg-chip--hover { background: var(--fill); }
 .kg-chip.is-on { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }
 .kg-chip__n { opacity: 0.7; }
+/* #ifdef H5 */
+.kg-chip { cursor: pointer; }
+@media (hover: hover) and (pointer: fine) {
+  .kg-chip:not(.is-on):hover { background: var(--fill); border-color: var(--line-strong); }
+}
+/* #endif */
 </style>

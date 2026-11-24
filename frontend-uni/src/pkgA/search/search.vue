@@ -48,7 +48,7 @@
               <view class="d-acts">
                 <kg-button v-if="detailAskSeen" variant="text" size="sm" @click.stop="openSeenAsk">回看 AI 详解</kg-button>
                 <kg-button variant="secondary" size="sm" icon="sparkles" @click.stop="askFromSearch(detail)">AI 详解本题</kg-button>
-                <kg-button variant="text" size="sm" icon="copy" @click.stop="copyQLink(detail.id)">复制链接</kg-button>
+                <kg-button variant="text" size="sm" :icon="copiedQid === detail.id ? 'check' : 'copy'" @click.stop="copyQLink(detail.id)">{{ copiedQid === detail.id ? '已复制' : '复制链接' }}</kg-button>
               </view>
             </view>
           </kg-card>
@@ -72,7 +72,7 @@
                 <view class="d-acts">
                   <kg-button v-if="detailAskSeen" variant="text" size="sm" @click.stop="openSeenAsk">回看 AI 详解</kg-button>
                   <kg-button variant="secondary" size="sm" icon="sparkles" @click.stop="askFromSearch(detail)">AI 详解本题</kg-button>
-                  <kg-button variant="text" size="sm" icon="copy" @click.stop="copyQLink(detail.id)">复制链接</kg-button>
+                  <kg-button variant="text" size="sm" :icon="copiedQid === detail.id ? 'check' : 'copy'" @click.stop="copyQLink(detail.id)">{{ copiedQid === detail.id ? '已复制' : '复制链接' }}</kg-button>
                 </view>
               </view>
             </kg-card>
@@ -201,6 +201,7 @@
         desc="支持题号语义码（如 ZL-JQ-2024-000914）、题干关键词、考点名、试卷名、申论真题/素材"
       />
     </view>
+    <kg-undo-bar />
   </view>
 </template>
 
@@ -211,6 +212,7 @@ import { withBasePath } from '../../utils/hash-url.js';
 import { askPrefill } from '../../ask/ask-prefill.js';
 import { askQid, findAskSid } from '../../ask/ask-link.js';
 import { MODULES } from '../../utils/module-meta.js';
+import { toastOk, toastErrFrom, showUndoToast, dismissUndoToast } from '../../utils/toast.js';
 
 const MODS = { shenlun: '申论' };
 
@@ -231,6 +233,7 @@ export default {
       result: null,
       detail: null,
       detailWant: null,
+      copiedQid: null,
       timer: null,
       searchSeq: 0,
       moreLoading: false,
@@ -253,8 +256,11 @@ export default {
   },
   onUnload() {
     this._unmounted = true;
+    dismissUndoToast(true);
     clearTimeout(this.timer);
     this.timer = null;
+    clearTimeout(this._copyTimer);
+    this._copyTimer = null;
   },
   computed: {
     tabChips() {
@@ -323,7 +329,15 @@ export default {
     copyQLink(id) {
       const origin = typeof window !== 'undefined' && window.location && window.location.origin ? window.location.origin : 'https://kaogong.zalize.com';
       const url = origin + buildTikuQPath(id);
-      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
+      uni.setClipboardData({
+        data: url,
+        success: () => {
+          this.copiedQid = id;
+          clearTimeout(this._copyTimer);
+          this._copyTimer = setTimeout(() => { this.copiedQid = null; }, 1600);
+          toastOk('链接已复制');
+        },
+      });
     },
     showSec(k) {
       return this.tab === 'all' || this.tab === k;
@@ -341,8 +355,18 @@ export default {
       // #endif
     },
     clearHist() {
+      const backup = [...this.hist];
+      if (!backup.length) return;
       this.hist = [];
       uni.removeStorageSync('kgSearchHist');
+      showUndoToast({
+        text: '已清空搜索历史',
+        actionText: '撤销',
+        onUndo: () => {
+          uni.setStorageSync('kgSearchHist', backup);
+          if (!this._unmounted) this.hist = backup;
+        },
+      });
     },
     onInput() {
       clearTimeout(this.timer);
@@ -381,7 +405,7 @@ export default {
       } catch (e) {
         if (this._unmounted || seq !== this.searchSeq) return;
         if (this.result) {
-          uni.showToast({ title: e.message || '搜索失败', icon: 'none' });
+          toastErrFrom(e, '搜索失败，请稍后重试');
         } else {
           this.loadErr = e.message || '搜索失败';
         }
@@ -404,7 +428,7 @@ export default {
         }
       } catch (e) {
         if (r !== this.result) return;
-        uni.showToast({ title: '加载失败', icon: 'none' });
+        toastErrFrom(e, '加载失败，请稍后重试');
       } finally {
         this.moreLoading = false;
       }
@@ -426,7 +450,7 @@ export default {
       } catch (e) {
         if (this.detailWant !== it.id) return;
         this.detailWant = null;
-        uni.showToast({ title: '加载失败', icon: 'none' });
+        toastErrFrom(e, '加载详情失败');
       }
     },
     goTopic(t) {
@@ -471,7 +495,8 @@ export default {
 .q-code { font-size: var(--fs-caption); color: var(--ink-3); }
 .stem { display: block; font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
 .q-loading { margin-top: var(--sp-8); }
-.q-detail { margin-top: var(--sp-12); padding-top: var(--sp-12); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--sp-4); }
+.q-detail { margin-top: var(--sp-12); padding-top: var(--sp-12); border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--sp-4); animation: qDetailIn var(--dur-fast) var(--ease-decel) both; }
+@keyframes qDetailIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .q-opt { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); }
 .q-opt.ans { color: var(--ok-strong); font-weight: 600; }
 .optimg { max-width: 100%; margin: var(--sp-8) var(--sp-8) 0 0; border-radius: var(--r-xs); display: inline-block; vertical-align: middle; }
@@ -486,9 +511,13 @@ export default {
 .mt-content { font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .idle { padding-top: var(--sp-16); }
 .hist-chips { display: flex; flex-wrap: wrap; gap: var(--sp-8); }
-.hist-chip { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: 40px; padding: 0 var(--sp-12); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); max-width: 100%; }
+.hist-chip { display: inline-flex; align-items: center; gap: var(--sp-4); min-height: 40px; padding: 0 var(--sp-12); border-radius: var(--r-full); background: var(--card); border: 1px solid var(--line); max-width: 100%; transition: border-color var(--dur-fast) var(--ease-standard), transform var(--dur-instant) var(--ease-standard); }
+.hist-chip:active { transform: scale(0.96); }
 .hist-chip-t { font-size: var(--fs-sub); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hist-clear { margin-top: var(--sp-8); }
+@media (prefers-reduced-motion: reduce) {
+  .q-detail { animation: none; }
+}
 /* #ifdef H5 */
 @media (min-width: 768px) {
   .page { max-width: 720px; margin: 0 auto; }

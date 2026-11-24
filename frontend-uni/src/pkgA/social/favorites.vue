@@ -78,18 +78,20 @@
                 <view class="nb"><l-icon name="pencil-line" :size="16" tone="warn" /><text class="nb-t">我的笔记</text></view>
                 <text class="mynote-t q-text">{{ it.note }}</text>
               </view>
-              <view v-if="it._open" class="detail">
-                <text v-for="(v, k) in it.options" :key="k" class="opt q-text" :class="{ ans: (it.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
-                <text class="ansline">正确答案 {{ it.answer }}</text>
-                <text v-if="it.hs_explanation || it.explanation" class="exp q-text">{{ it.hs_explanation || it.explanation }}</text>
-                <view class="ops" @click.stop>
-                  <kg-button v-if="askSeenTick >= 0 && favAskSeen(it)" variant="text" size="sm" aria-label="回看 AI 详解" @click.stop="openSeenAskFav(it)">回看 AI 详解</kg-button>
-                  <kg-button variant="text" size="sm" aria-label="AI 详解本题" @click.stop="askFromFav(it)">AI 详解本题</kg-button>
-                  <kg-button v-if="!it._local" variant="text" size="sm" @click.stop="moveItem(it)">移动到…</kg-button>
-                  <kg-button v-if="!it._local" variant="text" size="sm" @click.stop="openDiscuss(it)">讨论区</kg-button>
-                  <kg-button variant="text" size="sm" tone="bad" @click.stop="unfav(it)">取消收藏</kg-button>
+              <kg-collapse :open="!!it._open">
+                <view class="detail" @click.stop>
+                  <text v-for="(v, k) in it.options" :key="k" class="opt q-text" :class="{ ans: (it.answer || '').indexOf(k) !== -1 }">{{ k }}. {{ v }}</text>
+                  <text class="ansline">正确答案 {{ it.answer }}</text>
+                  <text v-if="it.hs_explanation || it.explanation" class="exp q-text">{{ it.hs_explanation || it.explanation }}</text>
+                  <view class="ops">
+                    <kg-button v-if="askSeenTick >= 0 && favAskSeen(it)" variant="text" size="sm" aria-label="回看 AI 详解" @click.stop="openSeenAskFav(it)">回看 AI 详解</kg-button>
+                    <kg-button variant="text" size="sm" aria-label="AI 详解本题" @click.stop="askFromFav(it)">AI 详解本题</kg-button>
+                    <kg-button v-if="!it._local" variant="text" size="sm" @click.stop="moveItem(it)">移动到…</kg-button>
+                    <kg-button v-if="!it._local" variant="text" size="sm" @click.stop="openDiscuss(it)">讨论区</kg-button>
+                    <kg-button variant="text" size="sm" tone="bad" @click.stop="unfav(it)">取消收藏</kg-button>
+                  </view>
                 </view>
-              </view>
+              </kg-collapse>
             </kg-card>
           </template>
         </template>
@@ -128,6 +130,60 @@
         </kg-card>
       </view>
     </template>
+
+    <!-- 收藏夹操作弹层（替代 6 项上限 actionSheet） -->
+    <kg-sheet v-model="folderOpsOpen" :title="folderOpsTarget ? folderOpsTarget.name : '收藏夹操作'">
+      <view class="sheet-opts">
+        <view class="sheet-opt" role="button" @click="renameFolderFromSheet">
+          <l-icon name="pencil-line" :size="18" tone="ink-2" />
+          <text class="sheet-opt-t">重命名</text>
+        </view>
+        <view class="sheet-opt bad" role="button" @click="deleteFolderFromSheet">
+          <l-icon name="trash-2" :size="18" tone="bad" />
+          <text class="sheet-opt-t">删除收藏夹（收藏移回默认夹）</text>
+        </view>
+      </view>
+    </kg-sheet>
+
+    <!-- 移动到收藏夹弹层（支持无限数量收藏夹） -->
+    <kg-sheet v-model="moveOpen" title="移动到收藏夹">
+      <view class="sheet-opts">
+        <view
+          v-for="f in folders"
+          :key="f.id"
+          class="sheet-opt"
+          :class="{ on: moveTarget && moveTarget.folder_id === f.id }"
+          role="button"
+          @click="confirmMove(f)"
+        >
+          <text class="sheet-opt-ico">{{ f.icon }}</text>
+          <text class="sheet-opt-t">{{ f.name }}</text>
+          <l-icon v-if="moveTarget && moveTarget.folder_id === f.id" name="check" :size="18" tone="brand-text" />
+        </view>
+      </view>
+    </kg-sheet>
+
+    <kg-confirm-sheet
+      :model-value="!!delFolderTarget"
+      :title="delFolderTarget ? '删除「' + delFolderTarget.name + '」？' : ''"
+      desc="夹内收藏会移回默认收藏夹"
+      confirm-text="删除"
+      danger
+      :loading="confirmLoading"
+      @confirm="confirmDeleteFolder"
+      @cancel="delFolderTarget = null"
+    />
+
+    <kg-confirm-sheet
+      :model-value="!!unfavTarget"
+      title="取消收藏这道题？"
+      desc="取消后可随时在题库重新收藏"
+      confirm-text="取消收藏"
+      danger
+      :loading="confirmLoading"
+      @confirm="unfav(unfavTarget, true)"
+      @cancel="unfavTarget = null"
+    />
   </view>
 </template>
 
@@ -142,6 +198,7 @@ import { withBasePath } from '../../utils/hash-url.js';
 import { MODULES, MODULE_KEYS, moduleLabel } from '../../utils/module-meta.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
 import { snapshotViewMixin } from '../../practice/snapshot-view.js';
+import { toastOk, toastErrFrom } from '../../utils/toast.js';
 
 // 收藏页模块筛选项：题库 5 模块（module-meta 单一来源）+ 本地时政收藏
 const MOD_KEYS = [...MODULE_KEYS, '时政'];
@@ -165,6 +222,13 @@ export default {
       modFilter: '',
       askSeenTick: 0,
       loading: true,
+      folderOpsOpen: false,
+      folderOpsTarget: null,
+      moveOpen: false,
+      moveTarget: null,
+      delFolderTarget: null,
+      unfavTarget: null,
+      confirmLoading: false,
     };
   },
   computed: {
@@ -286,7 +350,7 @@ export default {
         }
       } catch (e) {
         this.favErr = e.message || '网络异常';
-        uni.showToast({ title: e.message, icon: 'none' });
+        toastErrFrom(e, '加载失败，请稍后重试');
       }
       this.loading = false;
     },
@@ -299,7 +363,7 @@ export default {
         this.notes = d.items;
       } catch (e) {
         this.noteErr = e.message || '网络异常';
-        uni.showToast({ title: e.message, icon: 'none' });
+        toastErrFrom(e, '加载笔记失败');
       }
       this.loading = false;
     },
@@ -315,51 +379,60 @@ export default {
           if (!r.confirm || !r.content) return;
           try {
             await createFavFolder(r.content.trim());
+            toastOk('已新建收藏夹');
             this.load();
           } catch (e) {
-            uni.showToast({ title: e.message, icon: 'none' });
+            toastErrFrom(e, '新建失败');
           }
         },
       });
     },
     folderOps(f) {
       if (!f.id) return; // 默认夹不可改
-      uni.showActionSheet({
-        itemList: ['重命名', '删除（夹内收藏移回默认夹）'],
-        success: (r) => {
-          if (r.tapIndex === 0) {
-            uni.showModal({
-              title: '重命名收藏夹',
-              editable: true,
-              placeholderText: f.name,
-              success: async (m) => {
-                if (!m.confirm || !m.content) return;
-                try {
-                  await renameFavFolder(f.id, m.content.trim());
-                  this.load();
-                } catch (e) {
-                  uni.showToast({ title: e.message, icon: 'none' });
-                }
-              },
-            });
-          } else if (r.tapIndex === 1) {
-            uni.showModal({
-              title: `删除「${f.name}」？`,
-              content: '夹内收藏会移回默认收藏夹',
-              success: async (m) => {
-                if (!m.confirm) return;
-                try {
-                  await deleteFavFolder(f.id);
-                  if (this.folderId === f.id) this.folderId = null;
-                  this.load();
-                } catch (e) {
-                  uni.showToast({ title: e.message, icon: 'none' });
-                }
-              },
-            });
+      this.folderOpsTarget = f;
+      this.folderOpsOpen = true;
+    },
+    renameFolderFromSheet() {
+      const f = this.folderOpsTarget;
+      this.folderOpsOpen = false;
+      if (!f) return;
+      uni.showModal({
+        title: '重命名收藏夹',
+        editable: true,
+        placeholderText: f.name,
+        success: async (m) => {
+          if (!m.confirm || !m.content) return;
+          try {
+            await renameFavFolder(f.id, m.content.trim());
+            toastOk('已重命名');
+            this.load();
+          } catch (e) {
+            toastErrFrom(e, '重命名失败');
           }
         },
       });
+    },
+    deleteFolderFromSheet() {
+      const f = this.folderOpsTarget;
+      this.folderOpsOpen = false;
+      if (!f) return;
+      this.delFolderTarget = f;
+    },
+    async confirmDeleteFolder() {
+      const f = this.delFolderTarget;
+      if (!f || this.confirmLoading) return;
+      this.confirmLoading = true;
+      try {
+        await deleteFavFolder(f.id);
+        if (this.folderId === f.id) this.folderId = null;
+        this.delFolderTarget = null;
+        toastOk('已删除收藏夹');
+        this.load();
+      } catch (e) {
+        toastErrFrom(e, '删除失败');
+      } finally {
+        this.confirmLoading = false;
+      }
     },
     favAskSeen(it) {
       return findAskSid(uni.getStorageSync('askSessions'), uni.getStorageSync('askCurSession'), it && it.id);
@@ -382,27 +455,30 @@ export default {
       uni.switchTab({ url: '/pages/ask/ask' });
     },
     moveItem(it) {
-      const opts = this.folders.map((f) => f.icon + ' ' + f.name);
-      uni.showActionSheet({
-        itemList: opts,
-        success: async (r) => {
-          const f = this.folders[r.tapIndex];
-          try {
-            await setFav(it.id, f.id || null);
-            it.folder_id = f.id;
-            this.load();
-            uni.showToast({ title: '已移入「' + f.name + '」', icon: 'none' });
-          } catch (e) {
-            uni.showToast({ title: e.message, icon: 'none' });
-          }
-        },
-      });
+      this.moveTarget = it;
+      this.moveOpen = true;
     },
-    unfav(it) {
-      uni.showModal({
-        title: '取消收藏这道题？',
-        success: async (r) => {
-          if (!r.confirm) return;
+    async confirmMove(f) {
+      const it = this.moveTarget;
+      this.moveOpen = false;
+      if (!it || !f) return;
+      try {
+        await setFav(it.id, f.id || null);
+        it.folder_id = f.id;
+        this.load();
+        toastOk('已移入「' + f.name + '」');
+      } catch (e) {
+        toastErrFrom(e, '移动失败');
+      }
+    },
+    unfav(it, confirmed = false) {
+      if (!confirmed) {
+        this.unfavTarget = it;
+        return;
+      }
+      if (it && !this.confirmLoading) {
+        this.confirmLoading = true;
+        Promise.resolve().then(async () => {
           try {
             if (!it._local) await removeFav(it.id);
             // 云条目也清本机同题：题页/错题本对账（syncCloudFavs）会把云收藏写进 favQuestions，只删云端的话 load() 合并时它会以本机条目复活
@@ -412,12 +488,15 @@ export default {
             const next = dropFavItem(this.items, this.folders, it);
             this.items = next.items;
             this.folders = next.folders;
+            this.unfavTarget = null;
             this.load({ known: true });
           } catch (e) {
-            uni.showToast({ title: e.message, icon: 'none' });
+            toastErrFrom(e, '取消收藏失败');
+          } finally {
+            this.confirmLoading = false;
           }
-        },
-      });
+        });
+      }
     },
     openDiscuss(it) {
       uni.navigateTo({ url: '/pkgA/social/discuss?qid=' + it.id });
@@ -468,6 +547,14 @@ export default {
 .ops { display: flex; gap: var(--sp-8); margin-top: var(--sp-8); flex-wrap: wrap; }
 .ngrid { display: flex; flex-direction: column; gap: var(--card-gap); }
 .ngrid .qitem { margin-top: 0 !important; margin-bottom: 0 !important; }
+.sheet-opts { display: flex; flex-direction: column; }
+.sheet-opt { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-8) var(--sp-4); border-bottom: 1px solid var(--line); cursor: pointer; transition: opacity var(--dur-instant) var(--ease-standard); }
+.sheet-opt:last-child { border-bottom: none; }
+.sheet-opt:active { opacity: 0.65; }
+.sheet-opt-ico { font-size: var(--fs-body); line-height: 1; }
+.sheet-opt-t { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--ink); }
+.sheet-opt.on .sheet-opt-t { color: var(--brand-text); font-weight: 600; }
+.sheet-opt.bad .sheet-opt-t { color: var(--bad); }
 
 /* 桌面（H5）：≥1024 KgTwoCol 双栏（收藏夹辅栏 + 列表主列），笔记两列 */
 /* #ifdef H5 */

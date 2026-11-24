@@ -24,7 +24,7 @@
 
         <view v-if="prog.total > 0" class="progrow">
           <view class="prog-txt">
-            <text class="prog-t">{{ prog.done === prog.total ? '全部刷完 🎉' : '已刷 ' + prog.done + '/' + prog.total + ' 卷' }}</text>
+            <text class="prog-t">{{ prog.done === prog.total ? '全部刷完' : '已刷 ' + prog.done + '/' + prog.total + ' 卷' }}</text>
             <text class="prog-p num">{{ prog.pct }}%</text>
           </view>
           <kg-progress :value="prog.done" :max="prog.total" :aria-label="'已刷 ' + prog.done + '/' + prog.total + ' 卷'" />
@@ -156,14 +156,14 @@
             <text class="tpl-t">{{ t.name }}</text>
             <text v-if="t.note" class="tpl-s">{{ t.note }}</text>
           </view>
-          <text class="tpl-n num">{{ t.n }} 题 · {{ t.duration_min }} 分</text>
+          <text class="tpl-n num">{{ t.n }} 题 · {{ t.duration_min }} 分钟</text>
         </view>
         <view class="boost-row">
           <view class="boost-l">
             <text class="boost-t">薄弱考点加权</text>
             <text class="boost-s">优先抽你最近易错的考点</text>
           </view>
-          <wd-switch v-model="weakBoost" size="small" />
+          <kg-switch v-model="weakBoost" aria-label="薄弱考点加权" />
         </view>
       </view>
       <template #footer>
@@ -176,9 +176,10 @@
     <kg-sheet :model-value="!!exportDone" title="试卷已导出" @update:model-value="(v) => { if (!v) exportDone = null; }">
       <view v-if="exportDone" class="done">
         <text class="done-t">{{ exportDone.title }}</text>
-        <view class="done-code">
+        <view class="done-code" role="button" aria-label="点击复制卷码" @click="copyDoneCode">
           <text class="done-k">本卷回填码</text>
           <text class="done-c num">{{ exportDone.code }}</text>
+          <l-icon :name="codeCopied ? 'check' : 'copy'" :size="16" :tone="codeCopied ? 'ok' : 'brand-text'" />
         </view>
         <text class="done-s">纸质作答后：拍答题卡自动判分，或按码手动录入答案</text>
       </view>
@@ -189,6 +190,17 @@
         </view>
       </template>
     </kg-sheet>
+
+    <kg-confirm-sheet
+      :model-value="dropOpen"
+      title="放弃未交卷进度？"
+      desc="放弃后本次作答记录不再保留，需要重新开始"
+      confirm-text="确认放弃"
+      cancel-text="继续保留"
+      danger
+      @confirm="confirmDropResume"
+      @cancel="dropOpen = false"
+    />
   </view>
 </template>
 
@@ -205,6 +217,7 @@ import { paperModsText } from '../../exam/exam-paper-mods.js';
 import { paperCompleteness, sortPapersCompleteFirst } from '../../exam/exam-paper-quality.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
 import { withBasePath } from '../../utils/hash-url.js';
+import { toastOk, toastErrFrom } from '../../utils/toast.js';
 
 const PAGE = 20;
 const ST_LABELS = ['全部', '没考过', '考过的'];
@@ -239,6 +252,8 @@ export default {
       tplId: 'mini',
       weakBoost: false,
       exportDone: null,
+      codeCopied: false,
+      dropOpen: false,
     };
   },
   created() {
@@ -379,21 +394,30 @@ export default {
     continueExam() {
       const r = this.resume;
       if (!r) return;
-      uni.navigateTo({ url: r.mini ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + r.paperId });
+      uni.navigateTo({ url: r.mini ? '/pkgA/exam/exam?mini=1&resume=1' : '/pkgA/exam/exam?paper_id=' + r.paperId + '&resume=1' });
     },
     dropResume() {
-      uni.showModal({
-        title: '放弃未交卷进度？',
-        content: '放弃后本次作答记录不再保留',
-        confirmText: '放弃', cancelText: '再想想',
-        success: (res) => {
-          if (!res.confirm) return;
-          uni.setStorageSync('erClearedAt', Date.now());
-          if (this.resume && this.resume.attemptId) {
-            request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.resume.attemptId, drop: true } }).catch(() => {});
-          }
-          uni.removeStorageSync('examProgress');
-          this.resume = null;
+      this.dropOpen = true;
+    },
+    confirmDropResume() {
+      this.dropOpen = false;
+      uni.setStorageSync('erClearedAt', Date.now());
+      if (this.resume && this.resume.attemptId) {
+        request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.resume.attemptId, drop: true } }).catch(() => {});
+      }
+      uni.removeStorageSync('examProgress');
+      this.resume = null;
+      toastOk('已清除未交卷进度');
+    },
+    copyDoneCode() {
+      if (!this.exportDone || !this.exportDone.code) return;
+      uni.setClipboardData({
+        data: this.exportDone.code,
+        success: () => {
+          this.codeCopied = true;
+          if (this._codeCopyT) clearTimeout(this._codeCopyT);
+          this._codeCopyT = setTimeout(() => { this.codeCopied = false; }, 1800);
+          toastOk('回填码已复制：' + this.exportDone.code);
         },
       });
     },
@@ -522,12 +546,13 @@ export default {
         this.exportTarget = null;
         const last = (uni.getStorageSync('recentPapers') || [])[0];
         if (last && last.code) {
+          this.codeCopied = false;
           this.exportDone = { code: last.code, title: p.title };
         } else {
-          uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+          toastOk('PDF 已开始下载');
         }
       } catch (e) {
-        uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '导出失败，请稍后重试');
       }
       this.exportingId = null;
     },
@@ -605,7 +630,10 @@ export default {
 .sheet-acts { display: flex; flex-direction: column; gap: var(--sp-8); }
 .done { display: flex; flex-direction: column; gap: var(--sp-8); }
 .done-t { font-size: var(--fs-sub); color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.done-code { display: flex; align-items: baseline; gap: var(--sp-8); }
+.done-code { display: inline-flex; align-items: center; gap: var(--sp-8); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-sm); background: var(--brand-soft); align-self: flex-start; cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard); }
+.done-code:active { transform: scale(0.97); }
+.flt-comp, .rg, .tpl-it, .arow, .menu-it { transition: transform var(--dur-instant) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard); }
+.flt-comp:active, .rg:active, .arow:active, .menu-it:active { transform: scale(0.985); }
 .done-k { font-size: var(--fs-sub); color: var(--ink-3); }
 .done-c { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); letter-spacing: 0.08em; }
 .done-s { font-size: var(--fs-caption); color: var(--ink-3); }

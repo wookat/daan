@@ -34,21 +34,25 @@ export default {
 <style scoped>
 .kg-card {
   position: relative; background: var(--card); border-radius: var(--r-md); padding: var(--card-pad);
-  transition: background-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-spring-snappy);
 }
 .kg-card + .kg-card { margin-top: var(--card-gap); }
 .kg-card--p12 { padding: var(--sp-12); }
 .kg-card--flat { border: 1px solid var(--line); }
 .kg-card--raised { box-shadow: var(--sh-1); }
 .kg-card--soft { background: var(--fill); }
+.kg-card.is-clickable:active { transform: scale(0.985); }
 .kg-card--flat.kg-card--hover, .kg-card--soft.kg-card--hover { background: var(--fill); }
 .kg-card--raised.kg-card--hover { box-shadow: var(--sh-2); }
 .kg-card.is-selected { border: 1px solid var(--brand); box-shadow: 0 0 0 2px var(--brand-soft); }
 .kg-card__hd { margin-bottom: var(--sp-12); }
 .kg-card__ft { margin-top: var(--sp-12); }
 .kg-card__chev { position: absolute; right: var(--sp-12); top: 50%; transform: translateY(-50%); }
-@media (min-width: 1024px) {
+/* #ifdef H5 */
+.kg-card.is-clickable { cursor: pointer; }
+@media (hover: hover) and (pointer: fine) {
   .kg-card--raised.is-clickable:hover { box-shadow: var(--sh-2); }
   .kg-card--flat.is-clickable:hover { background: var(--fill); }
 }
+/* #endif */
 </style>

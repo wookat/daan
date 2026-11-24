@@ -52,7 +52,7 @@
             <text class="h">往期比赛 · {{ past.length }} 场</text>
             <l-icon name="chevron-down" :size="20" tone="ink-2" :class="{ flip: pastOpen }" class="fold-ico" />
           </view>
-          <template v-if="pastOpen">
+          <kg-collapse :open="pastOpen">
             <view v-for="p in past" :key="p.id" class="prow" role="button" hover-class="row--hover" @click="p.joined ? openReport(p.id) : openBoard(p)">
               <view class="prow-l">
                 <text class="prow-t">{{ p.title }}</text>
@@ -62,7 +62,7 @@
               <text v-else class="prow-none">未参加 · 看榜单</text>
               <l-icon name="chevron-right" :size="16" tone="faint" />
             </view>
-          </template>
+          </kg-collapse>
         </kg-card>
       </template>
 
@@ -72,13 +72,15 @@
             <text class="h">赛制说明</text>
             <l-icon name="chevron-down" :size="20" tone="ink-2" :class="{ flip: rulesOpen }" class="fold-ico" />
           </view>
-          <view v-if="rulesOpen" class="rules">
-            <text class="rule">1. 每周六 09:00-24:00（东八区）全站同卷比赛，报名可选，开赛后随时进入。</text>
-            <text class="rule">2. 只有比赛窗口内交卷的成绩计入排名，且以首次交卷为准。</text>
-            <text class="rule">3. 交卷后即可看到成绩与实时排名，比赛结束后排名冻结并生成赛后报告。</text>
-            <text class="rule">4. 比赛结束后试卷转为普通试卷，可自由练习，不影响比赛榜单。</text>
-            <text class="rule">5. 参赛人数较少时，报告会同时展示历史同卷分数池作为参照。</text>
-          </view>
+          <kg-collapse :open="rulesOpen">
+            <view class="rules">
+              <text class="rule">1. 每周六 09:00-24:00（东八区）全站同卷比赛，报名可选，开赛后随时进入。</text>
+              <text class="rule">2. 只有比赛窗口内交卷的成绩计入排名，且以首次交卷为准。</text>
+              <text class="rule">3. 交卷后即可看到成绩与实时排名，比赛结束后排名冻结并生成赛后报告。</text>
+              <text class="rule">4. 比赛结束后试卷转为普通试卷，可自由练习，不影响比赛榜单。</text>
+              <text class="rule">5. 参赛人数较少时，报告会同时展示历史同卷分数池作为参照。</text>
+            </view>
+          </kg-collapse>
         </kg-card>
       </template>
     </kg-two-col>
@@ -105,6 +107,7 @@
 <script>
 import { request, anonUid, pkNickname } from '../../api/api.js';
 import { fmtWindow as fmtWindowCst, fmtDay as fmtDayCst } from '../../exam/contest-time.js';
+import { toastErrFrom } from '../../utils/toast.js';
 
 export default {
   data() {
@@ -210,7 +213,7 @@ export default {
         this.board = await request('/api/mock/events/' + ev.id + '/rank?uid=' + encodeURIComponent(anonUid()));
       } catch (e) {
         this.boardLoading = false;
-        uni.showToast({ title: e.message, icon: 'none' });
+        toastErrFrom(e, '榜单加载失败，请稍后重试');
         return;
       }
       this.boardLoading = false;
@@ -241,7 +244,7 @@ export default {
 .score-line { display: block; font-size: var(--fs-body); color: var(--ink); margin: var(--sp-16) 0 var(--sp-12); }
 .score-n { font-size: var(--fs-h1); font-weight: 600; color: var(--brand-text); }
 .fold-h { display: flex; justify-content: space-between; align-items: center; min-height: var(--hit-min); }
-.fold-ico { transition: transform 0.2s ease; }
+.fold-ico { transition: transform var(--dur-fast) var(--ease-standard); }
 .fold-ico.flip { transform: rotate(180deg); }
 .prow { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--cell-h); padding: var(--sp-8) 0; border-bottom: 1px solid var(--line); }
 .prow:last-child { border-bottom: none; padding-bottom: 0; }

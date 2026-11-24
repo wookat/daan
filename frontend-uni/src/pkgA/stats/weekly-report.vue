@@ -83,7 +83,7 @@
             <text class="h">本周错因分布</text>
             <view v-for="x in r.reasons" :key="x.reason" class="rs-row">
               <text class="rs-k">{{ x.reason }}</text>
-              <view class="rs-bar"><view class="rs-fill" :style="{ width: reasonPct(x.n) + '%' }" /></view>
+              <view class="rs-bar"><view class="rs-fill" :style="{ transform: 'scaleX(' + Math.max(0, Math.min(1, reasonPct(x.n) / 100)) + ')' }" /></view>
               <text class="rs-v num">{{ x.n }}<text class="rs-p">（上周 {{ x.prev_n }}）</text></text>
             </view>
             <text v-if="reasonNote" class="rs-note">{{ reasonNote }}</text>
@@ -478,7 +478,7 @@ export default {
 .rs-row { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); }
 .rs-k { flex-shrink: 0; width: 72px; font-size: var(--fs-caption); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rs-bar { flex: 1; height: 8px; background: var(--bad-soft); border-radius: var(--r-full); overflow: hidden; }
-.rs-fill { height: 100%; background: var(--bad); border-radius: var(--r-full); }
+.rs-fill { width: 100%; height: 100%; background: var(--bad); border-radius: var(--r-full); transform-origin: left center; transition: transform var(--dur-slow) var(--ease-decel); }
 .rs-v { flex-shrink: 0; font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
 .rs-p { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
 .rs-note { display: block; margin-top: var(--sp-8); font-size: var(--fs-caption); color: var(--ink-3); line-height: 1.5; }

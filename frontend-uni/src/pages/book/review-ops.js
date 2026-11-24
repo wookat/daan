@@ -9,6 +9,7 @@ import { similarItemFromQuestion, mistakeRecFromExtra, reviewReasonMid, reviewAs
 import { buildReviewSnap, parseReviewSnap, reviewElapsedSecs } from '../../review/review-snap.js';
 import { nextReviewText, reviewSummary, similarRoom, reviewDueLeft } from '../../review/review-summary.js';
 import { reviewOptions, reviewOptionsFull, extractLetter } from '../../review/review-opts.js';
+import { toastOk } from '../../utils/toast.js';
 
 export const reviewComputed = {
 
@@ -57,6 +58,7 @@ export const reviewComputed = {
 export const reviewOps = {
 
     startReview() {
+      this.navDir = 'fade';
       this.rItems = [...this.due];
       this.rIdx = 0;
       this.resetQ();
@@ -104,6 +106,7 @@ export const reviewOps = {
       const r = this.resumeInfo;
       if (!r) return;
       trackEvent('review_resume_click', 'book');
+      this.navDir = 'fade';
       this.rItems = r.items.map((x) => ({ ...x }));
       this.rIdx = r.rIdx;
       this.picked = r.picked;
@@ -117,7 +120,17 @@ export const reviewOps = {
     },
 
     discardResume() {
-      this.clearReviewSnap();
+      this.confirmSheet = {
+        title: '放弃本轮复习进度？',
+        desc: '放弃后将清除暂存进度，下次需从头开始复习',
+        confirmText: '放弃进度',
+        cancelText: '继续保留',
+        danger: true,
+        onConfirm: () => {
+          this.clearReviewSnap();
+          toastOk('已清除暂存进度');
+        },
+      };
     },
 
     resetQ() {
@@ -267,6 +280,7 @@ export const reviewOps = {
 
     nextReview() {
       if (this.rIdx + 1 < this.rItems.length) {
+        this.navDir = 'next';
         this.rIdx++;
         this.resetQ();
         this.saveReviewSnap();
@@ -323,6 +337,21 @@ export const reviewOps = {
         mastery: item.mastery,
       });
       uni.navigateTo({ url: '/pages/practice/practice' });
+    },
+
+    pauseReview() {
+      this.saveReviewSnap();
+      if (this._snapPostTimer) {
+        clearTimeout(this._snapPostTimer);
+        this._snapPostTimer = null;
+        const snap = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
+        if (snap) request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap } }).catch(() => {});
+      }
+      this.reviewing = false;
+      this.resumeInfo = parseReviewSnap(uni.getStorageSync('reviewSnap'), anonUid(), Date.now() / 1000);
+      this.load();
+      toastOk('已保留进度，下次可接着做');
+      uni.pageScrollTo({ scrollTop: 0, duration: 0 });
     },
 
     exitReview() {

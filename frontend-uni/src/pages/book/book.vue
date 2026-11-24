@@ -6,8 +6,12 @@
     <kg-card v-if="reviewing" class="review">
       <view class="rhead">
         <kg-tag tone="warn">{{ cur._extra ? '加练同类' : '复习' }} {{ rIdx + 1 }}/{{ rItems.length }}</kg-tag>
-        <kg-button variant="text" size="sm" @click="exitReview">退出复习</kg-button>
+        <view class="rhead-acts">
+          <kg-button variant="text" size="sm" @click="pauseReview">暂退保留</kg-button>
+          <kg-button variant="text" size="sm" @click="exitReview">退出复习</kg-button>
+        </view>
       </view>
+      <view :key="rIdx" class="rev-stage" :class="'kg-q-enter-' + navDir">
       <view class="q" :style="qStyle">{{ cur.question_text }}</view>
       <view v-if="curLetter" class="opts" :class="{ full: curOptFull }">
         <view
@@ -20,7 +24,7 @@
           @click="pick(o.k)"
         ><text class="opt-k">{{ o.k }}</text><text v-if="o.t" class="opt-t" :style="optStyle">{{ o.t }}</text></view>
       </view>
-      <view v-if="answered">
+      <view v-if="answered" class="rev-after">
         <view class="verdict" :class="wasCorrect ? 'good' : 'badv'">{{ verdictText }}</view>
         <view v-if="wasCorrect === false && cur._appended" class="appended-tip">已为你在本轮末尾加练 {{ cur._appended }} 道同类题</view>
         <view v-if="cur._extra && !wasCorrect && cur._saved" class="appended-tip">已加入错题本，之后会安排复习</view>
@@ -47,6 +51,7 @@
           <kg-button variant="secondary" size="lg" block @click="selfJudge(true)">我做对了</kg-button>
           <kg-button variant="secondary" size="lg" tone="bad" block @click="selfJudge(false)">我做错了</kg-button>
         </view>
+      </view>
       </view>
     </kg-card>
 
@@ -124,6 +129,7 @@
                 <view class="seg-i" :class="{ on: tab === 'done' }" role="tab" @click="tab = 'done'"><text>已掌握</text><text class="seg-n num">{{ doneItems.length }}</text></view>
                 <view class="seg-i" :class="{ on: tab === 'sticky' }" role="tab" @click="tab = 'sticky'"><text>易错</text><text class="seg-n num">{{ stickyItems.length }}</text></view>
                 <view class="seg-i" :class="{ on: tab === 'fav' }" role="tab" @click="tab = 'fav'"><text>收藏</text><text v-if="favs.length" class="seg-n num">{{ favs.length }}</text></view>
+                <view class="seg-bar" :style="{ transform: 'translate3d(' + (tabIndex * 100) + '%, 0, 0)' }"><view class="seg-bar-in" /></view>
               </view>
             </view>
             <view v-if="tab !== 'fav' && items.length" class="toolrow">
@@ -146,27 +152,29 @@
                 </view>
               </view>
             </kg-card>
-            <kg-empty-state v-if="!favs.length" compact icon="star" title="还没有收藏" desc="刷题时点顶栏星星收藏好题；小程序、其他设备的收藏也会同步到这里" />
+            <kg-empty-state v-if="!favs.length" compact icon="star" title="还没有收藏" desc="刷题时点底部星标收藏好题；小程序、其他设备的收藏也会同步到这里" />
             <view v-if="favs.length > 3" class="searchbar">
               <l-icon name="search" :size="16" tone="muted" />
               <input v-model="favKw" class="searchinput" placeholder="搜收藏题干或题型" confirm-type="search" />
               <view v-if="favKw" class="searchclear" role="button" aria-label="清空搜索" @click="favKw = ''"><l-icon name="x" :size="16" tone="muted" /></view>
             </view>
-            <kg-card v-for="f in favShown" :key="f.id ? 'q' + f.id : 't' + f.t" clickable class="mcard" @click="f._open = !f._open">
+            <kg-card v-for="f in favShown" :key="f.id ? 'q' + f.id : 't' + f.t" clickable class="mcard" @click="toggleFavCard(f)">
               <view class="mhead">
                 <kg-tag tone="brand">{{ f.submodule || modName(f.module) }}</kg-tag>
                 <kg-tag v-if="f.is_real" tone="neutral">真题{{ f.exam_year ? ' · ' + f.exam_year : '' }}{{ f.exam_region ? ' · ' + f.exam_region : '' }}</kg-tag>
               </view>
               <view class="q" :class="{ clamp: !f._open }">{{ f._open ? (f.question || '') : (f.question || '').slice(0, 200) }}</view>
-              <template v-if="f._open">
-                <kg-fit-img v-if="f.image" :src="imgUrl(f.image)" mode="widthFix" class="optimg" />
-                <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><kg-fit-img v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" /></view>
-                <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
-                <template v-if="f.xp_explanation">
-                  <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
-                  <view class="xp-body">{{ f.xp_explanation }}</view>
+              <kg-collapse :open="!!f._open">
+                <template v-if="f._open || f._everOpen">
+                  <kg-fit-img v-if="f.image" :src="imgUrl(f.image)" mode="widthFix" class="optimg" />
+                  <view v-for="(v, k) in f.options" :key="k" class="anscmp"><text :class="(f.answer || '').indexOf(k) !== -1 ? 'ca' : ''">{{ k }}. {{ v }}</text><kg-fit-img v-for="(im, ii) in (f.option_imgs && f.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" /></view>
+                  <rich-text :nodes="md(f.hs_explanation || f.explanation || '暂无解析')" />
+                  <template v-if="f.xp_explanation">
+                    <view class="xp-k">{{ f.xp_school || '第二名师视角' }}</view>
+                    <view class="xp-body">{{ f.xp_explanation }}</view>
+                  </template>
                 </template>
-              </template>
+              </kg-collapse>
               <view class="mfoot">
                 <text class="meta">{{ fmt(f.t / 1000) }}</text>
                 <kg-button variant="text" size="sm" tone="bad" @click.stop="unfavItem(f)">取消收藏</kg-button>
@@ -216,7 +224,7 @@
             <kg-empty-state v-if="tab === 'done' && !kw && !hasFilter" compact icon="circle-check" title="还没有已掌握的错题" desc="在待掌握错题的「···」里标为已掌握，或复习连对后自动进入这里" />
             <kg-empty-state v-else-if="tab === 'sticky' && !kw && !hasFilter" compact icon="flag" title="暂无长期易错" desc="复习中累计再错 2 次以上的题会出现在这里，值得专项攻克" />
             <kg-empty-state v-else-if="tab === 'todo' && !kw && !hasFilter" compact icon="circle-check" title="待掌握已清零" :desc="doneItems.length + ' 道错题已全部掌握；再错的题会回到这里，也可去「已掌握」里恢复复习'" cta-text="去刷题" @cta="goPractice" />
-            <kg-empty-state v-else compact icon="search" title="没有匹配的错题" desc="换个关键词或清除筛选试试" />
+            <kg-empty-state v-else compact icon="search" title="没有匹配的错题" desc="换个关键词或清除筛选试试" cta-text="重置筛选" @cta="resetFilters" />
           </template>
 
           <kg-card
@@ -226,7 +234,7 @@
             clickable
             :selected="batchMode && !!selIds[m.id]"
             class="mcard"
-            :class="[masteryClass(m), { kbf: kbId === m.id }]"
+            :class="[masteryClass(m), { kbf: kbId === m.id, 'mcard--leaving': !!leavingIds[m.id] }]"
             @click="batchMode ? toggleSel(m) : toggleCard(m)"
           >
             <view class="mhead">
@@ -245,34 +253,38 @@
               <text class="meta mtime">{{ fmt(m.created_at) }}</text>
             </view>
             <view class="q" :class="{ clamp: !m.open }">{{ m.open ? (m.question_text || '') : (m.question_text || '').slice(0, 200) }}</view>
-            <kg-fit-img v-if="m.open && m.image" :src="imgUrl(m.image)" mode="widthFix" class="optimg" />
-            <view v-if="m.open && m.options" class="mopts">
-              <view v-for="(v, k) in m.options" :key="k" class="moptrow">
-                <text
-                  class="mopt"
-                  :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
-                >{{ k }}. {{ v }}</text>
-                <kg-fit-img v-for="(im, ii) in (m.option_imgs && m.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" />
-              </view>
-            </view>
-            <view v-if="m.open && ansLetter(m.user_answer)" class="anscmp">
-              <kg-tag tone="bad">我选 {{ ansLetter(m.user_answer) }}</kg-tag>
-              <kg-tag v-if="ansLetter(m.correct_answer)" tone="ok">答案 {{ ansLetter(m.correct_answer) }}</kg-tag>
-            </view>
-            <view v-if="m.open && mStatLine(m)" class="mstat">{{ mStatLine(m) }}</view>
-            <view v-if="m.open && (m.html || m.explanation)" class="mexpl">
-              <rich-text :nodes="m.html || md(m.explanation || '')" />
-            </view>
-            <view v-if="m.open && m.attempts && m.attempts.length" class="attempts">
-              <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
-              <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
-                <text class="att-mark" :class="a.correct ? 'aok' : 'abad'">{{ a.correct ? '✓ 对' : '✗ 错' }}</text>
-                <text class="att-src">{{ a.source === 'review' ? '复习' : '练习' }}</text>
-                <text class="att-pick">选 {{ a.picked || '—' }}</text>
-                <text v-if="a.secs" class="att-secs">用时 {{ a.secs }}s</text>
-                <text class="att-time">{{ fmt(a.created_at) }}</text>
-              </view>
-            </view>
+            <kg-collapse :open="!!m.open">
+              <template v-if="m.open || m._everOpen">
+                <kg-fit-img v-if="m.image" :src="imgUrl(m.image)" mode="widthFix" class="optimg" />
+                <view v-if="m.options" class="mopts">
+                  <view v-for="(v, k) in m.options" :key="k" class="moptrow">
+                    <text
+                      class="mopt"
+                      :class="{ 'mopt--ok': ansLetter(m.correct_answer).includes(k), 'mopt--bad': ansLetter(m.user_answer).includes(k) && !ansLetter(m.correct_answer).includes(k) }"
+                    >{{ k }}. {{ v }}</text>
+                    <kg-fit-img v-for="(im, ii) in (m.option_imgs && m.option_imgs[k]) || []" :key="ii" :src="imgUrl(im)" class="optimg" />
+                  </view>
+                </view>
+                <view v-if="ansLetter(m.user_answer)" class="anscmp">
+                  <kg-tag tone="bad">我选 {{ ansLetter(m.user_answer) }}</kg-tag>
+                  <kg-tag v-if="ansLetter(m.correct_answer)" tone="ok">答案 {{ ansLetter(m.correct_answer) }}</kg-tag>
+                </view>
+                <view v-if="mStatLine(m)" class="mstat">{{ mStatLine(m) }}</view>
+                <view v-if="m.html || m.explanation" class="mexpl">
+                  <rich-text :nodes="m.html || md(m.explanation || '')" />
+                </view>
+                <view v-if="m.attempts && m.attempts.length" class="attempts">
+                  <view class="att-h">历次作答 · {{ m.attempts.length }} 次</view>
+                  <view v-for="(a, ai) in m.attempts" :key="ai" class="att-row">
+                    <text class="att-mark" :class="a.correct ? 'aok' : 'abad'">{{ a.correct ? '✓ 对' : '✗ 错' }}</text>
+                    <text class="att-src">{{ a.source === 'review' ? '复习' : '练习' }}</text>
+                    <text class="att-pick">选 {{ a.picked || '—' }}</text>
+                    <text v-if="a.secs" class="att-secs">用时 {{ a.secs }}s</text>
+                    <text class="att-time">{{ fmt(a.created_at) }}</text>
+                  </view>
+                </view>
+              </template>
+            </kg-collapse>
             <view v-if="!m.open" class="mfoot">
               <text class="hint">点开看答案与详解</text>
               <kg-button variant="text" size="sm" icon="ellipsis" aria-label="更多操作" @click.stop="itemSheet(m)" />
@@ -283,12 +295,15 @@
                 <kg-button v-if="!m.mastered" variant="secondary" size="sm" @click.stop="redo(m)">AI 详解</kg-button>
                 <kg-button v-else variant="secondary" size="sm" @click.stop="master(m, false)">恢复复习</kg-button>
                 <kg-button v-if="m.question_id" variant="text" size="sm" @click.stop="openReport(m)">{{ m._reported ? '已纠错' : '纠错' }}</kg-button>
+                <kg-button variant="text" size="sm" @click.stop="toggleCard(m)">收起</kg-button>
               </view>
               <kg-button variant="text" size="sm" icon="ellipsis" aria-label="更多操作" @click.stop="itemSheet(m)" />
             </view>
-            <view v-if="m.open && m.question_id" class="msocial" @click.stop>
-              <q-social-bar compact :question-id="m.question_id" />
-            </view>
+            <kg-collapse v-if="m.question_id" :open="!!m.open">
+              <view v-if="m.open || m._everOpen" class="msocial" @click.stop>
+                <q-social-bar compact :question-id="m.question_id" />
+              </view>
+            </kg-collapse>
           </kg-card>
           <kg-button v-if="tab !== 'fav' && pageN < shownItems.length" variant="text" size="md" block class="loadmore" @click="pageN += 20">上滑或点击加载更多（{{ shownPage.length }}/{{ shownItems.length }}）</kg-button>
           <view v-else-if="tab !== 'fav' && !batchMode && shownPage.length" class="fabspace" />
@@ -322,7 +337,7 @@
           </kg-card>
           <kg-card v-if="monthRecap.total" class="side recap">
             <kg-section-header :title="'本月错题复盘 · 新增 ' + monthRecap.total + ' 道'" :more="recapOpen ? '收起' : '展开'" @more="recapOpen = !recapOpen" />
-            <view v-if="recapOpen">
+            <kg-collapse :open="recapOpen">
               <view class="recap-sec">
                 <text class="recap-st">按模块</text>
                 <view v-for="g in monthRecap.byModule" :key="g.name" class="recap-row">
@@ -340,7 +355,7 @@
                 </view>
               </view>
               <text class="side-s">高频错因是提分洼地：优先复习对应模块的待掌握错题</text>
-            </view>
+            </kg-collapse>
           </kg-card>
           <kg-card v-if="tab !== 'fav' && todoItems.length >= 3" clickable chevron class="side entry" @click="aiAnalysis(false)">
             <view class="entry-in">
@@ -370,7 +385,7 @@
                 <kg-tag tone="neutral">{{ g.n }}</kg-tag>
                 <kg-button variant="text" size="sm" @click.stop="pickGroup(g.key, '')">查看 ›</kg-button>
               </view>
-              <view v-if="mgOpen[g.key]">
+              <kg-collapse :open="!!mgOpen[g.key]">
                 <template v-for="s in g.subs" :key="s.name">
                   <view class="mg-sub" role="button" @click="pickGroup(g.key, s.name)">
                     <text class="mg-sub-name">{{ s.name }}</text>
@@ -388,7 +403,7 @@
                     <kg-tag tone="neutral">{{ t.n }}</kg-tag>
                   </view>
                 </template>
-              </view>
+              </kg-collapse>
             </view>
           </kg-card>
           <!-- #ifdef H5 -->
@@ -606,22 +621,37 @@ A. 春分  B. 夏至  C. 秋分  D. 冬至" :maxlength="MANUAL_QUESTION_MAX" ari
       </kg-sheet>
 
       <!-- 右下角「＋」：手录错题 / 扫描答题卡 / 卷码录入 -->
+      <view v-if="tab !== 'fav' && !batchMode && fabOpen" class="fab-mask" @click="fabOpen = false" />
       <view v-if="tab !== 'fav' && !batchMode" class="fabmenu">
         <template v-if="fabOpen">
-          <kg-button variant="secondary" size="lg" icon="pencil-line" @click="fabOpen = false; entryOpenSheet()">手录错题</kg-button>
-          <kg-button variant="secondary" size="lg" icon="scan-line" @click="fabOpen = false; scanSheetPick()">{{ scanning ? '识别中…' : '扫描答题卡' }}</kg-button>
-          <kg-button variant="secondary" size="lg" icon="file-text" @click="fabOpen = false; manualOpenSheet()">按卷码录入答案</kg-button>
+          <kg-button class="fab-item fab-item-3" variant="secondary" size="lg" icon="pencil-line" @click="fabOpen = false; entryOpenSheet()">手录错题</kg-button>
+          <kg-button class="fab-item fab-item-2" variant="secondary" size="lg" icon="scan-line" @click="fabOpen = false; scanSheetPick()">{{ scanning ? '识别中…' : '扫描答题卡' }}</kg-button>
+          <kg-button class="fab-item fab-item-1" variant="secondary" size="lg" icon="file-text" @click="fabOpen = false; manualOpenSheet()">按卷码录入答案</kg-button>
         </template>
         <view class="fab-main" :class="{ open: fabOpen }" role="button" :aria-label="fabOpen ? '收起' : '录入错题'" @click="fabOpen = !fabOpen"><l-icon name="plus" :size="28" tone="on-brand" /></view>
       </view>
     </template>
+
+    <kg-confirm-sheet
+      :model-value="!!confirmSheet"
+      :title="confirmSheet ? confirmSheet.title : ''"
+      :desc="confirmSheet ? (confirmSheet.content || confirmSheet.desc) : ''"
+      :confirm-text="confirmSheet ? confirmSheet.confirmText : '确认'"
+      :cancel-text="confirmSheet ? confirmSheet.cancelText : '取消'"
+      :danger="!!(confirmSheet && confirmSheet.danger)"
+      @confirm="runConfirmSheet"
+      @cancel="confirmSheet = null"
+    />
+    <kg-undo-bar above-tabbar />
   </view>
 </template>
 
 <script>
 import { md } from '../../utils/md.js';
-import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, removeFav, imgUrl } from '../../api/api.js';
+import { request, anonUid, exportPdf, scanSheet, shareCreate, trackEvent, qShareText, shareVariant, isStaleUidErr, fetchFavs, setFav, removeFav, imgUrl } from '../../api/api.js';
 import { staleAt } from '../../api/api.js';
+import { toastOk, toastErrFrom, showUndoToast } from '../../utils/toast.js';
+import { motionDuration } from '../../a11y/a11y-motion.js';
 import { snapshotNotice } from '../../practice/snapshot-notice.js';
 import { cloudFavId } from '../../exam/exam-fav.js';
 import { syncCloudFavs } from '../../fav/fav-sync.js';
@@ -650,6 +680,8 @@ import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordSc
 import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../exam/paper-scan-jump.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
+const NAME_TO_KEY = Object.fromEntries(Object.entries(NAMES).map(([k, v]) => [v, k]));
+const normModKey = (m) => NAME_TO_KEY[m] || m || '';
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
 const ANSWER_FORMATS = ['单选', '多选', '判断', '不定项'];
 
@@ -670,6 +702,9 @@ export default {
       dueLeft: 0,
       autoReview: false,
       reviewing: false,
+      navDir: 'next',
+      confirmSheet: null,
+      leavingIds: {},
       fontLv: normFontLv(uni.getStorageSync('fontLv')),
       celebrate: false,
       celebrateN: 0,
@@ -788,7 +823,7 @@ export default {
       );
     },
     chipList() {
-      const mods = [...new Set(this.items.map((m) => m.module).filter(Boolean))];
+      const mods = [...new Set(this.items.map((m) => normModKey(m.module)).filter(Boolean))];
       return [{ key: '', name: '全部' }, ...mods.map((m) => ({ key: m, name: NAMES[m] || m }))];
     },
     activeFilterCount() {
@@ -830,10 +865,14 @@ export default {
     tabBase() {
       return this.tab === 'done' ? this.doneItems : this.tab === 'sticky' ? this.stickyItems : this.todoItems;
     },
+    tabIndex() {
+      const idx = ['todo', 'done', 'sticky', 'fav'].indexOf(this.tab);
+      return idx < 0 ? 0 : idx;
+    },
     shownItems() {
       if (this.tab === 'fav') return [];
       let base = this.tabBase;
-      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.filterMod) base = base.filter((m) => normModKey(m.module) === normModKey(this.filterMod));
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
       if (this.kpFilter && this.qtFilter) base = base.filter((m) => this.tagName(m) === this.qtFilter);
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
@@ -951,7 +990,7 @@ export default {
     typeGroups() {
       if (this.tab === 'fav') return [];
       let base = this.tabBase;
-      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.filterMod) base = base.filter((m) => normModKey(m.module) === normModKey(this.filterMod));
       const map = {};
       for (const m of base) {
         const t = this.groupKey(m);
@@ -966,7 +1005,7 @@ export default {
     fineTypes() {
       if (this.tab === 'fav' || !this.kpFilter) return [];
       let base = this.tabBase;
-      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.filterMod) base = base.filter((m) => normModKey(m.module) === normModKey(this.filterMod));
       const map = {};
       for (const m of base) {
         if (this.groupKey(m) !== this.kpFilter) continue;
@@ -1138,6 +1177,9 @@ export default {
       this.aiHtml = '';
       this.aiErr = '';
       this.moreSheet = null;
+      this.confirmSheet = null;
+      this.fabOpen = false;
+      this.leavingIds = {};
       this.batchMode = false;
       this.selIds = {};
       this.pageN = 20;
@@ -1180,8 +1222,17 @@ export default {
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
       const k = e.key;
+      if (this.confirmSheet) {
+        if (k === 'Escape') { e.preventDefault(); this.confirmSheet = null; }
+        return;
+      }
       if (this.moreSheet) {
         if (k === 'Escape') { e.preventDefault(); this.moreSheet = null; }
+        return;
+      }
+      if (this.fabOpen && k === 'Escape') {
+        e.preventDefault();
+        this.fabOpen = false;
         return;
       }
       if (this.kbdHelp) {
@@ -1205,7 +1256,7 @@ export default {
         }
         return;
       }
-      if (this.batchMode || this.manualOpen || this.entryOpen || this.celebrate || this.reinforce || this.aiOpen || this.filterOpen || this.reportOpen || this.scanOpen || this.exportConfirm) return;
+      if (this.confirmSheet || this.batchMode || this.manualOpen || this.entryOpen || this.celebrate || this.reinforce || this.aiOpen || this.filterOpen || this.reportOpen || this.scanOpen || this.exportConfirm) return;
       const list = this.shownPage;
       if (!list.length) return;
       if (k === 'j' || k === 'k' || k === 'ArrowDown' || k === 'ArrowUp') {
@@ -1332,7 +1383,7 @@ export default {
         this.scanResult = d;
         this.scanOpen = true;
       } catch (e) {
-        uni.showToast({ title: '判分失败：' + e.message, icon: 'none', duration: 3000 });
+        toastErrFrom(e, '判分失败，请检查卷码后重试');
       }
       this.manualSubmitting = false;
     },
@@ -1348,7 +1399,7 @@ export default {
             this.scanResult = d;
             this.scanOpen = true;
           } catch (e) {
-            uni.showToast({ title: '识别失败：' + e.message, icon: 'none', duration: 3500 });
+            toastErrFrom(e, '识别失败，请换一张清晰照片重试');
           }
           this.scanning = false;
         },
@@ -1393,15 +1444,36 @@ export default {
         });
         this.exportConfirm = false;
         this.exportSel = false;
-        uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+        toastOk('PDF 已开始下载');
       } catch (e) {
-        uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '导出失败，请稍后重试');
       }
       this.exporting = false;
     },
     md,
+    runConfirmSheet() {
+      const fn = this.confirmSheet && this.confirmSheet.onConfirm;
+      this.confirmSheet = null;
+      if (fn) fn();
+    },
+    resetFilters() {
+      this.kw = '';
+      this.filterMod = '';
+      this.kpFilter = '';
+      this.qtFilter = '';
+      this.kp3Filter = '';
+      this.srcFilter = '';
+      this.rzFilter = '';
+      this.pidFilter = 0;
+      this.sortBy = 'time';
+    },
+    toggleFavCard(f) {
+      f._open = !f._open;
+      if (f._open) f._everOpen = true;
+    },
     toggleCard(m) {
       m.open = !m.open;
+      if (m.open) m._everOpen = true;
       if (m.open && !m.html) m.html = md(m.explanation || '');
       if (m.open && m.question_id && !m.attempts) {
         request('/api/attempts?uid=' + encodeURIComponent(anonUid()) + '&question_id=' + m.question_id)
@@ -1492,10 +1564,22 @@ export default {
       if (i < 0) return;
       const [f] = this.favs.splice(i, 1);
       this._favSeq = (this._favSeq || 0) + 1;
-      uni.setStorageSync('favQuestions', this.favs.map(({ _open, ...x }) => x));
+      uni.setStorageSync('favQuestions', this.favs.map(({ _open, _everOpen, ...x }) => x));
       if (!this.favs.length) this.tab = 'todo';
-      this.unfavCloud(f);
-      uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
+      const unfavP = this.unfavCloud(f);
+      showUndoToast({ text: '已取消收藏', onUndo: () => this.restoreUnfav(f, i, unfavP) });
+    },
+    async restoreUnfav(f, i, unfavP) {
+      if (!f) return;
+      const pos = Math.min(Math.max(i, 0), this.favs.length);
+      this.favs.splice(pos, 0, f);
+      this._favSeq = (this._favSeq || 0) + 1;
+      uni.setStorageSync('favQuestions', this.favs.map(({ _open, _everOpen, ...x }) => x));
+      this.tab = 'fav';
+      toastOk('已恢复收藏');
+      const resolvedQid = unfavP ? await unfavP.catch(() => null) : null;
+      const qid = cloudFavId(f) || resolvedQid;
+      if (qid) setFav(qid).catch(() => {});
     },
     // 本机收藏与云收藏（question_favs）同步取消；题库题按 id，历史无 id 条目按题干回查云列表
     async unfavCloud(f) {
@@ -1503,7 +1587,9 @@ export default {
         let qid = cloudFavId(f);
         if (!qid && f && f.question) qid = cloudFavId(f, (await fetchFavs()).items);
         if (qid) await removeFav(qid);
+        return qid || null;
       } catch (e) { /* 云端同步失败不回滚本机；下次收藏页合并仍以云端为准 */ }
+      return null;
     },
     isDue(m) {
       return !m.next_review || m.next_review <= Date.now() / 1000;
@@ -1540,13 +1626,34 @@ export default {
       try {
         await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } });
       } catch (e) {
-        uni.showToast({ title: '操作失败：' + (e.message || '请稍后重试'), icon: 'none' });
+        toastErrFrom(e, '操作失败，请稍后重试');
         return;
+      }
+      const wait = motionDuration(190);
+      if (wait > 0) {
+        this.leavingIds = { ...this.leavingIds, [m.id]: true };
+        await new Promise((r) => setTimeout(r, wait));
+      }
+      if (this.leavingIds[m.id]) {
+        const next = { ...this.leavingIds };
+        delete next[m.id];
+        this.leavingIds = next;
       }
       m.mastered = on ? 1 : 0;
       m.mastered_at = on ? (m.mastered_at || Date.now() / 1000) : null;
-      uni.showToast({ title: on ? '已掌握！' : '已恢复复习', icon: on ? 'success' : 'none' });
+      showUndoToast({ text: on ? '已标为已掌握' : '已恢复复习', onUndo: () => this.undoMaster(m, !on) });
       this.load();
+    },
+    async undoMaster(m, prevOn) {
+      try {
+        await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), mastered: prevOn ? 1 : 0 } });
+        m.mastered = prevOn ? 1 : 0;
+        m.mastered_at = prevOn ? (m.mastered_at || Date.now() / 1000) : null;
+        toastOk(prevOn ? '已撤销，仍在已掌握' : '已撤销，回到待掌握');
+        this.load();
+      } catch (e) {
+        toastErrFrom(e, '撤销失败，请稍后重试');
+      }
     },
     openFavPage() {
       uni.navigateTo({ url: '/pkgA/social/favorites' });
@@ -1753,7 +1860,7 @@ export default {
         uni.setStorageSync('redoNote', redoSkippedNote(ids.length, d.items.length));
         uni.navigateTo({ url: '/pages/practice/practice' });
       } catch (e) {
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '加载失败，请稍后重试');
       } finally {
         this.batchBusy = false;
       }
@@ -1843,7 +1950,7 @@ export default {
         this.reportOpen = false;
         uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
       } catch (e) {
-        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '提交失败，请稍后重试');
       } finally {
         this.reportBusy = false;
       }
@@ -1867,7 +1974,7 @@ export default {
       try {
         await request('/api/mistakes/' + m.id, { method: 'PATCH', data: { uid: anonUid(), error_reason: next } });
       } catch (e) {
-        uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+        toastErrFrom(e, '保存失败，请稍后重试');
       }
     },
     async shareToMates(m) {
@@ -1879,11 +1986,11 @@ export default {
         trackEvent('share_copy', 'book_' + shareVariant(), d.sid);
         uni.setClipboardData({
           data: qShareText(mod, d.sid, false),
-          success: () => uni.showToast({ title: '分享链接已复制，发给队友吧', icon: 'none' }),
+          success: () => toastOk('分享链接已复制，发给队友吧'),
         });
       } catch (e) {
         uni.hideLoading();
-        uni.showToast({ title: e.message || '分享失败', icon: 'none' });
+        toastErrFrom(e, '分享失败，请稍后重试');
       }
     },
     toggleBatch() {
@@ -1911,11 +2018,11 @@ export default {
         await Promise.all(Object.keys(this.selIds).map((id) =>
           request('/api/mistakes/' + id, { method: 'PATCH', data: { uid: anonUid(), mastered: on ? 1 : 0 } })
         ));
-        uni.showToast({ title: (on ? '已掌握 ' : '已恢复复习 ') + this.selCount + ' 题', icon: 'none' });
+        toastOk((on ? '已掌握 ' : '已恢复复习 ') + this.selCount + ' 题');
         this.selIds = {};
         this.load();
       } catch (e) {
-        uni.showToast({ title: '部分操作失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '部分操作失败，请稍后重试');
         this.load();
       } finally {
         this.batchBusy = false;
@@ -1923,44 +2030,49 @@ export default {
     },
     batchDel() {
       if (!this.selCount || this.batchBusy) return;
-      uni.showModal({
-        title: '删除选中的 ' + this.selCount + ' 道错题？',
-        content: '删除后不可恢复，也不再进入复习队列',
-        confirmText: '删除',
-        success: async (res) => {
-          if (!res.confirm) return;
+      const n = this.selCount;
+      const ids = Object.keys(this.selIds);
+      this.confirmSheet = {
+        title: '删除选中的 ' + n + ' 道错题？',
+        desc: '删除后不可恢复，也不再进入复习队列',
+        confirmText: '删除这 ' + n + ' 题',
+        cancelText: '再想想',
+        danger: true,
+        onConfirm: async () => {
           this.batchBusy = true;
           try {
-            await Promise.all(Object.keys(this.selIds).map((id) =>
+            await Promise.all(ids.map((id) =>
               request('/api/mistakes/' + id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' })
             ));
-            uni.showToast({ title: '已删除 ' + this.selCount + ' 题', icon: 'none' });
+            toastOk('已删除 ' + n + ' 题');
           } catch (e) {
-            uni.showToast({ title: '部分删除失败：' + e.message, icon: 'none' });
+            toastErrFrom(e, '部分删除失败，请稍后重试');
           } finally {
             this.selIds = {};
             this.batchBusy = false;
             this.load();
           }
         },
-      });
+      };
     },
     del(m) {
-      uni.showModal({
+      this.confirmSheet = {
         title: '删除这道错题？',
         content: m.mastered ? '删除后不可恢复' : '删除后不可恢复，也不再进入复习队列；只是暂时不想复习可选「标为已掌握」',
         confirmText: '删除',
-        success: async (res) => {
-          if (!res.confirm) return;
+        cancelText: '先保留',
+        danger: true,
+        onConfirm: async () => {
           try {
             await request('/api/mistakes/' + m.id + '?uid=' + encodeURIComponent(anonUid()), { method: 'DELETE' });
+            toastOk('已删除');
           } catch (e) {
             uni.showToast({ title: '删除失败：' + (e.message || '请稍后重试'), icon: 'none' });
             return;
           }
           this.load();
         },
-      });
+      };
     },
   },
 };
@@ -1985,10 +2097,11 @@ export default {
 /* 吸顶分段切换（Underline 40px 轻盈底线）+ 30px 齐平工具行 */
 .sticky-bar { position: sticky; top: var(--window-top, 0px); z-index: var(--z-sticky); background: var(--bg); margin: 0 calc(-1 * var(--page-x)) var(--sp-12); padding: 0 var(--page-x) var(--sp-8); }
 .segrow { display: flex; align-items: center; margin-bottom: var(--sp-8); }
-.seg { flex: 1; min-width: 0; display: flex; border-bottom: 1px solid var(--line); }
-.seg-i { position: relative; flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 3px; font-size: var(--fs-body); color: var(--ink-3); white-space: nowrap; padding: 0 var(--sp-4); }
+.seg { position: relative; flex: 1; min-width: 0; display: flex; border-bottom: 1px solid var(--line); }
+.seg-i { position: relative; flex: 1; min-width: 0; text-align: center; min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 3px; font-size: var(--fs-body); color: var(--ink-3); white-space: nowrap; padding: 0 var(--sp-4); transition: color var(--dur-fast) var(--ease-standard); }
 .seg-i.on { color: var(--brand-text); font-weight: 600; }
-.seg-i.on::after { content: ''; position: absolute; left: 20%; right: 20%; bottom: 0; height: 2px; border-radius: var(--r-full); background: var(--brand); }
+.seg-bar { position: absolute; left: 0; bottom: 0; width: 25%; height: 2px; transition: transform var(--dur-base) var(--ease-standard); pointer-events: none; }
+.seg-bar-in { width: 48%; height: 100%; margin: 0 auto; border-radius: var(--r-full); background: var(--brand); }
 .seg-n { font-size: var(--fs-caption); opacity: 0.78; }
 /* 工具行：左侧模块 chip(28-30px) 与右侧筛选/批量(sm 30px)严格等高齐平，命中区由 kg-button::after 保 44px */
 .toolrow { display: flex; align-items: center; gap: var(--sp-8); min-height: 30px; }
@@ -2015,8 +2128,9 @@ export default {
 .kpchip { min-height: 40px; padding: 0 var(--sp-12); }
 
 /* 错题卡 */
-.mcard { margin-bottom: var(--card-gap); scroll-margin-top: calc(var(--window-top, 0px) + var(--sp-8)); }
+.mcard { margin-bottom: var(--card-gap); scroll-margin-top: calc(var(--window-top, 0px) + var(--sp-8)); transition: opacity var(--dur-fast) var(--ease-standard), transform var(--dur-base) var(--ease-standard); }
 .mcard.kbf { outline: 2px solid var(--brand); outline-offset: -2px; }
+.mcard--leaving { opacity: 0; transform: translate3d(0, -6px, 0) scale(0.98); pointer-events: none; }
 .mhead { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; }
 .mright { margin-left: auto; }
 .mtime { white-space: nowrap; }
@@ -2064,8 +2178,9 @@ export default {
 .trend-bars { display: flex; gap: var(--sp-8); align-items: flex-end; margin-top: var(--sp-12); }
 .trend-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--sp-4); }
 .trend-barwrap { width: 100%; height: 48px; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
-.trend-bar { width: 12px; background: var(--brand); border-radius: var(--r-xs) var(--r-xs) 0 0; min-height: 0; }
+.trend-bar { width: 12px; background: var(--brand); border-radius: var(--r-xs) var(--r-xs) 0 0; min-height: 0; transform-origin: bottom; animation: kg-bar-rise var(--dur-base) var(--ease-decel) both; }
 .trend-bar.killed { background: var(--ok); }
+@keyframes kg-bar-rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 .trend-n { font-size: var(--fs-caption); color: var(--ink); }
 .trend-kn { font-size: var(--fs-caption); color: var(--ok); }
 .trend-lb { font-size: var(--fs-caption); color: var(--ink-4); }
@@ -2148,9 +2263,17 @@ export default {
 .bb-n { font-size: var(--fs-sub); color: var(--ink-3); flex: 1; }
 /* 动作组容不下时整体折到第二行右对齐，不让单个按钮被挤窄 */
 .bb-acts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--sp-8); margin-left: auto; }
+.fab-mask { position: fixed; inset: 0; z-index: calc(var(--z-bar) - 1); animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
 .fabmenu { position: fixed; right: var(--sp-16); bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + var(--sp-16)); z-index: var(--z-bar); display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-12); }
 /* 菜单项统一宽度——三个按钮文字长短不一，右对齐时左缘参差 */
 .fabmenu .kg-btn { width: 176px; }
+.fab-item { animation: kg-fab-in var(--dur-fast) var(--ease-decel) both; }
+.fab-item-2 { animation-delay: 28ms; }
+.fab-item-3 { animation-delay: 56ms; }
+@keyframes kg-fab-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
 /* #ifdef H5 */
 @media (min-width: 768px) {
   /* 宽屏左栏 tabbar、无底部栏，清掉底部 TabBar 避让 */
@@ -2163,8 +2286,10 @@ export default {
 /* #ifndef H5 */
 .fabmenu { bottom: calc(env(safe-area-inset-bottom) + var(--sp-16)); }
 /* #endif */
-.fab-main { width: 52px; height: 52px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-2); /* kg-allow */ transition: transform var(--dur-base) var(--ease-standard); }
+.fab-main { width: 52px; height: 52px; border-radius: var(--r-full); background: var(--brand); display: flex; align-items: center; justify-content: center; box-shadow: var(--sh-2); /* kg-allow */ transition: transform var(--dur-base) var(--ease-spring-snappy); cursor: pointer; }
+.fab-main:active { transform: scale(0.94); }
 .fab-main.open { transform: rotate(45deg); }
+.fab-main.open:active { transform: rotate(45deg) scale(0.94); }
 /* 列表见底时给悬浮「＋」（52px + 底距）让位，末卡「···」不被盖 */
 .fabspace { height: calc(52px + var(--sp-32)); }
 .more-reasons { margin: var(--sp-4) 0 var(--sp-12); flex-wrap: wrap; }
@@ -2174,9 +2299,17 @@ export default {
 
 /* 复习模式 */
 .review { display: flex; flex-direction: column; gap: var(--sp-8); }
-.rhead { display: flex; justify-content: space-between; align-items: center; }
+.rhead { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-8); }
+.rhead-acts { display: flex; align-items: center; gap: var(--sp-4); }
+.rev-stage { display: flex; flex-direction: column; gap: var(--sp-4); }
+.rev-after { animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
 .opts { display: flex; gap: var(--sp-8); margin: var(--sp-12) 0; }
-.opt { flex: 1; text-align: center; min-height: var(--hit-min); display: flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-size: var(--fs-body); color: var(--ink); background: var(--card); }
+.opt { flex: 1; text-align: center; min-height: var(--hit-min); display: flex; align-items: center; justify-content: center; border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-size: var(--fs-body); color: var(--ink); background: var(--card); cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard); }
+.opt:active { transform: scale(0.985); }
+@media (hover: hover) and (pointer: fine) {
+  .seg-i:hover { color: var(--ink); }
+  .opt:not(.ok):not(.bad):not(.dim):hover { border-color: var(--brand); }
+}
 .opt.ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-strong); }
 .opt.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
 .opt.dim { opacity: 0.4; }

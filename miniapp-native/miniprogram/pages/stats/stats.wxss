@@ -324,7 +324,7 @@
 
 .chev {
   display: inline-flex;
-  transition: transform 0.2s;
+  transition: transform var(--dur-fast) var(--ease-standard);
 }
 
 .chev.is-open {

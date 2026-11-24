@@ -6,6 +6,13 @@
   padding: var(--sp-8) var(--page-x) calc(var(--sp-16) + env(safe-area-inset-bottom));
   max-height: 80vh;
   box-sizing: border-box;
+  transition: transform var(--dur-base) var(--ease-decel);
+}
+.sheet.is-dragging {
+  transition: none;
+}
+.sheet-drag-zone {
+  padding-top: var(--sp-4);
 }
 
 .sheet-handle {

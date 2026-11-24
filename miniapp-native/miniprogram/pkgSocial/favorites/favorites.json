@@ -9,6 +9,7 @@
     "kg-empty": "/components/kg-empty/index",
     "kg-segmented": "/components/kg-segmented/index",
     "kg-chip-row": "/components/kg-chip-row/index",
+    "kg-sheet": "/components/kg-sheet/index",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

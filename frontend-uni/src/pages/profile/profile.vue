@@ -81,7 +81,7 @@
           </wd-cell>
           <!-- #ifdef H5 -->
           <wd-cell key="theme" title="外观模式" :value="themeLabel" is-link clickable @click="cycleTheme">
-            <template #icon><view class="cell-ico"><l-icon name="moon" :size="20" tone="info" /></view></template>
+            <template #icon><view class="cell-ico"><l-icon :name="themeIcon" :size="20" tone="info" /></view></template>
           </wd-cell>
           <wd-cell key="accent" title="主题色" custom-class="acc-cell">
             <template #icon><view class="cell-ico"><l-icon name="palette" :size="20" tone="info" /></view></template>
@@ -110,8 +110,9 @@
           <wd-cell key="offline" title="离线题包" :value="offlineN ? offlineN + ' 个题包' : '未下载'" is-link clickable @click="goOffline">
             <template #icon><view class="cell-ico"><l-icon name="package" :size="20" tone="info" /></view></template>
           </wd-cell>
-          <wd-cell key="sfx" title="答题音效" :value="sfxOn ? '已开启' : '已关闭'" is-link clickable @click="toggleSfx">
+          <wd-cell key="sfx" title="答题音效" clickable @click="toggleSfx">
             <template #icon><view class="cell-ico"><l-icon name="bell" :size="20" tone="info" /></view></template>
+            <view class="sw-stop" @click.stop><kg-switch :model-value="sfxOn" aria-label="答题音效" @update:model-value="setSfx" /></view>
           </wd-cell>
         </wd-cell-group>
 
@@ -155,16 +156,55 @@
         <view v-if="backupCode" class="bk-code" role="button" aria-label="复制恢复码" @click="copyCode">
           <text class="bk-code-l">恢复码</text>
           <text class="bk-code-v num">{{ backupCode }}</text>
-          <l-icon name="copy" :size="16" tone="brand-text" />
+          <l-icon :name="bkCopied ? 'check' : 'copy'" :size="16" :tone="bkCopied ? 'ok' : 'brand-text'" />
+        </view>
+        <view v-if="restoreMode" class="bk-restore">
+          <text class="bk-warn">注意：恢复会用云端备份覆盖当前设备尚未备份的学习记录。</text>
+          <input v-model="restoreCode" class="bk-inp num" placeholder="输入 8 位恢复码，如 AB3D5F7H" maxlength="16" confirm-type="done" @confirm="submitRestore" />
         </view>
       </view>
       <template #footer>
-        <view class="row2">
-          <kg-button variant="primary" size="lg" block :loading="bkLoading" @click="doBackup">{{ backupCode ? '更新备份' : '生成恢复码' }}</kg-button>
-          <kg-button variant="secondary" size="lg" block :disabled="bkLoading" @click="doRestore">输入恢复码恢复</kg-button>
+        <view v-if="!restoreMode" class="row2">
+          <kg-button variant="primary" size="lg" block :loading="bkLoading" @click="doBackup">{{ backupCode ? '更新并复制备份' : '生成恢复码' }}</kg-button>
+          <kg-button variant="secondary" size="lg" block :disabled="bkLoading" @click="restoreMode = true">输入恢复码恢复</kg-button>
+        </view>
+        <view v-else class="row2">
+          <kg-button variant="secondary" size="lg" block :disabled="bkLoading" @click="restoreMode = false">返回</kg-button>
+          <kg-button variant="primary" size="lg" block :loading="bkLoading" :disabled="!restoreCode.trim()" @click="submitRestore">确认恢复并覆盖</kg-button>
         </view>
       </template>
     </kg-sheet>
+
+    <!-- 公告 -->
+    <kg-sheet v-model="announceOpen" :title="(announce && announce.title) || '公告'">
+      <view class="sheet-body">
+        <text class="coach-body">{{ (announce && announce.body) || '' }}</text>
+      </view>
+      <template #footer>
+        <kg-button variant="primary" size="lg" block @click="announceOpen = false">知道了</kg-button>
+      </template>
+    </kg-sheet>
+
+    <kg-confirm-sheet
+      :model-value="!!fbConfirm"
+      title="反馈与纠错"
+      desc="题目内容纠错：答题或看解析时点「纠错」即可提交。其他建议可发邮件至 support@zalize.com"
+      confirm-text="复制邮箱"
+      cancel-text="关闭"
+      @confirm="runFbConfirm"
+      @cancel="fbConfirm = null"
+    />
+
+    <kg-confirm-sheet
+      :model-value="!!logoutConfirm"
+      title="退出登录？"
+      desc="退出后将回到本机匿名记录，账号数据仍保留在云端。"
+      confirm-text="退出登录"
+      cancel-text="先留着"
+      danger
+      @confirm="runLogoutConfirm"
+      @cancel="logoutConfirm = null"
+    />
 
     <!-- 关于：产品链接/协议/版权统一收纳（不再散落页脚） -->
     <kg-sheet v-model="aboutOpen" title="关于">
@@ -208,6 +248,7 @@ import { listPacks } from '../../services/offline.js';
 import { checkinStreak } from '../../home/checkin.js';
 import { DAILY_GOALS, adoptServerDailyGoal } from '../../home/daily-goal.js';
 import { moduleLabel } from '../../utils/module-meta.js';
+import { toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 
 // 旧版缓存的 AI 建议 HTML 内联了旧紫色，读取时映射到品牌色
 function cleanCoach(s) {
@@ -247,7 +288,13 @@ export default {
       coachHtml: cleanCoach(uni.getStorageSync('coachAdvice') || ''),
       coachLoading: false,
       bkOpen: false,
+      restoreMode: false,
+      restoreCode: '',
+      bkCopied: false,
       aboutOpen: false,
+      announceOpen: false,
+      fbConfirm: null,
+      logoutConfirm: null,
       backupCode: uni.getStorageSync('backupCode') || '',
       bkLoading: false,
       zlProducts: [
@@ -276,6 +323,9 @@ export default {
     },
     themeLabel() {
       return THEME_LABELS[this.themeMode] || '跟随系统';
+    },
+    themeIcon() {
+      return this.themeMode === 'dark' ? 'moon' : this.themeMode === 'light' ? 'sun' : 'sun-moon';
     },
     totalDone() {
       // 服务端 answer_log 全量口径优先（含时政，与统计页同源），离线降级本地 pstats
@@ -320,6 +370,7 @@ export default {
   },
   onUnload() {
     if (this._onAuth) uni.$off('authChanged', this._onAuth);
+    if (this._bkCopyTimer) { clearTimeout(this._bkCopyTimer); this._bkCopyTimer = null; }
     // #ifdef H5
     if (this._offInstallable) this._offInstallable();
     // #endif
@@ -488,12 +539,22 @@ export default {
         this.coachHtml = md(d.advice || '');
         uni.setStorageSync('coachAdvice', this.coachHtml);
       } catch (e) {
-        uni.showToast({ title: '生成失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '生成失败，请稍后重试');
       }
       this.coachLoading = false;
     },
-    copyCode() {
-      uni.setClipboardData({ data: this.backupCode });
+    copyCode(code) {
+      const target = typeof code === 'string' && code ? code : this.backupCode;
+      if (!target) return;
+      uni.setClipboardData({
+        data: target,
+        success: () => {
+          this.bkCopied = true;
+          if (this._bkCopyTimer) clearTimeout(this._bkCopyTimer);
+          this._bkCopyTimer = setTimeout(() => { this.bkCopied = false; }, 1800);
+          toastOk('恢复码已复制');
+        },
+      });
     },
     localData() {
       const keys = ['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode', 'favQuestions', 'practiceHistory', 'coachAdvice', 'backupCode'];
@@ -510,40 +571,44 @@ export default {
         const d = await request('/api/backup', { method: 'POST', data: { code: this.backupCode || null, data: this.localData() } });
         this.backupCode = d.code;
         uni.setStorageSync('backupCode', d.code);
-        uni.showModal({ title: '备份成功', content: '恢复码：' + d.code + '\n请记下或截图保存，在新设备输入即可恢复数据。', showCancel: false });
+        this.copyCode(d.code);
+        toastOk('恢复码已生成并复制：' + d.code);
       } catch (e) {
-        uni.showToast({ title: '备份失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '备份失败，请稍后重试');
       }
       this.bkLoading = false;
     },
-    doRestore() {
+    async submitRestore() {
+      const raw = (this.restoreCode || '').trim();
+      if (!raw || this.bkLoading) return;
+      this.bkLoading = true;
+      await this.doRestore(raw);
+      this.bkLoading = false;
+    },
+    async doRestore(rawCode) {
       const RESTORE_ALLOW = new Set(['pstats', 'dailyPlan', 'dailyGoal', 'groupSize', 'realMode', 'fontLv', 'beiMode', 'favQuestions', 'practiceHistory', 'coachAdvice', 'backupCode']);
-      uni.showModal({
-        title: '输入恢复码',
-        editable: true,
-        placeholderText: '如：AB3D5F7H',
-        success: async (res) => {
-          if (!res.confirm || !res.content) return;
-          try {
-            const d = await request('/api/backup?code=' + encodeURIComponent(res.content.trim()));
-            Object.entries(d.data || {}).forEach(([k, v]) => {
-              if (!RESTORE_ALLOW.has(k)) return;
-              uni.setStorageSync(k, k === 'coachAdvice' ? cleanCoach(typeof v === 'string' ? v : '') : v);
-            });
-            uni.setStorageSync('favQuestions', favsLocalOnly(uni.getStorageSync('favQuestions') || []));
-            uni.setStorageSync('backupCode', res.content.trim().toUpperCase());
-            this.backupCode = res.content.trim().toUpperCase();
-            this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
-            this.favN = (uni.getStorageSync('favQuestions') || []).length;
-            this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
-            this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
-            this.coachHtml = cleanCoach(uni.getStorageSync('coachAdvice') || '');
-            uni.showToast({ title: '恢复成功！', icon: 'success' });
-          } catch (e) {
-            uni.showToast({ title: '恢复失败：' + e.message, icon: 'none' });
-          }
-        },
-      });
+      const code = String(rawCode || '').trim();
+      if (!code) return;
+      try {
+        const d = await request('/api/backup?code=' + encodeURIComponent(code));
+        Object.entries(d.data || {}).forEach(([k, v]) => {
+          if (!RESTORE_ALLOW.has(k)) return;
+          uni.setStorageSync(k, k === 'coachAdvice' ? cleanCoach(typeof v === 'string' ? v : '') : v);
+        });
+        uni.setStorageSync('favQuestions', favsLocalOnly(uni.getStorageSync('favQuestions') || []));
+        uni.setStorageSync('backupCode', code.toUpperCase());
+        this.backupCode = code.toUpperCase();
+        this.pstats = uni.getStorageSync('pstats') || { byModule: {}, days: {} };
+        this.favN = (uni.getStorageSync('favQuestions') || []).length;
+        this.dailyGoal = uni.getStorageSync('dailyGoal') || 20;
+        this.fontLv = normFontLv(uni.getStorageSync('fontLv'));
+        this.coachHtml = cleanCoach(uni.getStorageSync('coachAdvice') || '');
+        this.restoreMode = false;
+        this.restoreCode = '';
+        toastOk('学习数据已恢复');
+      } catch (e) {
+        toastErrFrom(e, '恢复失败，请确认恢复码无误');
+      }
     },
     goLogin() {
       uni.navigateTo({ url: '/pkgA/user/login' });
@@ -587,61 +652,66 @@ export default {
       this.dailyGoal = next;
       uni.setStorageSync('dailyGoal', next);
       request('/api/profile', { method: 'POST', data: { uid: anonUid(), daily_goal: next } }).catch(() => {});
-      uni.showToast({ title: '每日目标：' + next + ' 题', icon: 'none' });
+      toastInfo('每日目标：' + next + ' 题');
     },
     cycleFont() {
       this.fontLv = (this.fontLv + 1) % 3;
       uni.setStorageSync('fontLv', this.fontLv);
-      uni.showToast({ title: '字号：' + ['小', '标准', '大'][this.fontLv] + '（做题与复习页生效）', icon: 'none' });
+      toastInfo('字号：' + ['小', '标准', '大'][this.fontLv] + '（做题与复习页生效）');
     },
     cycleTheme() {
       this.themeMode = cycleThemeMode();
-      uni.showToast({ title: '外观模式：' + this.themeLabel, icon: 'none' });
+      toastInfo('外观模式：' + this.themeLabel);
     },
     setAcc(key) {
       this.accKey = key;
       setThemeAccent(key);
-      uni.showToast({ title: '主题色已切换', icon: 'none' });
+      toastOk('主题色已切换');
     },
     goOffline() {
       uni.navigateTo({ url: '/pkgA/user/offline' });
     },
-    toggleSfx() {
-      this.sfxOn = !this.sfxOn;
+    setSfx(v) {
+      this.sfxOn = !!v;
       uni.setStorageSync('sfxOff', this.sfxOn ? '' : '1');
-      uni.showToast({ title: this.sfxOn ? '音效已开启' : '音效已关闭', icon: 'none' });
+      toastInfo(this.sfxOn ? '音效已开启' : '音效已关闭');
+    },
+    toggleSfx() {
+      this.setSfx(!this.sfxOn);
     },
     showAnnounce() {
       if (!this.announce) return;
-      uni.showModal({ title: this.announce.title, content: this.announce.body || '', showCancel: false, confirmText: '知道了' });
+      this.announceOpen = true;
     },
     feedback() {
-      uni.showModal({
-        title: '反馈与纠错',
-        content: '题目内容纠错：练习页答题后点「纠错」即可提交。\n其他建议可发送至邮箱 support@zalize.com',
-        showCancel: false,
-        confirmText: '知道了',
-      });
+      this.fbConfirm = () => {
+        uni.setClipboardData({ data: 'support@zalize.com', success: () => toastOk('支持邮箱已复制') });
+      };
+    },
+    runFbConfirm() {
+      const fn = this.fbConfirm;
+      this.fbConfirm = null;
+      if (fn) fn();
     },
     zlOpen(url) {
       // #ifdef H5
       window.open(url, '_blank');
       // #endif
       // #ifndef H5
-      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制', icon: 'none' }) });
+      uni.setClipboardData({ data: url, success: () => toastOk('链接已复制') });
       // #endif
     },
     doLogout() {
-      uni.showModal({
-        title: '退出登录',
-        content: '退出后将回到本机匿名记录，账号数据仍保留在云端。',
-        success: (r) => {
-          if (!r.confirm) return;
-          authLogout();
-          clearAuth();
-          uni.showToast({ title: '已退出登录', icon: 'none' });
-        },
-      });
+      this.logoutConfirm = () => {
+        authLogout();
+        clearAuth();
+        toastOk('已退出登录');
+      };
+    },
+    runLogoutConfirm() {
+      const fn = this.logoutConfirm;
+      this.logoutConfirm = null;
+      if (fn) fn();
     },
   },
 };
@@ -682,10 +752,12 @@ export default {
 :deep(.acc-cell .wd-cell__left) { max-width: none; }
 :deep(.acc-cell .wd-cell__value) { overflow: visible; flex: 1; min-width: 0; }
 .acc-row { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 4px; }
-.acc-chip { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 0 7px; height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-caption); color: var(--ink-2); white-space: nowrap; }
+.acc-chip { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 0 7px; height: var(--chip-h); border-radius: var(--r-full); border: 1px solid var(--line); background: var(--card); font-size: var(--fs-caption); color: var(--ink-2); white-space: nowrap; cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard), background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+.acc-chip:active { transform: scale(0.95); }
 .acc-chip.on { border-color: var(--brand); color: var(--brand-text); background: var(--brand-soft); font-weight: var(--fw-medium); }
 .acc-dot { width: 8px; height: 8px; border-radius: var(--r-full); flex-shrink: 0; }
 .acc-t { font-size: var(--fs-caption); line-height: 1; white-space: nowrap; }
+.sw-stop { display: inline-flex; align-items: center; }
 
 .logout { margin-top: var(--sp-24); }
 
@@ -693,9 +765,13 @@ export default {
 .sheet-body { padding: var(--sp-4) var(--sp-16) var(--sp-16); }
 .sheet-tip { display: block; font-size: var(--fs-sub); color: var(--ink-3); line-height: var(--lh-sub); margin-bottom: var(--sp-12); }
 .coach-body { display: block; font-size: var(--fs-body); line-height: var(--lh-body); color: var(--ink); }
-.bk-code { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); padding: 0 var(--sp-12); background: var(--brand-soft); border-radius: var(--r-sm); }
+.bk-code { display: flex; align-items: center; gap: var(--sp-8); min-height: var(--hit-min); padding: 0 var(--sp-12); background: var(--brand-soft); border-radius: var(--r-sm); cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard); }
+.bk-code:active { transform: scale(0.985); }
 .bk-code-l { font-size: var(--fs-sub); color: var(--ink-3); }
 .bk-code-v { flex: 1; font-size: var(--fs-h3); font-weight: 600; color: var(--brand-text); letter-spacing: 2px; }
+.bk-restore { margin-top: var(--sp-16); display: flex; flex-direction: column; gap: var(--sp-8); animation: kg-fade-in var(--dur-fast) var(--ease-decel) both; }
+.bk-warn { font-size: var(--fs-caption); color: var(--warn-strong); line-height: var(--lh-caption); }
+.bk-inp { width: 100%; height: var(--input-h); border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 0 var(--sp-12); background: var(--fill); color: var(--ink); font-size: var(--fs-body); box-sizing: border-box; letter-spacing: 1.5px; }
 .row2 { display: flex; gap: var(--sp-12); }
 .row2 :deep(.kg-btn) { flex: 1; }
 

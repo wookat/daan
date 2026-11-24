@@ -89,19 +89,23 @@
               </view>
             </view>
             <scroll-view scroll-y class="d-l-body" :show-scrollbar="false">
-              <text class="d-h">作答要求</text>
-              <text class="d-q">{{ detail.question }}</text>
-              <view class="d-toggle" role="button" :aria-expanded="showMat ? 'true' : 'false'" @click="showMat = !showMat">
-                <text class="d-h">给定资料</text>
-                <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showMat }" />
+              <view :key="detail.id" :class="'kg-q-enter-' + navDir">
+                <text class="d-h">作答要求</text>
+                <text class="d-q">{{ detail.question }}</text>
+                <view class="d-toggle" role="button" :aria-expanded="showMat ? 'true' : 'false'" @click="showMat = !showMat">
+                  <text class="d-h">给定资料</text>
+                  <l-icon name="chevron-down" :size="20" tone="muted" class="fold-ico" :class="{ flip: showMat }" />
+                </view>
+                <kg-collapse :open="showMat">
+                  <text class="d-mat">{{ detail.material }}</text>
+                </kg-collapse>
               </view>
-              <text v-if="showMat" class="d-mat">{{ detail.material }}</text>
             </scroll-view>
           </kg-card>
           <view v-if="qNav.idx >= 0 && qNav.total > 1" class="d-nav">
-            <kg-button variant="ghost" size="md" icon="chevron-left" :disabled="!qNav.prevId" aria-label="上一题" @click="qNav.prevId && openQ(qNav.prevId)">上一题</kg-button>
+            <kg-button variant="ghost" size="md" icon="chevron-left" :disabled="!qNav.prevId" aria-label="上一题" @click="qNav.prevId && openQ(qNav.prevId, 'prev')">上一题</kg-button>
             <text class="d-nav-pos num">{{ qNav.idx + 1 }} / {{ qNav.total }}</text>
-            <kg-button variant="ghost" size="md" :disabled="!qNav.nextId" aria-label="下一题" @click="qNav.nextId && openQ(qNav.nextId)">下一题</kg-button>
+            <kg-button variant="ghost" size="md" :disabled="!qNav.nextId" aria-label="下一题" @click="qNav.nextId && openQ(qNav.nextId, 'next')">下一题</kg-button>
           </view>
         </view>
         <view class="d-col d-col-r" :style="splitH ? { height: splitH + 'px' } : {}">
@@ -109,7 +113,7 @@
             <!-- 作答头固定不滚：长文作答时字数统计始终可见 -->
             <view class="d-ans-h">
               <text class="d-h">我的作答</text>
-              <text v-if="qWordLim" class="d-save num" :class="qWordSt">{{ myAnswer ? (myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '，已超 ' + (myAnswer.length - qWordLim.max) + ' 字' : '')) : '限' + qWordLim.label }}</text>
+              <text v-if="qWordLim" class="d-save num" :class="qWordSt">{{ myAnswer ? ('已保存 · ' + myAnswer.length + ' / 限' + qWordLim.label + (qWordSt === 'over' ? '（超 ' + (myAnswer.length - qWordLim.max) + ' 字）' : '')) : '限' + qWordLim.label }}</text>
               <text v-else-if="myAnswer" class="d-save">已自动保存 · <text class="num">{{ myAnswer.length }}</text> 字</text>
             </view>
             <scroll-view scroll-y class="d-ans-body" :show-scrollbar="false">
@@ -126,21 +130,23 @@
               </view>
               <view v-if="history.length" class="d-toggle" role="button" :aria-expanded="showHist ? 'true' : 'false'" @click="showHist = !showHist">
                 <text class="d-h">历史作答（{{ history.length }}）</text>
-                <l-icon name="chevron-down" :size="20" tone="muted" :class="{ flip: showHist }" />
+                <l-icon name="chevron-down" :size="20" tone="muted" class="fold-ico" :class="{ flip: showHist }" />
               </view>
-              <view v-if="showHist">
+              <kg-collapse :open="showHist">
                 <view v-for="h in history" :key="h.id" class="hist-item" role="button" title="还原这次作答与批改" @click="applyHist(h)">
                   <text class="hist-time num">{{ fmtTime(h.created_at) }}</text>
                   <text class="hist-ans">{{ h.answer }}</text>
                   <text v-if="h.result" class="hist-res">{{ h.result }}</text>
                 </view>
-              </view>
+              </kg-collapse>
               <view class="d-toggle ref" role="button" :aria-expanded="showRef ? 'true' : 'false'" @click="showRef = !showRef">
                 <text class="d-h ref-t">{{ showRef ? '收起参考要点' : '写完再看 · 参考要点' }}</text>
-                <l-icon name="chevron-down" :size="20" tone="brand-text" :class="{ flip: showRef }" />
+                <l-icon name="chevron-down" :size="20" tone="brand-text" class="fold-ico" :class="{ flip: showRef }" />
               </view>
-              <text v-if="showRef" class="d-ref">{{ detail.reference }}</text>
-              <text v-if="showRef && detail.notes" class="d-notes">{{ detail.notes }}</text>
+              <kg-collapse :open="showRef">
+                <text class="d-ref">{{ detail.reference }}</text>
+                <text v-if="detail.notes" class="d-notes">{{ detail.notes }}</text>
+              </kg-collapse>
             </scroll-view>
           </kg-card>
         </view>
@@ -171,9 +177,9 @@
           <kg-card v-for="g in hots" :key="g.topic" class="m-item">
             <view class="q-top" role="button" @click="expanded = expanded === 'h' + g.topic ? 0 : 'h' + g.topic">
               <text class="m-topic">{{ g.topic }}</text>
-              <l-icon :name="expanded === 'h' + g.topic ? 'chevron-up' : 'chevron-down'" :size="16" tone="faint" />
+              <l-icon name="chevron-down" :size="16" tone="faint" class="fold-ico" :class="{ flip: expanded === 'h' + g.topic }" />
             </view>
-            <template v-if="expanded === 'h' + g.topic">
+            <kg-collapse :open="expanded === 'h' + g.topic">
               <view v-for="seg in hotSegRows(g)" :key="seg.name" class="hot-seg">
                 <text class="hot-seg-name">{{ seg.name }}</text>
                 <view v-for="m in seg.items" :key="m.id" class="hot-line">
@@ -194,7 +200,7 @@
                   </view>
                 </template>
               </view>
-            </template>
+            </kg-collapse>
           </kg-card>
         </view>
         <kg-button v-if="!hotEnd && hots.length >= 20" variant="secondary" size="md" block class="more" @click="loadMoreMat">加载更多</kg-button>
@@ -295,9 +301,21 @@
         <input v-model="noteForm.title" class="note-input" placeholder="如：万能开头句式" maxlength="60" />
         <text class="sheet-k">内容</text>
         <textarea v-model="noteForm.content" class="note-ta" placeholder="自己的金句、案例、框架…" maxlength="3000" />
-        <kg-button variant="primary" size="lg" block @click="saveNote">保存</kg-button>
+        <kg-button variant="primary" size="lg" block :disabled="noteSaving" :loading="noteSaving" @click="saveNote">{{ noteSaving ? '保存中…' : '保存' }}</kg-button>
       </view>
     </kg-sheet>
+
+    <kg-confirm-sheet
+      :model-value="!!delNoteTarget"
+      title="删除这条笔记？"
+      desc="删除后不可恢复"
+      confirm-text="删除笔记"
+      cancel-text="留着"
+      danger
+      @confirm="confirmDelNote"
+      @cancel="delNoteTarget = null"
+    />
+    <kg-undo-bar />
   </view>
 </template>
 
@@ -311,6 +329,7 @@ import { parseWordLimit, wordState } from '../../shenlun/shenlun-words.js';
 import { adoptServerDraft } from '../../shenlun/shenlun-draft.js';
 import { segResizeMixin } from '../../utils/seg-resize.js';
 import { withBasePath } from '../../utils/hash-url.js';
+import { toastOk, toastInfo, toastErrFrom, showUndoToast, dismissUndoToast } from '../../utils/toast.js';
 
 const QTYPES = ['全部', '归纳概括', '综合分析', '提出对策', '贯彻执行', '大作文'];
 const MTYPES = ['全部', '热点', '金句', '案例', '政策理论', '范文', '我的笔记'];
@@ -354,6 +373,9 @@ export default {
       hotOthers: {},
       notes: [],
       noteForm: { open: false, id: 0, topic: '', title: '', content: '' },
+      noteSaving: false,
+      delNoteTarget: null,
+      navDir: 'fade',
       favOnly: false,
       favIds: uni.getStorageSync('slMatFavIds') || [],
       favMats: uni.getStorageSync('slMatFavs') || [],
@@ -435,7 +457,7 @@ export default {
     // #endif
   },
   onHide() {
-    if (this._draftTimer) { clearTimeout(this._draftTimer); this._draftTimer = null; }
+    this.flushDraft();
     // #ifdef H5
     if (this._slKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._slKeyHandler);
@@ -445,7 +467,8 @@ export default {
   },
   onUnload() {
     this._unmounted = true;
-    if (this._draftTimer) { clearTimeout(this._draftTimer); this._draftTimer = null; }
+    dismissUndoToast(true);
+    this.flushDraft();
     // #ifdef H5
     if (this._slKeyHandler && typeof window !== 'undefined') {
       window.removeEventListener('keydown', this._slKeyHandler);
@@ -687,6 +710,11 @@ export default {
       uni.setStorageSync('slQFavs', this.qFavs);
       const uid = anonUid();
       if (uid) request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: q.id, on: r.added } }).catch(() => {});
+      if (!r.added) showUndoToast({ text: '已取消收藏题目', onUndo: () => { if (!this.qFavIds.includes(Number(q && q.id))) this.toggleQFav(q); } });
+      else {
+        dismissUndoToast(false);
+        toastOk('已收藏题目');
+      }
     },
     async syncQFavs() {
       const uid = anonUid();
@@ -737,6 +765,11 @@ export default {
       uni.setStorageSync('slMatFavs', this.favMats);
       const uid = anonUid();
       if (uid) request('/api/shenlun/mat_favs', { method: 'POST', data: { uid, mid: m.id, on } }).catch(() => {});
+      if (!on) showUndoToast({ text: '已取消收藏素材', onUndo: () => { if (!this.favIds.includes(m.id)) this.toggleFav(m); } });
+      else {
+        dismissUndoToast(false);
+        toastOk('已收藏素材');
+      }
     },
     async syncFavs() {
       const uid = anonUid();
@@ -822,10 +855,12 @@ export default {
     },
     async saveNote() {
       const f = this.noteForm;
+      if (this.noteSaving) return;
       if (!f.content.trim()) {
-        uni.showToast({ title: '笔记内容为空', icon: 'none' });
+        toastInfo('请填写笔记内容');
         return;
       }
+      this.noteSaving = true;
       try {
         const uid = anonUid();
         await request('/api/shenlun/notes', {
@@ -834,34 +869,41 @@ export default {
         });
         this.noteForm.open = false;
         this.loadNotes();
+        toastOk('笔记已保存');
       } catch (e) {
-        uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+        toastErrFrom(e, '保存失败，请稍后重试');
+      } finally {
+        this.noteSaving = false;
       }
     },
     delNote(n) {
-      uni.showModal({
-        title: '删除笔记',
-        content: '确定删除这条笔记吗？',
-        success: async (r) => {
-          if (!r.confirm) return;
-          try {
-            const uid = anonUid();
-            await request('/api/shenlun/notes/delete', { method: 'POST', data: { uid, id: n.id } });
-            this.loadNotes();
-          } catch (e) {
-            uni.showToast({ title: e.message || '删除失败', icon: 'none' });
-          }
-        },
-      });
+      this.delNoteTarget = n;
+    },
+    async confirmDelNote() {
+      const n = this.delNoteTarget;
+      this.delNoteTarget = null;
+      if (!n) return;
+      try {
+        const uid = anonUid();
+        await request('/api/shenlun/notes/delete', { method: 'POST', data: { uid, id: n.id } });
+        this.loadNotes();
+        toastOk('笔记已删除');
+      } catch (e) {
+        toastErrFrom(e, '删除失败，请稍后重试');
+      }
     },
     // #ifdef H5
     onSlKeydown(e) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const tag = (e.target && e.target.tagName) || '';
       if (/INPUT|TEXTAREA|SELECT/.test(tag) || (e.target && e.target.isContentEditable)) return;
+      if (this.delNoteTarget) {
+        if (e.key === 'Escape') this.delNoteTarget = null;
+        return;
+      }
       if (this.tab !== 'q' || !this.detail) return;
-      if (e.key === 'ArrowLeft' && this.qNav.prevId) { e.preventDefault(); this.openQ(this.qNav.prevId); }
-      else if (e.key === 'ArrowRight' && this.qNav.nextId) { e.preventDefault(); this.openQ(this.qNav.nextId); }
+      if (e.key === 'ArrowLeft' && this.qNav.prevId) { e.preventDefault(); this.openQ(this.qNav.prevId, 'prev'); }
+      else if (e.key === 'ArrowRight' && this.qNav.nextId) { e.preventDefault(); this.openQ(this.qNav.nextId, 'next'); }
     },
     // #endif
     // ≥768 双栏独立滚动：量出分栏顶部到视口底的高度，交给两列 scroll-view
@@ -884,11 +926,13 @@ export default {
           .exec();
       });
     },
-    async openQ(id) {
+    async openQ(id, dir = 'fade') {
+      if (this.detail && this.detail.id && this.detail.id !== id) this.flushDraft();
       const seq = (this._openSeq = (this._openSeq || 0) + 1);
       try {
         const d = await request('/api/shenlun/questions/' + id);
         if (seq !== this._openSeq || this._unmounted) return;
+        this.navDir = dir;
         this.detail = d.item;
         this.showMat = true;
         this.showRef = false;
@@ -901,69 +945,82 @@ export default {
         uni.pageScrollTo({ scrollTop: 0, duration: 0 });
       } catch (e) {
         if (seq !== this._openSeq) return;
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '题目加载失败，请稍后重试');
       }
     },
-    // 作答记录直达：还原「材料 + 当次作答 + 批改结果」的完整作答界面
+    // 作答记录直达：还原「材料 + 当次作答 + 批改结果」的完整作答界面（若有未交草稿，还原后支持 4.5s 撤销）
     async openRec(r) {
       if (!r || !r.qid) return;
-      // 含已落盘草稿：目标题目存在与历史作答不同的未提交草稿时先确认，避免静默覆盖
       const curDraft = (this.detail && this.detail.id === r.qid ? this.myAnswer : uni.getStorageSync('slDraft:' + r.qid)) || '';
-      if (curDraft && curDraft !== r.answer) {
-        const ok = await new Promise((resolve) => {
-          uni.showModal({
-            title: '还原历史作答？',
-            content: '当前未提交的草稿将被这次历史作答覆盖',
-            confirmText: '还原',
-            cancelText: '取消',
-            success: (res) => resolve(!!res.confirm),
-            fail: () => resolve(false),
-          });
-        });
-        if (!ok) return;
-      }
       this.tab = 'q';
       await this.openQ(r.qid);
       if (!this.detail || this.detail.id !== r.qid) return;
+      const prevRes = this.gradeResult;
       if (r.answer) {
         this.myAnswer = r.answer;
         uni.setStorageSync('slDraft:' + r.qid, r.answer);
       }
       this.gradeResult = r.result || '';
-      uni.showToast({ title: '已还原本次作答与批改结果', icon: 'none', duration: 1600 });
+      if (curDraft && curDraft !== r.answer) {
+        const qid = r.qid;
+        showUndoToast({
+          text: '已还原历史作答，原草稿可撤销恢复',
+          onUndo: () => {
+            uni.setStorageSync('slDraft:' + qid, curDraft);
+            if (this.detail && this.detail.id === qid) {
+              this.myAnswer = curDraft;
+              this.gradeResult = prevRes;
+            }
+            toastOk('已恢复原草稿');
+          },
+        });
+      } else {
+        toastOk('已还原本次作答与批改结果');
+      }
     },
-    // 同题历史作答：点条目即换回那次作答与批改（草稿保护同 openRec）
+    // 同题历史作答：点条目即换回那次作答与批改（若有不同草稿，提供 4.5s 撤销恢复）
     async applyHist(h) {
       if (!h || !this.detail) return;
       const target = h.answer || '';
-      if (this.myAnswer && this.myAnswer !== target) {
-        const ok = await new Promise((resolve) => {
-          uni.showModal({
-            title: '还原这次作答？',
-            content: '当前未提交的草稿将被覆盖',
-            confirmText: '还原',
-            cancelText: '取消',
-            success: (res) => resolve(!!res.confirm),
-            fail: () => resolve(false),
-          });
-        });
-        if (!ok) return;
-      }
+      const prevDraft = this.myAnswer || '';
+      const prevRes = this.gradeResult;
+      const qid = this.detail.id;
       if (target) {
         this.myAnswer = target;
-        uni.setStorageSync('slDraft:' + this.detail.id, target);
+        uni.setStorageSync('slDraft:' + qid, target);
       }
       this.gradeResult = h.result || '';
-      uni.showToast({ title: '已还原这次作答与批改', icon: 'none', duration: 1200 });
+      if (prevDraft && prevDraft !== target) {
+        showUndoToast({
+          text: '已还原历史作答，原草稿可撤销恢复',
+          onUndo: () => {
+            uni.setStorageSync('slDraft:' + qid, prevDraft);
+            if (this.detail && this.detail.id === qid) {
+              this.myAnswer = prevDraft;
+              this.gradeResult = prevRes;
+            }
+            toastOk('已恢复原草稿');
+          },
+        });
+      } else {
+        toastOk('已还原这次作答与批改');
+      }
     },
     copyQLink() {
       if (!this.detail) return;
       const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunUrl(this.detail.id);
-      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本题', icon: 'none' }) });
+      uni.setClipboardData({ data: url, success: () => toastOk('链接已复制，发给考友直达本题') });
     },
     copyMatLink(m) {
       const url = (typeof window !== 'undefined' ? window.location.origin : '') + buildShenlunMatUrl(m.id, m.type);
-      uni.setClipboardData({ data: url, success: () => uni.showToast({ title: '链接已复制，发给考友直达本条素材', icon: 'none' }) });
+      uni.setClipboardData({ data: url, success: () => toastOk('链接已复制，发给考友直达本条素材') });
+    },
+    flushDraft() {
+      if (this._draftTimer) {
+        clearTimeout(this._draftTimer);
+        this._draftTimer = null;
+        if (this.detail && this.detail.id) this.pushDraft(this.detail.id);
+      }
     },
     saveDraft() {
       if (!this.detail) return;
@@ -1039,9 +1096,11 @@ export default {
         if (!this._unmounted && this.detail && this.detail.id === qid) {
           this.gradeResult = d.result;
           this.loadHistory(qid);
+        } else if (!this._unmounted) {
+          toastOk('AI 批改已完成，可前往「作答记录」查看');
         }
       } catch (e) {
-        uni.showToast({ title: e.message || '批改失败，请稍后重试', icon: 'none' });
+        toastErrFrom(e, '批改失败，请稍后重试');
       }
       this.grading = false;
     },
@@ -1083,7 +1142,8 @@ export default {
 .q-tags { display: flex; align-items: center; gap: var(--sp-8); flex: 1; min-width: 0; flex-wrap: wrap; }
 .q-top-r { display: flex; align-items: center; gap: var(--sp-4); flex-shrink: 0; }
 .q-paper { font-size: var(--fs-caption); color: var(--ink-2); }
-.star-btn { width: var(--hit-min); height: var(--hit-min); margin: calc((var(--hit-min) - 20px) / -2) 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--r-full); }
+.star-btn { width: var(--hit-min); height: var(--hit-min); margin: calc((var(--hit-min) - 20px) / -2) 0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: var(--r-full); cursor: pointer; transition: transform var(--dur-instant) var(--ease-standard); }
+.star-btn:active { transform: scale(0.9); }
 .q-text { display: block; margin-top: var(--sp-8); font-size: var(--fs-body); line-height: var(--lh-question); color: var(--ink); }
 .q-text.link { color: var(--brand-text); }
 .q-item, .m-item { display: flex; flex-direction: column; }
@@ -1096,6 +1156,7 @@ export default {
 .d-toggle { display: flex; align-items: center; justify-content: space-between; min-height: var(--hit-min); cursor: pointer; }
 .d-toggle .d-h { margin-top: 0; }
 .d-toggle.ref .ref-t { color: var(--brand-text); }
+.fold-ico { flex-shrink: 0; transition: transform var(--dur-fast) var(--ease-standard); }
 .flip { transform: rotate(180deg); }
 .d-mat { display: block; font-size: var(--fs-sub); line-height: var(--lh-body); color: var(--ink-2); white-space: pre-wrap; }
 

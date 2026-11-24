@@ -5,7 +5,7 @@
       <view class="dial {{phase}}">
         <text class="dial-phase">{{phase === 'focus' ? '专注中' : phase === 'break' ? '休息一下' : phase === 'done' ? '本轮完成' : '准备开始'}}</text>
         <text class="dial-time num">{{leftText}}</text>
-        <view class="dial-bar"><view class="dial-fill" style="width:{{pct}}%" /></view>
+        <view class="dial-bar"><view class="dial-fill" style="transform:scaleX({{pct / 100}})" /></view>
         <text wx:if="{{round}}" class="dial-round">今日第 {{round}} 个</text>
       </view>
       <view class="ops">

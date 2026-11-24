@@ -4,6 +4,7 @@
 后端用该 Cookie 向中心站换取短命 JWT（EdDSA/Ed25519），再用 JWKS 公钥本地验签，
 按邮箱找到/创建本地账号并签发本站 Bearer token。原手机号+密码登录不受影响。
 """
+import logging
 import secrets
 import sqlite3
 import time
@@ -16,6 +17,7 @@ from app import db
 from app.api.auth import _issue_token, _user_payload, client_ip, hash_password, rate_limit, require_user
 
 router = APIRouter(prefix="/api/auth")
+logger = logging.getLogger(__name__)
 
 ACCOUNT_ORIGIN = "https://account.zalize.com"
 JWT_ISSUER = ACCOUNT_ORIGIN
@@ -54,6 +56,7 @@ def _central_email(cookie: str | None) -> str:
     try:
         r = httpx.get(f"{ACCOUNT_ORIGIN}/api/auth/token", headers={"cookie": cookie}, timeout=8)
     except Exception:
+        logger.warning("zalize sso token exchange failed", exc_info=True)
         raise HTTPException(502, "统一账号服务暂不可用，请稍后再试") from None
     if r.status_code != 200:
         raise HTTPException(401, "未登录 Zalize 统一账号")
@@ -66,10 +69,11 @@ def _central_email(cookie: str | None) -> str:
             token, key.key, algorithms=["EdDSA"], audience=JWT_AUDIENCE, issuer=JWT_ISSUER
         )
     except Exception:
-        raise HTTPException(401, "统一账号凭证校验失败") from None
+        logger.warning("zalize sso jwt verification failed", exc_info=True)
+        raise HTTPException(401, "统一账号登录状态已失效，请重新登录") from None
     email = str(claims.get("email") or "").strip().lower()
     if not email:
-        raise HTTPException(401, "统一账号凭证缺少邮箱")
+        raise HTTPException(401, "该统一账号未绑定邮箱，请先在 Zalize 补充邮箱")
     return email
 
 
@@ -105,7 +109,8 @@ def api_sso(request: Request, cookie: str | None = Header(None)):
                 if not row:
                     row = conn.execute("SELECT * FROM users WHERE phone=?", (f"za:{email}",)).fetchone()
                 if not row:
-                    raise HTTPException(409, "账号并发初始化冲突，请重试") from None
+                    logger.warning("zalize sso concurrent user init conflict for email=%s", email)
+                    raise HTTPException(409, "登录初始化繁忙，请稍后重试") from None
         token = _issue_token(conn, row["id"])
         conn.commit()
     finally:

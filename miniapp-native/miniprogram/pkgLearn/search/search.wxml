@@ -89,7 +89,7 @@
         <!-- 申论真题 -->
         <view wx:if="{{shenlun.length}}" class="sec">
           <kg-section-header title="申论真题" />
-          <kg-card wx:for="{{shenlun}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" bind:click="onShenlun">
+          <kg-card wx:for="{{shenlun}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" data-id="{{item.id}}" bind:click="onShenlun">
             <view class="t-l">
               <view class="t-name"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>
               <text class="t-sub">{{item.sub}}</text>
@@ -100,7 +100,7 @@
         <!-- 申论素材 -->
         <view wx:if="{{mats.length}}" class="sec">
           <kg-section-header title="申论素材" />
-          <kg-card wx:for="{{mats}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" bind:click="onShenlun">
+          <kg-card wx:for="{{mats}}" wx:key="id" clickable chevron padding="{{12}}" class="titem" data-id="{{item.id}}" data-type="{{item.type}}" bind:click="onShenlunMat">
             <view class="t-l">
               <text class="t-sub">{{item.head}}</text>
               <view class="mt-content"><text wx:for="{{item.segs}}" wx:for-item="s" wx:key="index" class="{{s.hi ? 'hi' : ''}}">{{s.t}}</text></view>

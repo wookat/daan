@@ -4,7 +4,7 @@
       <wd-cell-group custom-class="cellcard" border>
         <wd-cell title="每日刷题提醒" :label="'每天 ' + time + ' · 未完成今日目标时提醒'" center>
           <template #icon><view class="ico"><l-icon name="alarm-clock" :size="20" tone="brand-text" /></view></template>
-          <wd-switch :model-value="on" size="24px" @change="toggle" />
+          <kg-switch :model-value="on" label="每日刷题提醒" @change="toggle" />
         </wd-cell>
         <wd-datetime-picker
           type="time"
@@ -37,7 +37,7 @@
       <wd-cell-group v-if="pushSupported" custom-class="cellcard" border>
         <wd-cell title="每日一练离线推送" label="每天早上推送全站同题 10 题，关闭页面也能收到" center>
           <template #icon><view class="ico"><l-icon name="send" :size="20" tone="brand-text" /></view></template>
-          <wd-switch :model-value="pushOn" :disabled="pushBusy" size="24px" @change="togglePush" />
+          <kg-switch :model-value="pushOn" :disabled="pushBusy" label="每日一练离线推送" @change="togglePush" />
         </wd-cell>
       </wd-cell-group>
       <!-- #endif -->
@@ -69,6 +69,7 @@
 <script>
 import { getReminderSettings, setReminderSettings } from '../../services/reminder.js';
 import { dayKey } from '../../home/checkin.js';
+import { toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 // #ifdef H5
 import { request, anonUid } from '../../api/api.js';
 // #endif
@@ -118,13 +119,14 @@ export default {
     // #endif
   },
   methods: {
-    async toggle({ value }) {
+    async toggle(arg) {
+      const value = typeof arg === 'object' && arg !== null ? !!arg.value : !!arg;
       this.on = value;
       setReminderSettings({ on: this.on, time: this.time });
       // #ifdef H5
       if (this.on && this.perm !== 'granted') await this.askPerm();
       // #endif
-      uni.showToast({ title: this.on ? `已开启 · 每天 ${this.time} 提醒` : '已关闭提醒', icon: 'none' });
+      toastOk(this.on ? `已开启 ${this.time} 提醒` : '已关闭提醒');
     },
     onTimeConfirm({ value }) {
       this.setTime({ detail: { value } });
@@ -133,12 +135,12 @@ export default {
       this.time = e.detail.value;
       setReminderSettings({ on: this.on, time: this.time });
       uni.removeStorageSync('remindFired');
-      if (this.on) uni.showToast({ title: `每天 ${this.time} 提醒`, icon: 'none' });
+      if (this.on) toastOk(`每天 ${this.time} 提醒`);
     },
     // #ifdef H5
     async askPerm() {
       this.perm = await requestNotificationPermission();
-      if (this.perm === 'granted') uni.showToast({ title: '通知权限已开启', icon: 'none' });
+      if (this.perm === 'granted') toastOk('通知权限已开启');
     },
     async initPush() {
       if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
@@ -152,7 +154,8 @@ export default {
         this.pushOn = !!sub;
       } catch (e) { /* 推送不可用时不渲染入口 */ }
     },
-    async togglePush({ value }) {
+    async togglePush(arg) {
+      const value = typeof arg === 'object' && arg !== null ? !!arg.value : !!arg;
       this.pushBusy = true;
       try {
         const reg = await navigator.serviceWorker.ready;
@@ -161,7 +164,7 @@ export default {
           if (perm !== 'granted') {
             this.perm = perm;
             this.pushOn = false;
-            uni.showToast({ title: '需要通知权限才能推送', icon: 'none' });
+            toastInfo('需要通知权限才能推送');
             return;
           }
           this.perm = perm;
@@ -171,7 +174,7 @@ export default {
           });
           await request('/api/push/subscribe', { method: 'POST', data: { uid: anonUid(), sub: sub.toJSON() } });
           this.pushOn = true;
-          uni.showToast({ title: '已开启每日一练推送', icon: 'none' });
+          toastOk('已开启离线推送');
         } else {
           const sub = await reg.pushManager.getSubscription();
           if (sub) {
@@ -180,11 +183,11 @@ export default {
             request('/api/push/unsubscribe', { method: 'POST', data: { endpoint } }).catch(() => {});
           }
           this.pushOn = false;
-          uni.showToast({ title: '已关闭推送', icon: 'none' });
+          toastOk('已关闭推送');
         }
       } catch (e) {
         this.pushOn = false;
-        uni.showToast({ title: '开启失败，请稍后再试', icon: 'none' });
+        toastErrFrom(e, '开启失败，请稍后再试');
       } finally {
         this.pushBusy = false;
       }
@@ -200,7 +203,8 @@ export default {
     // #ifdef MP-WEIXIN
     async mpSubscribe() {
       const r = await requestMpSubscribe();
-      uni.showToast({ title: r.ok ? '订阅成功' : '未完成订阅', icon: 'none' });
+      if (r.ok) toastOk('订阅成功');
+      else toastInfo('未完成订阅');
     },
     // #endif
   },

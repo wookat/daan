@@ -111,7 +111,7 @@
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "答岸收费吗？", "acceptedAnswer": { "@type": "Answer", "text": "刷题、错题本、真题卷库、模考等核心功能免费开放，注册即可使用。" } },
+        { "@type": "Question", "name": "答岸收费吗？", "acceptedAnswer": { "@type": "Answer", "text": "刷题、错题本、真题卷库、模考等核心功能免费开放，打开网页版即可直接使用。" } },
         { "@type": "Question", "name": "需要注册才能用吗？", "acceptedAnswer": { "@type": "Answer", "text": "网页版打开即可匿名练题；注册后错题、学习进度、外观设置云端同步，也支持 Zalize 统一账号一键登录。" } },
         { "@type": "Question", "name": "题库覆盖什么考试？", "acceptedAnswer": { "@type": "Answer", "text": "国考 2012–2026 全链 + 多省省考、选调行测真题与模考卷，题库超 16 万题、600+ 套整卷可考；申论素材与 AI 批改同步覆盖。" } },
         { "@type": "Question", "name": "手机和平板能用吗？", "acceptedAnswer": { "@type": "Answer", "text": "网页版适配手机与平板浏览器，直接打开 kaogong.zalize.com 即可；微信小程序正在内测，上线后与网页版数据互通。" } },
@@ -135,6 +135,8 @@
   --glass:rgba(255,255,255,.72);--glass-b:rgba(255,255,255,.85);--nav-bg:rgba(247,248,252,.78);--nav-b:rgba(231,233,240,.75);
   --r-lg:20px;--r-md:14px;--r-sm:10px;--r-full:999px;
   --hairline:1px solid var(--line);
+  --dur-instant:110ms;--dur-fast:180ms;--dur-base:260ms;--dur-slow:360ms;
+  --ease-standard:cubic-bezier(.22,1,.36,1);--ease-decel:cubic-bezier(.16,1,.3,1);
   --font:Inter,-apple-system,BlinkMacSystemFont,'PingFang SC','HarmonyOS Sans','Hiragino Sans GB','Microsoft YaHei','Noto Sans SC',system-ui,sans-serif;
   color-scheme:light dark;
 }
@@ -163,13 +165,9 @@ section{padding:76px 0}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}.hero [data-hero],.hero-visual,.reveal{opacity:1!important;transform:none!important}}
 
 /* ---- motion & FX ---- */
-@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
-@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-100%)}}
-@keyframes sheen{0%{transform:translateX(-120%) skewX(-18deg)}60%,100%{transform:translateX(220%) skewX(-18deg)}}
-@keyframes glowDrift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-3%) scale(1.06)}}
-@keyframes gradShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-.reveal{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+.reveal{opacity:0;transform:translateY(12px);transition:opacity var(--dur-slow) var(--ease-decel),transform var(--dur-slow) var(--ease-decel)}
 .reveal.in{opacity:1;transform:none}
 
 /* ---- nav ---- */
@@ -188,9 +186,10 @@ nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);backdrop-filter:bl
 .nav-links a:hover{color:var(--brand)}
 /* 按钮与 App kg-button 同口径：pill(r-full) 实色扁平、无阴影无位移，
    hover 换底色、:active 再压深一档；字重 lg 600 / md 500 */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--r-full);font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color .15s,border-color .15s,color .15s}
-.btn-brand{background:linear-gradient(180deg,#3d6bff,#2450f0);color:var(--on-brand);box-shadow:0 4px 16px -6px rgba(46,91,255,.4);transition:background-color .15s,border-color .15s,color .15s,box-shadow .25s,transform .15s}
-.btn-brand:hover{background:linear-gradient(180deg,#2e5bff,#1e44d9);box-shadow:0 8px 24px -6px rgba(46,91,255,.55);transform:translateY(-1px)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:var(--r-full);font-weight:600;font-size:14px;padding:12px 24px;cursor:pointer;border:1px solid transparent;transition:background-color var(--dur-instant) var(--ease-standard),border-color var(--dur-instant) var(--ease-standard),color var(--dur-instant) var(--ease-standard),transform var(--dur-instant) var(--ease-standard)}
+.btn:active{transform:scale(.98)}
+.btn-brand{background:var(--brand);color:var(--on-brand)}
+.btn-brand:hover{background:var(--brand-press)}
 .btn-brand:active{background:#1735ab}
 .btn-ghost{background:var(--card);color:var(--ink-2);border-color:var(--line);font-weight:500}
 .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
@@ -204,24 +203,23 @@ nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);backdrop-filter:bl
     radial-gradient(38% 42% at 18% 22%,rgba(46,91,255,.16),transparent 70%),
     radial-gradient(30% 36% at 78% 12%,rgba(56,189,248,.13),transparent 70%),
     radial-gradient(24% 30% at 60% 60%,rgba(30,68,217,.09),transparent 70%),
-    radial-gradient(20% 26% at 38% 80%,rgba(99,140,255,.08),transparent 70%);
-  animation:glowDrift 14s ease-in-out infinite}
+    radial-gradient(20% 26% at 38% 80%,rgba(99,140,255,.08),transparent 70%)}
 .hero::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
   background:radial-gradient(60% 40% at 50% -8%,rgba(255,255,255,.7),transparent 70%)}
 .hero .wrap{position:relative}
-.hero [data-hero]{opacity:0;animation:fadeUp .7s cubic-bezier(.2,.7,.2,1) forwards}
-.hero [data-hero="1"]{animation-delay:.05s}.hero [data-hero="2"]{animation-delay:.15s}
-.hero [data-hero="3"]{animation-delay:.28s}.hero [data-hero="4"]{animation-delay:.4s}
-.hero-visual{animation:fadeUp .8s .25s cubic-bezier(.2,.7,.2,1) forwards,floatY 7s ease-in-out 1s infinite;opacity:0}
+.hero [data-hero]{opacity:0;animation:fadeUp var(--dur-slow) var(--ease-decel) forwards}
+.hero [data-hero="1"]{animation-delay:0ms}.hero [data-hero="2"]{animation-delay:50ms}
+.hero [data-hero="3"]{animation-delay:100ms}.hero [data-hero="4"]{animation-delay:150ms}
+.hero-visual{animation:fadeUp var(--dur-slow) .12s var(--ease-decel) forwards;opacity:0}
 .hero-in{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--brand-soft);color:var(--brand-text);border-radius:999px;padding:5px 14px;font-size:12.5px;font-weight:600}
 .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--brand);display:inline-block}
 h1{font-size:clamp(34px,4.6vw,52px);line-height:1.18;font-weight:800;margin:20px 0 16px;letter-spacing:-.02em}
-h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55%,#2e5bff 95%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gradShift 6s ease-in-out infinite}
+h1 em{font-style:normal;color:var(--brand)}
 .lede{font-size:16.5px;color:var(--ink-3);line-height:1.8;max-width:30em}
 .hero-cta{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
 .hero-stats{display:flex;gap:34px;margin-top:40px;flex-wrap:wrap}
-.hstat b{font-size:26px;font-weight:800;color:var(--ink)}
+.hstat b{font-size:26px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
 .hstat b span{color:var(--brand)}
 .hstat small{display:block;color:var(--ink-3);font-size:12.5px;margin-top:3px}
 
@@ -243,7 +241,7 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 .chipstrip-in{display:flex;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
 .chiptrack{display:flex;flex-shrink:0;gap:10px;padding-right:10px;animation:marquee 36s linear infinite;will-change:transform}
 .chipstrip:hover .chiptrack{animation-play-state:paused}
-.chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:var(--hairline);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card);transition:border-color .15s,color .15s}
+.chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:var(--hairline);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card);transition:border-color var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard)}
 a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .chip i{width:8px;height:8px;border-radius:2px;background:var(--brand);display:inline-block}
 .chip.accent{background:var(--brand-soft);border-color:var(--brand-soft-2);color:var(--brand-text)}
@@ -257,10 +255,10 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 /* ---- features ---- */
 .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 /* 内容卡 = App kg-card--flat：卡底 + 1px line + r-md(14) */
-.feat{position:relative;background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px;display:flex;flex-direction:column;transition:border-color .15s,transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
-.feat:hover{border-color:var(--brand-soft-2);transform:translateY(-4px);box-shadow:0 10px 28px -14px rgba(23,53,171,.18)}
-.feat .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:16px;color:var(--brand);transition:background-color .15s,transform .25s cubic-bezier(.2,.7,.2,1)}
-.feat:hover .ic{background:var(--brand-soft-2);transform:scale(1.08)}
+.feat{position:relative;background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px;display:flex;flex-direction:column;transition:border-color var(--dur-fast) var(--ease-standard),transform var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard)}
+.feat:hover{border-color:var(--brand-soft-2);transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(23,53,171,.14)}
+.feat .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);display:grid;place-items:center;margin-bottom:16px;color:var(--brand);transition:background-color var(--dur-fast) var(--ease-standard)}
+.feat:hover .ic{background:var(--brand-soft-2)}
 .feat .ic svg{width:22px;height:22px}
 .feat h3{font-size:16.5px;font-weight:700;margin-bottom:8px}
 .feat p{font-size:13.5px;color:var(--ink-3);line-height:1.75;padding-bottom:14px}
@@ -268,21 +266,18 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 
 /* ---- pain (PAS) ---- */
 .pain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.pain{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:24px;transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s,border-color .15s}
-.pain:hover{transform:translateY(-4px);box-shadow:0 10px 28px -14px rgba(23,53,171,.14);border-color:var(--brand-soft-2)}
+.pain{background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:24px;transition:transform var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard)}
+.pain:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(23,53,171,.12);border-color:var(--brand-soft-2)}
 .pain b{display:block;font-size:15.5px;margin-bottom:8px}
 .pain p{font-size:13.5px;color:var(--ink-3);line-height:1.75}
 
 /* ---- steps ---- */
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.step{position:relative;background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px;transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s,border-color .15s}
-.step:hover{transform:translateY(-4px);box-shadow:0 10px 28px -14px rgba(23,53,171,.18);border-color:var(--brand-soft-2)}
+.step{position:relative;background:var(--card);border:var(--hairline);border-radius:var(--r-md);padding:26px 24px;transition:transform var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard)}
+.step:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(23,53,171,.14);border-color:var(--brand-soft-2)}
 .step .n{display:inline-block;font-size:13px;font-weight:800;color:var(--brand-text);background:var(--brand-soft);border-radius:8px;padding:3px 10px;margin-bottom:14px}
 .step b{display:block;font-size:16px;margin-bottom:8px}
 .step p{font-size:13.5px;color:var(--ink-3);line-height:1.75}
-
-.feat::after,.step::after{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,rgba(46,91,255,.5),rgba(56,189,248,.4));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s;pointer-events:none}
-.feat:hover::after,.step:hover::after{opacity:1}
 
 /* ---- faq (details/summary，无需 JS) ---- */
 #faq .shead,#get .shead{text-align:center;margin-left:auto;margin-right:auto}
@@ -291,7 +286,7 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .faq details+details{margin-top:12px}
 .faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:center}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:'+';color:var(--ink-4);font-size:18px;font-weight:400;transition:transform .15s}
+.faq summary::after{content:'+';color:var(--ink-4);font-size:18px;font-weight:400;transition:transform var(--dur-fast) var(--ease-standard)}
 .faq details[open] summary::after{transform:rotate(45deg)}
 .faq details p{padding:0 22px 18px;font-size:13.5px;color:var(--ink-3);line-height:1.75}
 
@@ -302,8 +297,8 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .strip img{-webkit-user-drag:none}
 .strip::-webkit-scrollbar{display:none}
 .shot{flex:0 0 232px}
-.shot .frame{border-radius:22px;background:#fff;padding:6px;border:var(--hairline);transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s;transform-style:preserve-3d}
-.shot:hover .frame{transform:perspective(800px) rotateX(3deg) rotateY(-4deg) translateY(-6px);box-shadow:0 18px 40px -18px rgba(23,53,171,.28)}
+.shot .frame{border-radius:22px;background:#fff;padding:6px;border:var(--hairline);transition:transform var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard)}
+.shot:hover .frame{transform:translateY(-3px);box-shadow:0 10px 24px -12px rgba(23,53,171,.18)}
 .shot img{width:100%;height:auto;border-radius:16px;display:block;background:var(--fill)}
 .shot p{text-align:center;font-size:12.5px;color:var(--ink-3);margin-top:12px}
 
@@ -322,10 +317,10 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 /* ---- platforms ---- */
 .plat{display:flex;justify-content:center;gap:20px}
 .plat .pcard{width:100%;max-width:420px}
-.pcard{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--glass-b);box-shadow:0 8px 24px -14px rgba(23,53,171,.12);border-radius:var(--r-md);padding:26px 24px;text-align:center;transition:border-color .15s,transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s}
-.pcard:hover{border-color:var(--brand-soft-2);transform:translateY(-4px);box-shadow:0 10px 28px -14px rgba(23,53,171,.18)}
-.pcard .pi{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;margin:0 auto 14px;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
-.pcard:hover .pi{transform:scale(1.08)}
+.pcard{background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--glass-b);box-shadow:0 8px 24px -14px rgba(23,53,171,.12);border-radius:var(--r-md);padding:26px 24px;text-align:center;transition:border-color var(--dur-fast) var(--ease-standard),transform var(--dur-fast) var(--ease-standard),box-shadow var(--dur-fast) var(--ease-standard)}
+.pcard:hover{border-color:var(--brand-soft-2);transform:translateY(-2px);box-shadow:0 10px 24px -14px rgba(23,53,171,.14)}
+.pcard .pi{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;margin:0 auto 14px;transition:background-color var(--dur-fast) var(--ease-standard)}
+.pcard:hover .pi{background:var(--brand-soft-2)}
 .pcard .pi svg{width:22px;height:22px}
 .pcard b{display:block;font-size:15.5px;margin-bottom:6px}
 .pcard p{font-size:13px;color:var(--ink-3);line-height:1.7}
@@ -346,7 +341,6 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 /* ---- cta ---- */
 .cta{background:linear-gradient(135deg,#2e5bff 0%,#2450f0 45%,#1a3cd4 100%);border-radius:var(--r-lg);text-align:center;padding:64px 32px;color:#fff;position:relative;overflow:hidden;box-shadow:0 24px 48px -20px rgba(23,53,171,.5)}
 .cta::before{content:'';position:absolute;inset:0;background:radial-gradient(60% 90% at 50% 0%,rgba(255,255,255,.16),transparent 65%)}
-.cta::after{content:'';position:absolute;top:0;bottom:0;width:34%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);animation:sheen 5.5s ease-in-out infinite}
 .cta>*{position:relative;z-index:1}
 .cta h2{font-size:30px;font-weight:800;margin-bottom:14px}
 .cta p{opacity:.85;font-size:15px;margin-bottom:30px}
@@ -356,7 +350,7 @@ a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .cta .btn-brand:active{background:#dbe6ff}
 .cta .btn-ghost{background:rgba(255,255,255,.16);color:#fff;border-color:transparent;font-weight:500}
 .cta .btn-ghost:hover{background:rgba(255,255,255,.26)}
-.cta-mascot{width:128px;height:128px;display:block;margin:0 auto 12px;border-radius:26px;background:rgba(255,255,255,.94);border:1px solid rgba(255,255,255,.65);padding:26px;box-sizing:border-box;box-shadow:0 12px 32px -8px rgba(10,25,90,.35),inset 0 1px 0 #fff;animation:floatY 5s ease-in-out infinite}
+.cta-mascot{width:128px;height:128px;display:block;margin:0 auto 12px;border-radius:26px;background:rgba(255,255,255,.94);border:1px solid rgba(255,255,255,.65);padding:26px;box-sizing:border-box;box-shadow:0 12px 32px -8px rgba(10,25,90,.35),inset 0 1px 0 #fff}
 
 /* ---- footer ---- */
 footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);font-size:13px}
@@ -451,7 +445,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     <div class="hero-visual">
       <div>
         <div class="phone"><img src="lp-assets/home.png" alt="答岸刷题首页" fetchpriority="high" width="390" height="844"></div>
-        <div class="phone-cap">DAAN · 刷题首页</div>
+        <div class="phone-cap">答岸 · 刷题首页</div>
       </div>
     </div>
   </div>
@@ -462,8 +456,8 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     <div class="band reveal">
       <div><b>2012–2026</b><small>国考省考整卷覆盖</small></div>
       <div><b>六段式</b><small>AI 讲解结构</small></div>
-      <div><b>SM-2</b><small>间隔复习调度</small></div>
-      <div><b>全站先验</b><small>每题正确率校准</small></div>
+      <div><b>防遗忘</b><small>科学间隔复习</small></div>
+      <div><b>全站正确率</b><small>每题难度校准</small></div>
       <div><b>云端同步</b><small>账号进度随身</small></div>
     </div>
   </div>
@@ -501,7 +495,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section id="pain">
   <div class="wrap">
     <div class="shead reveal">
-      <div class="tag">WHY</div>
+      <div class="tag">常见痛点</div>
       <h2>刷了几千题，错题还是一错再错</h2>
       <p>不是你不努力——是错题从来没被真正「讲透过、记住过、检验过」。</p>
     </div>
@@ -516,13 +510,13 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section id="how" style="padding-top:0">
   <div class="wrap">
     <div class="shead reveal">
-      <div class="tag">HOW IT WORKS</div>
+      <div class="tag">三步上手</div>
       <h2>三步，把错题变成能力</h2>
     </div>
     <div class="steps">
       <div class="step reveal"><span class="n">01</span><b>拍题 · 搜题</b><p>拍照或粘贴题目文字，也可以在 16 万+ 题库里按考点检索。</p></div>
       <div class="step reveal"><span class="n">02</span><b>讲解 · 归集</b><p>AI 按花生十三方法体系六段式讲解；错题自动进错题本，不用手抄。</p></div>
-      <div class="step reveal"><span class="n">03</span><b>复习 · 检验</b><p>SM-2 间隔复习到期推送；全真模考 + 全站排位检验真实水平。</p></div>
+      <div class="step reveal"><span class="n">03</span><b>复习 · 检验</b><p>错题按遗忘规律定时提醒复习；全真模考 + 全站排位检验真实水平。</p></div>
     </div>
   </div>
 </section>
@@ -530,17 +524,17 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section id="features" style="padding-top:0">
   <div class="wrap">
     <div class="shead reveal">
-      <div class="tag">FEATURES</div>
+      <div class="tag">核心功能</div>
       <h2>练、错、讲、考，一个闭环</h2>
       <p>不是再做一个题库 App——是把「做题→错因→讲解→复习→模考」串成一条学习回路。</p>
     </div>
     <div class="feat-grid reveal">
       <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h2.5l1.5-2.5h8L17.5 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="14" r="3.4"/></svg></div><h3>拍题 AI 讲解</h3><p>拍题或粘贴文字，AI 按花生十三方法体系给出六段式讲解：判对答案、速解方法、步骤拆解、易错陷阱、可迁移技巧、同类题入口。</p><span class="k">支持追问 · 举一反三</span></div>
-      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg></div><h3>真题卷库</h3><p>600+ 套真题与模考整卷：国考 2012–2026 全链 + 多省省考、选调真题及模考卷，按原卷结构还原，可整卷模考也可续考。</p><span class="k">含正确率先验</span></div>
-      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 18a2 2 0 0 0 2 2h11"/><path d="M9 8h6"/></svg></div><h3>错题本 · 间隔复习</h3><p>错题自动归集，SM-2 算法按遗忘曲线推送到期待复习；易错专项卷、掌握状态机（含「长期易错」终态）、错因 TOP 聚合。</p><span class="k">越练越懂你</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg></div><h3>真题卷库</h3><p>600+ 套真题与模考整卷：国考 2012–2026 全链 + 多省省考、选调真题及模考卷，按原卷结构还原，可整卷模考也可续考。</p><span class="k">含全站正确率参考</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z"/><path d="M5 18a2 2 0 0 0 2 2h11"/><path d="M9 8h6"/></svg></div><h3>错题本 · 间隔复习</h3><p>错题自动归集，按遗忘曲线定时推送到期复习；易错专项卷、掌握状态跟踪（含「长期易错」提醒）、错因 TOP 聚合。</p><span class="k">越练越懂你</span></div>
       <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4a3 3 0 0 0 3 4M17 5h3a3 3 0 0 1-3 4"/><path d="M12 13v3"/><path d="M8 20h8M9.5 16.5h5l.7 3.5H8.8z"/></svg></div><h3>全真模考 · 排位</h3><p>省份卷型模板（国考副省/地市、江苏 ABC 等 7 套）+ 薄弱加权智能组卷；计时判分 + 全站排位百分位 + 答对/答错均速。</p><span class="k">考出真实水平</span></div>
       <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4.5L16.5 4a2.1 2.1 0 0 1 3 3L8 18.5 4 20z"/><path d="M14.5 6l3 3"/></svg></div><h3>申论批改 · 素材库</h3><p>申论作答 AI 批改打分点评；素材库按热点聚合「内涵/角度/金句」三段式，支持我的笔记与逐条收藏。</p><span class="k">范文 + 素材双链路</span></div>
-      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8.5 10h7M8.5 13h4"/></svg></div><h3>AI 问泽 · 面试陪练</h3><p>逐题「问泽」追问、AI 面试陪练抽真题 + 五维考官打分点评，番茄钟、打卡热力图、周报陪伴整个备考周期。</p><span class="k">碎片时间全利用</span></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/><path d="M8.5 10h7M8.5 13h4"/></svg></div><h3>AI 追问 · 面试陪练</h3><p>逐题 AI 追问讲解、面试陪练抽真题 + 五维考官打分点评，番茄钟、打卡热力图、周报陪伴整个备考周期。</p><span class="k">碎片时间全利用</span></div>
     </div>
   </div>
 </section>
@@ -548,7 +542,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section class="screens" id="screens">
   <div class="wrap">
     <div class="shead reveal">
-      <div class="tag">SCREENS</div>
+      <div class="tag">实拍界面</div>
       <h2>真实界面，真实数据</h2>
       <p>以下均为当前版本实拍——你看到的就是实际长相。</p>
     </div>
@@ -570,7 +564,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section id="method">
   <div class="wrap method-in">
     <div class="shead reveal" style="margin-bottom:0">
-      <div class="tag">METHODOLOGY</div>
+      <div class="tag">解题方法</div>
       <h2>花生十三方法体系</h2>
       <p style="margin-bottom:0">不是泛泛的「AI 讲题」——讲解严格落在速解方法上：每题给出适用于该题型的方法名称（赋值法、特殊值法、排除法、整除特性……）、操作步骤、以及可迁移到同类题的技巧，让一题的讲解变成一类题的能力。</p>
     </div>
@@ -588,11 +582,11 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section id="faq" style="padding-top:0">
   <div class="wrap">
     <div class="shead reveal">
-      <div class="tag">FAQ</div>
+      <div class="tag">常见问题</div>
       <h2>常见问题</h2>
     </div>
     <div class="faq reveal">
-      <details><summary>答岸收费吗？</summary><p>刷题、错题本、真题卷库、模考等核心功能免费开放，注册即可使用。</p></details>
+      <details><summary>答岸收费吗？</summary><p>刷题、错题本、真题卷库、模考等核心功能免费开放，打开网页版即可直接使用。</p></details>
       <details><summary>需要注册才能用吗？</summary><p>网页版打开即可匿名练题；注册后错题、学习进度、外观设置云端同步，也支持 Zalize 统一账号一键登录。</p></details>
       <details><summary>题库覆盖什么考试？</summary><p>国考 2012–2026 全链 + 多省省考、选调行测真题与模考卷，题库超 16 万题、600+ 套整卷可考；申论素材与 AI 批改同步覆盖。</p></details>
       <details><summary>手机和平板能用吗？</summary><p>网页版适配手机与平板浏览器，直接打开 kaogong.zalize.com 即可；微信小程序正在内测，上线后与网页版数据互通。</p></details>
@@ -607,12 +601,12 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <section id="get" style="padding-top:0">
   <div class="wrap">
     <div class="shead reveal">
-      <div class="tag">PLATFORMS</div>
+      <div class="tag">多端可用</div>
       <h2>在哪都能练</h2>
     </div>
     <div class="plat reveal">
       <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.3 3.8 5.2 3.8 8.5s-1.3 6.2-3.8 8.5c-2.5-2.3-3.8-5.2-3.8-8.5s1.3-6.2 3.8-8.5z"/></svg></div><b>网页版</b><p>浏览器打开即用<br>kaogong.zalize.com</p><a class="btn btn-ghost btn-sm" href="/app/">打开 →</a></div>
-      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.8 4C5.2 4 2.5 6.6 2.5 9.8c0 1.9 1 3.5 2.6 4.6l-.7 2.6 3-1.5c.5.1 1 .2 1.4.2"/><path d="M21.5 14.8c0-2.9-2.6-5.2-5.8-5.2s-5.8 2.3-5.8 5.2 2.6 5.2 5.8 5.2c.6 0 1.2-.1 1.7-.2l2.6 1.3-.7-2.3c1.3-.9 2.2-2.3 2.2-4z"/></svg></div><b>微信小程序<span class="beta">内测中</span></b><p>开发内测中，暂未开放<br>上线后与网页版数据互通</p></div>
+      <div class="pcard"><div class="pi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8.8 4C5.2 4 2.5 6.6 2.5 9.8c0 1.9 1 3.5 2.6 4.6l-.7 2.6 3-1.5c.5.1 1 .2 1.4.2"/><path d="M21.5 14.8c0-2.9-2.6-5.2-5.8-5.2s-5.8 2.3-5.8 5.2 2.6 5.2 5.8 5.2c.6 0 1.2-.1 1.7-.2l2.6 1.3-.7-2.3c1.3-.9 2.2-2.3 2.2-4z"/></svg></div><b>微信小程序<span class="beta">内测中</span></b><p>开发内测中，暂未开放<br>上线后与网页版数据互通</p><a class="btn btn-ghost btn-sm" href="/app/">先用手机网页版 →</a></div>
     </div>
     <div class="fb reveal" id="feedback">
       <b>内测反馈</b>
@@ -655,7 +649,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       </div>
     </div>
     <div class="fcol"><b>联系</b><a href="mailto:support@zalize.com">support@zalize.com</a><span>微信 hveary</span></div>
-    <div class="fcol"><b>说明与索引</b><span>题库数据含公开真题整理</span><span>部分解析由 AI 生成</span><a href="/llms.txt">llms.txt</a><a href="/llms-full.txt">llms-full.txt</a><a href="/sitemap.xml">sitemap.xml</a></div>
+    <div class="fcol"><b>说明</b><span>题库数据含公开真题整理</span><span>部分解析由 AI 生成</span></div>
   </div>
   <div class="wrap foot-copy">© 2026 答岸 版权所有 · 运营团队：Zalize</div>
 </footer>
@@ -693,16 +687,16 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     });
   }
 
-  // 顶部滚动进度条
+  // 顶部滚动进度条（GPU scaleX，零布局重排）
   const prog=document.createElement('div');
-  prog.style.cssText='position:fixed;top:0;left:0;height:2px;z-index:60;background:linear-gradient(90deg,#2e5bff,#38bdf8);width:0;transition:width .12s linear;pointer-events:none';
+  prog.style.cssText='position:fixed;top:0;left:0;width:100%;height:2px;z-index:60;background:linear-gradient(90deg,#2e5bff,#38bdf8);transform-origin:left center;transform:scaleX(0);transition:transform var(--dur-instant) linear;will-change:transform;pointer-events:none';
   document.body.appendChild(prog);
   let rafP=0;
   addEventListener('scroll',()=>{
     if(rafP)return;rafP=requestAnimationFrame(()=>{
       rafP=0;
       const sc=scrollY,doc=document.documentElement.scrollHeight-innerHeight;
-      prog.style.width=(doc>0?sc/doc*100:0)+'%';
+      prog.style.transform='scaleX('+(doc>0?Math.min(1,Math.max(0,sc/doc)):0)+')';
     });
   },{passive:true});
   // 数字滚动计数（首屏 stats）
