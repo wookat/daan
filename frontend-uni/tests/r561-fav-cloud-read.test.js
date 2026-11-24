@@ -204,7 +204,7 @@ describe('R561 页面接线（源锁）', () => {
   });
   it('book.vue 收藏空态文案不再限定「本机」', () => {
     expect(BOOK).not.toContain('还没有本机收藏');
-    expect(BOOK).toContain('title="还没有收藏" desc="刷题时点顶栏星星收藏好题；小程序、其他设备的收藏也会同步到这里"');
+    expect(BOOK).toContain('title="还没有收藏" desc="刷题时点底部星标收藏好题；小程序、其他设备的收藏也会同步到这里"');
   });
   it('practice.vue：onShow 同步；取消收藏计 _favSeq；setFav 失败降级本机独有', () => {
     expect(PRACTICE).toContain("import { markFavLocalOnly } from '../../exam/exam-fav.js';");

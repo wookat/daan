@@ -89,6 +89,7 @@
         <view v-else-if="announce" class="strip">
           <kg-banner tone="info" icon="megaphone" :text="announce.title" :action-text="announce.body && !annOpen ? '详情' : ''" @action="annOpen = true" @close="dismissAnn" />
           <text v-if="annOpen && announce.body" class="ann-body">{{ announce.body }}</text>
+          <text v-if="annOpen && announce.body" class="ann-fold" role="button" @click="annOpen = false">收起公告</text>
         </view>
 
         <!-- 今日待办：到期复习 / 未打卡 / 断卡风险聚合成一张卡，不再多张促练横幅叠罗汉 -->
@@ -312,12 +313,12 @@
             <text class="sub-n num">{{ subAllCount }} 题</text>
           </view>
         </kg-card>
-        <view v-if="subSelect === 'shuliang'" class="sub-filter" role="switch" :aria-checked="excludeSz ? 'true' : 'false'" @click="setExcludeSz(!excludeSz)">
+        <view v-if="subSelect === 'shuliang'" class="sub-filter" @click="setExcludeSz(!excludeSz)">
           <view class="grow">
             <text class="sub-filter-t">不考数字推理</text>
             <text class="sub-filter-s">全部随机与混合刷题将跳过此题型</text>
           </view>
-          <view class="sub-sw" :class="{ 'is-on': excludeSz }"><view class="sub-sw-dot" /></view>
+          <kg-switch :model-value="excludeSz" label="不考数字推理" @click.stop @update:model-value="setExcludeSz" />
         </view>
         <kg-card v-for="s in submodules" :key="s.submodule" clickable chevron class="sub-chip" :class="{ 'is-excluded': subSelect === 'shuliang' && excludeSz && s.submodule === '数字推理' }" @click="startPreset(subSelect, s.submodule)">
           <view class="sub-row">
@@ -331,11 +332,24 @@
         </kg-card>
       </view>
     </kg-sheet>
+
+    <kg-confirm-sheet
+      :model-value="!!dropSheet"
+      :title="dropSheet ? dropSheet.title : ''"
+      :desc="dropSheet ? dropSheet.desc : ''"
+      :confirm-text="dropSheet ? dropSheet.confirmText : '确认放弃'"
+      :cancel-text="dropSheet ? dropSheet.cancelText : '保留进度'"
+      :danger="true"
+      @update:model-value="(v) => { if (!v) dropSheet = null; }"
+      @confirm="confirmDropSheet"
+    />
+    <kg-undo-bar above-tabbar />
   </view>
 </template>
 
 <script>
 import { request, snapPeek, anonUid, exportPdf, trackEvent, fetchCheckinBadges, fetchCheckinSummary, flushDailySubmit, isStaleUidErr, staleAt } from '../../api/api.js';
+import { toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 import { snapshotProgressNote, netOnlineNow } from '../../practice/snapshot-notice.js';
 import { checkinStreak, dayKey, loadSzDaily } from '../../home/checkin.js';
 import { parseExamProgress, fmtLeftSecs } from '../../exam/exam-resume.js';
@@ -397,6 +411,7 @@ export default {
       reviewResume: null,
       dsMeta: null,
       dsDone: null,
+      dropSheet: null,
     };
   },
   computed: {
@@ -764,34 +779,22 @@ export default {
       uni.switchTab({ url: '/pages/book/book' });
     },
     rvDrop() {
-      uni.showModal({
+      this.dropSheet = {
+        kind: 'review',
         title: '放弃未完成复习？',
-        content: '放弃后这轮复习的进度不再保留',
-        confirmText: '放弃',
-        cancelText: '再想想',
-        success: (res) => {
-          if (!res.confirm) return;
-          uni.removeStorageSync('reviewSnap');
-          uni.setStorageSync('rvClearedAt', Date.now());
-          request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap: null } }).catch(() => {});
-          this.reviewResume = null;
-        },
-      });
+        desc: '放弃后本轮待复习进度不会保留，之后可在错题本重新开始。',
+        confirmText: '确认放弃',
+        cancelText: '保留进度',
+      };
     },
     prDrop() {
-      uni.showModal({
+      this.dropSheet = {
+        kind: 'practice',
         title: '放弃未完成练习？',
-        content: '放弃后这组题的作答进度不再保留',
-        confirmText: '放弃',
-        cancelText: '再想想',
-        success: (res) => {
-          if (!res.confirm) return;
-          uni.removeStorageSync('pendingSession');
-          uni.setStorageSync('ppClearedAt', Date.now());
-          request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
-          this.practiceResume = null;
-        },
-      });
+        desc: '放弃后这组题的做题进度不再保留（已答题目仍会记录到统计与错题本）。',
+        confirmText: '确认放弃',
+        cancelText: '保留进度',
+      };
     },
     loadExamResume() {
       const saved = uni.getStorageSync('examProgress');
@@ -814,24 +817,40 @@ export default {
     erContinue() {
       const r = this.examResume;
       if (!r) return;
-      uni.navigateTo({ url: r.mini ? '/pkgA/exam/exam?mini=1' : '/pkgA/exam/exam?paper_id=' + r.paperId });
+      uni.navigateTo({ url: r.mini ? '/pkgA/exam/exam?mini=1&resume=1' : '/pkgA/exam/exam?paper_id=' + r.paperId + '&resume=1' });
     },
     erDrop() {
-      uni.showModal({
+      this.dropSheet = {
+        kind: 'exam',
         title: '放弃未交卷进度？',
-        content: '放弃后本次作答记录不再保留',
-        confirmText: '放弃',
-        cancelText: '再想想',
-        success: (res) => {
-          if (!res.confirm) return;
-          uni.setStorageSync('erClearedAt', Date.now());
-          if (this.examResume && this.examResume.attemptId) {
-            request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.examResume.attemptId, drop: true } }).catch(() => {});
-          }
-          uni.removeStorageSync('examProgress');
-          this.examResume = null;
-        },
-      });
+        desc: '放弃后这场未交卷的作答记录将清空，无法继续提交判分。',
+        confirmText: '确认放弃',
+        cancelText: '保留进度',
+      };
+    },
+    confirmDropSheet() {
+      const d = this.dropSheet;
+      this.dropSheet = null;
+      if (!d) return;
+      if (d.kind === 'review') {
+        uni.removeStorageSync('reviewSnap');
+        uni.setStorageSync('rvClearedAt', Date.now());
+        request('/api/review/cur', { method: 'POST', data: { uid: anonUid(), snap: null } }).catch(() => {});
+        this.reviewResume = null;
+      } else if (d.kind === 'practice') {
+        uni.removeStorageSync('pendingSession');
+        uni.setStorageSync('ppClearedAt', Date.now());
+        request('/api/practice/progress', { method: 'POST', data: { uid: anonUid(), qids: [] } }).catch(() => {});
+        this.practiceResume = null;
+      } else if (d.kind === 'exam') {
+        uni.setStorageSync('erClearedAt', Date.now());
+        if (this.examResume && this.examResume.attemptId) {
+          request('/api/exam/progress', { method: 'POST', data: { uid: anonUid(), attempt_id: this.examResume.attemptId, drop: true } }).catch(() => {});
+        }
+        uni.removeStorageSync('examProgress');
+        this.examResume = null;
+      }
+      toastInfo('已放弃该未完成进度');
     },
     fmtErLeft(s) {
       return fmtLeftSecs(s);
@@ -1098,7 +1117,7 @@ export default {
     skipGuide() {
       this.guideHide = true;
       uni.setStorageSync('planGuideHide', '1');
-      uni.showToast({ title: '已跳过，可在「我的」随时制定', icon: 'none', duration: 1500 });
+      toastInfo('已跳过，可在「我的」随时制定');
     },
     goTask(t) {
       if (t.done) return;
@@ -1142,9 +1161,9 @@ export default {
           ...opts,
         });
         this.exportConfirm = false;
-        uni.showToast({ title: 'PDF 已开始下载', icon: 'none' });
+        toastOk('PDF 已开始下载');
       } catch (e) {
-        uni.showToast({ title: '导出失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '导出失败，请稍后重试');
       }
       this.exporting = false;
     },
@@ -1156,7 +1175,7 @@ export default {
         await request('/api/user_state', { method: 'POST', data: { uid, focus: next } });
         this.plan = await request('/api/daily_plan?uid=' + encodeURIComponent(uid));
         if (this.profile) this.loadPlanToday();
-        if (next) uni.showToast({ title: '今日主攻已设为' + (modLabel(next) || next) + '，推荐已更新', icon: 'none' });
+        toastInfo(next ? '今日主攻已设为' + (modLabel(next) || next) : '已取消今日主攻');
       } catch (e) { /* 非关键路径 */ }
     },
   },
@@ -1198,7 +1217,8 @@ export default {
 
 /* 横幅 */
 .strip { margin-top: var(--card-gap); }
-.ann-body { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); padding: var(--sp-8) var(--sp-12) 0; }
+.ann-body { display: block; font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); padding: var(--sp-8) var(--sp-12) 0; animation: kg-fade-in var(--dur-fast) var(--ease-decel); }
+.ann-fold { display: inline-flex; align-items: center; min-height: 32px; padding: var(--sp-4) var(--sp-12) 0; font-size: var(--fs-caption); color: var(--brand-text); cursor: pointer; }
 
 /* 到期复习：标准白卡，不再加左侧黄色条 */
 .todo { margin-top: var(--card-gap); }
@@ -1232,7 +1252,7 @@ export default {
 
 /* 专项练习列表 */
 .skelwrap { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-12); }
-.skel-hint { font-size: var(--fs-caption); color: var(--ink-4); text-align: center; padding: var(--sp-8) 0; }
+.skel-hint { font-size: var(--fs-caption); color: var(--ink-4); text-align: center; padding: var(--sp-8) 0; animation: kg-fade-in var(--dur-base) var(--ease-decel) 2.2s both; }
 .modlist { margin-top: var(--sp-12); }
 .modrow { min-height: 72px; box-sizing: border-box; display: flex; align-items: center; }
 .modrow--weak { border-color: var(--brand-soft-2); }
@@ -1270,10 +1290,6 @@ export default {
 .sub-filter { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-8) var(--sp-12); border-radius: var(--r-md); background: var(--fill); cursor: pointer; }
 .sub-filter-t { font-size: var(--fs-sub); font-weight: 600; color: var(--ink); }
 .sub-filter-s { font-size: var(--fs-caption); color: var(--ink-3); }
-.sub-sw { width: 42px; height: 24px; border-radius: var(--r-full); background: var(--line-strong); padding: 2px; box-sizing: border-box; flex-shrink: 0; transition: background var(--dur-fast) var(--ease-out); display: flex; align-items: center; }
-.sub-sw.is-on { background: var(--brand); }
-.sub-sw-dot { width: 20px; height: 20px; border-radius: var(--r-full); background: var(--on-brand); transform: translateX(0); transition: transform var(--dur-fast) var(--ease-out); }
-.sub-sw.is-on .sub-sw-dot { transform: translateX(18px); }
 .sub-name { font-size: var(--fs-body); font-weight: 500; color: var(--ink); flex: 1; }
 .sub-prog { font-size: var(--fs-caption); color: var(--ink-3); }
 .sub-n { font-size: var(--fs-sub); color: var(--ink-3); flex-shrink: 0; }

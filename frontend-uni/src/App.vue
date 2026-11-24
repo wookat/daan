@@ -213,13 +213,32 @@ page {
 .wd-popup-wrapper .wd-popup {
   background: var(--card) !important;
 }
-/* 兜底：防 wd-transition 动画竞态把移动端底部抽屉卡在 translate3d(0, 100%, 0)（y=100vh 视口外）；必须写在全局 App.vue 才能命中 wd-popup 内部节点 */
-.wd-popup-wrapper .wd-popup--bottom.kg-sheet.is-settled {
+/* 兜底：防 wd-transition 动画竞态把移动端底部抽屉卡在 translate3d(0, 100%, 0)（y=100vh 视口外）；拖拽中让位给手势位移 */
+.wd-popup-wrapper .wd-popup--bottom.kg-sheet.is-settled:not(.is-dragging) {
   top: auto !important;
   bottom: 0 !important;
   left: 0 !important;
   right: 0 !important;
   transform: translate3d(0, 0, 0) !important;
+}
+/* 统一 wot 弹窗/抽屉与分段滑块的苹果物理曲线 */
+.wd-popup-wrapper .wd-slide-up-enter-active {
+  transition-timing-function: var(--ease-decel) !important;
+}
+.wd-popup-wrapper .wd-slide-up-leave-active {
+  transition-timing-function: var(--ease-accel) !important;
+  transition-duration: var(--dur-fast) !important;
+}
+.wd-popup-wrapper .wd-zoom-in-enter-active {
+  transition-timing-function: var(--ease-spring-snappy) !important;
+}
+.wd-popup-wrapper .wd-zoom-in-leave-active,
+.wd-popup-wrapper .wd-fade-enter-active,
+.wd-popup-wrapper .wd-fade-leave-active {
+  transition-timing-function: var(--ease-standard) !important;
+}
+.wd-segmented .wd-segmented__item--active {
+  transition: transform var(--dur-base) var(--ease-spring-snappy) !important;
 }
 .wd-picker-view .wd-picker-view__roller {
   background: var(--fill) !important;
@@ -404,7 +423,7 @@ uni-modal .uni-modal__btn {
 uni-modal .uni-modal__btn:active {
   background: var(--fill);
 }
-uni-modal .uni-modal__btn_primary {
+uni-modal .uni-modal__btn_primary:not([style*='220, 38, 38']):not([style*='#dc2626']) {
   color: var(--brand-text) !important;
   font-weight: 600;
 }
@@ -427,7 +446,7 @@ uni-modal .uni-modal__btn_primary {
 .theme-dark uni-modal .uni-modal__btn:active {
   background: var(--fill);
 }
-.theme-dark uni-modal .uni-modal__btn_primary {
+.theme-dark uni-modal .uni-modal__btn_primary:not([style*='220, 38, 38']):not([style*='#dc2626']) {
   color: var(--brand-text) !important;
 }
 /* #endif */
@@ -471,6 +490,8 @@ uni-modal .uni-modal__btn_primary {
     border: 1px solid var(--line);
     box-shadow: none;
   }
+}
+@media (hover: hover) and (pointer: fine) {
   uni-page-body .wrap.home .searchbar:hover {
     border-color: var(--brand-text);
     cursor: pointer;
@@ -563,10 +584,10 @@ uni-modal .uni-modal__btn_primary {
     height: 44px !important;
     border-radius: var(--r-sm);
     box-sizing: border-box;
-    transition: background var(--dur-fast) var(--ease-standard);
+    transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-instant) var(--ease-standard);
   }
-  .uni-tabbar .uni-tabbar__bd:hover {
-    background: var(--fill);
+  .uni-tabbar .uni-tabbar__bd:active {
+    transform: scale(0.985);
   }
   .uni-tabbar .uni-tabbar__item.kg-tab-active .uni-tabbar__bd {
     background: var(--brand-soft);
@@ -652,11 +673,59 @@ uni-modal .uni-modal__btn_primary {
   margin-bottom: 0 !important;
 }
 /* #ifdef H5 */
+@media (hover: hover) and (pointer: fine) {
+  .uni-tabbar .uni-tabbar__bd:hover {
+    background: var(--fill);
+  }
+  .uni-tabbar .uni-tabbar__item.kg-tab-active .uni-tabbar__bd:hover {
+    background: var(--brand-soft-2);
+  }
+}
 @media (min-width: 768px) {
   .kg-cards--grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+/* 全局 Apple-grade 共享动效原语：切题方向入场、微衰减摆动、图标弹出、内容淡入 */
+@keyframes kg-q-next {
+  from { opacity: 0; transform: translate3d(18px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes kg-q-prev {
+  from { opacity: 0; transform: translate3d(-18px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes kg-q-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes kg-nudge {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  25% { transform: translate3d(-5px, 0, 0); }
+  55% { transform: translate3d(4px, 0, 0); }
+  80% { transform: translate3d(-2px, 0, 0); }
+}
+@keyframes kg-icon-pop {
+  0% { transform: scale(0.76); opacity: 0.7; }
+  60% { transform: scale(1.16); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes kg-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.kg-q-enter-next {
+  animation: kg-q-next var(--dur-fast) var(--ease-decel) both;
+}
+.kg-q-enter-prev {
+  animation: kg-q-prev var(--dur-fast) var(--ease-decel) both;
+}
+.kg-q-enter-fade {
+  animation: kg-q-fade var(--dur-fast) var(--ease-decel) both;
+}
+.kg-icon-pop {
+  animation: kg-icon-pop var(--dur-base) var(--ease-spring);
 }
 /* #endif */
 </style>

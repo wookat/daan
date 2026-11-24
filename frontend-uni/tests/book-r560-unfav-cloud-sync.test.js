@@ -18,7 +18,7 @@ describe('R560 错题本取消收藏同步云端', () => {
     const unfav = BOOK.slice(BOOK.indexOf('    unfav(i) {'), BOOK.indexOf('    isDue(m) {'));
     expect(unfav).toContain('const [f] = this.favs.splice(i, 1);');
     expect(unfav).toContain('this.unfavCloud(f);');
-    expect(unfav).toContain("uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });");
+    expect(unfav).toMatch(/showUndoToast\('已取消收藏'|uni\.showToast\(\{ title: '已取消收藏'/);
     expect(unfav).toContain('let qid = cloudFavId(f);');
     expect(unfav).toContain('if (!qid && f && f.question) qid = cloudFavId(f, (await fetchFavs()).items);');
     expect(unfav).toContain('if (qid) await removeFav(qid);');

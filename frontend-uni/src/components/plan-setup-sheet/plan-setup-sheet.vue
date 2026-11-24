@@ -5,7 +5,7 @@
         <text class="set-k">考试类型</text>
         <kg-chip-row size="sm" :options="['国考', '省考', '事业单位', '其他'].map((t) => ({ label: t, value: t }))" :model-value="pf.exam_type" :scroll-to-selected="false" @update:model-value="(v) => (pf.exam_type = v)" />
       </view>
-      <view class="setrow">
+      <view v-if="pf.exam_type !== '国考'" class="setrow">
         <text class="set-k">目标地区</text>
         <input v-model="pf.target_region" class="pf-input" placeholder="如 广东 / 全国（选填）" :maxlength="20" />
       </view>
@@ -55,7 +55,19 @@
  * 保存走 POST /api/profile，成功后 emit('saved', profile)。 */
 import { fmtYMD } from '../../utils/fmt.js';
 import { request, anonUid } from '../../api/api.js';
+import { toastOk, toastErrFrom } from '../../utils/toast.js';
 import { isExamDatePast, examDateFieldText, cnTodayStr } from '../../home/plan-days-label.js';
+
+function suggestedGuokaoDate(todayStr) {
+  const yr = Number((todayStr || '2026-01-01').slice(0, 4)) || 2026;
+  for (const y of [yr, yr + 1]) {
+    const nov30 = new Date(Date.UTC(y, 10, 30));
+    const sun = 30 - nov30.getUTCDay();
+    const cand = `${y}-11-${String(sun).padStart(2, '0')}`;
+    if (cand > todayStr) return cand;
+  }
+  return '';
+}
 
 export default {
   name: 'PlanSetupSheet',
@@ -91,10 +103,12 @@ export default {
   methods: {
     initFromProfile() {
       const p = this.profile || {};
+      const examType = p.exam_type || '国考';
+      const examDate = p.exam_date || (examType === '国考' ? suggestedGuokaoDate(cnTodayStr()) : '');
       this.pf = {
-        exam_type: p.exam_type || '国考',
-        target_region: p.target_region || '',
-        exam_date: p.exam_date || '',
+        exam_type: examType,
+        target_region: examType === '国考' ? '' : (p.target_region || ''),
+        exam_date: examDate,
         target_score: p.target_score || 70,
         daily_minutes: p.daily_minutes || 60,
         base_level: p.base_level || '零基础',
@@ -138,9 +152,9 @@ export default {
         const d = await request('/api/profile', { method: 'POST', data: { uid: anonUid(), ...this.pf } });
         this.$emit('update:modelValue', false);
         this.$emit('saved', d.profile);
-        uni.showToast({ title: '学习计划已生成', icon: 'none' });
+        toastOk('学习计划已生成');
       } catch (e) {
-        uni.showToast({ title: '保存失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '保存计划失败，请重试');
       } finally {
         this.setupBusy = false;
       }

@@ -4,7 +4,7 @@
       <view class="dial" :class="phase">
         <text class="dial-phase">{{ phaseText }}</text>
         <text class="dial-time num">{{ leftText }}</text>
-        <view class="dial-bar"><view class="dial-fill" :style="{ width: pct + '%' }" /></view>
+        <view class="dial-bar"><view class="dial-fill" :style="{ transform: 'scaleX(' + Math.max(0, Math.min(1, pct / 100)) + ')' }" /></view>
         <text v-if="round" class="dial-round">今日第 {{ round }} 个</text>
       </view>
       <view class="ops">
@@ -33,6 +33,8 @@
 
 <script>
 // 番茄专注：纯前端计时器（25/5 循环），完成数与时长存本地 kgPomo，进行中状态存 kgPomoLive
+import { toastOk, toastInfo } from '../../utils/toast.js';
+
 const KEY = 'kgPomo';
 const LIVE_KEY = 'kgPomoLive';
 const FOCUS_MIN = 25;
@@ -173,6 +175,7 @@ export default {
         this.total = st.total;
         this.round = st.done;
         uni.vibrateShort && uni.vibrateShort({ type: 'medium' });
+        toastOk('专注完成，开始休息 5 分钟');
         this.start('break');
       } else {
         this.phase = 'done';
@@ -197,6 +200,7 @@ export default {
       this.left = FOCUS_MIN * 60;
       this.round = this.todayDone;
       this._saveLive();
+      toastInfo('已结束本轮专注');
     },
   },
 };
@@ -210,7 +214,7 @@ export default {
 .dial.break .dial-phase { color: var(--ok-strong); }
 .dial-time { font-size: 56px; font-weight: var(--fw-semibold); color: var(--ink); line-height: 1.1; }
 .dial-bar { width: 70%; height: 6px; border-radius: var(--r-full); background: var(--fill); overflow: hidden; }
-.dial-fill { height: 100%; border-radius: var(--r-full); background: var(--brand); transition: width 0.4s linear; }
+.dial-fill { width: 100%; height: 100%; border-radius: var(--r-full); background: var(--brand); transform-origin: left center; transition: transform var(--dur-base) var(--ease-standard); }
 .dial.break .dial-fill { background: var(--ok); }
 .dial-round { font-size: var(--fs-caption); color: var(--ink-3); }
 .ops { display: flex; flex-direction: column; gap: var(--sp-12); max-width: 360px; margin: 0 auto; width: 100%; }

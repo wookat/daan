@@ -4,9 +4,7 @@
       <text class="p-title">能力预测分</text>
     </view>
     <view class="p-skel">
-      <view class="p-skel-b lg" />
-      <view class="p-skel-b" />
-      <view class="p-skel-b sm" />
+      <kg-skeleton preset="lines" :loading="true" />
     </view>
   </kg-card>
   <kg-card v-else-if="data" variant="flat" class="pcard">
@@ -15,16 +13,19 @@
       <text class="p-title">能力预测分</text>
       <text class="p-cold-t">数据积累中</text>
       <text class="p-cold-s">再作答 {{ Math.max(data.need - data.n, 0) }} 题即可解锁预测分（{{ data.n }}/{{ data.need }}）</text>
-      <view class="p-cold-bar"><view class="p-cold-fill" :style="{ width: Math.min((data.n / data.need) * 100, 100) + '%' }" /></view>
+      <view class="p-cold-bar"><view class="p-cold-fill" :style="{ transform: `scaleX(${Math.min(data.n / (data.need || 1), 1)})` }" /></view>
+      <view class="p-cold-act">
+        <kg-button variant="secondary" size="sm" @click="goPractice">去刷题解锁</kg-button>
+      </view>
     </view>
     <template v-else>
       <view class="p-head">
         <text class="p-title">能力预测分</text>
-        <text class="p-conf">置信度 {{ data.confidence }}</text>
+        <text class="p-conf">参考度 · {{ data.confidence }}</text>
       </view>
       <view class="p-hero">
         <view class="p-score-w">
-          <text class="p-score num">{{ data.score }}</text>
+          <kg-number class="p-score" :value="data.score" />
           <text class="p-unit">分</text>
         </view>
         <view class="p-meta">
@@ -38,7 +39,7 @@
       <view class="p-mods">
         <view v-for="m in data.modules" :key="m.module" class="p-mod">
           <text class="p-mod-n">{{ m.name }}</text>
-          <view class="p-mod-bar"><view class="p-mod-fill" :style="{ width: (m.score / m.max) * 100 + '%' }" /></view>
+          <view class="p-mod-bar"><view class="p-mod-fill" :style="{ transform: `scaleX(${Math.min((m.score / (m.max || 1)), 1)})` }" /></view>
           <text class="p-mod-s num">{{ m.score }}<text class="p-mod-mx">/{{ m.max }}</text></text>
           <text class="p-mod-t" :class="m.trend > 0.03 ? 'up' : m.trend < -0.03 ? 'down' : ''">{{ m.trend > 0.03 ? '↑' : m.trend < -0.03 ? '↓' : '—' }}</text>
         </view>
@@ -50,6 +51,7 @@
 <script>
 import { request, anonUid } from '../../api/api.js';
 import { visColors } from '../../utils/vis-colors.js';
+import { motionDuration } from '../../a11y/a11y-motion.js';
 
 export default {
   name: 'PredictCard',
@@ -70,7 +72,7 @@ export default {
       const max = Math.max(...scores);
       const pad = Math.max((max - min) * 0.3, 5);
       return {
-        animationDuration: 400,
+        animationDuration: motionDuration(360),
         grid: { left: 8, right: 8, top: 22, bottom: 2, containLabel: true },
         xAxis: {
           type: 'category',
@@ -126,6 +128,9 @@ export default {
       this.data = d || null;
       this.loading = false;
     },
+    goPractice() {
+      uni.switchTab({ url: '/pages/home/home' });
+    },
     // 页面 onShow 会重新调用以刷新作答进度；已有数据时静默更新不闪骨架屏
     async load() {
       this.loading = !this.data;
@@ -137,7 +142,7 @@ export default {
       }
       this.loading = false;
     },
-  }
+  },
 };
 </script>
 
@@ -158,23 +163,17 @@ export default {
 .p-mod { display: flex; align-items: center; gap: var(--sp-8); }
 .p-mod-n { width: 60px; font-size: var(--fs-caption); color: var(--ink-2); }
 .p-mod-bar { flex: 1; height: var(--sp-8); background: var(--fill); border-radius: var(--r-full); overflow: hidden; }
-.p-mod-fill { height: 100%; background: var(--brand); border-radius: var(--r-full); }
+.p-mod-fill { width: 100%; height: 100%; background: var(--brand); border-radius: var(--r-full); transform-origin: left center; transition: transform var(--dur-slow) var(--ease-decel); }
 .p-mod-s { width: 50px; text-align: right; font-size: var(--fs-caption); color: var(--ink); font-weight: 600; }
 .p-mod-mx { font-size: var(--fs-caption); color: var(--ink-3); font-weight: 400; }
 .p-mod-t { width: 16px; text-align: center; font-size: var(--fs-caption); color: var(--ink-3); }
 .p-mod-t.up { color: var(--ok-strong); }
 .p-mod-t.down { color: var(--bad-strong); }
-.p-skel { display: flex; flex-direction: column; gap: var(--sp-8); margin-top: var(--sp-8); }
-.p-skel-b { height: var(--sp-12); border-radius: var(--r-xs); background: var(--fill); width: 70%; animation: p-skel-pulse 1.2s ease-in-out infinite; }
-.p-skel-b.lg { height: 30px; width: 40%; }
-.p-skel-b.sm { width: 50%; }
-@keyframes p-skel-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.45; }
-}
+.p-skel { margin-top: var(--sp-8); }
 .p-cold { display: flex; flex-direction: column; gap: var(--sp-4); }
 .p-cold-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); margin-top: var(--sp-4); }
 .p-cold-s { font-size: var(--fs-caption); color: var(--ink-2); }
 .p-cold-bar { height: 6px; background: var(--fill); border-radius: var(--r-full); overflow: hidden; margin-top: var(--sp-4); }
-.p-cold-fill { height: 100%; background: var(--brand); border-radius: var(--r-full); }
+.p-cold-fill { width: 100%; height: 100%; background: var(--brand); border-radius: var(--r-full); transform-origin: left center; transition: transform var(--dur-slow) var(--ease-decel); }
+.p-cold-act { margin-top: var(--sp-8); }
 </style>

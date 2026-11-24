@@ -43,30 +43,33 @@
 
         <kg-banner v-if="offline" tone="warn" icon="plane" text="离线题包模式 · 本地判分，作答记录联网后自动同步（AI 讲解等需联网）" :closable="false" />
         <kg-banner v-if="leadHint && idx === 0" class="lead-tag" tone="info" :text="leadHint" @close="leadHint = ''" />
+        <kg-banner v-if="!exclHintDone && !beiMode && !picked && optList.length" class="lead-tag" tone="info" icon="lightbulb" text="提示：长按选项可划掉排除（手机/平板均适用）" @close="dismissExclHint" />
 
-        <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv">
-          <template v-if="qSegs && !matInfo" #stem>
-            <text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text>
-          </template>
-          <text v-if="qSegs && qSegs.some(s => s.hl)" class="qhl-tip">已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息</text>
-          <text v-if="cur.image && cur.image_credit" class="img-credit">图源：{{ cur.image_credit }}</text>
-          <kg-option-group
-            :options="optList"
-            :model-value="picked ? ansKeys(picked) : multiSel"
-            :answer="ansKeys(cur.answer)"
-            :revealed="(!!picked || beiMode) && !examMode && (!deferMode || resultSent)"
-            :excluded="cur._excl || []"
-            :readonly="beiMode"
-            :multiple="isMulti"
-            :font-level="fontLv"
-            @select="pick"
-            @exclude="toggleExclOpt"
-          />
-          <view v-if="isMulti && !picked && !beiMode" class="multi-bar">
-            <text class="multi-hint">多选题：选完所有正确项后确认</text>
-            <kg-button variant="primary" size="lg" :disabled="!multiSel.length" @click="confirmMulti">确认答案{{ multiSel.length ? '（' + multiSel.length + '）' : '' }}</kg-button>
-          </view>
-        </kg-question-card>
+        <view :key="qAnimKey" :class="qEnterClass">
+          <kg-question-card :q="qCard" :index="idx" :total="items.length" :font-level="fontLv">
+            <template v-if="qSegs && !matInfo" #stem>
+              <text v-for="(s, si) in qSegs" :key="si" :class="{ qhl: s.hl }">{{ s.t }}</text>
+            </template>
+            <text v-if="qSegs && qSegs.some(s => s.hl)" class="qhl-tip">已标注题干重点（解析涉及的关键数字/关键词），对照检查是否找对了信息</text>
+            <text v-if="cur.image && cur.image_credit" class="img-credit">图源：{{ cur.image_credit }}</text>
+            <kg-option-group
+              :options="optList"
+              :model-value="picked ? ansKeys(picked) : multiSel"
+              :answer="ansKeys(cur.answer)"
+              :revealed="(!!picked || beiMode) && !examMode && (!deferMode || resultSent)"
+              :excluded="cur._excl || []"
+              :readonly="beiMode"
+              :multiple="isMulti"
+              :font-level="fontLv"
+              @select="pick"
+              @exclude="toggleExclOpt"
+            />
+            <view v-if="isMulti && !picked && !beiMode" class="multi-bar">
+              <text class="multi-hint">多选题：选完所有正确项后确认</text>
+              <kg-button variant="primary" size="lg" :disabled="!multiSel.length" @click="confirmMulti">确认答案{{ multiSel.length ? '（' + multiSel.length + '）' : '' }}</kg-button>
+            </view>
+          </kg-question-card>
+        </view>
 
         <view v-if="(picked || beiMode) && !examMode && (!deferMode || resultSent)" class="after">
           <kg-banner
@@ -77,6 +80,7 @@
             @action="stayHere"
           />
           <kg-analysis-card
+            :key="(cur.id || 'q') + '-' + idx"
             :answer="cur.answer"
             :picked="beiMode ? '' : picked"
             :analysis="mainExplanation"
@@ -86,13 +90,10 @@
           >
             <template #social>
               <text v-if="timedMode && !beiMode && cur._secs != null" class="tm-cmp num" :class="{ over: cur._secs > targetSecs }">用时 {{ cur._secs }}s / 目标 {{ targetSecs }}s</text>
-              <view v-if="cur.hs_explanation" class="hs-rate">
-                <text v-if="hsRated[cur.id]" class="hs-rate-done">{{ hsRated[cur.id] === 'up' ? '已反馈：有用' : '已反馈：有误' }}</text>
-                <template v-else>
-                  <text class="hs-rate-t">花生十三方法解析</text>
-                  <kg-button variant="ghost" size="sm" icon="thumbs-up" @click="rateHs(cur, true)">有用</kg-button>
-                  <kg-button variant="ghost" size="sm" tone="bad" icon="thumbs-down" @click="rateHs(cur, false)">有误</kg-button>
-                </template>
+              <view v-if="cur.hs_explanation" class="hs-rate" :class="{ 'is-up': hsRated[cur.id] === 'up', 'is-down': hsRated[cur.id] === 'down' }">
+                <text class="hs-rate-t">{{ hsRated[cur.id] ? (hsRated[cur.id] === 'up' ? '已赞有用 · 再点可取消' : '已反馈有误 · 再点可取消') : '花生十三方法解析' }}</text>
+                <kg-button variant="ghost" size="sm" icon="thumbs-up" @click="rateHs(cur, true)">有用</kg-button>
+                <kg-button variant="ghost" size="sm" tone="bad" icon="thumbs-down" @click="rateHs(cur, false)">有误</kg-button>
               </view>
               <q-social-bar v-if="cur.id && !cur._sz" :question-id="cur.id" />
             </template>
@@ -133,8 +134,11 @@
           @primary="barPrimary.go()"
         >
           <template #tools>
+            <view class="kg-tool" :class="{ dis: idx === 0 }" role="button" aria-label="上一题" :aria-disabled="idx === 0 ? 'true' : 'false'" hover-class="tool-hover" @click="idx > 0 && jumpTo(idx - 1)">
+              <l-icon name="chevron-left" :size="24" tone="ink-2" />
+            </view>
             <view class="kg-tool" :class="{ on: isFav }" role="button" :aria-label="isFav ? '取消收藏' : '收藏本题'" :aria-pressed="isFav ? 'true' : 'false'" hover-class="tool-hover" @click="toggleFav">
-              <l-icon name="star" :size="24" :tone="isFav ? 'warn' : 'ink-2'" :fill="isFav ? 'currentColor' : 'none'" />
+              <l-icon :class="{ 'kg-icon-pop': favPop }" name="star" :size="24" :tone="isFav ? 'warn' : 'ink-2'" :fill="isFav ? 'currentColor' : 'none'" />
             </view>
             <view class="kg-tool" role="button" aria-label="练习工具" hover-class="tool-hover" @click="toolsOpen = true">
               <l-icon name="sliders-horizontal" :size="24" tone="ink-2" />
@@ -151,7 +155,7 @@
         <kg-card class="side-card">
           <view class="side-h">
             <text class="side-t">答题卡</text>
-            <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="(!examMode && !deferMode) || resultSent"> · 正确 {{ right }}</template></text>
+            <text class="acard-foot num">已答 {{ answeredCount }}/{{ items.length }}<template v-if="(!examMode && !deferMode) || resultSent"> · 正确 {{ right }}</template></text>
           </view>
           <view class="acard-grid side-grid">
             <view
@@ -186,12 +190,23 @@
           unit="%"
           :progress="Math.round((right / (items.length || 1)) * 100)"
         >
-          <text class="hero-s">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></text>
+          <text class="hero-s num">答对 {{ right }}/{{ items.length }} · 最高连对 {{ bestStreak }} 题<template v-if="autoSaved">，错题已自动加入错题本</template></text>
           <text v-if="percentile != null" class="hero-s">{{ percentileLine(percentile) }}</text>
         </kg-hero-card>
         <kg-hero-card v-else label="本组背完" :value="items.length" unit="题">
           <text class="hero-s">已浏览 {{ items.length }} 道题的答案与解析</text>
         </kg-hero-card>
+
+        <kg-banner
+          v-if="!beiMode && unlockedBadge"
+          class="sec"
+          tone="ok"
+          icon="medal"
+          :text="`连续打卡 ${unlockedBadge.streak} 天，解锁 ${unlockedBadge.days} 天打卡徽章`"
+          action-text="生成海报"
+          @action="goBadgePoster"
+          @close="unlockedBadge = null"
+        />
 
         <kg-stat-row v-if="!beiMode" class="sec" :items="doneStats" />
 
@@ -335,41 +350,55 @@
           @click="jumpTo(i)"
         >{{ i + 1 }}</view>
       </view>
-      <text class="acard-foot">已答 {{ answeredCount }}/{{ items.length }}<template v-if="(!examMode && !deferMode) || resultSent"> · 正确 {{ right }}</template></text>
+      <text class="acard-foot num">已答 {{ answeredCount }}/{{ items.length }}<template v-if="(!examMode && !deferMode) || resultSent"> · 正确 {{ right }}</template></text>
       <kg-button v-if="(examMode || deferMode) && !resultSent" size="lg" block @click="deferMode ? confirmFinishDefer() : confirmFinishExam()">{{ deferMode ? '提交看解析' : '交卷' }}</kg-button>
     </kg-sheet>
 
     <!-- 练习工具 -->
     <kg-sheet v-model="toolsOpen" title="练习工具">
-      <view class="tool-row" role="button" @click="cycleFont">
+      <view class="tool-row">
         <text class="tool-name">字号大小</text>
-        <text class="tool-val">{{ ['小', '标准', '大'][fontLv] || '标准' }} · 点击切换</text>
+        <kg-chip-row size="sm" :options="[{ label: '小', value: 0 }, { label: '标准', value: 1 }, { label: '大', value: 2 }]" :model-value="fontLv" :scroll-to-selected="false" @update:model-value="setFontLv" />
       </view>
-      <view v-if="!examMode" class="tool-row" role="switch" :aria-checked="deferMode ? 'true' : 'false'" @click="toggleDefer">
+      <view v-if="!examMode" class="tool-row" @click="toggleDefer">
         <text class="tool-name">先做题后看解析（整组提交统一判分）</text>
-        <text class="tool-val" :class="{ on: deferMode }">{{ deferMode ? '已开启' : '已关闭' }}</text>
+        <kg-switch :model-value="deferMode" label="先做题后看解析" @click.stop @update:model-value="toggleDefer" />
       </view>
-      <view v-if="!examMode && !deferMode" class="tool-row" role="switch" :aria-checked="beiMode ? 'true' : 'false'" @click="toggleBei">
+      <view v-if="!examMode && !deferMode" class="tool-row" @click="toggleBei">
         <text class="tool-name">背题模式</text>
-        <text class="tool-val" :class="{ on: beiMode }">{{ beiMode ? '已开启' : '已关闭' }}</text>
+        <kg-switch :model-value="beiMode" label="背题模式" @click.stop @update:model-value="toggleBei" />
       </view>
-      <view v-if="!examMode && !deferMode" class="tool-row" role="switch" :aria-checked="autoNext ? 'true' : 'false'" @click="toggleAutoNext">
+      <view v-if="!examMode && !deferMode" class="tool-row" @click="toggleAutoNext">
         <text class="tool-name">答对自动跳下一题</text>
-        <text class="tool-val" :class="{ on: autoNext }">{{ autoNext ? '已开启' : '已关闭' }}</text>
+        <kg-switch :model-value="autoNext" label="答对自动跳下一题" @click.stop @update:model-value="toggleAutoNext" />
       </view>
-      <view v-if="!examMode && !beiMode" class="tool-row" role="switch" :aria-checked="timedMode ? 'true' : 'false'" @click="toggleTimed">
+      <view v-if="!examMode && !beiMode" class="tool-row" @click="toggleTimed">
         <text class="tool-name">限时训练（按模块建议用时倒计时）</text>
-        <text class="tool-val" :class="{ on: timedMode }">{{ timedMode ? '已开启' : '已关闭' }}</text>
+        <kg-switch :model-value="timedMode" label="限时训练" @click.stop @update:model-value="toggleTimed" />
       </view>
-      <view class="tool-row" role="switch" :aria-checked="sfxOn ? 'true' : 'false'" @click="toggleSfx">
+      <view class="tool-row" @click="toggleSfx">
         <text class="tool-name">答题音效</text>
-        <text class="tool-val" :class="{ on: sfxOn }">{{ sfxOn ? '已开启' : '已关闭' }}</text>
+        <kg-switch :model-value="sfxOn" label="答题音效" @click.stop @update:model-value="toggleSfx" />
       </view>
-      <view class="tool-row" role="switch" :aria-checked="vibrateOn ? 'true' : 'false'" @click="toggleVibrate">
+      <view class="tool-row" @click="toggleVibrate">
         <text class="tool-name">答题震动反馈</text>
-        <text class="tool-val" :class="{ on: vibrateOn }">{{ vibrateOn ? '已开启' : '已关闭' }}</text>
+        <kg-switch :model-value="vibrateOn" label="答题震动反馈" @click.stop @update:model-value="toggleVibrate" />
       </view>
     </kg-sheet>
+
+    <!-- 交卷 / 提交看解析前确认未答题 -->
+    <kg-confirm-sheet
+      :model-value="!!finishSheet"
+      :title="finishSheet === 'exam' ? '确认交卷？' : '确认提交看解析？'"
+      :desc="finishSheetDesc"
+      :confirm-text="finishSheet === 'exam' ? '确认交卷' : '确认提交'"
+      cancel-text="继续作答"
+      :danger="true"
+      @update:model-value="(v) => { if (!v) finishSheet = ''; }"
+      @confirm="onFinishConfirm"
+    >
+      <kg-button variant="text" size="sm" @click="jumpFirstUnanswered">直达第一道未答题 ›</kg-button>
+    </kg-confirm-sheet>
 
     <!-- 中途退出：关层（X / Esc / Back / 遮罩）= 继续做题；两种离开都要显式点按，键盘 Esc 不再等于「结束本组」 -->
     <kg-sheet v-model="quitOpen" :title="quitSum ? quitSum.title : '退出练习'">
@@ -420,6 +449,7 @@
 
 <script>
 import { request, BASE_URL, anonUid, removeFav, setFav, fetchCheckinBadges, getAuthUser, trackEvent } from '../../api/api.js';
+import { humanErrorText, toastOk, toastInfo, toastErrFrom } from '../../utils/toast.js';
 import { markFavLocalOnly } from '../../exam/exam-fav.js';
 import { syncCloudFavs } from '../../fav/fav-sync.js';
 import { enqueueAnswers, enqueueMistake, drawOffline, flushOfflineQueue } from '../../services/offline.js';
@@ -529,9 +559,26 @@ export default {
       hsRated: {},
       matOpen: {},
       REASONS: ['粗心大意', '概念不清', '方法不会', '纯蒙的'],
+      navDir: 'fade',
+      qAnimSeq: 0,
+      favPop: false,
+      unlockedBadge: null,
+      finishSheet: '',
+      exclHintDone: !!uni.getStorageSync('exclHintDone'),
     };
   },
   computed: {
+    qAnimKey() {
+      return `${this.idx}-${this.qAnimSeq}`;
+    },
+    qEnterClass() {
+      return this.navDir === 'next' ? 'kg-q-enter-next' : this.navDir === 'prev' ? 'kg-q-enter-prev' : 'kg-q-enter-fade';
+    },
+    finishSheetDesc() {
+      const left = this.items.filter((q) => !q._picked).length;
+      const done = this.items.length - left;
+      return `已答 ${done}/${this.items.length} 题，还有 ${left} 题未作答，未答题按不得分处理。`;
+    },
     isMulti() {
       return !!(this.cur && typeof this.cur.answer === 'string' && this.cur.answer.trim().length > 1);
     },
@@ -887,6 +934,8 @@ export default {
   },
   onHide() {
     if (this.autoTimer) { clearTimeout(this.autoTimer); this.autoTimer = null; }
+    if (this._advTimer) { clearTimeout(this._advTimer); this._advTimer = null; }
+    if (this._favPopT) { clearTimeout(this._favPopT); this._favPopT = null; }
     if (this._loadTick) { clearInterval(this._loadTick); this._loadTick = null; }
     this.stopQTimer();
     // #ifdef H5
@@ -900,6 +949,8 @@ export default {
     // 顶栏/浏览器返回不经 quit()：全部答完就视同完成
     this.finalizeIfAnswered();
     if (this.autoTimer) { clearTimeout(this.autoTimer); this.autoTimer = null; }
+    if (this._advTimer) { clearTimeout(this._advTimer); this._advTimer = null; }
+    if (this._favPopT) { clearTimeout(this._favPopT); this._favPopT = null; }
     if (this._loadTick) { clearInterval(this._loadTick); this._loadTick = null; }
     if (this.examTimer) { clearInterval(this.examTimer); this.examTimer = null; }
     if (this._ppTimer) { clearTimeout(this._ppTimer); this._ppTimer = null; }
@@ -1111,7 +1162,7 @@ export default {
         }
       } catch (e) {
         uni.hideLoading();
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        uni.showToast({ title: '加载失败：' + humanErrorText(e, '请稍后重试'), icon: 'none' });
       } finally {
         this._starting = false;
       }
@@ -1122,15 +1173,7 @@ export default {
         this.finishExam();
         return;
       }
-      uni.showModal({
-        title: '确认交卷？',
-        content: '还有 ' + left + ' 题未作答，交卷后未答题不得分',
-        confirmText: '交卷',
-        cancelText: '继续作答',
-        success: (res) => {
-          if (res.confirm) this.finishExam();
-        },
-      });
+      this.finishSheet = 'exam';
     },
     finishExam() {
       if (!this.examMode) return;
@@ -1157,15 +1200,31 @@ export default {
         this.finishDefer();
         return;
       }
-      uni.showModal({
-        title: '提交看解析？',
-        content: '还有 ' + left + ' 题未作答，提交后按已作答判分',
-        confirmText: '提交',
-        cancelText: '继续作答',
-        success: (res) => {
-          if (res.confirm) this.finishDefer();
-        },
-      });
+      this.finishSheet = 'defer';
+    },
+    jumpFirstUnanswered() {
+      this.finishSheet = '';
+      const un = this.items.findIndex((q) => !q._picked);
+      if (un >= 0) this.jumpTo(un);
+    },
+    onFinishConfirm() {
+      const kind = this.finishSheet;
+      this.finishSheet = '';
+      if (kind === 'exam') this.finishExam();
+      else if (kind === 'defer') this.finishDefer();
+    },
+    dismissExclHint() {
+      this.exclHintDone = true;
+      uni.setStorageSync('exclHintDone', '1');
+    },
+    goBadgePoster() {
+      const days = this.unlockedBadge && this.unlockedBadge.days;
+      if (days) uni.navigateTo({ url: '/pkgA/social/poster?badge=' + days });
+    },
+    setFontLv(lv) {
+      this.fontLv = lv;
+      uni.setStorageSync('fontLv', lv);
+      toastInfo('字号：' + ['小', '标准', '大'][lv]);
     },
     finishDefer() {
       if (!this.deferMode) return;
@@ -1265,15 +1324,19 @@ export default {
       if (i >= 0) {
         this.favs.splice(i, 1);
         this._favSeq = (this._favSeq || 0) + 1;
+        this.favPop = false;
         if (qid) removeFav(qid).catch(() => {});
-        uni.showToast({ title: '已取消收藏', icon: 'none', duration: 900 });
+        toastInfo('已取消收藏');
       } else {
         const favQ = this.cur.question;
         if (qid) setFav(qid).catch(() => this.favLocalOnly(favQ));
         const { question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module, submodule, is_real, exam_year, exam_region, image, image_credit } = this.cur;
         this.favs.unshift({ t: Date.now(), id: qid || null, question, options, answer, explanation, hs_explanation, xp_explanation, xp_school, module: this.cur._sz ? '时政' : module, submodule, is_real, exam_year, exam_region, image, image_credit });
         if (this.favs.length > 200) this.favs.length = 200;
-        uni.showToast({ title: '已收藏，可在错题本查看', icon: 'none', duration: 900 });
+        this.favPop = true;
+        if (this._favPopT) clearTimeout(this._favPopT);
+        this._favPopT = setTimeout(() => { this.favPop = false; }, 280);
+        toastOk('已收藏，可在错题本查看');
       }
       uni.setStorageSync('favQuestions', this.favs);
     },
@@ -1376,7 +1439,7 @@ export default {
         this.startQTimer();
       } catch (e) {
         uni.hideLoading();
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        uni.showToast({ title: '加载失败：' + humanErrorText(e, '请稍后重试'), icon: 'none' });
       } finally {
         this._starting = false;
       }
@@ -1410,7 +1473,7 @@ export default {
         this.stopQTimer();
       } catch (e) {
         uni.hideLoading();
-        uni.showToast({ title: '加载失败：' + e.message, icon: 'none' });
+        uni.showToast({ title: '加载失败：' + humanErrorText(e, '请稍后重试'), icon: 'none' });
       }
     },
     async startReinforce(launch) {
@@ -1768,15 +1831,8 @@ export default {
         if (hit) {
           uni.setStorageSync('badgeSeenMax', hit);
           trackEvent('badge_unlock', 'badge', String(hit));
-          uni.showModal({
-            title: '🏅 解锁新徽章！',
-            content: `连续打卡 ${srvStreak} 天，解锁 ${hit} 天徽章，坚持就是实力。生成专属海报，晒给考友看？`,
-            confirmText: '生成海报',
-            cancelText: '稍后再看',
-            success: (r) => {
-              if (r.confirm) uni.navigateTo({ url: '/pkgA/social/poster?badge=' + hit });
-            },
-          });
+          this.unlockedBadge = { days: hit, streak: srvStreak };
+          toastOk(`解锁 ${hit} 天连续打卡徽章`);
         }
       } catch (e) { /* 非关键路径 */ }
       this._badgeChecking = false;
@@ -1860,6 +1916,13 @@ export default {
         clearTimeout(this.autoTimer);
         this.autoTimer = null;
       }
+      if (this._advTimer) {
+        clearTimeout(this._advTimer);
+        this._advTimer = null;
+      }
+      const d = i - this.idx;
+      this.navDir = Math.abs(d) === 1 ? (d > 0 ? 'next' : 'prev') : 'fade';
+      this.qAnimSeq++;
       this.idx = i;
       this.picked = this.items[i]._picked || '';
       if (!this.picked) this.startQTimer();
@@ -1924,18 +1987,21 @@ export default {
       this.cur._secs = this.qsecs;
       this.stopQTimer();
       if (this.examMode) {
-        setTimeout(() => {
+        if (this._advTimer) clearTimeout(this._advTimer);
+        this._advTimer = setTimeout(() => {
+          this._advTimer = null;
+          if (!this.session || !this.examMode) return;
           if (this.idx + 1 < this.items.length) {
             this.next();
             return;
           }
           const un = this.items.findIndex((q) => !q._picked);
-          if (un === -1) this.finishExam();
+          if (un === -1) toastInfo('已全部作答，请检查后点击下方「交卷」');
           else {
-            uni.showToast({ title: '还有未答题目，答完自动交卷', icon: 'none' });
+            toastInfo('还有未答题目，已为你跳转');
             this.jumpTo(un);
           }
-        }, 200);
+        }, 350);
         return;
       }
       if (this.deferMode && !this.resultSent) {
@@ -1944,18 +2010,21 @@ export default {
         this.recordStat(this.cur.module, ok, this.cur.submodule);
         if (ok) this.right++;
         this.saveSession();
-        setTimeout(() => {
+        if (this._advTimer) clearTimeout(this._advTimer);
+        this._advTimer = setTimeout(() => {
+          this._advTimer = null;
+          if (!this.session || !this.deferMode) return;
           if (this.idx + 1 < this.items.length) {
             this.next();
             return;
           }
           const un = this.items.findIndex((q) => !q._picked);
-          if (un === -1) this.finishDefer();
+          if (un === -1) toastInfo('已全部作答，请检查后点击「提交看解析」');
           else {
-            uni.showToast({ title: '还有未答题目，答完可提交看解析', icon: 'none' });
+            toastInfo('还有未答题目，已为你跳转');
             this.jumpTo(un);
           }
-        }, 200);
+        }, 350);
         return;
       }
       const correct = k === this.cur.answer.trim();
@@ -2032,11 +2101,20 @@ export default {
       if (this.session && items.some((x) => !x._picked)) this.saveSession();
     },
     async rateHs(q, up) {
-      this.hsRated[q.id] = up ? 'up' : 'down';
+      const val = up ? 'up' : 'down';
+      const canceled = this.hsRated[q.id] === val;
+      if (canceled) {
+        const nextMap = { ...this.hsRated };
+        delete nextMap[q.id];
+        this.hsRated = nextMap;
+        toastInfo('已取消反馈');
+        return;
+      }
+      this.hsRated = { ...this.hsRated, [q.id]: val };
       try {
         await request('/api/rate', { method: 'POST', data: { question_id: q.id, up } });
       } catch (e) { /* 静默失败 */ }
-      uni.showToast({ title: up ? '感谢反馈' : '已记录，我们会核查这条解析', icon: 'none' });
+      toastInfo(up ? '感谢反馈' : '已记录，我们会核查这条解析');
     },
     toggleAutoNext() {
       this.autoNext = !this.autoNext;
@@ -2169,9 +2247,9 @@ export default {
         });
         q._reported = true;
         this.reportOpen = false;
-        uni.showToast({ title: '感谢反馈，我们会尽快核查', icon: 'none' });
+        toastOk('感谢反馈，我们会尽快核查');
       } catch (e) {
-        uni.showToast({ title: '提交失败：' + e.message, icon: 'none' });
+        toastErrFrom(e, '提交纠错失败，请稍后重试');
       } finally {
         this.reportBusy = false;
       }
@@ -2206,6 +2284,12 @@ export default {
         clearTimeout(this.autoTimer);
         this.autoTimer = null;
       }
+      if (this._advTimer) {
+        clearTimeout(this._advTimer);
+        this._advTimer = null;
+      }
+      this.navDir = 'next';
+      this.qAnimSeq++;
       this.idx++;
       this.picked = (this.items[this.idx] && this.items[this.idx]._picked) || '';
       this.saveSession();
@@ -2405,9 +2489,11 @@ export default {
 .cnt.okc { color: var(--ok-strong); }
 .cnt.badc { color: var(--bad-strong); }
 .cnt.fire { display: inline-flex; align-items: center; gap: var(--sp-4); color: var(--streak); }
-.icon-btn { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); margin-right: calc(-1 * var(--sp-8)); }
+.icon-btn { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); margin-right: calc(-1 * var(--sp-8)); transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-spring-snappy); }
+.icon-btn:active { transform: scale(0.9); background: var(--fill); }
 .tool-hover { background: var(--fill); }
 .kg-tool.on { background: var(--warn-soft); }
+.kg-tool.dis { opacity: 0.35; pointer-events: none; }
 
 /* 题面 */
 .qhl { background: var(--warn-soft); color: var(--warn-strong); border-radius: var(--r-xs); padding: 0 2px; font-weight: 600; }
@@ -2415,17 +2501,21 @@ export default {
 .img-credit { display: block; margin-bottom: var(--sp-12); font-size: var(--fs-caption); color: var(--ink-3); }
 
 /* 作答后 */
-.after { display: flex; flex-direction: column; gap: var(--sp-12); margin-top: var(--sp-12); }
+.after { display: flex; flex-direction: column; gap: var(--sp-12); margin-top: var(--sp-12); animation: kg-fade-in var(--dur-base) var(--ease-decel); }
 .reasons { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); }
 .rz-t { font-size: var(--fs-sub); color: var(--ink-2); margin-right: var(--sp-4); }
 .rz {
   display: inline-flex; align-items: center; min-height: 40px; padding: 0 var(--sp-16); border-radius: var(--r-full);
   border: 1px solid var(--line); background: var(--card); font-size: var(--fs-sub); color: var(--ink-2);
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-spring-snappy);
 }
+.rz:active { transform: scale(0.95); }
 .rz.on { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-text); font-weight: 600; }
 .tm-cmp { display: block; margin-bottom: var(--sp-8); font-size: var(--fs-sub); color: var(--ok-strong); }
 .tm-cmp.over { color: var(--bad-strong); }
 .hs-rate { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-8); margin-bottom: var(--sp-8); }
+.hs-rate.is-up :deep(.kg-btn:first-of-type) { background: var(--brand-soft); color: var(--brand-text); }
+.hs-rate.is-down :deep(.kg-btn:last-of-type) { background: var(--bad-soft); }
 .hs-rate-t, .hs-rate-done { font-size: var(--fs-sub); color: var(--ink-2); margin-right: var(--sp-4); }
 .xp-k { display: block; font-size: var(--fs-sub); font-weight: 600; color: var(--warn-strong); margin-bottom: var(--sp-4); }
 .xp-b { display: block; font-size: var(--fs-body); color: var(--ink-2); line-height: var(--lh-question); white-space: pre-wrap; }
@@ -2439,7 +2529,9 @@ export default {
 .acard-n {
   width: var(--acard-cell); height: var(--acard-cell); line-height: var(--acard-cell); text-align: center; border-radius: var(--r-full);
   background: var(--fill); border: 1px solid var(--line); font-size: var(--fs-sub); color: var(--ink-2); box-sizing: border-box;
+  transition: transform var(--dur-fast) var(--ease-spring-snappy), background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
+.acard-n:active { transform: scale(0.92); }
 .acard-n.ok { background: var(--ok-soft); border-color: var(--ok); color: var(--ok-strong); }
 .acard-n.bad { background: var(--bad-soft); border-color: var(--bad); color: var(--bad-strong); }
 .acard-n.skip { background: var(--fill); color: var(--ink-3); }

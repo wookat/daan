@@ -5,7 +5,8 @@
       <kg-streak-badges v-if="streak != null" :days="streak" :inverse="variant === 'brand'" />
     </view>
     <view class="kg-hero__num-row">
-      <text class="kg-hero__num num">{{ value }}</text>
+      <kg-number v-if="typeof value === 'number'" class="kg-hero__num" :value="value" />
+      <text v-else class="kg-hero__num num">{{ value }}</text>
       <text v-if="total != null" class="kg-hero__total num">/{{ total }}{{ unit }}</text>
       <text v-else-if="unit" class="kg-hero__total">{{ unit }}</text>
     </view>

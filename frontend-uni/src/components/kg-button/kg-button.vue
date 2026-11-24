@@ -60,7 +60,8 @@ export default {
 
 <style>
 /* 非 scoped：custom-class 挂在 wd-button 根上，scoped 属性穿不进去 */
-.kg-btn { font-weight: 500; transition: background-color var(--dur-instant) var(--ease-standard), color var(--dur-instant) var(--ease-standard); }
+.kg-btn { font-weight: 500; transition: background-color var(--dur-instant) var(--ease-standard), color var(--dur-instant) var(--ease-standard), transform var(--dur-fast) var(--ease-spring-snappy), opacity var(--dur-fast) var(--ease-standard); }
+.kg-btn:active:not(.is-disabled):not([disabled]) { transform: scale(0.97); }
 .kg-btn--lg { font-weight: 600; }
 /* wot medium 自带 min-width:120，行内工具位（筛选/批量）放不下且挤压同排分段控件；宽度由内容+padding 决定，与 sm/lg 一致 */
 .kg-btn.kg-btn--md { min-width: 0 !important; }
@@ -89,7 +90,7 @@ export default {
 .kg-btn.kg-btn--sm, .kg-btn.kg-btn--md, .kg-btn.kg-btn--lg { position: relative; overflow: visible !important; }
 /* 复用 wd-button 自带的 ::after（text 变体下它 display:none、宽 200% 做 hairline），全部覆写成命中层 */
 .kg-btn.kg-btn--sm::after, .kg-btn.kg-btn--md::after, .kg-btn.kg-btn--lg::after { content: ''; display: block; position: absolute; left: 0; right: 0; width: auto; top: 50%; height: var(--hit-min); border: none; transform: translateY(-50%); }
-@media (min-width: 1024px) {
+@media (hover: hover) and (pointer: fine) {
   .kg-btn.kg-btn--tone-brand.kg-btn--primary:hover { background: var(--brand-press) !important; }
   .kg-btn.kg-btn--tone-brand.kg-btn--secondary:hover { background: var(--brand-soft-2) !important; }
   .kg-btn.kg-btn--tone-brand.kg-btn--ghost:hover { background: var(--fill) !important; }

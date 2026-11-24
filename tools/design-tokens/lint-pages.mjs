@@ -21,6 +21,8 @@ const RULES = [
   { id: 'fs-rpx', re: /font-size\s*:\s*[^;]*\d\s*rpx/g, msg: 'font-size rpx → --fs-*（7 档 px）' },
   { id: 'fw', re: /font-weight\s*:\s*(700|800|900|bold|bolder)\b/g, msg: 'font-weight 700/800/bold → 600' },
   { id: 'wb', re: /word-break\s*:\s*break-all/g, msg: 'word-break: break-all → .q-text（line-break:strict + overflow-wrap:anywhere）' },
+  { id: 'no-layout-transition', re: /transition\s*:[^;]*\b(?:width|height|top|left|right|bottom|margin|padding)\b/, msg: '禁止动画布局属性（width/height/top/left/margin/padding）→ transform / opacity / grid-template-rows', allow: true },
+  { id: 'no-bare-motion', re: /transition(?:-duration|-timing-function)?\s*:[^;]*(?:(?<![-\d.])(?!(?:0\.01ms|0ms|0s)(?![\w-]))\d*\.?\d+m?s(?![\w-])|(?<![-\w])(?:ease(?:-in|-out|-in-out)?|linear)(?![-\w])|cubic-bezier\()/, msg: '过渡时长与曲线须走 --dur-* / --ease-* token', allow: true },
 ];
 // 仅页面层（共享组件里 kg-card--raised / kg-sheet 等浮层本身是阴影的唯一合法归属）
 const PAGE_RULES = [
@@ -96,6 +98,7 @@ for (const abs of files) {
     lines.forEach((line, i) => {
       if (shared && SHARED_ALLOW_LINE.test(line)) return;
       for (const rule of RULES) {
+        if (rule.allow && ALLOW_MARK.test(rawLines[i] || '')) continue;
         rule.re.lastIndex = 0;
         if (rule.re.test(line)) hits.push({ line: lineOffset + i + 1, rule: rule.id, msg: rule.msg });
       }

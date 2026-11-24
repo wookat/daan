@@ -54,7 +54,8 @@ export default {
 .kg-abar__prog { display: flex; flex-direction: column; gap: var(--sp-4); min-width: 56px; }
 .kg-abar__n { font-size: var(--fs-sub); color: var(--ink-2); }
 .kg-abar__tools { flex: 1; display: flex; justify-content: center; gap: var(--sp-8); }
-.kg-abar__tools :deep(.kg-tool) { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); }
+.kg-abar__tools :deep(.kg-tool) { width: var(--hit-min); height: var(--hit-min); display: flex; align-items: center; justify-content: center; border-radius: var(--r-full); transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-spring-snappy); }
+.kg-abar__tools :deep(.kg-tool:active) { transform: scale(0.9); background: var(--fill); }
 @keyframes kg-abar-in { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @media (min-width: 1024px) {
   .kg-abar {

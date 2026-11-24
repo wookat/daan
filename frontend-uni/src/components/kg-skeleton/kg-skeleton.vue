@@ -14,13 +14,15 @@
     </template>
     <wd-skeleton v-else theme="paragraph" :row-col="[{ width: '40%', height: '20px' }, 1, 1, { width: '70%' }]" :animation="anim" />
   </view>
-  <slot v-else />
+  <view v-else class="kg-skel-body">
+    <slot />
+  </view>
 </template>
 
 <script>
-import { prefersReducedMotion } from '../../a11y/a11y-motion.js';
+import { prefersReducedMotion, watchReducedMotion } from '../../a11y/a11y-motion.js';
 
-/** KgSkeleton（COMPONENTS §1.9）：wd-skeleton 五套预设（banner = 单行 KgBanner 等高占位；plan = 首页学习计划卡等高占位，放在 kg-card.plan 内，rows=0 为「去制定」引导卡、rows=n 为 n 行任务的今日计划卡），回包后不抬/不压下方内容；reduced-motion 下静止。空态与骨架互斥由页面保证。 */
+/** KgSkeleton（COMPONENTS §1.9）：wd-skeleton 五套预设，回包后真内容纯透明度柔入（零位移不触发 CLS），reduced-motion 下静止。 */
 export const SKELETON_PRESETS = ['hero', 'cards', 'lines', 'banner', 'plan'];
 
 export default {
@@ -30,8 +32,17 @@ export default {
     loading: { type: Boolean, default: true },
     rows: { type: Number, default: 0 },
   },
+  data() {
+    return { reduced: prefersReducedMotion() };
+  },
   computed: {
-    anim() { return prefersReducedMotion() ? undefined : 'gradient'; },
+    anim() { return this.reduced ? undefined : 'gradient'; },
+  },
+  mounted() {
+    this._unwatchMotion = watchReducedMotion((v) => { this.reduced = v; });
+  },
+  beforeUnmount() {
+    if (this._unwatchMotion) { this._unwatchMotion(); this._unwatchMotion = null; }
   },
 };
 </script>
@@ -39,4 +50,5 @@ export default {
 <style scoped>
 .kg-skel { display: flex; flex-direction: column; gap: var(--sp-12); }
 .kg-skel :deep(.wd-skeleton__item) { background: var(--fill); border-radius: var(--r-xs); }
+.kg-skel-body { animation: kg-fade-in var(--dur-fast) var(--ease-decel); }
 </style>
