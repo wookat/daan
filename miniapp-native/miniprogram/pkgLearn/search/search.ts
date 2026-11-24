@@ -320,11 +320,21 @@ Page({
         (code ? '&tag3=' + encodeURIComponent(code) : ''),
     });
   },
-  onPaper() {
-    // 小程序模考页（pages/exam）尚不接受 paper_id 直达（Exam 组范围）；先切到模考列表
+  onPaper(e: WechatMiniprogram.TouchEvent) {
+    const id = Number((e.currentTarget.dataset as { id?: number | string }).id || 0);
+    if (id) {
+      wx.navigateTo({ url: '/pkgExam/exam/exam?paper_id=' + id });
+      return;
+    }
     wx.switchTab({ url: '/pages/exam/exam' });
   },
-  onShenlun() {
-    wx.showToast({ title: '申论页面小程序端尚未上线', icon: 'none' });
+  onShenlun(e: WechatMiniprogram.TouchEvent) {
+    const id = Number((e.currentTarget.dataset as { id?: number | string }).id || 0);
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun' + (id ? '?id=' + id : '') });
+  },
+  onShenlunMat(e: WechatMiniprogram.TouchEvent) {
+    const { id, type } = e.currentTarget.dataset as { id?: number | string; type?: string };
+    const t = type ? '&mtype=' + encodeURIComponent(type) : '';
+    wx.navigateTo({ url: '/pkgExam/shenlun/shenlun?tab=m' + (id ? '&mid=' + id : '') + t });
   },
 });

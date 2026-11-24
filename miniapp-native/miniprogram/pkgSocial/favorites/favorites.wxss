@@ -31,3 +31,10 @@
 .ansline { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); color: var(--ink); font-weight: var(--fw-semibold); }
 .exp { display: block; margin-top: var(--sp-8); font-size: var(--fs-sub); line-height: var(--lh-sub); color: var(--ink-2); white-space: pre-wrap; }
 .ops { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-8); }
+.sheet-opts { display: flex; flex-direction: column; }
+.sheet-opt { display: flex; align-items: center; gap: var(--sp-12); min-height: var(--hit-min); padding: var(--sp-8) var(--sp-4); border-bottom: 1px solid var(--line); }
+.sheet-opt:last-child { border-bottom: none; }
+.sheet-opt-ico { font-size: var(--fs-body); line-height: 1; }
+.sheet-opt-t { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--ink); }
+.sheet-opt.on .sheet-opt-t { color: var(--brand-text); font-weight: 600; }
+.sheet-opt.bad .sheet-opt-t { color: var(--bad); }

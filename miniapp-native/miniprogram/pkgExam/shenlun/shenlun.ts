@@ -189,8 +189,11 @@ Page({
     if (/^\d+$/.test(o.id || '')) this.openQ(Number(o.id));
     this.syncQFavs();
   },
+  onHide() {
+    this.flushDraft();
+  },
   onUnload() {
-    if (this._draftTimer) clearTimeout(this._draftTimer);
+    this.flushDraft();
   },
   onShareAppMessage(): { title: string; path: string } {
     const d = this.data.detail;
@@ -395,6 +398,7 @@ Page({
     if (this.data.qNav.nextId) this.openQ(this.data.qNav.nextId);
   },
   async openQ(id: number) {
+    this.flushDraft();
     try {
       const d = await fetchShenlunQuestion(id);
       const detail = d.item;
@@ -477,6 +481,14 @@ Page({
     const d = this.data.detail;
     const c = content !== undefined ? content : d && d.id === qid ? this.data.myAnswer : String(wx.getStorageSync(draftKey(qid)) || '');
     saveShenlunDraft(qid, c).catch(() => {});
+  },
+  flushDraft() {
+    if (this._draftTimer) {
+      clearTimeout(this._draftTimer);
+      this._draftTimer = 0;
+      const d = this.data.detail;
+      if (d) this.pushDraft(d.id, this.data.myAnswer);
+    }
   },
   async syncDraft(id: number) {
     try {

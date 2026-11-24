@@ -224,6 +224,10 @@ Page({
     this.loadDailySet();
     this.setData({ szTodayDone: !!loadSzDaily().days[cnDayKey()] });
     flushDailySubmit(cnDayKey());
+    if (wx.getStorageSync('openPlanSetup')) {
+      wx.removeStorageSync('openPlanSetup');
+      this.onOpenSetup();
+    }
   },
   onSearch() {
     wx.navigateTo({ url: '/pkgLearn/search/search' });
@@ -575,9 +579,10 @@ Page({
     }
   },
   onReviewEntry() {
-    if (!this.data.dueReview) return;
-    trackEvent('review_entry_click', 'home_card');
-    wx.setStorageSync('autoStartReview', 1);
+    if (this.data.dueReview) {
+      trackEvent('review_entry_click', 'home_card');
+      wx.setStorageSync('autoStartReview', 1);
+    }
     wx.switchTab({ url: '/pages/book/book' });
   },
   onGoBook() {

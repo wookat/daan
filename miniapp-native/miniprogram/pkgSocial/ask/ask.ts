@@ -31,7 +31,7 @@ import {
   upsertLocalSession,
 } from '../../utils/ask-sessions';
 import type { AskFu, AskItem, AskSession } from '../../utils/ask-sessions';
-import { toastErr, toastInfo, toastOk } from '../../utils/toast';
+import { confirmDanger, toastErr, toastInfo, toastOk } from '../../utils/toast';
 
 interface FuMsg extends AskFu {
   html: string;
@@ -306,7 +306,7 @@ Page({
       },
     });
     if (!ok) {
-      wx.showToast({ title: '语音识别不可用：请在小程序后台开通同声传译插件', icon: 'none' });
+      wx.showToast({ title: '当前暂不支持语音输入，请直接打字或拍照提问', icon: 'none' });
       return;
     }
     wx.showToast({ title: '正在聆听，说完点停止', icon: 'none' });
@@ -818,8 +818,9 @@ Page({
     this.persistSession();
   },
 
-  onDelSession(e: WechatMiniprogram.BaseEvent) {
+  async onDelSession(e: WechatMiniprogram.BaseEvent) {
     const id = Number(e.currentTarget.dataset.id);
+    if (!(await confirmDanger({ title: '删除这条提问记录？', content: '删除后无法恢复', confirmText: '删除' }))) return;
     const sessions = this.data.sessions.filter((s) => s.id !== id);
     wx.setStorageSync('askSessions', sessions);
     this.setSessions(sessions);
@@ -827,6 +828,7 @@ Page({
       wx.setStorageSync('askDelTombs', addTombstone(wx.getStorageSync('askDelTombs'), id));
       this.dropRemoteSession(id);
     }
+    toastOk('已删除');
   },
 
   onShareAppMessage() {

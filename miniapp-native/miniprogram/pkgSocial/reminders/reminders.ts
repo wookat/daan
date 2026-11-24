@@ -2,7 +2,7 @@
 import { fetchReminders, setReminder, trackEvent } from '../../api/index';
 import { SUBSCRIBE_TMPL_ID, subscribeAvailable } from '../../utils/config';
 import { dayKey, getDailyGoal, loadPStats } from '../../utils/stats';
-import { toastInfo } from '../../utils/toast';
+import { toastInfo, toastOk, toastErrFrom } from '../../utils/toast';
 
 const DEFAULT_TIME = '20:30';
 
@@ -86,9 +86,9 @@ Page({
       await setReminder('wxsub', true, hourOf(this.data.time));
       this.setData({ subOn: true });
       trackEvent('reminder_optin', 'reminders');
-      toastInfo('订阅成功');
+      toastOk('订阅成功');
     } catch (err) {
-      toastInfo('操作失败：' + (err as Error).message);
+      toastErrFrom(err, '订阅失败，请稍后重试');
     }
   },
 

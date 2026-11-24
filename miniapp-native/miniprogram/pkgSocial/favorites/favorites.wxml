@@ -95,5 +95,38 @@
         </view>
       </kg-card>
     </block>
+
+    <!-- 收藏夹操作抽屉（无 6 项上限限制） -->
+    <kg-sheet visible="{{folderOpsOpen}}" title="{{folderOpsTitle}}" bind:close="onCloseFolderOps">
+      <view class="sheet-opts">
+        <view class="sheet-opt" hover-class="row--hover" role="button" bind:tap="onSheetRenameFolder">
+          <l-icon name="pencil-line" size="18" tone="ink-2" />
+          <text class="sheet-opt-t">重命名</text>
+        </view>
+        <view class="sheet-opt bad" hover-class="row--hover" role="button" bind:tap="onSheetDeleteFolder">
+          <l-icon name="trash-2" size="18" tone="bad" />
+          <text class="sheet-opt-t">删除收藏夹（收藏移回默认夹）</text>
+        </view>
+      </view>
+    </kg-sheet>
+
+    <!-- 移动到收藏夹抽屉 -->
+    <kg-sheet visible="{{moveOpen}}" title="移动到收藏夹" bind:close="onCloseMove">
+      <view class="sheet-opts">
+        <view
+          wx:for="{{folders}}"
+          wx:key="id"
+          class="sheet-opt {{moveFolderId === item.id ? 'on' : ''}}"
+          hover-class="row--hover"
+          role="button"
+          data-fid="{{item.id}}"
+          bind:tap="onConfirmMove"
+        >
+          <text class="sheet-opt-ico">{{item.icon}}</text>
+          <text class="sheet-opt-t">{{item.name}}</text>
+          <l-icon wx:if="{{moveFolderId === item.id}}" name="check" size="18" tone="brand-text" />
+        </view>
+      </view>
+    </kg-sheet>
   </view>
 </scroll-view>

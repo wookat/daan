@@ -1,5 +1,6 @@
 // 成绩报告：逐段对照 H5 pkgA/exam/report.vue（hero/统计/排名/目标差/模块得分/配速/历次/薄弱考点/逐题/错题重练/错因画像/下一卷/解析浮层）
 import { patchMistake, postQuestionReport, deleteFav, fetchProfile } from '../../api/index';
+import { fetchFavStatus } from '../../api/learn';
 import {
   addFav,
   fetchExamAttempts,
@@ -421,6 +422,16 @@ Page({
       hasPrev: !!reviewStep(r.items, it.no, -1, this.data.navMode),
       hasNext: !!reviewStep(r.items, it.no, 1, this.data.navMode),
     });
+    if (it.question_id) {
+      const qid = it.question_id;
+      fetchFavStatus(qid)
+        .then((s) => {
+          if (this.data.detail && this.data.detail.question_id === qid) {
+            this.setData({ 'detail.faved': !!s.faved });
+          }
+        })
+        .catch(() => {});
+    }
   },
   onCell(e: WechatMiniprogram.TouchEvent) {
     const no = Number(e.currentTarget.dataset.no);

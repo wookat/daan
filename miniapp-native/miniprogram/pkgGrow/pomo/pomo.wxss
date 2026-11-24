@@ -42,10 +42,12 @@
 }
 
 .dial-fill {
+  width: 100%;
   height: 100%;
   border-radius: var(--r-full);
   background: var(--brand);
-  transition: width 0.4s linear;
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-standard);
 }
 
 .dial.break .dial-fill {

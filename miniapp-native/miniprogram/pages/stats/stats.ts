@@ -260,7 +260,7 @@ Page({
       subs: subs.sort((a, b) => a.pct - b.pct),
     }));
 
-    const hasData = totalDone > 0 || this.data.byModule.length > 0 || hmTotal > 0;
+    const hasData = totalDone >= UNLOCK_N;
     const hasRadar = axes.some((a) => a.n > 0);
     this.setData({
       totalDone,

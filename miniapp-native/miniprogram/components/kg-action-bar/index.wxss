@@ -3,4 +3,4 @@
 .kg-abar__btn { display: block; flex: 1; min-width: 0; }
 .kg-abar__idx { font-size: var(--fs-sub); color: var(--ink-3); min-width: 48px; }
 .kg-abar__prog { position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: var(--prog-track); }
-.kg-abar__prog-fill { height: 100%; background: var(--brand); transition: width var(--dur-base) var(--ease-decel); }
+.kg-abar__prog-fill { width: 100%; height: 100%; background: var(--brand); transform-origin: left center; transition: transform var(--dur-base) var(--ease-decel); }

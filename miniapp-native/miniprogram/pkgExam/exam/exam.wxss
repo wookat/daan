@@ -4,8 +4,6 @@
 .clock { display: inline-flex; align-items: center; gap: var(--sp-4); }
 .clock-t { font-size: var(--fs-h3); font-weight: 600; color: var(--ink); }
 .clock.low .clock-t { color: var(--bad); }
-.clock.low { animation: clock-pulse 1s ease-in-out infinite; }
-@keyframes clock-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .prog { margin-bottom: var(--sp-12); }
 .hint { font-size: var(--fs-caption); color: var(--ink-4); text-align: center; }
 .expl { display: flex; flex-direction: column; gap: var(--sp-8); }

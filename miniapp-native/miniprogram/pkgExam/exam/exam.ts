@@ -85,6 +85,7 @@ Page({
   _qt: null as unknown as QuestionTimer,
   _progTimer: 0 as ReturnType<typeof setTimeout> | 0,
   _retryTimer: 0 as ReturnType<typeof setTimeout> | 0,
+  _autoNextTimer: 0 as ReturnType<typeof setTimeout> | 0,
   _submitTries: 0,
   _tsx: 0,
 
@@ -144,6 +145,9 @@ Page({
   onUnload() {
     this._clock.stop();
     if (this._retryTimer) clearTimeout(this._retryTimer);
+    if (this._autoNextTimer) clearTimeout(this._autoNextTimer);
+    this._retryTimer = 0;
+    this._autoNextTimer = 0;
     if (this.data.practice) {
       this.logAttempts(this.data.items);
       return;
@@ -152,6 +156,10 @@ Page({
     this.flushProgress();
   },
   onHide() {
+    if (this._autoNextTimer) {
+      clearTimeout(this._autoNextTimer);
+      this._autoNextTimer = 0;
+    }
     if (this.data.practice) return;
     this.saveProgress();
     this.flushProgress();
@@ -262,8 +270,15 @@ Page({
     cur._picked = cur._picked === k ? '' : k;
     this.refreshCur(cur);
     this.saveProgress();
+    if (this._autoNextTimer) {
+      clearTimeout(this._autoNextTimer);
+      this._autoNextTimer = 0;
+    }
     if (cur._picked && this.data.idx + 1 < this.data.items.length) {
-      setTimeout(() => this.onNext(), 180);
+      this._autoNextTimer = setTimeout(() => {
+        this._autoNextTimer = 0;
+        this.onNext();
+      }, 180);
     }
   },
   onExcl(e: WechatMiniprogram.CustomEvent<{ key: string }>) {
@@ -295,6 +310,10 @@ Page({
   goto(i: number) {
     const { items, idx } = this.data;
     if (i < 0 || i >= items.length || i === idx) return;
+    if (this._autoNextTimer) {
+      clearTimeout(this._autoNextTimer);
+      this._autoNextTimer = 0;
+    }
     if (!this.data.practice) this.flushQSecs();
     const cur = items[i];
     this.setData({ idx: i, cur, opts: optList(cur), revealed: !!cur._picked });
@@ -384,6 +403,10 @@ Page({
   },
   async submit() {
     if (this.data.submitting) return;
+    if (this._autoNextTimer) {
+      clearTimeout(this._autoNextTimer);
+      this._autoNextTimer = 0;
+    }
     this.setData({ submitting: true, cardOpen: false });
     this._clock.stop();
     this.flushQSecs();
