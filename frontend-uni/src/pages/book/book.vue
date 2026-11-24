@@ -680,6 +680,8 @@ import { scanPageLabel, scanPagesNote, scanDupNote, paperSubmittedNote, recordSc
 import { scanRowJumpable, scanRowKey, findScanMistake, pageNFor } from '../../exam/paper-scan-jump.js';
 
 const NAMES = { ziliao: '资料分析', shuliang: '数量关系', yanyu: '言语理解', panduan: '判断推理', changshi: '常识判断', shenlun: '申论' };
+const NAME_TO_KEY = Object.fromEntries(Object.entries(NAMES).map(([k, v]) => [v, k]));
+const normModKey = (m) => NAME_TO_KEY[m] || m || '';
 // 只描述作答形式、不是题型/考点的 question_type（时政题库存的是「单选」）：标签退回模块名
 const ANSWER_FORMATS = ['单选', '多选', '判断', '不定项'];
 
@@ -821,7 +823,7 @@ export default {
       );
     },
     chipList() {
-      const mods = [...new Set(this.items.map((m) => m.module).filter(Boolean))];
+      const mods = [...new Set(this.items.map((m) => normModKey(m.module)).filter(Boolean))];
       return [{ key: '', name: '全部' }, ...mods.map((m) => ({ key: m, name: NAMES[m] || m }))];
     },
     activeFilterCount() {
@@ -870,7 +872,7 @@ export default {
     shownItems() {
       if (this.tab === 'fav') return [];
       let base = this.tabBase;
-      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.filterMod) base = base.filter((m) => normModKey(m.module) === normModKey(this.filterMod));
       if (this.kpFilter) base = base.filter((m) => this.groupKey(m) === this.kpFilter);
       if (this.kpFilter && this.qtFilter) base = base.filter((m) => this.tagName(m) === this.qtFilter);
       if (this.kp3Filter) base = base.filter((m) => m.tag3_name === this.kp3Filter);
@@ -988,7 +990,7 @@ export default {
     typeGroups() {
       if (this.tab === 'fav') return [];
       let base = this.tabBase;
-      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.filterMod) base = base.filter((m) => normModKey(m.module) === normModKey(this.filterMod));
       const map = {};
       for (const m of base) {
         const t = this.groupKey(m);
@@ -1003,7 +1005,7 @@ export default {
     fineTypes() {
       if (this.tab === 'fav' || !this.kpFilter) return [];
       let base = this.tabBase;
-      if (this.filterMod) base = base.filter((m) => m.module === this.filterMod);
+      if (this.filterMod) base = base.filter((m) => normModKey(m.module) === normModKey(this.filterMod));
       const map = {};
       for (const m of base) {
         if (this.groupKey(m) !== this.kpFilter) continue;
@@ -1565,7 +1567,7 @@ export default {
       uni.setStorageSync('favQuestions', this.favs.map(({ _open, _everOpen, ...x }) => x));
       if (!this.favs.length) this.tab = 'todo';
       this.unfavCloud(f);
-      showUndoToast('已取消收藏', () => this.restoreUnfav(f, i));
+      showUndoToast({ text: '已取消收藏', onUndo: () => this.restoreUnfav(f, i) });
     },
     restoreUnfav(f, i) {
       if (!f) return;
@@ -1636,7 +1638,7 @@ export default {
       }
       m.mastered = on ? 1 : 0;
       m.mastered_at = on ? (m.mastered_at || Date.now() / 1000) : null;
-      showUndoToast(on ? '已标为已掌握' : '已恢复复习', () => this.undoMaster(m, !on));
+      showUndoToast({ text: on ? '已标为已掌握' : '已恢复复习', onUndo: () => this.undoMaster(m, !on) });
       this.load();
     },
     async undoMaster(m, prevOn) {

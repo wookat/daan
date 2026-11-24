@@ -32,11 +32,11 @@ export function humanErrorText(err: unknown, fallback = '操作失败，请稍�
     typeof err === 'string' ? err : ((err as { message?: string; errMsg?: string } | null)?.message || (err as { errMsg?: string } | null)?.errMsg || ''),
   );
   if (!raw) return fallback;
-  if (/^(?:request:fail|failed to fetch|load failed|network)/i.test(raw) || /net::ERR_|ECONN|ENOTFOUND|network error/i.test(raw)) {
-    return '网络不太稳定，请检查网络后重试';
-  }
   if (/timeout|timed out|aborted|ETIMEDOUT/i.test(raw)) {
     return '请求超时了，请稍后重试';
+  }
+  if (/^(?:request:fail|failed to fetch|load failed|network)/i.test(raw) || /net::ERR_|ECONN|ENOTFOUND|network error/i.test(raw)) {
+    return '网络不太稳定，请检查网络后重试';
   }
   const httpM = raw.match(/\bHTTP\s+(\d{3})\b/i);
   if (httpM) {

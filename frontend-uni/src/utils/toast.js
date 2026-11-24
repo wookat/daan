@@ -15,11 +15,11 @@ export function normalizeToastText(title) {
 export function humanErrorText(err, fallback = '操作失败，请稍后重试') {
   const raw = normalizeToastText(typeof err === 'string' ? err : (err && (err.message || err.errMsg)) || '');
   if (!raw) return fallback;
-  if (/^(?:request:fail|failed to fetch|load failed|network)/i.test(raw) || /net::ERR_|ECONN|ENOTFOUND|network error/i.test(raw)) {
-    return '网络不太稳定，请检查网络后重试';
-  }
   if (/timeout|timed out|aborted|ETIMEDOUT/i.test(raw)) {
     return '请求超时了，请稍后重试';
+  }
+  if (/^(?:request:fail|failed to fetch|load failed|network)/i.test(raw) || /net::ERR_|ECONN|ENOTFOUND|network error/i.test(raw)) {
+    return '网络不太稳定，请检查网络后重试';
   }
   const httpM = raw.match(/\bHTTP\s+(\d{3})\b/i);
   if (httpM) {
@@ -99,7 +99,11 @@ export function triggerUndoToast(id) {
   return true;
 }
 
-export function showUndoToast({ text, actionText = '撤销', duration = 4500, onUndo, onCommit } = {}) {
+export function showUndoToast(arg, onUndoArg, extraOpts) {
+  const opts = typeof arg === 'string'
+    ? { ...(extraOpts && typeof extraOpts === 'object' ? extraOpts : {}), text: arg, ...(typeof onUndoArg === 'function' ? { onUndo: onUndoArg } : {}) }
+    : (arg || {});
+  const { text, actionText = '撤销', duration = 4500, onUndo, onCommit } = opts;
   dismissUndoToast(true);
   const cleanText = normalizeToastText(text);
   if (!cleanText) return null;

@@ -1185,7 +1185,7 @@ export default {
         uni.setStorageSync('askDelTombs', addTombstone(uni.getStorageSync('askDelTombs'), s.id));
         this.dropRemoteSession(s.id);
         if (s.id === (this.curSid || Number(uni.getStorageSync('askCurSid')) || 0)) this.clearCurrent();
-        showUndoToast('已删除会话', () => this.restoreSession(s, i, wasCur, prevResults, activeSid));
+        showUndoToast({ text: '已删除会话', onUndo: () => this.restoreSession(s, i, wasCur, prevResults, activeSid) });
       }
     },
     restoreSession(s, i, wasCur, prevResults, prevSid) {

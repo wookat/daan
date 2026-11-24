@@ -709,7 +709,7 @@ export default {
       uni.setStorageSync('slQFavs', this.qFavs);
       const uid = anonUid();
       if (uid) request('/api/shenlun/qfavs', { method: 'POST', data: { uid, qid: q.id, on: r.added } }).catch(() => {});
-      if (!r.added) showUndoToast('已取消收藏题目', () => this.toggleQFav(q));
+      if (!r.added) showUndoToast({ text: '已取消收藏题目', onUndo: () => this.toggleQFav(q) });
       else toastOk('已收藏题目');
     },
     async syncQFavs() {
@@ -761,7 +761,7 @@ export default {
       uni.setStorageSync('slMatFavs', this.favMats);
       const uid = anonUid();
       if (uid) request('/api/shenlun/mat_favs', { method: 'POST', data: { uid, mid: m.id, on } }).catch(() => {});
-      if (!on) showUndoToast('已取消收藏素材', () => this.toggleFav(m));
+      if (!on) showUndoToast({ text: '已取消收藏素材', onUndo: () => this.toggleFav(m) });
       else toastOk('已收藏素材');
     },
     async syncFavs() {
@@ -956,13 +956,16 @@ export default {
       this.gradeResult = r.result || '';
       if (curDraft && curDraft !== r.answer) {
         const qid = r.qid;
-        showUndoToast('已还原历史作答，原草稿可撤销恢复', () => {
-          uni.setStorageSync('slDraft:' + qid, curDraft);
-          if (this.detail && this.detail.id === qid) {
-            this.myAnswer = curDraft;
-            this.gradeResult = prevRes;
-          }
-          toastOk('已恢复原草稿');
+        showUndoToast({
+          text: '已还原历史作答，原草稿可撤销恢复',
+          onUndo: () => {
+            uni.setStorageSync('slDraft:' + qid, curDraft);
+            if (this.detail && this.detail.id === qid) {
+              this.myAnswer = curDraft;
+              this.gradeResult = prevRes;
+            }
+            toastOk('已恢复原草稿');
+          },
         });
       } else {
         toastOk('已还原本次作答与批改结果');
@@ -981,13 +984,16 @@ export default {
       }
       this.gradeResult = h.result || '';
       if (prevDraft && prevDraft !== target) {
-        showUndoToast('已还原历史作答，原草稿可撤销恢复', () => {
-          uni.setStorageSync('slDraft:' + qid, prevDraft);
-          if (this.detail && this.detail.id === qid) {
-            this.myAnswer = prevDraft;
-            this.gradeResult = prevRes;
-          }
-          toastOk('已恢复原草稿');
+        showUndoToast({
+          text: '已还原历史作答，原草稿可撤销恢复',
+          onUndo: () => {
+            uni.setStorageSync('slDraft:' + qid, prevDraft);
+            if (this.detail && this.detail.id === qid) {
+              this.myAnswer = prevDraft;
+              this.gradeResult = prevRes;
+            }
+            toastOk('已恢复原草稿');
+          },
         });
       } else {
         toastOk('已还原这次作答与批改');

@@ -302,7 +302,7 @@
     <plan-setup-sheet v-model="setupOpen" :profile="profile" @saved="onPlanSaved" />
 
     <!-- 选二级题型 sheet -->
-    <kg-sheet :model-value="!!subSelect" :title="modName(subSelect) + ' · 选择题型'" @update:model-value="(v) => { if (!v) subSelect = null; }">
+    <kg-sheet :model-value="subOpen" :title="modName(subSelect) + ' · 选择题型'" @update:model-value="(v) => { subOpen = v; }">
       <view class="sub-list">
         <kg-card clickable chevron class="sub-chip is-all" @click="startPreset(subSelect)">
           <view class="sub-row">
@@ -372,6 +372,7 @@ export default {
     return {
       counts: [],
       subSelect: null,
+      subOpen: false,
       customOpen: false,
       exporting: false,
       exportConfirm: false,
@@ -683,7 +684,7 @@ export default {
       uni.navigateTo({ url: '/pages/practice/practice' });
     },
     startPreset(module, submodule, count, adaptive, tag3, source) {
-      this.subSelect = null;
+      this.subOpen = false;
       this.launch({ kind: 'start', module: module || null, submodule: submodule || null, count: count || null, adaptive: !!adaptive, tag3: tag3 || null, source: source || null });
     },
     startDaily() {
@@ -1016,6 +1017,7 @@ export default {
         }
         this.submodules = items;
         this.subSelect = module;
+        this.subOpen = true;
         this.prefetchModule(module);
         this.subProg = {};
         const uid = uni.getStorageSync('anonUid');
