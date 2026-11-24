@@ -9,6 +9,10 @@
 /app/assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# 落地页视觉/媒体资源（独立文件名，日级缓存）
+/lp-assets/*
+  Cache-Control: public, max-age=86400
+
 # tab 图标等未指纹化静态资源：日级缓存。
 # 缺省 max-age=0+must-revalidate 会让每次切 tab 的 -on.png 回源 revalidate（弱网数秒才亮）。
 /app/static/*

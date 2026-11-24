@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>答岸 · 考公错题助手</title>
+<title>答岸 - 免费公务员考试行测刷题、错题本与历年真题模考 | 花生十三 AI 讲解</title>
 <meta name="description" content="答岸：考公考编错题助手。拍题 AI 讲解（花生十三方法体系）、16万+ 智能题库、600+ 套国考省考与模考整卷、错题本间隔复习、全真模考排位、申论批改。">
 <link rel="canonical" href="https://kaogong.zalize.com/">
 <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">
@@ -19,7 +19,8 @@
 <link rel="manifest" href="/lp-assets/manifest.json">
 <!-- 机器可读声明：便于搜索引擎与 AI 爬虫发现站点资产 -->
 <link rel="sitemap" type="application/xml" href="/sitemap.xml" title="站点地图">
-<link rel="alternate" type="text/plain" href="/llms.txt" title="LLM 站点说明">
+<link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM 站点说明">
+<link rel="alternate" type="text/markdown" href="/llms-full.txt" title="LLM 完整知识索引">
 <link rel="me" href="https://github.com/wookat/daan">
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -32,7 +33,7 @@
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="答岸 — 考公行测错题助手">
-<meta property="og:updated_time" content="2026-11-22T00:00:00+00:00">
+<meta property="og:updated_time" content="2026-11-24T00:00:00+00:00">
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="答岸 · AI 考公刷题与错题助手">
@@ -48,9 +49,18 @@
       "@type": "WebSite",
       "@id": "https://kaogong.zalize.com/#website",
       "name": "答岸",
-      "alternateName": "Daan",
+      "alternateName": ["Daan", "答岸考公", "答岸公考题库", "考公错题助手"],
       "url": "https://kaogong.zalize.com/",
-      "inLanguage": "zh-CN"
+      "inLanguage": "zh-CN",
+      "publisher": { "@id": "https://kaogong.zalize.com/#org" },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://kaogong.zalize.com/tiku/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
     },
     {
       "@type": "SoftwareApplication",
@@ -63,8 +73,9 @@
       "isAccessibleForFree": true,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
       "description": "面向公务员考试（国考/省考/事业单位）的行测+申论备考工具：拍照或截图识题后由 AI 按花生十三方法体系分步讲解，错题自动归集按间隔复习，含五大模块题库、历年真题整卷、每周模考大赛与申论 AI 批改。",
-      "featureList": "拍照/截图识题 AI 讲解;花生十三方法体系（ABRX、截位直除、415 份数等）;错题本 SM-2 间隔复习;16万+ 智能题库;600+ 套真题与模考整卷;每周模考大赛;申论素材与 AI 批改;学习统计与掌握度图谱",
-      "creator": { "@type": "Organization", "name": "Zalize" },
+      "featureList": "拍照/截图识题 AI 讲解;花生十三方法体系（ABRX、截位直除、415 份数等）;错题本 SM-2 间隔复习;16万+ 智能题库;600+ 套真题与模考整卷;每周模考大赛;申论素材与 AI 批改;学习统计与掌握度图谱;错题卷 PDF 导出",
+      "creator": { "@id": "https://kaogong.zalize.com/#org" },
+      "publisher": { "@id": "https://kaogong.zalize.com/#org" },
       "softwareVersion": "2026.11",
       "browserRequirements": "需要支持 JavaScript 的现代浏览器（Chrome/Edge/Safari/Firefox 及微信内置浏览器）",
       "screenshot": [
@@ -86,10 +97,11 @@
       "primaryImageOfPage": "https://kaogong.zalize.com/lp-assets/og-card.png",
       "description": "考公考编错题助手官网：拍题 AI 讲解（花生十三方法体系）、智能题库、真题整卷、错题本间隔复习、全真模考与申论批改。网页版打开即用。",
       "inLanguage": "zh-CN",
-      "dateModified": "2026-11-23"
+      "dateModified": "2026-11-24"
     },
     {
       "@type": "Organization",
+      "@id": "https://kaogong.zalize.com/#org",
       "name": "答岸（Zalize 运营团队）",
       "url": "https://kaogong.zalize.com/",
       "logo": "https://kaogong.zalize.com/lp-assets/logo.svg",
@@ -103,7 +115,10 @@
         { "@type": "Question", "name": "需要注册才能用吗？", "acceptedAnswer": { "@type": "Answer", "text": "网页版打开即可匿名练题；注册后错题、学习进度、外观设置云端同步，也支持 Zalize 统一账号一键登录。" } },
         { "@type": "Question", "name": "题库覆盖什么考试？", "acceptedAnswer": { "@type": "Answer", "text": "国考 2012–2026 全链 + 多省省考、选调行测真题与模考卷，题库超 16 万题、600+ 套整卷可考；申论素材与 AI 批改同步覆盖。" } },
         { "@type": "Question", "name": "手机和平板能用吗？", "acceptedAnswer": { "@type": "Answer", "text": "网页版适配手机与平板浏览器，直接打开 kaogong.zalize.com 即可；微信小程序正在内测，上线后与网页版数据互通。" } },
-        { "@type": "Question", "name": "我的做题数据存在哪？", "acceptedAnswer": { "@type": "Answer", "text": "答题记录与错题本保存在你的账号下，仅用于生成复习计划与学习统计，不对外提供。" } }
+        { "@type": "Question", "name": "我的做题数据存在哪？", "acceptedAnswer": { "@type": "Answer", "text": "答题记录与错题本保存在你的账号下，仅用于生成复习计划与学习统计，不对外提供。" } },
+        { "@type": "Question", "name": "什么是花生十三方法体系与 AI 六段式讲解？", "acceptedAnswer": { "@type": "Answer", "text": "答岸将花生十三资料分析与数量关系速解方法（如截位直除、415 份数法、假设分配法、线段法等）拆解为「判答案→点方法→拆步骤→防陷阱→给迁移→练同类」六段式讲解，帮你记住可迁移的解题方法而不只是答案。" } },
+        { "@type": "Question", "name": "答岸支持导出错题卷或真题卷 PDF 打印吗？", "acceptedAnswer": { "@type": "Answer", "text": "支持。在错题本右侧栏或历年真题卷页面，可一键生成带答案解析与机读答题卡的错题卷 PDF（微信内会引导使用系统浏览器下载打印）。" } },
+        { "@type": "Question", "name": "答岸与传统考公刷题 App 有什么区别？", "acceptedAnswer": { "@type": "Answer", "text": "答岸网页版免注册即可开刷 16 万+ 题与 600+ 套真题整卷，内置 SM-2 遗忘曲线复习队列、考友讨论与做题笔记、申论 AI 采分点批改，桌面端支持双栏分屏效率刷题，核心功能均免费。" } }
       ]
     }
   ]
@@ -228,7 +243,8 @@ h1 em{font-style:normal;background:linear-gradient(115deg,#2e5bff 15%,#38bdf8 55
 .chipstrip-in{display:flex;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent)}
 .chiptrack{display:flex;flex-shrink:0;gap:10px;padding-right:10px;animation:marquee 36s linear infinite;will-change:transform}
 .chipstrip:hover .chiptrack{animation-play-state:paused}
-.chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:var(--hairline);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card)}
+.chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border:var(--hairline);border-radius:999px;font-size:13px;font-weight:600;color:var(--ink-2);background:var(--card);transition:border-color .15s,color .15s}
+a.chip:hover{border-color:var(--brand);color:var(--brand)}
 .chip i{width:8px;height:8px;border-radius:2px;background:var(--brand);display:inline-block}
 .chip.accent{background:var(--brand-soft);border-color:var(--brand-soft-2);color:var(--brand-text)}
 
@@ -383,6 +399,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 </style>
 <link rel="icon" type="image/svg+xml" href="lp-assets/logo.svg">
 <link rel="icon" type="image/png" sizes="64x64" href="lp-assets/favicon.png">
+<noscript><style>.reveal,.hero [data-hero],.hero-visual{opacity:1!important;transform:none!important}</style></noscript>
 </head>
 <body>
 
@@ -391,6 +408,8 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     <div class="logo"><img src="lp-assets/logo.svg" alt="" aria-hidden="true"></div>
     <img class="brand-mark" src="lp-assets/daan-wordmark.svg" alt="答岸">
     <div class="nav-links">
+      <a href="/tiku/">免费题库</a>
+      <a href="/tiku/papers/">历年真题</a>
       <a href="#features">功能</a>
       <a href="#screens">界面</a>
       <a href="#method">方法体系</a>
@@ -403,6 +422,8 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
     <a class="btn btn-brand btn-sm nav-cta" href="/app/">打开网页版</a>
   </div>
   <div class="nav-drawer" id="navDrawer">
+    <a href="/tiku/">免费题库</a>
+    <a href="/tiku/papers/">历年真题</a>
     <a href="#features">功能</a>
     <a href="#screens">界面</a>
     <a href="#method">方法体系</a>
@@ -451,16 +472,16 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <div class="chipstrip">
   <div class="wrap chipstrip-in">
     <div class="chiptrack">
-      <span class="chip accent"><i></i>全站题库 16 万+ 题</span>
-      <span class="chip"><i></i>言语理解</span>
-      <span class="chip"><i></i>判断推理</span>
-      <span class="chip"><i></i>数量关系</span>
-      <span class="chip"><i></i>资料分析</span>
-      <span class="chip"><i></i>常识判断</span>
-      <span class="chip"><i></i>申论</span>
-      <span class="chip"><i></i>面试陪练</span>
-      <span class="chip"><i></i>时政每日一练</span>
-      <span class="chip"><i></i>全真模考</span>
+      <a class="chip accent" href="/tiku/"><i></i>全站题库 16 万+ 题</a>
+      <a class="chip" href="/tiku/yanyu/"><i></i>言语理解</a>
+      <a class="chip" href="/tiku/panduan/"><i></i>判断推理</a>
+      <a class="chip" href="/tiku/shuliang/"><i></i>数量关系</a>
+      <a class="chip" href="/tiku/ziliao/"><i></i>资料分析</a>
+      <a class="chip" href="/tiku/changshi/"><i></i>常识判断</a>
+      <a class="chip" href="/tiku/shenlun/"><i></i>申论</a>
+      <a class="chip" href="/app/#/pkgA/interview/interview"><i></i>面试陪练</a>
+      <a class="chip" href="/tiku/daily/"><i></i>时政每日一练</a>
+      <a class="chip" href="/tiku/papers/"><i></i>全真模考</a>
     </div>
     <div class="chiptrack" aria-hidden="true">
       <span class="chip accent"><i></i>全站题库 16 万+ 题</span>
@@ -576,6 +597,9 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
       <details><summary>题库覆盖什么考试？</summary><p>国考 2012–2026 全链 + 多省省考、选调行测真题与模考卷，题库超 16 万题、600+ 套整卷可考；申论素材与 AI 批改同步覆盖。</p></details>
       <details><summary>手机和平板能用吗？</summary><p>网页版适配手机与平板浏览器，直接打开 kaogong.zalize.com 即可；微信小程序正在内测，上线后与网页版数据互通。</p></details>
       <details><summary>我的做题数据存在哪？</summary><p>答题记录与错题本保存在你的账号下，仅用于生成复习计划与学习统计，不对外提供。</p></details>
+      <details><summary>什么是花生十三方法体系与 AI 六段式讲解？</summary><p>答岸将花生十三资料分析与数量关系速解方法（如截位直除、415 份数法、假设分配法、线段法等）拆解为「判答案→点方法→拆步骤→防陷阱→给迁移→练同类」六段式讲解，帮你记住可迁移的解题方法而不只是答案。</p></details>
+      <details><summary>答岸支持导出错题卷或真题卷 PDF 打印吗？</summary><p>支持。在错题本右侧栏或历年真题卷页面，可一键生成带答案解析与机读答题卡的错题卷 PDF（微信内会引导使用系统浏览器下载打印）。</p></details>
+      <details><summary>答岸与传统考公刷题 App 有什么区别？</summary><p>答岸网页版免注册即可开刷 16 万+ 题与 600+ 套真题整卷，内置 SM-2 遗忘曲线复习队列、考友讨论与做题笔记、申论 AI 采分点批改，桌面端支持双栏分屏效率刷题，核心功能均免费。</p></details>
     </div>
   </div>
 </section>
@@ -620,9 +644,18 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;color:var(--ink-3);f
 <footer>
   <div class="wrap foot-grid">
     <div class="fcol"><b>答岸</b><span>考公行测错题助手</span><span>花生十三方法体系</span></div>
-    <div class="fcol"><b>产品</b><a href="/app/">网页版</a><a href="https://github.com/wookat/daan" rel="noopener">GitHub 开源</a></div>
+    <div class="fcol"><b>产品</b><a href="/app/">网页版</a><a href="/tiku/">公开题库首页</a><a href="https://github.com/wookat/daan" rel="noopener">GitHub 开源</a></div>
+    <div class="fcol"><b>公开题库</b>
+      <div style="display:grid;grid-template-columns:repeat(2,auto);gap:8px 18px">
+        <a href="/tiku/ziliao/">资料分析</a><a href="/tiku/shuliang/">数量关系</a>
+        <a href="/tiku/yanyu/">言语理解</a><a href="/tiku/panduan/">判断推理</a>
+        <a href="/tiku/changshi/">常识判断</a><a href="/tiku/shenlun/">申论真题</a>
+        <a href="/tiku/papers/">历年真题卷</a><a href="/tiku/daily/">每日一练</a>
+        <a href="/tiku/discuss/">考友热议</a><a href="/tiku/search">题库搜索</a>
+      </div>
+    </div>
     <div class="fcol"><b>联系</b><a href="mailto:support@zalize.com">support@zalize.com</a><span>微信 hveary</span></div>
-    <div class="fcol"><b>说明</b><span>题库数据含公开真题整理</span><span>部分解析由 AI 生成</span></div>
+    <div class="fcol"><b>说明与索引</b><span>题库数据含公开真题整理</span><span>部分解析由 AI 生成</span><a href="/llms.txt">llms.txt</a><a href="/llms-full.txt">llms-full.txt</a><a href="/sitemap.xml">sitemap.xml</a></div>
   </div>
   <div class="wrap foot-copy">© 2026 答岸 版权所有 · 运营团队：Zalize</div>
 </footer>

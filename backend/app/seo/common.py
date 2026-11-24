@@ -130,6 +130,8 @@ def _page(
     body: str,
     jsonld: dict | list | None = None,
     noindex: bool = False,
+    prev_path: str | None = None,
+    next_path: str | None = None,
 ) -> str:
     ld = (
         '<script type="application/ld+json">' + _safe_jsonld(jsonld) + "</script>"
@@ -137,14 +139,19 @@ def _page(
         else ""
     )
     # 404 等错误态页不声明规范地址/og:url，并显式 noindex
-    head_meta = (
-        '<meta name="robots" content="noindex">'
-        if noindex
-        else (
+    if noindex:
+        head_meta = '<meta name="robots" content="noindex">'
+    else:
+        rel_links = (
+            (f'<link rel="prev" href="{_e(_url(prev_path))}">' if prev_path else "")
+            + (f'<link rel="next" href="{_e(_url(next_path))}">' if next_path else "")
+        )
+        head_meta = (
+            '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">'
             f'<link rel="canonical" href="{_e(_url(canonical_path))}">'
+            f"{rel_links}"
             f'<meta property="og:url" content="{_e(_url(canonical_path))}">'
         )
-    )
     return (
         '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -154,10 +161,19 @@ def _page(
         f'<meta name="description" content="{_e(description)}">'
         '<meta property="og:type" content="website">'
         '<meta property="og:site_name" content="答岸">'
+        '<meta property="og:locale" content="zh_CN">'
         f'<meta property="og:title" content="{_e(title)}">'
         f'<meta property="og:description" content="{_e(description)}">'
         f'<meta property="og:image" content="{_e(SITE_BASE)}/lp-assets/og-card.png">'
+        '<meta property="og:image:width" content="1200">'
+        '<meta property="og:image:height" content="630">'
         '<meta name="twitter:card" content="summary_large_image">'
+        f'<meta name="twitter:title" content="{_e(title)}">'
+        f'<meta name="twitter:description" content="{_e(description)}">'
+        f'<meta name="twitter:image" content="{_e(SITE_BASE)}/lp-assets/og-card.png">'
+        '<link rel="icon" type="image/svg+xml" href="/lp-assets/logo.svg">'
+        '<link rel="sitemap" type="application/xml" href="/sitemap.xml" title="站点地图">'
+        '<link rel="alternate" type="text/markdown" href="/llms.txt" title="LLM 站点说明">'
         f"{head_meta}"
         f"<style>{_CSS}</style>{ld}</head><body>"
         f'<header class="hdr"><div class="wrap"><a class="brand" href="/tiku/">答岸 · 考公题库</a>'
@@ -166,7 +182,11 @@ def _page(
         f'<a class="hdr-cta" href="/app/">去刷题</a></div></header>'
         f'<main class="wrap">{body}</main>'
         f'<footer class="ftr"><a href="{_e(SITE_BASE)}/">答岸</a> · 16万+ 行测题 · 2.3万+ 历年真题'
+        f' · <a href="/tiku/">题库</a>'
         f' · <a href="/tiku/papers/">真题卷</a>'
+        f' · <a href="/tiku/daily/">每日一练</a>'
+        f' · <a href="/tiku/discuss/">考友热议</a>'
+        f' · <a href="/llms.txt">AI 索引</a>'
         f' · <a href="https://career.zalize.com/privacy/">隐私政策</a>'
         f' · <a href="https://career.zalize.com/terms/">服务条款</a>'
         f' · <a href="mailto:support@zalize.com">联系我们</a></footer></body></html>'
@@ -204,6 +224,9 @@ def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[st
         "name": name,
         "description": description[:200],
         "url": _url(path),
+        "inLanguage": "zh-CN",
+        "isAccessibleForFree": True,
+        "publisher": {"@type": "Organization", "name": "答岸", "url": SITE_BASE},
         "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
@@ -213,6 +236,14 @@ def _collection_ld(name: str, description: str, path: str, crumbs: list[tuple[st
             ],
         },
     }
+
+
+def _pager_links(base_path: str, page: int, total: int) -> tuple[str | None, str | None]:
+    """返回分页列表的 (prev_path, next_path)，供 <head> rel=prev/next 输出。"""
+    pages = max(1, math.ceil(total / PAGE_SIZE))
+    prev_p = (base_path if page == 2 else f"{base_path}?page={page - 1}") if page > 1 else None
+    next_p = f"{base_path}?page={page + 1}" if page < pages else None
+    return prev_p, next_p
 
 
 def _breadcrumb_ld(crumbs: list[tuple[str, str | None]]) -> dict:

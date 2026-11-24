@@ -132,7 +132,7 @@ fi
 # 保护的是重建窗口内 VPS 自身 cron/脚本的请求；引擎与真人所在机房的 stale-if-error 副本
 # 来自它们各自的历史访问，不受本步影响（取证见 docs/archive/iter/round-3/r395-edge-swr-stale-evidence.md）。
 step "3b 边缘缓存预热（重建前刷新入口级可缓存副本，仅本机所在机房）"
-for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "/llms.txt" \
+for u in "/tiku/" "/tiku/daily/" "/tiku/discuss/" "/robots.txt" "/sitemap.xml" "/llms.txt" "/llms-full.txt" \
          "/tiku/yanyu/" "/tiku/changshi/" "/tiku/panduan/" "/tiku/shuliang/" \
          "/tiku/ziliao/" "/tiku/shenlun/" \
          "/api/announcement" "/api/question_counts" "/api/daily_set" \
@@ -301,8 +301,8 @@ rm -rf "$PAGES_DIR"
 
 # 部署完成后按显式 files 清单清关键入口边缘缓存（兼容非 Enterprise 套餐；校验 JSON .success == true）
 ZONE_ID="$KG_CF_ZONE_ID"
-PURGE_PAYLOAD=$(printf '{"files":["%s/","%s/index.html","%s/app/","%s/app/index.html","%s/app/sw.js","%s/app/precache.json"]}' \
-  "$SITE" "$SITE" "$SITE" "$SITE" "$SITE" "$SITE")
+PURGE_PAYLOAD=$(printf '{"files":["%s/","%s/index.html","%s/app/","%s/app/index.html","%s/app/sw.js","%s/app/precache.json","%s/robots.txt","%s/llms.txt","%s/llms-full.txt"]}' \
+  "$SITE" "$SITE" "$SITE" "$SITE" "$SITE" "$SITE" "$SITE" "$SITE" "$SITE")
 PURGE_RESP=$(curl -sS --max-time 20 -X POST "https://api.cloudflare.com/client/v4/zones/$ZONE_ID/purge_cache" \
   -H "X-Auth-Email: $CLOUDFLARE_EMAIL" -H "X-Auth-Key: $CLOUDFLARE_API_KEY" \
   -H "Content-Type: application/json" -d "$PURGE_PAYLOAD" || true)

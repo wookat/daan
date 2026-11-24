@@ -25,6 +25,10 @@ BOT_ENGINES = {
     "yandex": "Yandex", "sogou": "Sogou", "360spider": "360",
     "bytespider": "ByteDance", "duckduckbot": "DuckDuckGo",
     "applebot": "Apple", "petalbot": "Petal(华为)", "yisouspider": "Yisou(神马)",
+    "oai-searchbot": "OpenAI-Search", "chatgpt-user": "ChatGPT-User",
+    "perplexitybot": "Perplexity", "perplexity-user": "Perplexity",
+    "claude-searchbot": "Claude-Search", "claude-user": "Claude-User",
+    "duckassistbot": "DuckAssist",
 }
 # 与 backend/app/auth.PROBE_UA_MARKERS 同步（单测锁：后端每一条自动化签名这里都能认出）。
 # devin/ ：Devin 自动化驾驭的浏览器上下文 UA 后缀；validator：schema.org/W3C 等校验工具。

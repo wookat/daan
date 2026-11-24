@@ -169,4 +169,33 @@ describe('Frontend 6 UX & Layout Fixes', () => {
     const sl = read('../src/pkgA/shenlun/shenlun.vue');
     expect(sl).toContain('shenlun_sync');
   });
+
+  it('SEO & GEO optimizations: landing links /tiku/, SearchAction, noscript, consistent 8 FAQ items, and /lp-assets cache header', () => {
+    const landing = read('../../landing/index.html');
+    expect(landing).toContain('href="/tiku/"');
+    expect(landing).toContain('href="/tiku/papers/"');
+    expect(landing).toContain('href="/llms-full.txt"');
+    expect(landing).toContain('SearchAction');
+    expect(landing).toContain('<noscript>');
+
+    const ldMatch = landing.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    expect(ldMatch).toBeTruthy();
+    const graph = JSON.parse(ldMatch[1])['@graph'];
+    const faqLd = graph.find((x) => x['@type'] === 'FAQPage');
+    expect(faqLd.mainEntity.length).toBe(8);
+    for (const q of faqLd.mainEntity) {
+      expect(landing).toContain(`<summary>${q.name}</summary><p>${q.acceptedAnswer.text}</p>`);
+    }
+
+    const appHtml = read('../index.html');
+    expect(appHtml).toContain('max-snippet:-1');
+    expect(appHtml).toContain('property="og:locale" content="zh_CN"');
+    expect(appHtml).toContain('property="og:image:width" content="1200"');
+    expect(appHtml).toContain('name="twitter:image"');
+    expect(appHtml).toContain('rel="sitemap"');
+    expect(appHtml).toContain('href="/llms.txt"');
+
+    const headers = read('../../deploy/cf-pages/_headers');
+    expect(headers).toMatch(/\/lp-assets\/\*\r?\n\s+Cache-Control:\s*public, max-age=86400/);
+  });
 });

@@ -6,7 +6,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app import db
 from app.services import taxonomy
-from .common import _EMPTY_MODULE_OUTLET, SITE_BASE, _collection_ld, _count_questions, _crumb, _e, _list_questions, _module_name, _not_found, _page, _pager, _q_items, _sub_path, _topic_path, _year_path, root_router, router
+from .common import _EMPTY_MODULE_OUTLET, SITE_BASE, _collection_ld, _count_questions, _crumb, _e, _list_questions, _module_name, _not_found, _page, _pager, _pager_links, _q_items, _sub_path, _topic_path, _year_path, root_router, router
 from .shenlun import _render_shenlun_qtype, _tiku_shenlun
 
 
@@ -57,6 +57,7 @@ def tiku_module(module: str, page: int = 1):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = f"/tiku/{module}/" + (f"?page={page}" if page > 1 else "")
+    prev_p, next_p = _pager_links(f"/tiku/{module}/", page, total)
     return _page(
         f"{name}题库{suffix}_行测{name}真题及答案解析_答岸",
         f"{name}题库共 {total} 题（含历年真题），按题型分类，附答案与花生十三方法解析，支持在线刷题。{suffix}",
@@ -68,6 +69,8 @@ def tiku_module(module: str, page: int = 1):
             page_path,
             [("题库", "/tiku/"), (name, f"/tiku/{module}/")],
         ),
+        prev_path=prev_p,
+        next_path=next_p,
     )
 
 
@@ -88,17 +91,43 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
     rows = _list_questions(module, submodule, page)
     if not rows and page > 1:
         return _not_found("页码超出范围")
+    t3counts = db.tag3_counts()
+    cand_topics = [
+        t for t in taxonomy.candidate_topics(module, submodule) if t3counts.get(t["code"], 0) > 0
+    ]
+    topic_html = "".join(
+        f'<li><a href="{_e(_topic_path(t["code"]))}">{_e(t["name"])}（{t3counts[t["code"]]} 题）</a>'
+        + (f'<div class="meta">{_e((t.get("usage") or t.get("desc") or "")[:90])}</div>' if (t.get("usage") or t.get("desc")) else "")
+        + "</li>"
+        for t in cand_topics[:10]
+    )
+    sibling_subs = "".join(
+        f'<a href="{_e(_sub_path(module, s["submodule"]))}">{_e(s["submodule"])}（{s["n"]}）</a>'
+        for s in db.submodule_counts(module)
+        if s["submodule"] != submodule
+    )
+    year_items = [
+        item for item in sorted(db.year_module_counts().items(), reverse=True) if item[0][1] == module
+    ][:8]
+    year_links = "".join(
+        f'<a href="{_e(_year_path(y, module))}">{y}年{_e(name)}（{n}）</a>'
+        for (y, _mk), (n, _mu) in year_items
+    )
     body = (
         _crumb([("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, None)])
         + f"<h1>{_e(name)}·{_e(submodule)}题库（{total} 题）</h1>"
+        + (f'<div class="card"><h2>本题型高频考点</h2><ul class="qlist">{topic_html}</ul></div>' if topic_html else "")
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
         + _pager(_sub_path(module, submodule), page, total)
+        + (f'<div class="card"><h2>同模块其他题型</h2><div class="tags">{sibling_subs}</div></div>' if sibling_subs else "")
+        + (f'<div class="card"><h2>按年份刷{_e(name)}真题</h2><div class="tags">{year_links}</div></div>' if year_links else "")
         + f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?module={quote(module)}&amp;submodule={quote(submodule)}&amp;source=seo">进入主站刷{_e(submodule)} →</a>'
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = _sub_path(module, submodule) + (f"?page={page}" if page > 1 else "")
+    prev_p, next_p = _pager_links(_sub_path(module, submodule), page, total)
     return _page(
         f"{submodule}题库{suffix}_{name}{submodule}真题及答案解析_答岸",
         f"{name}{submodule}专项题库共 {total} 题（含历年真题），附答案与解析，在线刷题提升正确率。{suffix}",
@@ -110,6 +139,8 @@ def tiku_submodule(module: str, submodule: str, page: int = 1):
             page_path,
             [("题库", "/tiku/"), (name, f"/tiku/{module}/"), (submodule, _sub_path(module, submodule))],
         ),
+        prev_path=prev_p,
+        next_path=next_p,
     )
 
 

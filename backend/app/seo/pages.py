@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from app import db
 from app.services import quality
 from app.services import taxonomy
-from .common import PAGE_SIZE, SITE_BASE, _breadcrumb_ld, _collection_ld, _crumb, _e, _module_name, _not_found, _page, _pager, _q_items, _shenlun_sucai_path, _sub_path, _topic_path, _url, _year_path, router
+from .common import PAGE_SIZE, SITE_BASE, _breadcrumb_ld, _collection_ld, _crumb, _e, _module_name, _not_found, _page, _pager, _pager_links, _q_items, _shenlun_sucai_path, _sub_path, _topic_path, _url, _year_path, router
 from .shenlun import _render_shenlun_year
 
 
@@ -82,12 +82,23 @@ def tiku_index():
             + "</section>"
         )
     total = sum(counts.values())
+    papers_n = len(db.list_exam_papers(kind="zhenti"))
+    overview_card = (
+        '<section class="card">'
+        '<h2>答岸公考题库核心说明</h2>'
+        f'<p>答岸免费提供 {total} 道行测题目（覆盖资料分析、数量关系、言语理解、判断推理、常识判断）与 '
+        f'<a href="/tiku/papers/">{papers_n} 套国考/省考历年真题卷</a>；'
+        '支持免注册在线刷题与<a href="/tiku/daily/">全站同题每日一练</a>，并结合花生十三六段式解题方法与 '
+        'SM-2 遗忘曲线错题本复习，可在<a href="/app/">主站网页版</a>一键导出错题卷 PDF。</p>'
+        '</section>'
+    )
     body = (
         "<h1>公务员考试题库</h1>"
         f"<p>收录 {total} 道行测题目（含历年真题），按模块、题型、考点分类，可在线刷题并查看花生十三方法讲解。</p>"
         '<p class="meta" style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:-4px">'
         '<a href="/tiku/daily/" style="white-space:nowrap">今日每日一练 →</a>'
         '<a href="/tiku/discuss/" style="white-space:nowrap">考友热议题目 →</a></p>'
+        + overview_card
         + "".join(sections)
         + f'<a class="cta" href="{_e(SITE_BASE)}/app/">进入刷题主站 →</a>'
     )
@@ -108,6 +119,8 @@ def tiku_index():
                 "@type": "WebSite",
                 "name": "答岸",
                 "url": SITE_BASE,
+                "inLanguage": "zh-CN",
+                "publisher": {"@type": "Organization", "name": "答岸", "url": SITE_BASE},
                 "potentialAction": {
                     "@type": "SearchAction",
                     "target": {
@@ -317,11 +330,18 @@ def tiku_papers():
         + "</div></li>"
         for p in papers
     )
+    mod_counts = {r["module"]: r["n"] for r in db.question_counts()}
+    mod_chips = "".join(
+        f'<a href="/tiku/{quote(m["key"])}/">{_e(m["name"])}（{mod_counts[m["key"]]}）</a>'
+        for m in taxonomy.tree().get("modules", [])
+        if mod_counts.get(m["key"])
+    )
     body = (
         _crumb([("题库", "/tiku/"), ("真题卷", None)])
         + f"<h1>历年公务员考试真题卷（{len(papers)} 套）</h1>"
         + (f'<div class="card"><h2>按年份筛卷</h2><div class="tags">{year_chips}</div></div>' if year_chips else "")
         + (f'<div class="card"><h2>按地区筛卷</h2><div class="tags">{region_chips}</div></div>' if region_chips else "")
+        + (f'<div class="card"><h2>按模块刷历年真题</h2><div class="tags">{mod_chips}</div></div>' if mod_chips else "")
         + '<div class="card"><ul class="qlist">'
         + lis
         + "</ul></div>"
@@ -432,6 +452,11 @@ def tiku_paper_detail(pid: int):
         "name": title,
         "description": f"{title}，共 {len(rows)} 题{social_text}，在线全真模考并查看逐题答案解析。",
         "url": _url(f"/tiku/papers/{pid}"),
+        "inLanguage": "zh-CN",
+        "isAccessibleForFree": True,
+        "educationalLevel": "公务员考试",
+        "numberOfItems": len(rows),
+        "publisher": {"@type": "Organization", "name": "答岸", "url": SITE_BASE},
         "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
@@ -572,12 +597,16 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = _year_path(year, module) + (f"?page={page}" if page > 1 else "")
+    prev_p, next_p = _pager_links(_year_path(year, module), page, total)
     jsonld = {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": f"{year}年{mod_name}真题题库",
         "description": f"{year}年公务员考试{mod_name}模块真题 {total} 题，附答案解析。",
         "url": _url(page_path),
+        "inLanguage": "zh-CN",
+        "isAccessibleForFree": True,
+        "publisher": {"@type": "Organization", "name": "答岸", "url": SITE_BASE},
         "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "breadcrumb": {
             "@type": "BreadcrumbList",
@@ -594,6 +623,8 @@ def _render_year(year: int, module: str, page: int, version: tuple = (0, None)) 
         _year_path(year, module) + (f"?page={page}" if page > 1 else ""),
         body,
         jsonld,
+        prev_path=prev_p,
+        next_path=next_p,
     )
 
 
@@ -658,42 +689,89 @@ def _render_topic(code: str, page: int, version: tuple = (0, None)) -> str:
         f'<a class="cta" href="{_e(SITE_BASE)}/app/#/pages/practice/practice?tag3={quote(code)}'
         f'&amp;module={quote(mod_key)}&amp;source=seo">在线练习「{_e(name)}」（免费）→</a>'
     )
+    faq_items = [
+        (
+            f"什么是{name}？",
+            (topic["desc"] or "").strip() or f"{name}是公务员考试{mod_name}模块的重要高频考点。",
+        ),
+        (
+            f"{name}怎么快速解题？",
+            (topic["usage"] or "").strip() or f"建议结合{mod_name}基础方法梳理题干关键词，并用同类真题集中巩固。",
+        ),
+        (
+            f"如何免费刷{name}历年真题？",
+            f"在答岸题库（kaogong.zalize.com）打开本考点页或点击「在线练习」，无需注册即可免费练全站 {total} 道「{name}」题目，错题会自动加入 SM-2 间隔复习队列并支持导出 PDF。",
+        ),
+    ]
+    faq_html = (
+        '<div class="card"><h2>常见考点问答</h2>'
+        + "".join(
+            f'<details open style="margin-top:8px"><summary>{_e(q)}</summary><p>{_e(a)}</p></details>'
+            for q, a in faq_items
+        )
+        + "</div>"
+    )
+    year_items = [
+        item for item in sorted(db.year_module_counts().items(), reverse=True) if item[0][1] == mod_key
+    ][:8]
+    year_links = "".join(
+        f'<a href="{_e(_year_path(y, mod_key))}">{y}年{_e(mod_name)}（{n}）</a>'
+        for (y, _mk), (n, _mu) in year_items
+    )
     body = (
         _crumb([("题库", "/tiku/"), (mod_name, f"/tiku/{mod_key}/"), (name, None)])
         + f"<h1>{_e(name)}考点题库（{total} 题）</h1>"
         + f'<p class="meta">{_e(mod_name)} · {_e(topic["group_name"])} · 考点代码 {_e(code)}</p>'
         + (f'<div class="card"><h2>考点介绍</h2>{intro}</div>' if intro else "")
+        + faq_html
         + cta
         + '<div class="card">'
         + _q_items(rows)
         + "</div>"
         + _pager(_topic_path(code), page, total)
         + _sibling_topics(code, topic)
+        + (f'<div class="card"><h2>按年份刷{_e(mod_name)}真题</h2><div class="tags">{year_links}</div></div>' if year_links else "")
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = _topic_path(code) + (f"?page={page}" if page > 1 else "")
-    jsonld = {
-        "@context": "https://schema.org",
-        "@type": "CollectionPage",
-        "name": f"{name}考点题库",
-        "description": (topic["desc"] or f"{mod_name}{name}考点真题练习")[:200],
-        "url": _url(page_path),
-        "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
-        "breadcrumb": {
-            "@type": "BreadcrumbList",
-            "itemListElement": [
-                {"@type": "ListItem", "position": 1, "name": "题库", "item": _url("/tiku/")},
-                {"@type": "ListItem", "position": 2, "name": mod_name, "item": _url(f"/tiku/{mod_key}/")},
-                {"@type": "ListItem", "position": 3, "name": name, "item": _url(_topic_path(code))},
+    prev_p, next_p = _pager_links(_topic_path(code), page, total)
+    jsonld = [
+        _collection_ld(
+            f"{name}考点题库",
+            (topic["desc"] or f"{mod_name}{name}考点真题练习")[:200],
+            page_path,
+            [("题库", "/tiku/"), (mod_name, f"/tiku/{mod_key}/"), (name, _topic_path(code))],
+        ),
+        {
+            "@context": "https://schema.org",
+            "@type": "DefinedTerm",
+            "name": name,
+            "termCode": code,
+            "description": (topic["desc"] or topic["usage"] or f"{mod_name}{name}考点")[:200],
+            "url": _url(_topic_path(code)),
+            "inDefinedTermSet": {
+                "@type": "DefinedTermSet",
+                "name": f"答岸公考{mod_name}三级考点体系",
+                "url": _url(f"/tiku/{mod_key}/"),
+            },
+        },
+        {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
+                for q, a in faq_items
             ],
         },
-    }
+    ]
     return _page(
         f"{name}考点题库{suffix}_{mod_name}{name}真题及解题方法_答岸",
         f"{name}考点专项题库共 {total} 题：{(topic['desc'] or '')[:60]}附答案解析与花生十三方法讲解，可在线按考点刷题。{suffix}",
         _topic_path(code) + (f"?page={page}" if page > 1 else ""),
         body,
         jsonld,
+        prev_path=prev_p,
+        next_path=next_p,
     )
 
 
@@ -751,7 +829,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
     conn = db.get_conn()
     r = conn.execute(
         "SELECT id, module, submodule, tag3, question, options, option_imgs, answer, explanation, hs_explanation, "
-        "is_real, exam_year, exam_region, image, image_credit, material_hash, source "
+        "is_real, exam_year, exam_region, image, image_credit, material_hash, source, updated_at "
         "FROM questions WHERE id=? AND disabled=0",
         (qid,),
     ).fetchone()
@@ -846,6 +924,10 @@ def _render_question(qid: int, version: float | None = None) -> str:
     if r["submodule"]:
         crumbs.append((r["submodule"], _sub_path(r["module"], r["submodule"])))
     crumbs.append(("题目", None))
+    topic_note_html = ""
+    if topic and (topic.get("desc") or topic.get("usage")):
+        note_parts = " ".join(p for p in ((topic.get("desc") or "").strip(), (topic.get("usage") or "").strip()) if p)
+        topic_note_html = f'<p class="meta"><b>考点速记（{_e(topic["name"])}）：</b>{_e(note_parts)}</p>'
     body = (
         _crumb(crumbs)
         + f'<article class="card"><h1>{_e(qtext[:40])}{"…" if len(qtext) > 40 else ""}</h1>'
@@ -860,6 +942,7 @@ def _render_question(qid: int, version: float | None = None) -> str:
         + f'<p><b>正确答案：{_e(r["answer"] or "见解析")}</b></p>{exp_html}'
         + cta_html
         + "</details>"
+        + topic_note_html
         + (
             f'<p><a href="{_e(_topic_path(r["tag3"]))}">更多「{_e(topic["name"])}」考点题目 ›</a></p>'
             if topic
@@ -885,6 +968,19 @@ def _render_question(qid: int, version: float | None = None) -> str:
         + "<!--QCOMMENTS-->"
     )
     title_head = qtext.replace("\n", " ")[:50].rstrip("_ ") or f"行测题 #{qid}"
+    ua_raw = r["updated_at"]
+    if isinstance(ua_raw, (int, float)) and ua_raw > 0:
+        date_mod = time.strftime("%Y-%m-%d", time.gmtime(ua_raw))
+    elif isinstance(ua_raw, str) and len(ua_raw) >= 10:
+        date_mod = ua_raw[:10]
+    else:
+        date_mod = ""
+    kw_list = list(
+        dict.fromkeys(
+            k for k in (mod_name, r["submodule"] or "", topic["name"] if topic else "", "公务员考试", "行测真题" if r["is_real"] else "行测题库")
+            if k
+        )
+    )
     # 站方单一解析的练习题不是 Q&A 社区页（Google QAPage 内容准则明确列为无效用例），
     # 按 schema.org 教育资源建模：LearningResource ⊃ Question(选择题)，选项为 suggestedAnswer
     jsonld = {
@@ -893,9 +989,13 @@ def _render_question(qid: int, version: float | None = None) -> str:
         "name": title_head,
         "url": _url(f"/tiku/q/{qid}"),
         "inLanguage": "zh-CN",
+        "isAccessibleForFree": True,
         "learningResourceType": "真题" if r["is_real"] else "练习题",
+        "educationalUse": "练习与真题解析",
         "educationalLevel": "公务员考试",
+        "keywords": ",".join(kw_list),
         "about": {"@type": "Thing", "name": topic["name"] if topic else mod_name},
+        "publisher": {"@type": "Organization", "name": "答岸", "url": SITE_BASE},
         "isPartOf": {"@type": "WebSite", "name": "答岸", "url": SITE_BASE},
         "hasPart": {
             "@type": "Question",
@@ -908,12 +1008,22 @@ def _render_question(qid: int, version: float | None = None) -> str:
             ],
             "acceptedAnswer": {
                 "@type": "Answer",
-                "text": f'正确答案：{r["answer"] or ""}。{explanation[:500]}',
+                "text": f'正确答案：{r["answer"] or ""}。{explanation[:1500]}',
             },
         },
     }
+    if date_mod:
+        jsonld["dateModified"] = date_mod
+    if topic and topic.get("desc"):
+        jsonld["teaches"] = topic["desc"]
+    src_prefix = (f'{r["exam_year"]}年' if r["exam_year"] else "") + (r["exam_region"] or "")
+    page_title = (
+        f"{title_head}_{src_prefix}{mod_name}真题及答案解析_答岸"
+        if r["is_real"]
+        else f"{title_head}_{mod_name}题库及解析_答岸"
+    )
     return _page(
-        f"{title_head}_{mod_name}题库_答岸",
+        page_title,
         _question_description(r, mod_name, topic["name"] if topic else None),
         f"/tiku/q/{qid}",
         body,

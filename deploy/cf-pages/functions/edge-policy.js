@@ -56,7 +56,7 @@ export function isEdgeCacheable(method, pathname, hasAuth, hasUid, hasOrigin = f
   // /s/* 分享落地页：输出仅依赖 sid（OG + 跳 SPA），动态内容都在 SPA 内走 API
   if (pathname.startsWith("/s/")) return true;
   if (pathname.startsWith("/p/")) return true;
-  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") return true;
+  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt" || pathname === "/llms-full.txt") return true;
   if (SHELL_CACHE_ALLOWLIST.has(pathname)) return true;
   if (pathname.startsWith("/qimg/")) return true;
   // 跨源请求（如 Capacitor App 带 Origin 头）绕过公共 caches.default，避免无 CORS 头缓存污染
@@ -140,7 +140,7 @@ export function isCacheableContentType(pathname, isApi, contentType) {
   if (pathname.startsWith("/qimg/")) return ct.startsWith("image/");
   if (pathname === "/sw.js") return ct.includes("javascript");
   if (pathname === "/precache.json") return ct.includes("json");
-  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt") {
+  if (pathname.startsWith("/sitemap") || pathname === "/robots.txt" || pathname === "/llms.txt" || pathname === "/llms-full.txt") {
     return ct.includes("xml") || ct.includes("text/plain") || ct.includes("text/markdown");
   }
   return ct.includes(isApi ? "application/json" : "text/html");

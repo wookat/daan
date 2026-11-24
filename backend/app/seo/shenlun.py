@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app import db
-from .common import _EMPTY_MODULE_OUTLET, PAGE_SIZE, _collection_ld, _crumb, _e, _not_found, _page, _pager, _shenlun_paper_path, _shenlun_sucai_path, _sub_path, _year_path, router
+from .common import _EMPTY_MODULE_OUTLET, PAGE_SIZE, _collection_ld, _crumb, _e, _not_found, _page, _pager, _pager_links, _shenlun_paper_path, _shenlun_sucai_path, _sub_path, _year_path, router
 
 
 def _shenlun_q_items(items) -> str:
@@ -71,17 +71,20 @@ def _render_shenlun_paper(paper: str) -> str:
         + (f'<div class="card"><h2>其他套卷申论真题</h2><div class="tags">{others}</div></div>' if others else "")
         + f'<a class="cta" href="/app/#/pkgA/shenlun/shenlun?paper={quote(paper)}">进入申论专区在线作答本套真题 →</a>'
     )
+    paper_ld = _collection_ld(
+        f"{paper}申论真题",
+        f"{paper}申论真题 {len(items)} 题，含给定资料与参考解析。",
+        _shenlun_paper_path(paper),
+        [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (paper, _shenlun_paper_path(paper))],
+    )
+    paper_ld["educationalLevel"] = "公务员考试"
+    paper_ld["numberOfItems"] = len(items)
     return _page(
         f"{paper}申论真题_给定资料与参考解析_答岸",
         f"{paper}申论真题共 {len(items)} 题，含完整给定资料与参考解析，可在线作答。",
         _shenlun_paper_path(paper),
         body,
-        _collection_ld(
-            f"{paper}申论真题",
-            f"{paper}申论真题 {len(items)} 题，含给定资料与参考解析。",
-            _shenlun_paper_path(paper),
-            [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (paper, _shenlun_paper_path(paper))],
-        ),
+        paper_ld,
     )
 
 
@@ -112,6 +115,7 @@ def _render_shenlun_year(year: int, page: int) -> str:
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = _year_path(year, "shenlun") + (f"?page={page}" if page > 1 else "")
+    prev_p, next_p = _pager_links(_year_path(year, "shenlun"), page, total)
     return _page(
         f"{year}年申论真题{suffix}_{year}年公务员考试申论真题及参考解析_答岸",
         f"{year}年公务员考试申论真题共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{suffix}",
@@ -123,6 +127,8 @@ def _render_shenlun_year(year: int, page: int) -> str:
             page_path,
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (f"{year}年真题", _year_path(year, "shenlun"))],
         ),
+        prev_path=prev_p,
+        next_path=next_p,
     )
 
 
@@ -153,6 +159,7 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = _sub_path("shenlun", qtype) + (f"?page={page}" if page > 1 else "")
+    prev_p, next_p = _pager_links(_sub_path("shenlun", qtype), page, total)
     return _page(
         f"申论{qtype}真题{suffix}_历年申论{qtype}题型真题及参考解析_答岸",
         f"申论{qtype}题型真题共 {total} 题，附参考解析，可在线作答。{suffix}",
@@ -164,6 +171,8 @@ def _render_shenlun_qtype(qtype: str, page: int) -> str:
             page_path,
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/"), (qtype, _sub_path("shenlun", qtype))],
         ),
+        prev_path=prev_p,
+        next_path=next_p,
     )
 
 
@@ -300,6 +309,7 @@ def _tiku_shenlun(page: int):
     )
     suffix = f"（第{page}页）" if page > 1 else ""
     page_path = "/tiku/shenlun/" + (f"?page={page}" if page > 1 else "")
+    prev_p, next_p = _pager_links("/tiku/shenlun/", page, total)
     return _page(
         f"申论真题库{suffix}_历年申论真题及参考解析_答岸",
         f"申论真题库共 {total} 题，覆盖概括、对策、公文、大作文等题型，附参考解析，可在线作答。{mat_desc}{suffix}",
@@ -311,5 +321,7 @@ def _tiku_shenlun(page: int):
             page_path,
             [("题库", "/tiku/"), ("申论", "/tiku/shenlun/")],
         ),
+        prev_path=prev_p,
+        next_path=next_p,
     )
 

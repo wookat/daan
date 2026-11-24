@@ -31,7 +31,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from access_log_report import BOT_ENGINES, BOT_GENERIC
 
-SITEMAP_PREFIXES = ("/sitemap", "/robots.txt")
+SITEMAP_PREFIXES = ("/sitemap", "/robots.txt", "/llms.txt", "/llms-full.txt")
 # 探针/冒烟会话的 uid 前缀（R374 只按网段打标，跨网段跑的测试会话靠 uid 兜底）
 TEST_UID_MARKERS = ("uid=test-", "uid=probe")
 # 真人口径不计的内部/心跳路径

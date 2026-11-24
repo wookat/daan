@@ -45,7 +45,12 @@ describe('isBlockedBot', () => {
     expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (compatible; bingbot/2.0)')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (compatible; Baiduspider/2.0)')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', 'OAI-SearchBot/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'ChatGPT-User/1.0')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', 'PerplexityBot/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'Perplexity-User/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'Claude-SearchBot/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'Claude-User/1.0')).toBe(false);
+    expect(isBlockedBot('/tiku/q/3', 'DuckAssistBot/1.0')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 MicroMessenger/8.0.50 Chrome/120')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', 'Mozilla/5.0 (Windows NT 10.0) Chrome/120')).toBe(false);
     expect(isBlockedBot('/tiku/q/3', '')).toBe(false);
@@ -55,7 +60,7 @@ describe('isBlockedBot', () => {
 
 describe('isEdgeCacheable', () => {
   it('SEO 页族 / 分享落地页 / sitemap / robots 可缓存', () => {
-    for (const p of ['/tiku/', '/tiku/q/3', '/s/abc123', '/p/og433f', '/sitemap.xml', '/sitemap-questions-8.xml', '/robots.txt', '/llms.txt']) {
+    for (const p of ['/tiku/', '/tiku/q/3', '/s/abc123', '/p/og433f', '/sitemap.xml', '/sitemap-questions-8.xml', '/robots.txt', '/llms.txt', '/llms-full.txt']) {
       expect(isEdgeCacheable('GET', p, false, false)).toBe(true);
     }
   });
@@ -143,9 +148,12 @@ describe('isCacheableContentType', () => {
     expect(isCacheableContentType('/robots.txt', false, 'text/plain; charset=utf-8')).toBe(true);
     expect(isCacheableContentType('/sitemap.xml', false, 'text/html')).toBe(false);
   });
-  it('llms.txt 接受 text/markdown，拒绝 html 错误页', () => {
+  it('llms.txt 与 llms-full.txt 接受 text/markdown，拒绝 html 错误页', () => {
     expect(isCacheableContentType('/llms.txt', false, 'text/markdown; charset=utf-8')).toBe(true);
     expect(isCacheableContentType('/llms.txt', false, 'text/html')).toBe(false);
+    expect(isCacheableContentType('/llms-full.txt', false, 'text/markdown; charset=utf-8')).toBe(true);
+    expect(isCacheableContentType('/llms-full.txt', false, 'text/html')).toBe(false);
+    expect(edgeTtl('/llms-full.txt')).toBe(EDGE_CACHE_TTL);
   });
   it('API 只入 json，页面只入 html（错误页/网关页不入缓存）', () => {
     expect(isCacheableContentType('/api/daily_set', true, 'application/json')).toBe(true);
